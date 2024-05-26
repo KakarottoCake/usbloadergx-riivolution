@@ -297,6 +297,9 @@ bool Wad::InstallContents(const char *installpath)
 			int result = CheckContentMap(installpath, &tmd_data->contents[cnt], filepath);
 			if(result == 1) // exists already, skip file
 				continue;
+
+			else if(result < 0) // failure
+				return false;
 		}
 		totalSize += round_up( tmd_data->contents[cnt].size, 64 );
 	}
@@ -320,17 +323,20 @@ bool Wad::InstallContents(const char *installpath)
 		memcpy(iv, &cnt, 2);
 
 		// Install content
-		if(content->type == 0x8001) {
+		if(content->type == 0x8001)
+		{
 			// shared content
-			int result = UpdateContentMap(installpath, content, filepath);
+			int result = CheckContentMap(installpath, content, filepath);
 			if(result == 1) // exists already, skip file
 				continue;
 
 			else if(result < 0) // failure
 				return false;
 			// else it does not exist...install it
+			snprintf(filepath, sizeof(filepath), "%s/shared1/%08x.app", installpath, (unsigned int)content_map_size);
 		}
-		else {
+		else
+		{
 			// private content
 			snprintf(filepath, sizeof(filepath), "%s/title/%08x/%08x/content/%08x.app", installpath, (unsigned int) (tmd_data->title_id >> 32), (unsigned int) tmd_data->title_id, (unsigned int) content->cid);
 		}
@@ -340,7 +346,10 @@ bool Wad::InstallContents(const char *installpath)
 		if(!fp)
 		{
 			if(showPrompt)
+			{
+				ProgressStop();
 				ShowError(tr("Can't create file: %s"), filepath);
+			}
 			return false;
 		}
 
@@ -349,7 +358,10 @@ bool Wad::InstallContents(const char *installpath)
 		if(!inbuf || !outbuf)
 		{
 			if(showPrompt)
+			{
+				ProgressStop();
 				ShowError(tr("Not enough memory."));
+			}
 			if(inbuf) free(inbuf);
 			if(outbuf) free(outbuf);
 			fclose(fp);
@@ -416,8 +428,22 @@ bool Wad::InstallContents(const char *installpath)
 		if(done < len)
 		{
 			if(showPrompt)
+			{
+				ProgressStop();
 				ShowError(tr("File read/write error."));
+			}
 			return false;
+		}
+
+		if(content->type == 0x8001)
+		{
+			// shared content installed ok. It's time to update content.map
+			int result = UpdateContentMap(installpath, content, filepath);
+			if(result == 1) // exists already, skip file
+				continue;
+
+			else if(result < 0) // failure
+				return false;
 		}
 	}
 
@@ -433,7 +459,10 @@ int Wad::CheckContentMap(const char *installpath, tmd_content *content, char *fi
 		if(LoadFileToMem(filepath, &content_map, &content_map_size) < 0 || content_map_size < sizeof(map_entry_t))
 		{
 			if(showPrompt)
+			{
+				ProgressStop();
 				ShowError(tr("Can't read file: %s"), filepath);
+			}
 			return -1;
 		}
 
@@ -454,7 +483,7 @@ int Wad::CheckContentMap(const char *installpath, tmd_content *content, char *fi
 
 int Wad::UpdateContentMap(const char *installpath, tmd_content *content, char *filepath)
 {
-	int result = CheckContentMap(installpath, content, filepath); 
+	int result = CheckContentMap(installpath, content, filepath);
 	if (result != 0)
 		return result; // content already exists or error
 
@@ -464,7 +493,10 @@ int Wad::UpdateContentMap(const char *installpath, tmd_content *content, char *f
 	if(!tmp)
 	{
 		if(showPrompt)
+		{
+			ProgressStop();
 			ShowError(tr("Not enough memory."));
+		}
 		return -1;
 	}
 
@@ -481,8 +513,6 @@ int Wad::UpdateContentMap(const char *installpath, tmd_content *content, char *f
 	snprintf(filepath, 1024, "%s/shared1/content.map", installpath);
 	if(!WriteFile(filepath, content_map, content_map_size * sizeof(map_entry_t)))
 		return -1;
-
-	snprintf(filepath, 1024, "%s/shared1/%08x.app", installpath, (unsigned int)next_entry);
 
 	return 0;
 }
