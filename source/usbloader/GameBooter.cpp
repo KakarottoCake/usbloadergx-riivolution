@@ -226,7 +226,7 @@ int GameBooter::SetupDisc(struct discHdr &gameHeader)
 	if (gameHeader.type == TYPE_GAME_WII_DISC)
 	{
 		gprintf("Loading DVD\n");
-		return Disc_Open();
+		return Disc_Open(false);
 	}
 
 	int ret = -1;
@@ -253,7 +253,7 @@ int GameBooter::SetupDisc(struct discHdr &gameHeader)
 	}
 
 	gprintf("Disc_Open()...");
-	ret = Disc_Open();
+	ret = Disc_Open(false);
 	gprintf("%d\n", ret);
 
 	return ret;

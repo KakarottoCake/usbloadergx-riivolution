@@ -218,7 +218,7 @@ int MenuInstall()
 		WindowPrompt(tr( "Error reading Disc" ), 0, tr( "Back" ));
 		return MENU_DISCLIST;
 	}
-	ret = Disc_Open();
+	ret = Disc_Open(true);
 	if (ret < 0)
 	{
 		WindowPrompt(tr( "Could not open Disc" ), 0, tr( "Back" ));

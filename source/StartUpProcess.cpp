@@ -22,6 +22,7 @@
 #include "usbloader/MountGamePartition.h"
 #include "usbloader/GameBooter.hpp"
 #include "usbloader/GameList.h"
+#include "usbloader/wdvd.h"
 #include "utils/tools.h"
 #include "sys.h"
 #include "svnrev.h"
@@ -348,6 +349,7 @@ int StartUpProcess::Execute(bool quickGameBoot)
 	{
 		Settings.USBAutoMount = ON;
 		Settings.LoaderMode = MODE_ALL;
+		Settings.AutobootDiscs = OFF;
 		Settings.skipSaving = true;
 	}
 
@@ -427,6 +429,56 @@ int StartUpProcess::Execute(bool quickGameBoot)
 	SetTextf("Checking installed MIOS\n");
 	IosLoader::GetMIOSInfo();
 
+	if (Settings.AutobootDiscs == ON)
+	{
+		Timer countDown;
+		bool skipDiscAutoboot = false;
+		s32 delay = 0;
+		u32 DiscDriveCover = 0;
+
+		Disc_Init();
+		WDVD_GetCoverStatus(&DiscDriveCover);
+		if (DiscDriveCover & 0x02)
+		{
+			drawCancel = true;
+			gprintf("Disc found in drive\n");
+			cancelTxt->SetText("Press B to cancel");
+			do
+			{
+				UpdatePads();
+				for (int i = 0; i < 4; ++i)
+					cancelBtn->Update(&userInput[i]);
+				if (cancelBtn->GetState() == STATE_CLICKED)
+				{
+					skipDiscAutoboot = true;
+					break;
+				}
+
+				delay = Settings.AutobootDiscsDelay - (int)countDown.elapsed();
+				messageTxt->SetTextf("Booting from disc in %d second%s\n", delay, delay > 1 ? "s" : "");
+				Draw();
+				usleep(50000);
+			} while (countDown.elapsed() < (float)Settings.AutobootDiscsDelay);
+
+			drawCancel = false;
+			if (skipDiscAutoboot == false)
+			{
+				messageTxt->SetTextf("Booting from disc\n");
+				Draw();
+				return AutobootDisc();
+			}
+		}
+		else
+		{
+			gprintf("No disc found in drive\n");
+			WDVD_Close();
+		}
+	}
+	return FinalizeExecute();
+}
+
+int StartUpProcess::FinalizeExecute()
+{
 	SetTextf("Loading resources\n");
 	// Do not allow banner grid mode without AHBPROT
 	// this function does nothing if it was already initiated before
@@ -480,4 +532,23 @@ int StartUpProcess::QuickGameBoot(const char *gameID)
 	GameStatistics.Save();
 
 	return GameBooter::BootGame(header);
+}
+
+int StartUpProcess::AutobootDisc()
+{
+	struct discHdr *header = new struct discHdr;
+	if (Disc_Mount(header) < 0)
+	{
+		delete header;
+		header = NULL;
+		SetTextf("Error mounting disc\n");
+		sleep(3);
+		return FinalizeExecute();
+	}
+	else
+	{
+		GameStatistics.SetPlayCount(header->id, GameStatistics.GetPlayCount(header->id) + 1);
+		GameStatistics.Save();
+		return GameBooter::BootGame(header);
+	}
 }
