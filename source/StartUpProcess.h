@@ -23,7 +23,6 @@ private:
 	int AutobootDisc();
 
 	bool drawCancel;
-	bool drawDiscCancel;
 
 	GuiImageData *GXImageData;
 	GuiImage *background;
@@ -32,7 +31,6 @@ private:
 	GuiText *messageTxt;
 	GuiText *versionTxt;
 	GuiText *cancelTxt;
-	GuiText *discCancelTxt;
 	GuiButton *cancelBtn;
 	GuiButton *sdmodeBtn;
 	GuiTrigger *trigB;

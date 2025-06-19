@@ -55,7 +55,7 @@ extern "C"
 
 	/* Prototypes */
 	s32 Disc_Init(void);
-	s32 Disc_Open(void);
+	s32 Disc_Open(bool reset);
 	s32 Disc_Wait(void);
 	void Disc_SetLowMem(void);
 	s32 Disc_SetUSB(const u8 *);

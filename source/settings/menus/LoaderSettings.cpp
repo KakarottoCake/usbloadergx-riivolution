@@ -287,6 +287,8 @@ void LoaderSettings::SetOptionNames()
 	Options->SetName(Idx++, "%s", tr( "Wiird Debugger" ));
 	Options->SetName(Idx++, "%s", tr( "Debugger Paused Start" ));
 	Options->SetName(Idx++, "%s", tr( "Channel Launcher" ));
+	Options->SetName(Idx++, "%s", tr( "Autoboot Discs" ));
+	Options->SetName(Idx++, "%s", tr( "Autoboot Discs Delay" ));
 	Options->SetName(Idx++, "%s", tr( "=== GameCube Settings" ));
 	Options->SetName(Idx++, "%s", tr( "GameCube Source" ));
 	Options->SetName(Idx++, "%s", tr( "GameCube Mode" ));
@@ -437,6 +439,12 @@ void LoaderSettings::SetOptionValues()
 
 	//! Settings: Channel Launcher
 	Options->SetValue(Idx++, "%s", tr( ChannelLaunchText[Settings.UseChanLauncher] ));
+
+	//! Settings: Autoboot Discs
+	Options->SetValue(Idx++, "%s", tr( OnOffText[Settings.AutobootDiscs] ));
+
+	//! Settings: Autoboot Discs Delay
+	Options->SetValue(Idx++, "%i", Settings.AutobootDiscsDelay);
 
 	//! Settings: TITLE - GameCube Settings
 	Options->SetValue(Idx++, "=======");
@@ -816,6 +824,18 @@ int LoaderSettings::GetMenuInternal()
 	else if (ret == ++Idx )
 	{
 		if (++Settings.UseChanLauncher >= MAX_ON_OFF) Settings.UseChanLauncher = 0;
+	}
+
+	//! Settings: Autoboot Discs
+	else if (ret == ++Idx)
+	{
+		if (++Settings.AutobootDiscs >= MAX_ON_OFF) Settings.AutobootDiscs = 0;
+	}
+
+	//! Settings: Autoboot Discs Delay
+	else if (ret == ++Idx)
+	{
+		if (++Settings.AutobootDiscsDelay >= 6) Settings.AutobootDiscsDelay = 0;
 	}
 
 	//! Settings: TITLE - GameCube Settings

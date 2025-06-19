@@ -6,7 +6,6 @@
 #include "usbloader/wbfs.h"
 #include "usbloader/disc.h"
 #include "usbloader/GameList.h"
-#include "usbloader/wdvd.h"
 #include "prompts/ProgressWindow.h"
 #include "prompts/GCMultiDiscMenu.h"
 #include "themes/CTheme.h"
@@ -219,12 +218,7 @@ int MenuInstall()
 		WindowPrompt(tr( "Error reading Disc" ), 0, tr( "Back" ));
 		return MENU_DISCLIST;
 	}
-	ret = WDVD_Reset();
-	if (ret < 0) {
-		WindowPrompt(tr( "Error resetting disc drive" ), 0, tr( "Back" ));
-		return MENU_DISCLIST;
-	}
-	ret = Disc_Open();
+	ret = Disc_Open(true);
 	if (ret < 0)
 	{
 		WindowPrompt(tr( "Could not open Disc" ), 0, tr( "Back" ));
