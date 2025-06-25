@@ -57,7 +57,7 @@ extern "C"
 	s32 Disc_Init(void);
 	s32 Disc_Open(bool reset);
 	s32 Disc_Wait(void);
-	void Disc_SetLowMem(void);
+	void Disc_SetLowMem(struct discHdr *gameHdr);
 	s32 Disc_SetUSB(const u8 *);
 	s32 Disc_ReadHeader(void *);
 	s32 Disc_IsWii(void);

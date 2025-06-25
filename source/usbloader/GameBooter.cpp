@@ -127,7 +127,7 @@ int GameBooter::BootGCMode(struct discHdr *gameHdr)
 	return 0;
 }
 
-u32 GameBooter::BootPartition(char *dolpath, u8 videoselected, u8 alternatedol, u32 alternatedoloffset)
+u32 GameBooter::BootPartition(char *dolpath, u8 videoselected, u8 alternatedol, u32 alternatedoloffset, struct discHdr &gameHdr)
 {
 	gprintf("Booting partition IOS %u r%u\n", IOS_GetVersion(), IOS_GetRevision());
 	entry_point p_entry;
@@ -145,7 +145,7 @@ u32 GameBooter::BootPartition(char *dolpath, u8 videoselected, u8 alternatedol, 
 		return 0;
 
 	/* Setup low memory */
-	Disc_SetLowMem();
+	Disc_SetLowMem(&gameHdr);
 
 	/* Setup video mode */
 	Disc_SelectVMode(videoselected, false, NULL, NULL);
@@ -674,7 +674,7 @@ int GameBooter::BootGame(struct discHdr *gameHdr, const s8 useOcarina)
 	if (gameHeader.tid == 0)
 	{
 		gprintf("Game Boot\n");
-		AppEntrypoint = BootPartition(Settings.dolpath, videoChoice, alternatedol, alternatedoloffset);
+		AppEntrypoint = BootPartition(Settings.dolpath, videoChoice, alternatedol, alternatedoloffset, gameHeader);
 		// Reading of game is done we can close devices now
 		ShutDownDevices(usbport);
 	}

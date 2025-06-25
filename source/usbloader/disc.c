@@ -41,7 +41,7 @@ static u8 *diskid = (u8 *) Disc_ID;
 static u32 rmode_reg = 0;
 GXRModeObj *rmode = NULL;
 
-void Disc_SetLowMem(void)
+void Disc_SetLowMem(struct discHdr *gameHdr)
 {
 	*Sys_Magic = 0x0D15EA5E;			// Standard boot code
 	*Sys_Version = 0x00000001;			// Version
@@ -62,7 +62,10 @@ void Disc_SetLowMem(void)
 
 	int iosVer = IOS_GetVersion();
 	if(iosVer != 222 && iosVer != 223 && iosVer != 224 && iosVer != 225 && IOS_GetRevision() >= 18)
-		*GameID_Address = 0x80000000; // Game ID Address
+	{
+		if (!strstr(gameHdr->title, "Just Dance")) // Use names to support modded versions too
+			*GameID_Address = 0x80000000; // Game ID Address
+	}
 	*(vu32*)0xCD00643C = 0x00000000;	// 32 MHz on Bus
 
 	/* Copy disc ID */
