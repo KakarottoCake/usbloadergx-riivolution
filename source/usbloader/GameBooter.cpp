@@ -149,8 +149,7 @@ u32 GameBooter::BootPartition(char *dolpath, u8 videoselected, u8 alternatedol, 
 		return 0;
 
 	/* Open specified partition */
-	u32 Tmd_Buffer[0x4A00] ATTRIBUTE_ALIGN(32);
-	ret = WDVD_OpenPartition(offset, Tmd_Buffer);
+	ret = WDVD_OpenPartition(offset, NULL);
 	if (ret < 0)
 		return 0;
 
@@ -374,7 +373,7 @@ int GameBooter::BootGame(struct discHdr *gameHdr)
 
 	if (autoIOS == GAME_IOS_AUTO && d2x_list.size())
 	{
-		s32 requestedIOS = 0;
+		u8 requestedIOS = 0;
 		if (gameHeader.type == TYPE_GAME_NANDCHAN)
 			requestedIOS = Channels::GetRequestedIOS(gameHeader.tid, NULL);
 		else if (gameHeader.type == TYPE_GAME_EMUNANDCHAN)
@@ -386,7 +385,7 @@ int GameBooter::BootGame(struct discHdr *gameHdr)
 			{
 				void *titleTMD = NULL;
 				int tmd_size = wbfs_extract_file(d, (char *)"TMD", &titleTMD);
-				if (titleTMD != NULL)
+				if (titleTMD)
 				{
 					if (tmd_size > 0x18B)
 						requestedIOS = *((u8 *)titleTMD + 0x18B);
@@ -400,13 +399,8 @@ int GameBooter::BootGame(struct discHdr *gameHdr)
 			u64 offset;
 			if (Disc_FindPartition(&offset) >= 0)
 			{
-				u32 Tmd_Buffer[0x4A00] ATTRIBUTE_ALIGN(32);
-				if (WDVD_OpenPartition(offset, Tmd_Buffer) >= 0)
-				{
-					tmd *tmd_dvd = (tmd *)SIGNATURE_PAYLOAD(Tmd_Buffer);
-					requestedIOS = tmd_dvd->sys_version;
+				if (WDVD_OpenPartition(offset, &requestedIOS) >= 0)
 					WDVD_ClosePartition();
-				}
 			}
 		}
 

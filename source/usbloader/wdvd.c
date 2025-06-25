@@ -193,12 +193,15 @@ s32 WDVD_StopMotor(void)
 	return (ret == 1) ? 0 : -ret;
 }
 
-s32 WDVD_OpenPartition(u64 offset, u32 *tmdbuf)
+s32 WDVD_OpenPartition(u64 offset, u8 *ios)
 {
 	if (_di_fd < 0)
 		return _di_fd;
 
-	static ioctlv Vectors[5] ATTRIBUTE_ALIGN(32);
+	u8 *Tmd_Buffer = memalign(32, 0x4A00);
+	if (!Tmd_Buffer)
+		return -1;
+	ioctlv Vectors[5] ATTRIBUTE_ALIGN(32);
 	s32 ret;
 
 	memset(inbuf, 0, sizeof inbuf);
@@ -213,7 +216,7 @@ s32 WDVD_OpenPartition(u64 offset, u32 *tmdbuf)
 	Vectors[1].len		= 0;
 	Vectors[2].data		= 0;
 	Vectors[2].len		= 0;
-	Vectors[3].data		= tmdbuf;
+	Vectors[3].data		= Tmd_Buffer;
 	Vectors[3].len		= 0x49e4;
 	Vectors[4].data		= outbuf;
 	Vectors[4].len		= 0x20;
@@ -221,8 +224,15 @@ s32 WDVD_OpenPartition(u64 offset, u32 *tmdbuf)
 	ret = IOS_Ioctlv(_di_fd, IOCTL_DI_OPENPART, 3, 2, (ioctlv *)Vectors);
 
 	if (ret < 0)
+	{
+		free(Tmd_Buffer);
 		return ret;
+	}
 
+	if (ios)
+		*ios = Tmd_Buffer[0x18B];
+
+	free(Tmd_Buffer);
 	return (ret == 1) ? 0 : -ret;
 }
 
