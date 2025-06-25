@@ -300,7 +300,7 @@ s32 Disc_SetUSB(const u8 *id)
 s32 Disc_ReadHeader(void *outbuf)
 {
 	/* Read disc header */
-	return WDVD_UnencryptedRead(outbuf, sizeof(struct discHdr), 0);
+	return WDVD_UnencryptedRead(outbuf, 128, 0);
 }
 
 s32 Disc_IsWii(void)

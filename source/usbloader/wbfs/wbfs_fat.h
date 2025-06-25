@@ -1,11 +1,15 @@
 #ifndef _WBFS_FAT_H
 #define _WBFS_FAT_H
 
+#include <string>
+#include <set>
 #include <ogcsys.h>
 
 #include "usbloader/splits.h"
 #include "usbloader/wbfs.h"
 #include "wbfs_base.h"
+
+#define MAX_FAT_PATH 260
 
 class Wbfs_Fat: public Wbfs
 {
@@ -30,28 +34,28 @@ class Wbfs_Fat: public Wbfs
 
 		u64 EstimateGameSize();
 
-		void AddHeader(struct discHdr *discHeader);
+		void AddHeader(const struct discHdr &discHeader);
 
 		virtual s32 GetFragList(u8 *);
 		virtual u8 GetFSType(void) { return PART_FS_FAT; }
-
-		static bool CheckLayoutB(char *fname, int len, u8* id, char *fname_title);
 		static void CleanTitleCharacters(char *title);
 	protected:
 
 		split_info_t split;
 
-		struct discHdr *fat_hdr_list;
-		u32 fat_hdr_count;
+		std::vector<struct discHdr> fat_hdr_vector;
 		char wbfs_fs_drive[16];
 
 		wbfs_t* OpenPart(char *fname);
 		void ClosePart(wbfs_t* part);
 		wbfs_t* CreatePart(u8 *id, char *path);
-		int FindFilename(u8 *id, char *fname, int len);
+		std::string FindFilename(u8 *id);
+		std::string GetDir(struct discHdr *header);
+		bool IsDirectFile(const std::string &path);
+		bool ValidExtension(const char *filename);
+		bool TryAddGameFile(const std::string &fpath, const char *expected_id, const char *folder_title, std::set<std::string> &added_ids, bool use_folder_title);
 		void Filename(u8 *id, char *fname, int len, char *path);
 		s32 GetHeadersCount();
-		void GetDir(struct discHdr *header, char *path);
 
 		void mk_gameid_title(struct discHdr *header, char *name, int re_space, int layout);
 

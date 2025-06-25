@@ -33,9 +33,11 @@
 #include "gecko.h"
 #include "cache/cache.hpp"
 
+#define TITLE_LEN 130
+
 GCGames *GCGames::instance = NULL;
 
-inline bool isGameID(const u8 *id)
+inline bool isGameID(const char *id)
 {
 	for (int i = 0; i < 6; i++)
 		if (!isalnum((int)id[i]))
@@ -69,6 +71,35 @@ void GCGames::clear()
 	std::vector<struct discHdr>().swap(HeaderList);
 	std::vector<struct discHdr>().swap(sdGCList);
 	std::vector<std::string>().swap(sdGCPathList);
+}
+
+bool GCGames::CheckLayoutB(char *fname, int len, u8 *id, char *fname_title)
+{
+	if (len <= 8)
+		return false;
+	if (fname[len - 8] != '[' || fname[len - 1] != ']')
+		return false;
+	if (!isGameID(&fname[len - 7]))
+		return false;
+	strncpy(fname_title, fname, TITLE_LEN);
+	// cut at '['
+	fname_title[len - 8] = 0;
+	int n = strlen(fname_title);
+	if (n == 0)
+		return false;
+	// cut trailing _ or ' '
+	if (fname_title[n - 1] == ' ' || fname_title[n - 1] == '_')
+	{
+		fname_title[n - 1] = 0;
+	}
+	if (strlen(fname_title) == 0)
+		return false;
+	if (id)
+	{
+		memcpy(id, &fname[len - 7], 6);
+		id[6] = 0;
+	}
+	return true;
 }
 
 void GCGames::LoadGameList(const std::string &path, std::vector<struct discHdr> &headerList, std::vector<std::string> &pathList)
@@ -105,9 +136,9 @@ void GCGames::LoadGameList(const std::string &path, std::vector<struct discHdr> 
 		int len = strlen(dirname);
 		if (len >= 8)
 		{
-			if (Wbfs_Fat::CheckLayoutB((char *)dirname, len, id, fname_title))
+			if (CheckLayoutB((char *)dirname, len, id, fname_title))
 			{
-				// path/TITLE[GAMEID]/game.iso
+				// path/TITLE [GAMEID]/game.iso
 				lay_b = true;
 			}
 			else if (dirname[6] == '_')
@@ -115,14 +146,14 @@ void GCGames::LoadGameList(const std::string &path, std::vector<struct discHdr> 
 				// path/GAMEID_TITLE/game.iso
 				memcpy(id, dirname, 6);
 
-				if (isGameID(id))
+				if (isGameID((char *)id))
 				{
 					lay_a = true;
 					snprintf(fname_title, sizeof(fname_title), "%s", &dirname[7]);
 				}
 			}
 		}
-		else if (len == 6 && isGameID((u8 *)dirname))
+		else if (len == 6 && isGameID(dirname))
 		{
 			memcpy(id, dirname, 6);
 			lay_a = true;

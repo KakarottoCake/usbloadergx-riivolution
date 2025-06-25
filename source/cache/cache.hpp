@@ -4,18 +4,11 @@
 #include "usbloader/disc.h"
 #include "settings/CSettings.h"
 
+#define GAME_HEADER_CACHE_VERSION 1282
+
 #define WII_HEADER_CACHE_FILE "WII.cache"
 #define GAMECUBE_HEADER_CACHE_FILE "GAMECUBE.cache"
 #define EMUNAND_HEADER_CACHE_FILE "EMUNAND.cache"
-
-struct gameHdr
-{
-	/* Game ID */
-	u8 id[6];
-
-	/* Padding */
-	u8 unused3[2];
-};
 
 struct wiiCache
 {

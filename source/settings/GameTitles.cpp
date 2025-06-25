@@ -294,24 +294,20 @@ void CGameTitles::CleanTitles(std::vector<struct discHdr *> &headerlist)
 	if (TitleList.empty())
 		return;
 
-	for (u32 n = 0; n < TitleList.size(); ++n)
-	{
-		bool isCached = false;
-		for (u32 i = 0; i < headerlist.size(); ++i)
-		{
-			if (strncasecmp(TitleList[n].GameID, (const char *)headerlist[i]->id, 6) == 0)
+	TitleList.erase(
+		std::remove_if(
+			TitleList.begin(),
+			TitleList.end(),
+			[&headerlist](const GameTitle &title)
 			{
-				isCached = true;
-				break;
-			}
-		}
-		if (!isCached)
-		{
-			TitleList.erase(TitleList.begin() + n);
-			n--;
-		}
-	}
-	return;
+				for (auto hdr : headerlist)
+				{
+					if (strncasecmp(title.GameID, (const char *)hdr->id, 6) == 0)
+						return false;
+				}
+				return true;
+			}),
+		TitleList.end());
 }
 
 void CGameTitles::LoadTitlesFromGameTDB(const char *path)

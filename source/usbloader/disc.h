@@ -50,7 +50,7 @@ extern "C"
 			u8 h3_verify;
 
 			/* Padding */
-			u8 unused3[30];
+			char path[260];
 	} ATTRIBUTE_PACKED;
 
 	/* Prototypes */
