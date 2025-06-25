@@ -21,7 +21,7 @@
 #include <string>
 #include <vector>
 
-//!Handles Ocarina TXT Cheatfiles
+//!Handles Ocarina TXT cheat files
 class GCTCheats
 {
 	private:

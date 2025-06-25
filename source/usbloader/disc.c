@@ -26,6 +26,8 @@
 #pragma GCC diagnostic ignored "-Wstringop-overread"
 #endif
 
+extern char etext, edata;
+
 // Global app entry point
 extern u32 AppEntrypoint;
 
@@ -41,24 +43,27 @@ GXRModeObj *rmode = NULL;
 
 void Disc_SetLowMem(void)
 {
-	/* Setup low memory */
-	*Sys_Magic = 0x0D15EA5E;			// Standard Boot Code
+	*Sys_Magic = 0x0D15EA5E;			// Standard boot code
 	*Sys_Version = 0x00000001;			// Version
-	*Arena_L = 0x00000000;				// Arena Low
+	*Mem_Size = 0x01800000;				// MEM1 size 24MB
+	*Board_Model = 0x00000023;			// Production board model
+	*Arena_L = 0x00000000;				// Arena low
+	*OS_Thread = 0x80431A80;			// OSThread
+	*Dev_Debugger = 0x81800000;			// Dev debugger monitor address
+	*Simulated_Mem = 0x01800000;		// Simulated memory size
 	*BI2 = 0x817E5480;					// BI2
-	*Bus_Speed = 0x0E7BE2C0;			// Console Bus Speed
-	*CPU_Speed = 0x2B73A840;			// Console CPU Speed
-
-	/* Setup low memory */
-	*Assembler = 0x38A00040;			// Assembler
-	*(u32 *) 0x800000E4 = 0x80431A80;	// OS_Thread
-	*Dev_Debugger = 0x81800000;			// Dev Debugger Monitor Address
-	*Simulated_Mem = 0x01800000;		// Simulated Memory Size
-	*(vu32 *) 0xCD00643C = 0x00000000;	// 32Mhz on Bus
+	*Bus_Speed = 0x0E7BE2C0;			// Console bus speed
+	*CPU_Speed = 0x2B73A840;			// Console CPU speed
+	*(vu32*)0x800030D8 = 0xFFFFFFFF;	// Time
+	*(vu32*)0x800030DC = 0x00000000;	// Time
+	*PAD_Init = 0x00000000;				// PADInit
+	*DOL_Parameters = 0x00000000;		// Apploader parameters
+	*OS_Init = 0x80800113;				// DI legacy mode / Devkit boot program version
 
 	int iosVer = IOS_GetVersion();
 	if(iosVer != 222 && iosVer != 223 && iosVer != 224 && iosVer != 225 && IOS_GetRevision() >= 18)
-		*GameID_Address = 0x80000000;	// Game ID Address
+		*GameID_Address = 0x80000000; // Game ID Address
+	*(vu32*)0xCD00643C = 0x00000000;	// 32 MHz on Bus
 
 	/* Copy disc ID */
 	memcpy((void *) Online_Check, (void *) Disc_ID, 4);
@@ -93,7 +98,7 @@ void Disc_SelectVMode(u8 videoselected, bool devolution, u32 *dml_VideoMode, u32
 		else
 		{
 			rmode_reg = VI_PAL;
-			rmode = &TVPal528IntDf;
+			rmode = &TVPal528IntDf_RVL;
 		}
 		return;
 	}
@@ -103,14 +108,14 @@ void Disc_SelectVMode(u8 videoselected, bool devolution, u32 *dml_VideoMode, u32
 	{
 		case CONF_VIDEO_PAL:
 			rmode_reg = PAL60 ? VI_EURGB60 : VI_PAL;
-			rmode = progressive ? &TVEurgb60Hz480Prog : (PAL60 ? &TVEurgb60Hz480IntDf : &TVPal528IntDf);
+			rmode = progressive ? &TVEurgb60Hz480Prog_RVL : (PAL60 ? &TVEurgb60Hz480IntDf : &TVPal528IntDf_RVL);
 			if(dml_VideoMode) *dml_VideoMode = progressive ? DML_VID_FORCE_PROG : (PAL60 ? DML_VID_FORCE_PAL60 : DML_VID_FORCE_PAL50);
 			if(nin_VideoMode) *nin_VideoMode = progressive ? NIN_VID_FORCE_PAL60 | NIN_VID_PROG : (PAL60 ? NIN_VID_FORCE_PAL60 : NIN_VID_FORCE_PAL50);
 			break;
 
 		case CONF_VIDEO_MPAL:
 			rmode_reg = VI_MPAL;
-			rmode = progressive ? &TVEurgb60Hz480Prog : &TVMpal480IntDf;
+			rmode = progressive ? &TVEurgb60Hz480Prog_RVL : &TVMpal480IntDf;
 			if(nin_VideoMode) *nin_VideoMode = progressive ? NIN_VID_FORCE_MPAL | NIN_VID_PROG : NIN_VID_FORCE_MPAL;
 			break;
 
@@ -129,20 +134,34 @@ void Disc_SelectVMode(u8 videoselected, bool devolution, u32 *dml_VideoMode, u32
 			/* Select video mode */
 			switch (diskid[3])
 			{
-				// PAL
-				case 'D':
-				case 'F':
-				case 'P':
-				case 'X':
-				case 'Y':
+				// PAL video regions
+				case 'D': // Germany
+				case 'F': // France
+				case 'H': // Netherlands
+				case 'I': // Italy
+				case 'L': // Japanese import to Europe
+				case 'M': // American import to Europe
+				case 'P': // Europe
+				case 'R': // Russia
+				case 'S': // Spain
+				case 'U': // Australia
+				case 'V': // Scandinavia
+				case 'W': // Republic of China
+				case 'X': // Europe / USA special releases
+				case 'Y': // Europe / USA special releases
+				case 'Z': // Europe / USA special releases
 					rmode_reg = PAL60 ? VI_EURGB60 : VI_PAL;
-					rmode = progressive ? &TVEurgb60Hz480Prog : (PAL60 ? &TVEurgb60Hz480IntDf : &TVPal528IntDf);
+					rmode = progressive ? &TVEurgb60Hz480Prog_RVL : (PAL60 ? &TVEurgb60Hz480IntDf : &TVPal528IntDf_RVL);
 					if(dml_VideoMode) *dml_VideoMode = progressive ? DML_VID_FORCE_PROG : (PAL60 ? DML_VID_FORCE_PAL60 : DML_VID_FORCE_PAL50);
 					if(nin_VideoMode) *nin_VideoMode = progressive ? NIN_VID_FORCE_PAL60 | NIN_VID_PROG : (PAL60 ? NIN_VID_FORCE_PAL60 : NIN_VID_FORCE_PAL50);
 					break;
-				// NTSC
-				case 'E':
-				case 'J':
+				// NTSC video regions
+				case 'E': // USA
+				case 'J': // Japan
+				case 'K': // South Korea
+				case 'N': // Japanese import to USA
+				case 'Q': // Japanese import to Korea
+				case 'T': // American import to Korea
 					rmode_reg = VI_NTSC;
 					rmode = progressive ? &TVNtsc480Prog : &TVNtsc480IntDf;
 					if(dml_VideoMode) *dml_VideoMode = progressive ? DML_VID_FORCE_PROG : DML_VID_FORCE_NTSC;
@@ -154,8 +173,9 @@ void Disc_SelectVMode(u8 videoselected, bool devolution, u32 *dml_VideoMode, u32
 					break;
 			}
 			break;
+		// nincfg.bin sets NIN_VID_PROG for non progressive modes too
 		case VIDEO_MODE_PAL50: // PAL50
-			rmode =  &TVPal528IntDf;
+			rmode =  &TVPal528IntDf_RVL;
 			rmode_reg = VI_PAL;
 			if(dml_VideoMode) *dml_VideoMode = DML_VID_FORCE_PAL50;
 			if(nin_VideoMode) *nin_VideoMode = NIN_VID_FORCE_PAL50;
@@ -173,7 +193,7 @@ void Disc_SelectVMode(u8 videoselected, bool devolution, u32 *dml_VideoMode, u32
 			if(nin_VideoMode) *nin_VideoMode = NIN_VID_FORCE_NTSC;
 			break;
 		case VIDEO_MODE_PAL480P:
-			rmode = &TVEurgb60Hz480Prog;
+			rmode = &TVEurgb60Hz480Prog_RVL;
 			rmode_reg = VI_EURGB60;
 			if(dml_VideoMode) *dml_VideoMode = DML_VID_FORCE_PROG | DML_VID_PROG_PATCH;
 			if(nin_VideoMode) *nin_VideoMode = NIN_VID_FORCE_PAL60 | NIN_VID_PROG;
@@ -379,6 +399,12 @@ s32 Disc_JumpToEntrypoint(s32 hooktype, u32 dolparameter)
 	 /* Originally from tueidj - taken from NeoGamme (thx) */
 	*(vu32*)0xCC003024 = dolparameter != 0 ? dolparameter : 1;
 
+	/* A little clean up */
+	gprintf("Clearing segment @ %p (len: 0x%x)\n", &etext, &edata - &etext);
+	memset((void*)&etext, 0, &edata - &etext);
+	DCFlushRange((void*)&etext, &edata - &etext);
+	ICInvalidateRange((void*)&etext, &edata - &etext);
+
  	if(AppEntrypoint == 0x3400)
 	{
  		if(hooktype)
@@ -495,16 +521,38 @@ void PatchCountryStrings(void *Address, int Size)
 			PatchData[2] = 0x50; // P
 			break;
 
-		case 'D':
-		case 'F':
-		case 'P':
-		case 'X':
-		case 'Y':
+		case 'D': // Germany
+		case 'F': // France
+		case 'H': // Netherlands
+		case 'I': // Italy
+		case 'L': // Japanese import to Europe
+		case 'M': // American import to Europe
+		case 'P': // Europe
+		case 'R': // Russia
+		case 'S': // Spain
+		case 'U': // Australia
+		case 'V': // Scandinavia
+		case 'X': // Europe / USA special releases
+		case 'Y': // Europe / USA special releases
+		case 'Z': // Europe / USA special releases
 			PatchData[1] = 0x45; // E
 			PatchData[2] = 0x55; // U
 			break;
 
-		case 'E':
+		case 'K': // South Korea
+		case 'Q': // Japanese import to Korea
+		case 'T': // American import to Korea
+			PatchData[1] = 0x4B; // K
+			PatchData[2] = 0x52; // R
+			break;
+
+		case 'W': // Republic of China
+			PatchData[1] = 0x43; // C
+			PatchData[2] = 0x4E; // N
+			break;
+
+		case 'E': // USA
+		case 'N': // Japanese import to USA
 		default:
 			PatchData[1] = 0x55; // U
 			PatchData[2] = 0x53; // S

@@ -1,6 +1,6 @@
 /****************************************************************************
- * Copyright (C) 2011
- * by Dimok
+ * Copyright (C) 2019-2025 by Dimok
+ * Copyright (C) 2011 by Dimok
  *
  * This software is provided 'as-is', without any express or implied
  * warranty. In no event will the authors be held liable for any
@@ -37,7 +37,9 @@
 #include "utils/ShowError.h"
 #include "utils/tools.h"
 #include "gecko.h"
-
+#include "menu/GameBrowseMenu.hpp"
+#include "Controls/PartitionHandle.h"
+#include "Controls/DeviceHandler.hpp"
 
 ThemeMenu::ThemeMenu()
 	: FlyingButtonsMenu(tr("Theme Menu"))
@@ -78,15 +80,44 @@ ThemeMenu::ThemeMenu()
 ThemeMenu::~ThemeMenu()
 {
 	HaltGui();
-	for(u32 i = 0; i < MainButton.size(); ++i)
+	for (u32 i = 0; i < MainButton.size(); ++i)
+	{
 		Remove(MainButton[i]);
-	Remove(defaultBtn);
+		if (MainButton[i])
+		{
+			delete MainButton[i];
+			MainButton[i] = nullptr;
+		}
+		if (MainButtonTxt[i])
+		{
+			delete MainButtonTxt[i];
+			MainButtonTxt[i] = nullptr;
+		}
+		if (MainButtonImg[i])
+		{
+			delete MainButtonImg[i];
+			MainButtonImg[i] = nullptr;
+		}
+		if (MainButtonImgOver[i])
+		{
+			delete MainButtonImgOver[i];
+			MainButtonImgOver[i] = nullptr;
+		}
+	}
+	MainButton.clear();
+	MainButtonTxt.clear();
+	MainButtonImg.clear();
+	MainButtonImgOver.clear();
 
+	Remove(defaultBtn);
 	delete defaultBtn;
 	delete defaultBtnTxt;
 	delete defaultBtnImg;
-	for(int i = 0; i < 4; ++i)
+	for (int i = 0; i < 4; ++i)
+	{
 		delete ThemePreviews[i];
+		ThemePreviews[i] = nullptr;
+	}
 }
 
 int ThemeMenu::Execute()
@@ -133,6 +164,27 @@ void ThemeMenu::SetMainButton(int position, const char * ButtonText, GuiImageDat
 		MainButtonImgOver.resize(position+1);
 		MainButtonTxt.resize(position+1);
 		MainButton.resize(position+1);
+	}
+
+	if (MainButtonImg[position])
+	{
+		delete MainButtonImg[position];
+		MainButtonImg[position] = nullptr;
+	}
+	if (MainButtonImgOver[position])
+	{
+		delete MainButtonImgOver[position];
+		MainButtonImgOver[position] = nullptr;
+	}
+	if (MainButtonTxt[position])
+	{
+		delete MainButtonTxt[position];
+		MainButtonTxt[position] = nullptr;
+	}
+	if (MainButton[position])
+	{
+		delete MainButton[position];
+		MainButton[position] = nullptr;
 	}
 
 	MainButtonImg[position] = new GuiImage(imageData);
@@ -197,7 +249,6 @@ void ThemeMenu::SetupMainButtons()
 	{
 		u8 *buffer = NULL;
 		u32 filesize;
-		gprintf("%i %s\n", i, ThemeDir.GetFilepath(i));
 		LoadFileToMem(ThemeDir.GetFilepath(i), &buffer, &filesize);
 
 		if(!buffer) continue;
@@ -292,6 +343,7 @@ void ThemeMenu::MainButtonClicked(int button)
 
 	gprintf("\nTheme_Prompt(%s ,%s)", title, author);
 	bool leave = false;
+	bool applyTheme = false;
 
 	GuiImageData btnOutline(Resources::GetFile("button_dialogue_box.png"), Resources::GetFileSize("button_dialogue_box.png"));
 	GuiImageData dialogBox(Resources::GetFile("theme_dialogue_box.png"), Resources::GetFileSize("theme_dialogue_box.png"));
@@ -409,13 +461,8 @@ void ThemeMenu::MainButtonClicked(int button)
 			int choice = WindowPrompt(tr( "Do you want to apply this theme?" ), title, tr( "Yes" ), tr( "Cancel" ));
 			if (choice)
 			{
-				if (Theme::Load(ThemeList[button].Filepath.c_str()))
-				{
-					snprintf(Settings.theme, sizeof(Settings.theme), ThemeList[button].Filepath.c_str());
-					Theme::Reload();
-					returnMenu = MENU_THEMEMENU;
-					leave = true;
-				}
+				applyTheme = true;
+				leave = true;
 			}
 			mainWindow->SetState(STATE_DISABLED);
 			promptWindow.SetState(STATE_DEFAULT);
@@ -434,5 +481,15 @@ void ThemeMenu::MainButtonClicked(int button)
 	HaltGui();
 	mainWindow->Remove(&promptWindow);
 	mainWindow->SetState(STATE_DEFAULT);
+
+	if (applyTheme)
+	{
+		if (Theme::Load(ThemeList[button].Filepath.c_str()))
+		{
+			snprintf(Settings.theme, sizeof(Settings.theme), ThemeList[button].Filepath.c_str());
+			Theme::Reload();
+			returnMenu = MENU_THEMEMENU;
+		}
+	}
 	ResumeGui();
 }

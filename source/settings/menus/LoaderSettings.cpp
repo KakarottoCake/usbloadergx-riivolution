@@ -483,8 +483,11 @@ void LoaderSettings::SetOptionValues()
 	Options->SetValue(Idx++, "=======");
 
 	//! Settings: GameCube Source
-	Options->SetValue(Idx++, "%s%s%s", tr(GCSourceText[Settings.GameCubeSource][0]),
-	                GCSourceText[Settings.GameCubeSource][1], tr(GCSourceText[Settings.GameCubeSource][2]));
+	if (Settings.GameCubeSource >= 0 && Settings.GameCubeSource <= 2)
+		Options->SetValue(Idx++, "%s", tr(GCSourceText[Settings.GameCubeSource][0]));
+	else
+		Options->SetValue(Idx++, "%s%s%s", tr(GCSourceText[Settings.GameCubeSource][0]),
+	                	GCSourceText[Settings.GameCubeSource][1], tr(GCSourceText[Settings.GameCubeSource][2]));
 
 	//! Settings: GameCube Mode
 	Options->SetValue(Idx++, "%s", tr(GCMode[Settings.GameCubeMode]));

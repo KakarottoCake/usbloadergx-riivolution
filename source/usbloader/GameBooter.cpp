@@ -502,6 +502,11 @@ int GameBooter::BootGame(struct discHdr *gameHdr, const s8 useOcarina)
 			{
 				requestedIOS = 56;
 			}
+			// SSBB mods like Infinite won't work with IOS 38
+			else if (memcmp(gameHeader.id, "RSB", 3) == 0)
+			{
+				requestedIOS = 56;
+			}
 			// The d2x cIOS can only save to SD cards with bases 56-60
 			else if ((strncmp(NandEmuPath, "sd", 2) == 0 && NandEmuMode > EMUNAND_OFF) || Settings.SDMode)
 			{
@@ -666,6 +671,11 @@ int GameBooter::BootGame(struct discHdr *gameHdr, const s8 useOcarina)
 
 	//! Now we can free up the memory used by the game/channel lists
 	gameList.clear();
+	GameTitles.Clear();
+	GCGames::Instance()->clear();
+	Channels::Instance()->clear();
+	GCGames::DestroyInstance();
+	Channels::DestroyInstance();
 
 	//! Load main.dol or alternative dol into memory, start the game apploader and get game entrypoint
 	if (gameHeader.tid == 0)

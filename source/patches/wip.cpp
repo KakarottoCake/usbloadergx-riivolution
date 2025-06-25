@@ -42,7 +42,7 @@ extern "C" void do_wip_code(u8 * dst, u32 len)
 			}
 			else
 			{
-				gprintf("WIP: %08X Address does not match with WIP entrie.\n", CodeList[i].offset + n);
+				gprintf("WIP: %08X Address does not match with WIP entry.\n", CodeList[i].offset + n);
 				gprintf("Destination: %02X | Should be: %02X.\n", dst[offset], ((u8 *) &CodeList[i].srcaddress)[n]);
 			}
 		}

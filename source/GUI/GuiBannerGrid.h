@@ -38,6 +38,7 @@ public:
 	void GetIconCoordinates(int icon, f32 *x, f32 *y);
 	void Update(GuiTrigger *t);
 	void SetPage(int page) { pageNo = LIMIT(page, 0, pageCnt-1); UpdateTooltips(); }
+	void PrefetchBanners(int startIdx, int endIdx);
 	void Draw();
 private:
 	void RenderHighliter(Mtx &modelview);

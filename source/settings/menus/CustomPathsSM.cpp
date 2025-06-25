@@ -50,13 +50,13 @@ CustomPathsSM::CustomPathsSM()
 	Options->SetName(Idx++, tr("Disc Artwork Path"));
 	Options->SetName(Idx++, tr("Theme Path"));
 	Options->SetName(Idx++, tr("Titles Path"));
-	Options->SetName(Idx++, tr("GCT Cheatcodes Path"));
-	Options->SetName(Idx++, tr("TXT Cheatcodes Path"));
+	Options->SetName(Idx++, tr("GCT Cheat Codes Path"));
+	Options->SetName(Idx++, tr("TXT Cheat Codes Path"));
 	Options->SetName(Idx++, tr("DOL Path"));
 	Options->SetName(Idx++, tr("Homebrew Apps Path"));
 	Options->SetName(Idx++, tr("BCA Codes Path"));
 	Options->SetName(Idx++, tr("WIP Patches Path"));
-	Options->SetName(Idx++, tr("Languagefiles Path"));
+	Options->SetName(Idx++, tr("Languages Path"));
 	Options->SetName(Idx++, tr("WDM Files Path"));
 	Options->SetName(Idx++, tr("Wiinnertag Path"));
 	Options->SetName(Idx++, tr("EmuNAND Save Path"));
@@ -93,10 +93,10 @@ void CustomPathsSM::SetOptionValues()
 	//! Settings: Titles Path
 	Options->SetValue(Idx++, Settings.titlestxt_path);
 
-	//! Settings: GCT Cheatcodes Path
+	//! Settings: GCT Cheat Codes Path
 	Options->SetValue(Idx++, Settings.Cheatcodespath);
 
-	//! Settings: TXT Cheatcodes Path
+	//! Settings: TXT Cheat Codes Path
 	Options->SetValue(Idx++, Settings.TxtCheatcodespath);
 
 	//! Settings: DOL Path
@@ -111,7 +111,7 @@ void CustomPathsSM::SetOptionValues()
 	//! Settings: WIP Patches Path
 	Options->SetValue(Idx++, Settings.WipCodepath);
 
-	//! Settings: Languagefiles Path
+	//! Settings: Languages Path
 	Options->SetValue(Idx++, Settings.languagefiles_path);
 
 	//! Settings: WDM Files Path
@@ -213,17 +213,17 @@ int CustomPathsSM::GetMenuInternal()
 		}
 	}
 
-	//! Settings: GCT Cheatcodes Path
+	//! Settings: GCT Cheat Codes Path
 	else if (ret == ++Idx)
 	{
-		titleTxt->SetText(tr( "GCT Cheatcodes Path" ));
+		titleTxt->SetText(tr( "GCT Cheat Codes Path" ));
 		ChangePath(Settings.Cheatcodespath, sizeof(Settings.Cheatcodespath));
 	}
 
-	//! Settings: TXT Cheatcodes Path
+	//! Settings: TXT Cheat Codes Path
 	else if (ret == ++Idx)
 	{
-		titleTxt->SetText(tr( "TXT Cheatcodes Path" ));
+		titleTxt->SetText(tr( "TXT Cheat Codes Path" ));
 		ChangePath(Settings.TxtCheatcodespath, sizeof(Settings.TxtCheatcodespath));
 	}
 
@@ -255,10 +255,10 @@ int CustomPathsSM::GetMenuInternal()
 		ChangePath(Settings.WipCodepath, sizeof(Settings.WipCodepath));
 	}
 
-	//! Settings: Languagefiles Path
+	//! Settings: Languages Path
 	else if (ret == ++Idx)
 	{
-		titleTxt->SetText(tr( "Languagefiles Path" ));
+		titleTxt->SetText(tr( "Languages Path" ));
 		ChangePath(Settings.languagefiles_path, sizeof(Settings.languagefiles_path));
 	}
 

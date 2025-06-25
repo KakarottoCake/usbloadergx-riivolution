@@ -23,6 +23,11 @@
 #include "usbloader/GameList.h"
 #include "gecko.h"
 
+constexpr int BUTTONS_PER_PAGE = 12;
+constexpr int PREFETCH_BEFORE = 24;
+constexpr int PREFETCH_AFTER = 36;
+constexpr int MAX_PREFETCH = PREFETCH_BEFORE + BUTTONS_PER_PAGE + PREFETCH_AFTER;
+
 //! some math to get the row and column from channel idx
 static inline int Idx2Row(int sIdx)
 {
@@ -113,8 +118,8 @@ GuiBannerGrid::GuiBannerGrid(int listOffset)
 
 	//! Calculate the page count
 	//! 1 page is minumum to show statics even if no games are loaded
-	pageCnt = std::max((int)(bannerList.size() + 11) / 12, 1);
-	pageNo = LIMIT(listOffset / 12, 0, pageCnt-1);
+	pageCnt = std::max((int)(bannerList.size() + BUTTONS_PER_PAGE - 1) / BUTTONS_PER_PAGE, 1);
+	pageNo = LIMIT(listOffset / BUTTONS_PER_PAGE, 0, pageCnt-1);
 
 	//! set screen properties
 	width = ScreenProps.x = screenwidth;
@@ -187,7 +192,7 @@ int GuiBannerGrid::GetClickedOption(void)
 		if (gridBtn[i]->GetState() == STATE_CLICKED)
 		{
 			gridBtn[i]->SetState(STATE_SELECTED);
-			return pageNo * 12 + i;
+			return pageNo * BUTTONS_PER_PAGE + i;
 		}
 	}
 	return -1;
@@ -198,14 +203,14 @@ int GuiBannerGrid::GetSelectedOption(void)
 	for (int i = 0; i < MAX_BUTTONS; ++i)
 	{
 		if (gridBtn[i]->GetState() == STATE_SELECTED)
-			return pageNo * 12 + i;
+			return pageNo * BUTTONS_PER_PAGE + i;
 	}
 	return -1;
 }
 
 void GuiBannerGrid::UpdateTooltips(void)
 {
-	int chIdx = pageNo * 12;
+	int chIdx = pageNo * BUTTONS_PER_PAGE;
 
 	for(int i = 0; i < MAX_BUTTONS; i++)
 	{
@@ -234,8 +239,8 @@ void GuiBannerGrid::UpdateTooltips(void)
 
 void GuiBannerGrid::GetIconCoordinates(int icon, f32 *x, f32 *y)
 {
-	int row = Idx2Row(icon % 12);
-	int column = Idx2Column(icon % 12);
+	int row = Idx2Row(icon % BUTTONS_PER_PAGE);
+	int column = Idx2Column(icon % BUTTONS_PER_PAGE);
 	*x = XOffset + chanWidth * column + ScreenProps.x * 0.5f  - chanWidth * 2.f;
 	*y = YOffset + chanHeight * row + (ScreenProps.y - chanHeight) * 0.5f - chanHeight;
 }
@@ -333,6 +338,20 @@ void GuiBannerGrid::Update(GuiTrigger *t)
 	}
 }
 
+void GuiBannerGrid::PrefetchBanners(int startIdx, int endIdx)
+{
+	for (int i = endIdx; i >= startIdx; i--) // counting backwards so the loading is upwards
+	{
+		if (i >= 0 && i < (int)bannerList.size())
+		{
+			if (!bannerList[i])
+				bannerList[i] = new BannerAsync(gameList[i]);
+			if (!bannerList[i]->getIcon())
+				BannerAsync::PushFront(bannerList[i]);
+		}
+	}
+}
+
 void GuiBannerGrid::Draw()
 {
 	if(!this->IsVisible())
@@ -354,43 +373,35 @@ void GuiBannerGrid::Draw()
 	Mtx modelview;
 	guMtxTransApply(gridview, modelview, fAnimation, 0.f, 0.f);
 
-	int chIdx = pageNo * 12;
+	int chIdx = pageNo * BUTTONS_PER_PAGE;
 
 	//! removed unneeded banners
+	int removeBefore = chIdx - PREFETCH_BEFORE;
+	int removeAfter = chIdx + PREFETCH_AFTER;
 	for(int i = 0; i < (int) bannerList.size(); i++)
 	{
-		if((i < (chIdx - 24) || i > (chIdx + 36)) && bannerList[i] != NULL)
+		if((i < removeBefore || i > removeAfter) && bannerList[i] != NULL)
 		{
 			BannerAsync::RemoveBanner(bannerList[i]);
 			bannerList[i] = NULL;
 		}
 	}
 
-	//! Load the games that are seen first and after that the rest
-	for(int i = chIdx+11; i >= chIdx; i--) // counting backwards so the loading is upwards
-	{
-		if(i >= 0 && i < (int) bannerList.size())
-		{
-			if(!bannerList[i])
-				bannerList[i] = new BannerAsync(gameList[i]);
-
-			if(!bannerList[i]->getIcon())
-				BannerAsync::PushFront(bannerList[i]);
-		}
-	}
+	//! Prefetch banners for visible and soon to be visible games
+	PrefetchBanners(chIdx, chIdx + BUTTONS_PER_PAGE - 1);
 
 	//! we start at the channels on pre-pre-page
-	chIdx -= 24;
+	chIdx -= PREFETCH_BEFORE;
 
 	int GridCutLeft = 0;
 	int GridCutRight = vmode->fbWidth;
 
-	for(int sIdx = -24; sIdx < 36; sIdx++, chIdx++)
+	for(int sIdx = -PREFETCH_BEFORE; sIdx < PREFETCH_AFTER; sIdx++, chIdx++)
 	{
 		int row = Idx2Row(sIdx);
 		int column = Idx2Column(sIdx);
 
-		if(chIdx < 0 || chIdx >= pageCnt*12)
+		if(chIdx < 0 || chIdx >= pageCnt*BUTTONS_PER_PAGE)
 			continue;
 
 		if(chIdx >= 0 && chIdx < (int) bannerList.size() && !bannerList[chIdx])
@@ -426,7 +437,7 @@ void GuiBannerGrid::Draw()
 		// save scissor value for grid cut of left/right part
 		if(chIdx == 0)
 			GridCutLeft = scissorX;
-		if(chIdx == pageCnt*12-1)
+		if(chIdx == pageCnt*BUTTONS_PER_PAGE-1)
 			GridCutRight = scissorX+scissorW;
 
 		if(chIdx >= (int) bannerList.size() || !bannerList[chIdx]->getIcon())
@@ -570,8 +581,8 @@ void GuiBannerGrid::Draw()
 		if(AnimationRunning)
 			gridBtn[i]->ResetState();
 
-		if (!AnimationRunning && Settings.marknewtitles && (pageNo * 12 + i) < gameList.size()
-			&& NewTitles::Instance()->IsNew(gameList[pageNo * 12 + i]->id))
+		if (!AnimationRunning && Settings.marknewtitles && (pageNo * BUTTONS_PER_PAGE + i) < gameList.size()
+			&& NewTitles::Instance()->IsNew(gameList[pageNo * BUTTONS_PER_PAGE + i]->id))
 				gridBtn[i]->Draw();
 
 		gridBtn[i]->DrawTooltip();

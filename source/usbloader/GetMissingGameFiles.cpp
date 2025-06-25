@@ -23,19 +23,21 @@ int GetMissingGameFiles(const char * path, const char * fileext, std::vector<std
 	char filepath[512];
 	MissingFilesList.clear();
 
-	for (int i = 0; i < gameList.size(); ++i)
-	{
-		struct discHdr* header = gameList[i];
+	std::vector<struct discHdr *> headerlist;
+	if (!gameList.GetGameListHeaders(headerlist, MODE_ALL))
+		return 0;
 
+	for (u32 i = 0; i < headerlist.size(); ++i)
+	{
 		// Only GameCube games might have missing banners
-		if (strcmp(fileext, ".bnr") == 0 && !(header->type >= TYPE_GAME_GC_IMG && header->type <= TYPE_GAME_GC_EXTRACTED))
+		if (strcmp(fileext, ".bnr") == 0 && !(headerlist[i]->type >= TYPE_GAME_GC_IMG && headerlist[i]->type <= TYPE_GAME_GC_EXTRACTED))
 			continue;
 		
 		// NAND and EmuNAND games don't have disc artwork
-		if (strcmp(path, Settings.disc_path) == 0 && (header->type == TYPE_GAME_NANDCHAN || header->type == TYPE_GAME_EMUNANDCHAN))
+		if (strcmp(path, Settings.disc_path) == 0 && (headerlist[i]->type == TYPE_GAME_NANDCHAN || headerlist[i]->type == TYPE_GAME_EMUNANDCHAN))
 			continue;
 
-		snprintf(gameID, sizeof(gameID), "%s", (char *) header->id);
+		snprintf(gameID, sizeof(gameID), "%s", (char *) headerlist[i]->id);
 		snprintf(filepath, sizeof(filepath), "%s/%s%s", path, gameID, fileext);
 
 		if (CheckFile(filepath))
@@ -56,7 +58,7 @@ int GetMissingGameFiles(const char * path, const char * fileext, std::vector<std
 			continue;
 
 		//! Not found add to missing list
-		snprintf(gameID, sizeof(gameID), "%s", (char *) header->id);
+		snprintf(gameID, sizeof(gameID), "%s", (char *) headerlist[i]->id);
 		MissingFilesList.push_back(std::string(gameID));
 	}
 

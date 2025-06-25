@@ -32,22 +32,26 @@ static inline const char * ConsoleFromTitleID(const char* TitleID)
 	switch (TitleID[0])
 	{
 		case 'W': return "WiiWare";
-		case 'D': return "VC_Arcade";
-		case 'H': return "Wii_System_Channel";
+		case 'D': return "Demo";
+		case 'H': return "Channel";
 		case 'F': return "VC_NES";
 		case 'G': return "GameCube";
 		case 'J': return "VC_SNES";
 		case 'N': return "VC_N64";
-		case 'L': return "VC_Master_System";
-		case 'M': return "VC_Genesis_Megadrive";
-		case 'E': return "VC_NeoGeo";
-		case 'C': return "VC_Commodore";
+		case 'L': return "VC_SMS";
+		case 'M':
+			if (TitleID[3] == 'E')
+				return "VC_GEN";
+			else
+				return "VC_SMD";
+		case 'E': return "VC_NG";
+		case 'C': return "VC_C64";
 		case 'X': return "VC_MSX";
-		case 'P': return "VC_TurboGraphX";
-		case 'Q': return "VC_TurboGraphX-CD";
-		case 'R': return "Wii_Game_Disc";
-		case 'S': return "Wii_Game_Disc";
-		default: return "Unknown";
+		case 'P': return "VC_TG16";
+		case 'Q': return "VC_TGCD";
+		case 'R': return "Wii";
+		case 'S': return "Wii";
+		default: return "Custom";
 	}
 }
 
@@ -61,8 +65,8 @@ static inline const char * HdrTypeText(u8 type)
 		case TYPE_GAME_GC_IMG		: return "Gamecube_Image";
 		case TYPE_GAME_GC_DISC		: return "Gamecube_Disc";
 		case TYPE_GAME_GC_EXTRACTED	: return "Gamecube_Extracted";
-		case TYPE_GAME_NANDCHAN		: return "Channel_NAND";
-		case TYPE_GAME_EMUNANDCHAN	: return "Channel_EmuNAND";
+		case TYPE_GAME_NANDCHAN		: return "NAND";
+		case TYPE_GAME_EMUNANDCHAN	: return "EmuNAND";
 		default						: return "Unknown";
 	}
 }
@@ -1138,10 +1142,6 @@ bool save_gamelist(bool bCSV) // save gamelist
 		mainWindow->SetState(STATE_DEFAULT);
 		return false;
 	}
-	wString oldFilter(gameList.GetCurrentFilter());
-
-	//make sure that all games are added to the gamelist
-	gameList.LoadUnfiltered();
 
 	f32 size = 0.0f;
 	f32 freespace, used;
@@ -1151,7 +1151,7 @@ bool save_gamelist(bool bCSV) // save gamelist
 
 	if (bCSV)
 	{
-		fprintf(f, "\"ID\",\"Size\",\"Name\",\"Type\",\"Console\"\n");
+		fprintf(f, "\"ID\",\"Size\",\"Type\",\"System\",\"Title\"\n");
 
 		for (i = 0; i < gameList.size(); i++)
 		{
@@ -1161,7 +1161,7 @@ bool save_gamelist(bool bCSV) // save gamelist
 				if(header->type == TYPE_GAME_EMUNANDCHAN)
 				{
 					char nandPath[1024];
-					snprintf(nandPath, sizeof(nandPath), "%s/title/00010001/%02x%02x%02x%02x", Settings.NandEmuPath, header->id[0], header->id[1], header->id[2], header->id[3]);
+					snprintf(nandPath, sizeof(nandPath), "%s/title/%08x/%08x", Settings.NandEmuPath, (unsigned int)(header->tid >> 32), (unsigned int)header->tid);
 					size = GetDirectorySize(nandPath);
 				}
 				else
@@ -1180,17 +1180,16 @@ bool save_gamelist(bool bCSV) // save gamelist
 			}
 			char rsize[11];
 			readable_size(size, rsize);
-			fprintf(f, "\"%.6s\",\"%s\",\"%s\",\"%s\",\"%s\"\n", (char*)header->id, rsize, GameTitles.GetTitle(header), HdrTypeText(header->type), ConsoleFromTitleID((char*)header->id));
+			fprintf(f, "\"%.6s\",\"%s\",\"%s\",\"%s\",\"%s\"\n", (char*)header->id, rsize, HdrTypeText(header->type), ConsoleFromTitleID((char*)header->id), GameTitles.GetTitle(header));
 		}
 	}
 	else
 	{
-		fprintf(f, "# USB Loader GX has saved this file\n");
 		fprintf(f, "# This file was created based on your list of games and language settings.\n");
 		fprintf(f, "# Only the size of the first disc is shown here.\n\n");
 
 		fprintf(f, "%.2fGB %s %.2fGB %s\n\n", freespace, tr( "of" ), (freespace + used), tr( "free" ));
-		fprintf(f, "ID       Size           Name; Game type; Console (based on TitleID)\n");
+		fprintf(f, "ID       Size       Type                 System     Title\n");
 
 		for (i = 0; i < gameList.size(); i++)
 		{
@@ -1200,7 +1199,7 @@ bool save_gamelist(bool bCSV) // save gamelist
 				if(header->type == TYPE_GAME_EMUNANDCHAN)
 				{
 					char nandPath[1024];
-					snprintf(nandPath, sizeof(nandPath), "%s/title/00010001/%02x%02x%02x%02x", Settings.NandEmuPath, header->id[0], header->id[1], header->id[2], header->id[3]);
+					snprintf(nandPath, sizeof(nandPath), "%s/title/%08x/%08x", Settings.NandEmuPath, (unsigned int)(header->tid >> 32), (unsigned int)header->tid);
 					size = GetDirectorySize(nandPath);
 				}
 				else
@@ -1221,28 +1220,11 @@ bool save_gamelist(bool bCSV) // save gamelist
 			char rsize[11];
 			readable_size(size, rsize);
 			// Use spaces because editors can't agree on tab sizes
-			if (header->id[4])
-				fprintf(f, "%.6s   ", (char*)header->id);
-			else
-				fprintf(f, "%.6s     ", (char*)header->id);
-			if (strlen(rsize) == 10)
-				fprintf(f, "[%s]   ", rsize);
-			else if (strlen(rsize) == 9)
-				fprintf(f, "[%s]    ", rsize);
-			else if (strlen(rsize) == 8)
-				fprintf(f, "[%s]     ", rsize);
-			else if (strlen(rsize) == 6)
-				fprintf(f, "[%s]       ", rsize);
-			else
-				fprintf(f, "[%s]      ", rsize);
-			fprintf(f, "%s; ", GameTitles.GetTitle(header));
-			fprintf(f, "%s; ", HdrTypeText(header->type));
-			fprintf(f, "%s\n", ConsoleFromTitleID((char*)header->id));
+			fprintf(f, "%-6s   %-9s   %-18s   %-8s   %s\n", (char*)header->id, rsize, HdrTypeText(header->type), ConsoleFromTitleID((char*)header->id), GameTitles.GetTitle(header));
 		}
 	}
 	fclose(f);
 
-	gameList.FilterList(oldFilter.c_str());
 	mainWindow->SetState(STATE_DEFAULT);
 	return true;
 }

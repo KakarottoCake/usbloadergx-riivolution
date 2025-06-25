@@ -34,8 +34,8 @@
 #define DESTINATION_IP "192.168.1.255"
 #define DESTINATION_PORT 4405
 
-#define GPRINTF_SIZE 256
-#define WIFIGECKO_SIZE 1024
+#define GPRINTF_SIZE 512
+#define WIFIGECKO_SIZE 2048
 
 char wifigeckobuffer[WIFIGECKO_SIZE];
 
@@ -84,7 +84,7 @@ int WifiGecko_Send(const char *data, int datasize)
 	u32 sendsize = strlen(wifigeckobuffer);
 
 	while (net_get_status() == -EBUSY)
-		usleep(10000);
+		usleep(100);
 	int ret = net_send(connection, wifigeckobuffer, sendsize, 0);
 	if (ret < 0)
 		WifiGecko_Close();

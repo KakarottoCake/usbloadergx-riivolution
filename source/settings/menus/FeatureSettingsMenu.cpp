@@ -243,8 +243,7 @@ int FeatureSettingsMenu::GetMenuInternal()
 			if(choice)
 			{
 				Settings.autonetwork = ON;
-				if(!IsNetworkInit())
-					Initialize_Network();
+				ResumeNetworkThread();
 			}
 		}
 

@@ -35,7 +35,7 @@ int DownloadAllLanguageFiles()
 
 	if(!IsNetworkInit())
 	{
-		ShowError(tr("Network is not initiated."));
+		ShowError(tr("Network is not initialized."));
 		return -2;
 	}
 	char fullURL[300];
@@ -103,7 +103,7 @@ int UpdateLanguageFiles()
 
 	if(!IsNetworkInit())
 	{
-		ShowError(tr("Network is not initiated."));
+		ShowError(tr("Network is not initialized."));
 		return -2;
 	}
 

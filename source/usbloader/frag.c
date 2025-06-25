@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <unistd.h>
+#include <limits.h>
 #include <sys/stat.h>
 
 #include "libs/libext2fs/ext2_frag.h"
@@ -170,6 +171,10 @@ int get_frag_list_for_file(char *fname, u8 *id, const u8 wbfs_part_fs, const u32
 	int is_wbfs = 0;
 	int ret_val = -1;
 
+	char fname_buf[PATH_MAX];
+	strncpy(fname_buf, fname, PATH_MAX - 1);
+	fname_buf[PATH_MAX - 1] = '\0';
+
 	if (strcasecmp(strrchr(fname,'.'), ".wbfs") == 0) {
 		is_wbfs = 1;
 	}
@@ -183,11 +188,11 @@ int get_frag_list_for_file(char *fname, u8 *id, const u8 wbfs_part_fs, const u32
 	for (i=0; i<10; i++) {
 		frag_init(fs, MAX_FRAG);
 		if (i > 0) {
-			fname[strlen(fname)-1] = '0' + i;
-			if (stat(fname, &st) == -1) break;
+			fname_buf[strlen(fname_buf)-1] = '0' + i;
+			if (stat(fname_buf, &st) == -1) break;
 		}
 		if (wbfs_part_fs == PART_FS_FAT) {
-			ret = _FAT_get_fragments(fname, &frag_append, fs);
+			ret = _FAT_get_fragments(fname_buf, &frag_append, fs);
 			if (ret) {
 				// don't return failure, let it fallback to old method
 				//ret_val = ret;
@@ -195,7 +200,7 @@ int get_frag_list_for_file(char *fname, u8 *id, const u8 wbfs_part_fs, const u32
 				goto out;
 			}
 		} else if (wbfs_part_fs == PART_FS_NTFS) {
-			ret = _NTFS_get_fragments(fname, &frag_append, fs);
+			ret = _NTFS_get_fragments(fname_buf, &frag_append, fs);
 			if (ret) {
 				ret_val = ret;
 				goto out;
@@ -205,7 +210,7 @@ int get_frag_list_for_file(char *fname, u8 *id, const u8 wbfs_part_fs, const u32
 				fs->frag[j].sector += lba_offset;
 			}
 		} else if (wbfs_part_fs == PART_FS_EXT) {
-			ret = _EXT2_get_fragments(fname, &frag_append, fs);
+			ret = _EXT2_get_fragments(fname_buf, &frag_append, fs);
 			if (ret) {
 				ret_val = ret;
 				goto out;
