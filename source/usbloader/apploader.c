@@ -1,12 +1,9 @@
 #include <stdio.h>
 #include <ogcsys.h>
-#include <string.h>
-#include <malloc.h>
 
 #include "apploader.h"
 #include "wdvd.h"
 #include "wpad.h"
-#include "disc.h"
 #include "alternatedol.h"
 #include "fstfile.h"
 #include "gecko.h"
@@ -16,9 +13,10 @@
 
 /* Apploader function pointers */
 typedef int (*app_main)(void **dst, int *size, int *offset);
-typedef void (*app_init)(void(*report)(const char *fmt, ...));
+typedef void (*app_init_cb)(const char *fmt, ...);
+typedef void (*app_init)(app_init_cb);
 typedef void *(*app_final)();
-typedef void (*app_entry)(void(**init)(void(*report)(const char *fmt, ...)), int(**main)(), void *(**final)());
+typedef void (*app_entry)(app_init *init, app_main *main, app_final *final);
 
 /* Apploader pointers */
 static u8 *appldr = (u8 *) 0x81200000;
@@ -31,11 +29,14 @@ static u32 buffer[0x20] ATTRIBUTE_ALIGN( 32 );
 
 s32 Apploader_Run(entry_point *entry, char * dolpath, u8 alternatedol, u32 alternatedoloffset)
 {
-	app_entry appldr_entry;
-	app_init appldr_init;
-	app_main appldr_main;
-	app_final appldr_final;
+	app_entry appldr_entry = NULL;
+	app_init appldr_init = NULL;
+	app_main appldr_main = NULL;
+	app_final appldr_final = NULL;
 
+	void *dst = NULL;
+	int len = 0;
+	int offset = 0;
 	u32 appldr_len;
 	s32 ret;
 	gprintf("\nApploader_Run() started\n");
@@ -51,6 +52,10 @@ s32 Apploader_Run(entry_point *entry, char * dolpath, u8 alternatedol, u32 alter
 	ret = WDVD_Read(appldr, appldr_len, APPLDR_OFFSET + 0x20);
 	if (ret < 0) return ret;
 
+	/* Flush memory */
+	DCFlushRange(appldr, appldr_len);
+	ICInvalidateRange(appldr, appldr_len);
+
 	/* Set apploader entry function */
 	appldr_entry = (app_entry) buffer[4];
 
@@ -60,21 +65,15 @@ s32 Apploader_Run(entry_point *entry, char * dolpath, u8 alternatedol, u32 alter
 	/* Initialize apploader */
 	appldr_init(gprintf);
 
-	for (;;)
+	while(appldr_main(&dst, &len, &offset))
 	{
-		void *dst = NULL;
-		int len = 0, offset = 0;
-
-		/* Run apploader main function */
-		ret = appldr_main(&dst, &len, &offset);
-		if (!ret) break;
-
 		/* Read data from DVD */
 		WDVD_Read(dst, len, (u64) (offset << 2));
 
 		RegisterDOL((u8 *) dst, len);
 
 		DCFlushRange(dst, len);
+		ICInvalidateRange(dst, len);
 	}
 
 	*entry = appldr_final();
@@ -99,6 +98,8 @@ s32 Apploader_Run(entry_point *entry, char * dolpath, u8 alternatedol, u32 alter
 		wip_reset_counter();
 		FST_ENTRY *fst = (FST_ENTRY *) *(u32 *) 0x80000038;
 
+		if (!fst)
+			return -1;
 		//! Check if it's inside the limits
 		if(alternatedoloffset >= fst[0].filelen)
 			return 0;

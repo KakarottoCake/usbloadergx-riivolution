@@ -25,8 +25,7 @@
 #include "usbloader/wdvd.h"
 #include "utils/tools.h"
 #include "sys.h"
-#include "svnrev.h"
-#include "gitver.h"
+#include "version.h"
 #include "usbloader/sdhc.h"
 #include "settings/meta.h"
 
@@ -57,10 +56,13 @@ StartUpProcess::StartUpProcess()
 	versionTxt->SetAlignment(ALIGN_LEFT, ALIGN_BOTTOM);
 	versionTxt->SetPosition(23, screenheight - 20);
 
-#ifdef FULLCHANNEL
-	versionTxt->SetTextf("v3.0c Rev. %s (%s)", GetRev(), commitID());
+// Please don't release unofficial builds w/o tagging them as such
+#if defined(FULLCHANNEL)
+	versionTxt->SetTextf("v4.0c Rev. %s (%s)", LOADER_REV, GIT_VER);
+#elif defined(GITRELEASE)
+	versionTxt->SetTextf("v4.0 Rev. %s (%s)", LOADER_REV, GIT_VER);
 #else
-	versionTxt->SetTextf("v3.0 Rev. %s (%s)", GetRev(), commitID());
+	versionTxt->SetTextf("v4.0 Rev. %s (%s) / Unofficial", LOADER_REV, GIT_VER);
 #endif
 
 	if (strncmp(Settings.ConfigPath, "sd", 2) == 0)

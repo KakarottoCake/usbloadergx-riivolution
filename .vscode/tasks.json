@@ -9,7 +9,7 @@
         {
             "label": "make",
             "type": "shell",
-            "command": "make",
+            "command": "make -j8",
             "problemMatcher": [],
             "group": {
                 "kind": "build",
@@ -25,7 +25,7 @@
         {
             "label": "deploy",
             "type": "shell",
-            "command": "make deploy",
+            "command": "make deploy -j8",
             "problemMatcher": []
         }
     ]

@@ -45,7 +45,7 @@
 #include "FileOperations/fileops.h"
 #include "xml/GameTDB.hpp"
 #include "sys.h"
-#include "svnrev.h"
+#include "version.h"
 
 /****************************************************************************
  * Checking if an Update is available
@@ -178,7 +178,12 @@ static int ApplicationDownload(void)
 {
 	std::string DownloadURL;
 	int newrev = 0;
-	int currentrev = atoi(GetRev());
+#if defined(GITRELEASE)
+	int currentrev = atoi(LOADER_REV);
+#else
+	// It might be a pre-release version, so always update
+	int currentrev = 0;
+#endif
 
 	struct download file = {};
 #ifdef FULLCHANNEL

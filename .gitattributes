@@ -1,0 +1,9 @@
+makefile text eol=lf
+*.sh text eol=lf
+*.elf binary
+*.dol binary
+*.ttf binary
+*.png binary
+*.ogg binary
+*.bin binary
+*.bnr binary

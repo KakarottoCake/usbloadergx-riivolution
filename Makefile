@@ -50,71 +50,64 @@ SOURCES		:=	source \
 				source/utils/minizip \
 				source/usbloader/wbfs \
 				source/cache
-DATA		:=	data \
-				data/images \
+DATA		:=	data/images \
 				data/fonts \
 				data/sounds \
 				data/binary
 INCLUDES	:=	source
 
 #---------------------------------------------------------------------------------
-# options for code generation
+# Options for code generation
 #---------------------------------------------------------------------------------
-CFLAGS		=	-g -ggdb -O2 -Wall -Wno-multichar -Wno-unused-parameter -Wextra $(MACHDEP) $(INCLUDE) -D_GNU_SOURCE
+CFLAGS		=	-ggdb -Os -Wall -Wno-multichar -Wno-unused-parameter -Wextra $(MACHDEP) $(INCLUDE) -D_GNU_SOURCE -DNDEBUG
 CXXFLAGS	=	$(CFLAGS)
-LDFLAGS		=	-g -ggdb $(MACHDEP) -Wl,-Map,$(notdir $@).map,--section-start,.init=0x80B00000,-wrap,malloc,-wrap,free,-wrap,memalign,-wrap,calloc,-wrap,realloc,-wrap,malloc_usable_size,-wrap,time
+LDFLAGS		=	-ggdb $(MACHDEP) -Wl,-Map,$(notdir $@).map,--section-start,.init=0x80B00000,-wrap,malloc,-wrap,free,-wrap,memalign,-wrap,calloc,-wrap,realloc,-wrap,malloc_usable_size
 
 ifeq ($(BUILDMODE),channel)
-CFLAGS += -DFULLCHANNEL
-CXXFLAGS += -DFULLCHANNEL
+	CFLAGS += -DFULLCHANNEL
+	CXXFLAGS += -DFULLCHANNEL
+else ifeq ($(BUILDMODE),release)
+# Unofficial builds should be tagged as such
+	GIT_ORIGIN_URL := $(shell git remote get-url origin 2>/dev/null)
+	ifneq (,$(findstring wiidev/usbloadergx,$(GIT_ORIGIN_URL)))
+		CFLAGS += -DGITRELEASE
+		CXXFLAGS += -DGITRELEASE
+	endif
 endif
 
 #---------------------------------------------------------------------------------
-# any extra libraries we wish to link with the project
+# Any extra libraries we wish to link with the project
 #---------------------------------------------------------------------------------
 LIBS := -lwolfssl -lcustomfat -lcustomntfs -lcustomext2fs -lvorbisidec -logg \
 		-lmad -lfreetype -lgd -ljpeg -lpng -lm -lz -lwiiuse -lwiidrc \
 		-lbte -lasnd -logc
 #---------------------------------------------------------------------------------
-# list of directories containing libraries, this must be the top level containing
+# List of directories containing libraries, this must be the top level containing
 # include and lib
 #---------------------------------------------------------------------------------
 LIBDIRS	:= $(CURDIR)/portlibs
 #---------------------------------------------------------------------------------
-# no real need to edit anything past this point unless you need to add additional
-# rules for different file extensions
-#---------------------------------------------------------------------------------
 ifneq ($(BUILD),$(notdir $(CURDIR)))
 #---------------------------------------------------------------------------------
-export PROJECTDIR := $(CURDIR)
-export OUTPUT	:=	$(CURDIR)/$(TARGETDIR)/$(TARGET)
-export VPATH	:=	$(foreach dir,$(SOURCES),$(CURDIR)/$(dir)) \
-					$(foreach dir,$(DATA),$(CURDIR)/$(dir))
-export DEPSDIR	:=	$(CURDIR)/$(BUILD)
+export PROJECTDIR	:=	$(CURDIR)
+export OUTPUT		:=	$(CURDIR)/$(TARGET)
+export VPATH		:=	$(foreach dir,$(SOURCES),$(CURDIR)/$(dir)) \
+						$(foreach dir,$(DATA),$(CURDIR)/$(dir))
+export DEPSDIR		:=	$(CURDIR)/$(BUILD)
 
 #---------------------------------------------------------------------------------
-# automatically build a list of object files for our project
+# Automatically build a list of object files for our project
 #---------------------------------------------------------------------------------
-SVNREV		:=	$(shell bash ./svnrev.sh)
-GITVER		:=	$(shell bash ./gitver.sh)
-IMPORTFILES	:=  $(shell bash ./filelist.sh)
-export CFILES	:=	$(foreach dir,$(SOURCES),$(notdir $(wildcard $(dir)/*.c)))
-export CPPFILES	:=	$(foreach dir,$(SOURCES),$(notdir $(wildcard $(dir)/*.cpp)))
-sFILES		:=	$(foreach dir,$(SOURCES),$(notdir $(wildcard $(dir)/*.s)))
-SFILES		:=	$(foreach dir,$(SOURCES),$(notdir $(wildcard $(dir)/*.S)))
-ELFFILES	:=	$(foreach dir,$(DATA),$(notdir $(wildcard $(dir)/*.elf)))
-BINFILES	:=	$(foreach dir,$(DATA),$(notdir $(wildcard $(dir)/*.bin)))
-TTFFILES	:=	$(foreach dir,$(DATA),$(notdir $(wildcard $(dir)/*.ttf)))
-PNGFILES	:=	$(foreach dir,$(DATA),$(notdir $(wildcard $(dir)/*.png)))
-OGGFILES	:=	$(foreach dir,$(DATA),$(notdir $(wildcard $(dir)/*.ogg)))
-PCMFILES	:=	$(foreach dir,$(DATA),$(notdir $(wildcard $(dir)/*.pcm)))
-WAVFILES	:=	$(foreach dir,$(DATA),$(notdir $(wildcard $(dir)/*.wav)))
-DOLFILES	:=	$(foreach dir,$(DATA),$(notdir $(wildcard $(dir)/*.dol)))
-MP3FILES	:=	$(foreach dir,$(DATA),$(notdir $(wildcard $(dir)/*.mp3)))
-BNRFILES	:=	$(foreach dir,$(DATA),$(notdir $(wildcard $(dir)/*.bnr)))
+CREATEFILES		:=	$(shell bash ./makexml.sh)
+IMPORTFILES		:=	$(shell bash ./filelist.sh)
+export CFILES	:=	$(foreach dir,$(SOURCES),$(notdir $(sort $(wildcard $(dir)/*.c))))
+export CPPFILES	:=	$(foreach dir,$(SOURCES),$(notdir $(sort $(wildcard $(dir)/*.cpp))))
+sFILES			:=	$(foreach dir,$(SOURCES),$(notdir $(sort $(wildcard $(dir)/*.s))))
+SFILES			:=	$(foreach dir,$(SOURCES),$(notdir $(sort $(wildcard $(dir)/*.S))))
+DATAFILES		:=	$(foreach dir,$(DATA),$(notdir $(sort $(wildcard $(dir)/*.*))))
 
 #---------------------------------------------------------------------------------
-# use CXX for linking C++ projects, CC for standard C
+# Use CXX for linking C++ projects, CC for standard C
 #---------------------------------------------------------------------------------
 ifeq ($(strip $(CPPFILES)),)
 	export LD	:=	$(CC)
@@ -122,22 +115,20 @@ else
 	export LD	:=	$(CXX)
 endif
 
-export OFILES	:=	$(CPPFILES:.cpp=.o) $(CFILES:.c=.o) \
-					$(sFILES:.s=.o) $(SFILES:.S=.o) \
-					$(TTFFILES:.ttf=.ttf.o) $(PNGFILES:.png=.png.o) $(addsuffix .o,$(DOLFILES)) \
-					$(OGGFILES:.ogg=.ogg.o) $(PCMFILES:.pcm=.pcm.o) $(MP3FILES:.mp3=.mp3.o) \
-					$(WAVFILES:.wav=.wav.o) $(addsuffix .o,$(ELFFILES)) $(addsuffix .o,$(BINFILES)) \
-					$(BNRFILES:.bnr=.bnr.o) $(CURDIR)/data/magic_patcher.o
+export OFILES	:=	$(addsuffix .o,$(DATAFILES)) \
+					$(CURDIR)/data/magic_patcher.o \
+					$(CPPFILES:.cpp=.o) $(CFILES:.c=.o) \
+					$(sFILES:.s=.o) $(SFILES:.S=.o)
 
 #---------------------------------------------------------------------------------
-# build a list of include paths
+# Build a list of include paths
 #---------------------------------------------------------------------------------
 export INCLUDE	:=	$(foreach dir,$(INCLUDES),-I$(CURDIR)/$(dir)) \
 					$(foreach dir,$(LIBDIRS),-I$(dir)/include) \
 					-I$(CURDIR)/$(BUILD) -I$(LIBOGC_INC)
 
 #---------------------------------------------------------------------------------
-# build a list of library paths
+# Build a list of library paths
 #---------------------------------------------------------------------------------
 export LIBPATHS	:=	$(foreach dir,$(LIBDIRS),-L$(dir)/lib) -L$(CURDIR)/source/libs/libdrc/ \
 					-L$(CURDIR)/source/libs/libext2fs -L$(CURDIR)/source/libs/libfat \
@@ -145,16 +136,22 @@ export LIBPATHS	:=	$(foreach dir,$(LIBDIRS),-L$(dir)/lib) -L$(CURDIR)/source/lib
 					-L$(CURDIR)/source/libs/libwolfssl -L$(LIBOGC_LIB)
 
 export OUTPUT	:=	$(CURDIR)/$(TARGET)
-.PHONY: $(BUILD) lang all clean
+.PHONY: $(BUILD) channel lang theme all clean deploy zip reload release
 
 #---------------------------------------------------------------------------------
 $(BUILD):
 	@[ -d $@ ] || mkdir -p $@
 	@$(MAKE) --no-print-directory -C $(BUILD) -f $(CURDIR)/Makefile
 
+#---------------------------------------------------------------------------------
 channel:
 	@[ -d build ] || mkdir -p build
 	@$(MAKE) BUILDMODE=channel --no-print-directory -C $(BUILD) -f $(CURDIR)/Makefile
+
+#---------------------------------------------------------------------------------
+release:
+	@[ -d build ] || mkdir -p build
+	@$(MAKE) BUILDMODE=release --no-print-directory -C $(BUILD) -f $(CURDIR)/Makefile
 
 #---------------------------------------------------------------------------------
 lang:
@@ -185,16 +182,22 @@ deploy:
 	@cp HBC/icon.png usbloader_gx/
 	@cp HBC/meta.xml usbloader_gx/
 	@zip usbloader_gx.zip usbloader_gx/*
-	wiiload usbloader_gx.zip
+	@wiiload usbloader_gx.zip
+
+#---------------------------------------------------------------------------------
+zip:
+	$(MAKE)
+	@echo Creating zip file...
+	@[ -d usbloader_gx ] || mkdir -p usbloader_gx
+	@cp $(TARGET).dol usbloader_gx/
+	@cp $(TARGET).elf usbloader_gx/
+	@cp HBC/icon.png usbloader_gx/
+	@cp HBC/meta.xml usbloader_gx/
+	@zip usbloader_gx.zip usbloader_gx/*
 
 #---------------------------------------------------------------------------------
 reload:
-	wiiload -r $(OUTPUT).dol
-
-#---------------------------------------------------------------------------------
-release:
-	$(MAKE)
-	cp boot.dol ./hbc/boot.dol
+	@wiiload -r $(OUTPUT).dol
 
 #---------------------------------------------------------------------------------
 else
@@ -202,7 +205,7 @@ else
 DEPENDS	:=	$(OFILES:.o=.d)
 
 #---------------------------------------------------------------------------------
-# main targets
+# Main targets
 #---------------------------------------------------------------------------------
 $(OUTPUT).dol: $(OUTPUT).elf
 $(OUTPUT).elf: $(OFILES)
@@ -214,67 +217,39 @@ language: $(wildcard $(PROJECTDIR)/Languages/*.lang) $(wildcard $(PROJECTDIR)/Th
 
 %.elf.o : %.elf
 	@echo $(notdir $<)
-	@bin2s -a 32 $< | $(AS) -o $(@)
+	$(bin2o)
 
 %.dol.o : %.dol
 	@echo $(notdir $<)
-	@bin2s -a 32 $< | $(AS) -o $(@)
+	$(bin2o)
 
 %.ttf.o : %.ttf
 	@echo $(notdir $<)
-	@bin2s -a 32 $< | $(AS) -o $(@)
+	$(bin2o)
 
 %.png.o : %.png
 	@echo $(notdir $<)
-	@bin2s -a 32 $< | $(AS) -o $(@)
+	$(bin2o)
 
 %.ogg.o : %.ogg
 	@echo $(notdir $<)
-	@bin2s -a 32 $< | $(AS) -o $(@)
-
-%.pcm.o : %.pcm
-	@echo $(notdir $<)
-	@bin2s -a 32 $< | $(AS) -o $(@)
-
-%.wav.o : %.wav
-	@echo $(notdir $<)
-	@bin2s -a 32 $< | $(AS) -o $(@)
-
-%.mp3.o : %.mp3
-	@echo $(notdir $<)
-	@bin2s -a 32 $< | $(AS) -o $(@)
-
-%.certs.o	:	%.certs
-	@echo $(notdir $<)
-	@bin2s -a 32 $< | $(AS) -o $(@)
-
-%.dat.o	:	%.dat
-	@echo $(notdir $<)
-	@bin2s -a 32 $< | $(AS) -o $(@)
+	$(bin2o)
 
 %.bin.o	:	%.bin
 	@echo $(notdir $<)
-	@bin2s -a 32 $< | $(AS) -o $(@)
-
-%.tik.o	:	%.tik
-	@echo $(notdir $<)
-	@bin2s -a 32 $< | $(AS) -o $(@)
-
-%.tmd.o	:	%.tmd
-	@echo $(notdir $<)
-	@bin2s -a 32 $< | $(AS) -o $(@)
+	$(bin2o)
 	
 %.bnr.o	:	%.bnr
 	@echo $(notdir $<)
-	@bin2s -a 32 $< | $(AS) -o $(@)
+	$(bin2o)
 
 export PATH		:=	$(PROJECTDIR)/gettext-bin:$(PATH)
 
 %.pot: $(CFILES) $(CPPFILES)
-	@echo Updating Languagefiles ...
+	@echo Updating language files...
 	@touch $(PROJECTDIR)/Languages/$(TARGET).pot
 	@xgettext -C -cTRANSLATORS --from-code=utf-8 --sort-output --no-wrap --no-location -ktr -ktrNOOP -o$(PROJECTDIR)/Languages/$(TARGET).pot -p $@ $^
-	@echo Updating Themefiles ...
+	@echo Updating theme files...
 	@touch $(PROJECTDIR)/Themes/$(TARGET).pot
 	@xgettext -C -cTRANSLATORS --from-code=utf-8 -F --no-wrap --add-location -kthInt -kthFloat -kthColor -kthAlign -o$(PROJECTDIR)/Themes/$(TARGET).pot -p $@ $^
 

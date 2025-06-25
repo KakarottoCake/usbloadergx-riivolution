@@ -1,5 +1,5 @@
 /*
-Copyright (c) 2014 - Cyan
+Copyright (C) 2025 blackb0x
 
 This software is provided 'as-is', without any express or implied
 warranty. In no event will the authors be held liable for any damages
@@ -20,108 +20,60 @@ misrepresented as being the original software.
 3. This notice may not be removed or altered from any source
 distribution.
 */
-#include "homebrewboot/HomebrewXML.h"
-#include "FileOperations/fileops.h"
 #include "settings/CSettings.h"
-#include "svnrev.h"
-
-int updateMetaXML()
-{
-	HomebrewXML MetaXML;
-	char filepath[255];
-	snprintf(filepath, sizeof(filepath), "%smeta.xml", Settings.ConfigPath);
-	if (!MetaXML.LoadHomebrewXMLData(filepath))
-		return 0;
-
-	char line[50];
-	snprintf(line, sizeof(line), "--ios=%d", Settings.LoaderIOS);
-	MetaXML.SetArgument(line);
-	snprintf(line, sizeof(line), "--bootios=%d", Settings.BootIOS);
-	MetaXML.SetArgument(line);
-	snprintf(line, sizeof(line), "--usbport=%d", Settings.USBPort);
-	MetaXML.SetArgument(line);
-	snprintf(line, sizeof(line), "--mountusb=%d", Settings.USBAutoMount);
-	MetaXML.SetArgument(line);
-	snprintf(line, sizeof(line), "--sdmode=%d", Settings.SDMode);
-	MetaXML.SetArgument(line);
-	snprintf(line, sizeof(line), "3.0 r%s", GetRev());
-	MetaXML.SetVersion(line);
-
-	int ret = MetaXML.SaveHomebrewXMLData(filepath);
-	return ret;
-}
+#include "xml/pugixml.hpp"
+#include "gecko.h"
 
 int editMetaArguments()
 {
-	char metapath[255] = "";
-	char metatmppath[255] = "";
+	if (Settings.skipSaving)
+		return 0;
+
+	char metapath[256];
 	snprintf(metapath, sizeof(metapath), "%smeta.xml", Settings.ConfigPath);
-	snprintf(metatmppath, sizeof(metatmppath), "%smeta.tmp", Settings.ConfigPath);
 
-	FILE *source = fopen(metapath, "rb");
-	if (!source)
+	pugi::xml_document xmlDoc;
+	pugi::xml_parse_result result = xmlDoc.load_file(metapath);
+	if (!result)
 		return 0;
 
-	FILE *destination = fopen(metatmppath, "wb");
-	if (!destination)
-	{
-		fclose(source);
+	pugi::xml_node decl = xmlDoc.prepend_child(pugi::node_declaration);
+	decl.append_attribute("version") = "1.0";
+	decl.append_attribute("encoding") = "UTF-8";
+	decl.append_attribute("standalone") = "yes";
+
+	pugi::xml_node app = xmlDoc.child("app");
+	if (!app)
 		return 0;
-	}
 
-	const int max_line_size = 255;
-	char *line = new char[max_line_size];
-	while (fgets(line, max_line_size, source) != NULL)
+	app.child("disabled_arguments").set_name("arguments");
+	pugi::xml_node arguments = app.child("arguments");
+	if (!arguments)
 	{
-		// delete commented lines
-		if (strstr(line, "	<!-- remove this line to enable arguments") != NULL ||
-			strstr(line, "	remove this line to enable arguments -->") != NULL)
-		{
-			strcpy(line, "");
-		}
-		// delete commented lines (old version)
-		if (strstr(line, "<!--   // remove this line to enable arguments") != NULL ||
-			strstr(line, "// remove this line to enable arguments -->") != NULL)
-		{
-			strcpy(line, "");
-		}
-
-		// generate argurments
-		if (strstr(line, "<arguments>") != NULL)
-		{
-			fputs(line, destination);
-			snprintf(line, max_line_size, "		<arg>--ios=%d</arg>\n", Settings.LoaderIOS);
-			fputs(line, destination);
-			snprintf(line, max_line_size, "		<arg>--bootios=%d</arg>\n", Settings.BootIOS);
-			fputs(line, destination);
-			snprintf(line, max_line_size, "		<arg>--usbport=%d</arg>\n", Settings.USBPort);
-			fputs(line, destination);
-			snprintf(line, max_line_size, "		<arg>--mountusb=%d</arg>\n", Settings.USBAutoMount);
-			fputs(line, destination);
-			snprintf(line, max_line_size, "		<arg>--sdmode=%d</arg>\n", Settings.SDMode);
-			fputs(line, destination);
-
-			while (strstr(line, "</arguments>") == NULL)
-			{
-				fgets(line, max_line_size, source); // advance one line
-				if (feof(source))
-				{
-					fclose(source);
-					fclose(destination);
-					delete[] line;
-					return 0;
-				}
-			}
-		}
-		fputs(line, destination);
+		pugi::xml_node date = app.child("release_date");
+		if (!date)
+			return 0;
+		arguments = app.insert_child_after("arguments", date);
 	}
+	else
+		arguments.remove_children();
 
-	fclose(source);
-	fclose(destination);
-	delete[] line;
+	char line[32];
+	snprintf(line, sizeof(line), "--ios=%d", Settings.LoaderIOS);
+	if (!arguments.append_child("arg").append_child(pugi::node_pcdata).set_value(line))
+		return 0;
+	snprintf(line, sizeof(line), "--bootios=%d", Settings.BootIOS);
+	if (!arguments.append_child("arg").append_child(pugi::node_pcdata).set_value(line))
+		return 0;
+	snprintf(line, sizeof(line), "--usbport=%d", Settings.USBPort);
+	if (!arguments.append_child("arg").append_child(pugi::node_pcdata).set_value(line))
+		return 0;
+	snprintf(line, sizeof(line), "--sdmode=%d", Settings.SDMode);
+	if (!arguments.append_child("arg").append_child(pugi::node_pcdata).set_value(line))
+		return 0;
 
-	if (RemoveFile(metapath))
-		RenameFile(metatmppath, metapath);
+	bool res = xmlDoc.save_file(metapath);
+	gprintf("%s meta.xml\n", res ? "Saved" : "Failed to save");
 
-	return 1;
+	return res;
 }

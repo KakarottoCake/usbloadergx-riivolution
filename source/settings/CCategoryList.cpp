@@ -27,7 +27,6 @@
 #include "CCategoryList.hpp"
 #include "language/gettext.h"
 #include "FileOperations/fileops.h"
-#include "svnrev.h"
 
 #define VALID_CONFIG_REV	1085
 

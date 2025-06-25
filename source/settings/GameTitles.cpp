@@ -7,7 +7,7 @@
 #include "usbloader/GameList.h"
 #include "Channels/channels.h"
 #include "xml/GameTDB.hpp"
-#include "svnrev.h"
+#include "version.h"
 #include "FileOperations/fileops.h"
 
 #define VALID_CACHE_REVISION 1280
@@ -247,7 +247,7 @@ void CGameTitles::WriteCachedTitles(const char *path)
 
 	CacheTitle Cache;
 	u32 count = TitleList.size();
-	u32 revision = atoi(GetRev());
+	u32 revision = atoi(LOADER_REV);
 	fwrite(&revision, 1, 4, f);
 	fwrite(Settings.db_language, 1, 10, f);
 	fwrite(&count, 1, 4, f);

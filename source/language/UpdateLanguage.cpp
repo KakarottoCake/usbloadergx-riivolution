@@ -20,7 +20,7 @@
 #include "prompts/ProgressWindow.h"
 #include "utils/ShowError.h"
 #include "gecko.h"
-#include "svnrev.h"
+#include "version.h"
 
 static const char * LanguageFilesURL = "https://raw.githubusercontent.com/wiidev/usbloadergx/enhanced/Languages/";
 static const char * LanguagesURL = "https://raw.githubusercontent.com/wiidev/usbloadergx/enhanced/Languages/index.html";
@@ -128,7 +128,7 @@ int UpdateLanguageFiles()
 	//build the URL, save path, and download each file and save it
 	for(int i = 0; i < Dir.GetFilecount(); ++i)
 	{
-		snprintf(codeurl, sizeof(codeurl), "%s%s?p=%s", LanguageFilesURL, Dir.GetFilename(i), GetRev());
+		snprintf(codeurl, sizeof(codeurl), "%s%s?p=%s", LanguageFilesURL, Dir.GetFilename(i), LOADER_REV);
 		snprintf(savepath, sizeof(savepath), "%s/%s", Settings.languagefiles_path, Dir.GetFilename(i));
 
 		struct download file = {};

@@ -109,7 +109,7 @@ wbfs_disc_t* Wbfs_Fat::OpenDisc(u8 *discid)
 		int fd;
 		fd = open(fname, O_RDONLY);
 		if (fd == -1) return NULL;
-		wbfs_disc_t *iso_file = (wbfs_disc_t *) calloc(sizeof(wbfs_disc_t), 1);
+		wbfs_disc_t *iso_file = (wbfs_disc_t *) calloc(1, sizeof(wbfs_disc_t));
 		if (iso_file == NULL) return NULL;
 		// mark with a special wbfs_part
 		wbfs_iso_file.wbfs_sec_sz = hdd_sector_size[usbport];

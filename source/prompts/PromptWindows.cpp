@@ -36,7 +36,7 @@
 #include "wpad.h"
 #include "wad/wad.h"
 #include "zlib.h"
-#include "svnrev.h"
+#include "version.h"
 #include "audio.h"
 #include "language/UpdateLanguage.h"
 #include "system/IosLoader.h"
@@ -287,11 +287,11 @@ void WindowCredits()
 	currentTxt->SetFont(creditsFont, creditsFontSize);
 	txt.push_back(currentTxt);
 
-	char SvnRev[80];
+	char revision[80];
 #ifdef FULLCHANNEL
-	snprintf(SvnRev, sizeof(SvnRev), "Rev%sc   IOS%d (Rev %d)%s", GetRev(), (int)IOS_GetVersion(), (int)IOS_GetRevision(), (*(vu32*)0xcd800064 == 0xFFFFFFFF)? " + AHB" : "" );
+	snprintf(revision, sizeof(revision), "Rev%sc   IOS%d (Rev %d)%s", LOADER_REV, (int)IOS_GetVersion(), (int)IOS_GetRevision(), (*(vu32*)0xcd800064 == 0xFFFFFFFF)? " + AHB" : "" );
 #else
-	snprintf(SvnRev, sizeof(SvnRev), "Rev%s   IOS%d (Rev %d)%s", GetRev(), (int)IOS_GetVersion(), (int)IOS_GetRevision(), (*(vu32*)0xcd800064 == 0xFFFFFFFF)? " + AHB" : "" );
+	snprintf(revision, sizeof(revision), "Rev%s   IOS%d (Rev %d)%s", LOADER_REV, (int)IOS_GetVersion(), (int)IOS_GetRevision(), (*(vu32*)0xcd800064 == 0xFFFFFFFF)? " + AHB" : "" );
 #endif
 
 	char IosInfo[80] = "";
@@ -359,7 +359,7 @@ void WindowCredits()
 	txt.push_back(currentTxt);
 
 	// Header - Top right
-	currentTxt = new GuiText(SvnRev, 16, ( GXColor ) {255, 255, 255, 255});
+	currentTxt = new GuiText(revision, 16, ( GXColor ) {255, 255, 255, 255});
 	currentTxt->SetAlignment(ALIGN_RIGHT, ALIGN_TOP);
 	currentTxt->SetPosition(0, (info || currentMIOS > DEFAULT_MIOS) ? y-10 : y);
 	currentTxt->SetFont(creditsFont, creditsFontSize);

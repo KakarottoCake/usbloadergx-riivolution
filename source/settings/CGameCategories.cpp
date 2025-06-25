@@ -33,7 +33,7 @@
 #include "prompts/ProgressWindow.h"
 #include "xml/GameTDB.hpp"
 #include "utils/StringTools.h"
-#include "svnrev.h"
+#include "version.h"
 
 #define VALID_CONFIG_REV 1084
 
@@ -136,7 +136,7 @@ bool CGameCategories::Save()
 
 	pugi::xml_node root = xmlDoc.append_child("USBLoaderGX");
 	pugi::xml_node revision = root.append_child("Revision");
-	revision.append_child(pugi::node_pcdata).set_value(GetRev());
+	revision.append_child(pugi::node_pcdata).set_value(LOADER_REV);
 
 	int progressSize = CategoryList.size() + List.size();
 	int progress = 0;

@@ -48,6 +48,10 @@
 #include "utils/timer.h"
 #include "sigslot.h"
 
+#ifdef __GNUC__
+#pragma GCC diagnostic ignored "-Woverloaded-virtual"
+#endif
+
 //! Frequently used variables
 extern FreeTypeGX *fontSystem;
 extern GuiSound *btnSoundClick;

@@ -32,7 +32,7 @@ class Wbfs
 		virtual s32 RenameGame(u8 *, const void *) = 0;
 		virtual s32 ReIDGame(u8 *discid, const void *newID) = 0;
 		virtual u64 EstimateGameSize(void) = 0;
-		virtual u8 GetFSType(void) const { return PART_FS_WBFS; }
+		virtual u8 GetFSType(void) { return PART_FS_WBFS; }
 		const wbfs_t *GetHDDHandle(void) { return hdd; }
 	protected:
 		wbfs_t *hdd;

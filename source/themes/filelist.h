@@ -11,602 +11,206 @@
 
 #include <gctypes.h>
 
-extern const u8 abcIcon_png[];
-extern const u32 abcIcon_png_size;
-
-extern const u8 add_png[];
-extern const u32 add_png_size;
-
-extern const u8 addressbar_textbox_png[];
-extern const u32 addressbar_textbox_png_size;
-
-extern const u8 arrangeBannerGrid_png[];
-extern const u32 arrangeBannerGrid_png_size;
-
-extern const u8 arrangeBannerGrid_gray_png[];
-extern const u32 arrangeBannerGrid_gray_png_size;
-
-extern const u8 arrangeCarousel_png[];
-extern const u32 arrangeCarousel_png_size;
-
-extern const u8 arrangeCarousel_gray_png[];
-extern const u32 arrangeCarousel_gray_png_size;
-
-extern const u8 arrangeGrid_png[];
-extern const u32 arrangeGrid_png_size;
-
-extern const u8 arrangeGrid_gray_png[];
-extern const u32 arrangeGrid_gray_png_size;
-
-extern const u8 arrangeList_png[];
-extern const u32 arrangeList_png_size;
-
-extern const u8 arrangeList_gray_png[];
-extern const u32 arrangeList_gray_png_size;
-
-extern const u8 background_png[];
-extern const u32 background_png_size;
-
-extern const u8 balanceboard_png[];
-extern const u32 balanceboard_png_size;
-
-extern const u8 balanceboardR_png[];
-extern const u32 balanceboardR_png_size;
-
-extern const u8 battery_png[];
-extern const u32 battery_png_size;
-
-extern const u8 battery_bar_png[];
-extern const u32 battery_bar_png_size;
-
-extern const u8 battery_bar_red_png[];
-extern const u32 battery_bar_red_png_size;
-
-extern const u8 battery_bar_white_png[];
-extern const u32 battery_bar_white_png_size;
-
-extern const u8 battery_red_png[];
-extern const u32 battery_red_png_size;
-
-extern const u8 battery_white_png[];
-extern const u32 battery_white_png_size;
-
-extern const u8 bg_browser_png[];
-extern const u32 bg_browser_png_size;
-
-extern const u8 bg_browser_selection_png[];
-extern const u32 bg_browser_selection_png_size;
-
-extern const u8 bg_options_png[];
-extern const u32 bg_options_png_size;
-
-extern const u8 bg_options_entry_png[];
-extern const u32 bg_options_entry_png_size;
-
-extern const u8 bg_options_settings_png[];
-extern const u32 bg_options_settings_png_size;
-
-extern const u8 boxBorder_png[];
-extern const u32 boxBorder_png_size;
-
-extern const u8 browser_png[];
-extern const u32 browser_png_size;
-
-extern const u8 browser_over_png[];
-extern const u32 browser_over_png_size;
-
-extern const u8 button_dialogue_box_png[];
-extern const u32 button_dialogue_box_png_size;
-
-extern const u8 button_install_png[];
-extern const u32 button_install_png_size;
-
-extern const u8 button_install_over_png[];
-extern const u32 button_install_over_png_size;
-
-extern const u8 category_png[];
-extern const u32 category_png_size;
-
-extern const u8 categoryPrompt_png[];
-extern const u32 categoryPrompt_png_size;
-
-extern const u8 category_gray_png[];
-extern const u32 category_gray_png_size;
-
-extern const u8 cero_a_png[];
-extern const u32 cero_a_png_size;
-
-extern const u8 cero_b_png[];
-extern const u32 cero_b_png_size;
-
-extern const u8 cero_c_png[];
-extern const u32 cero_c_png_size;
-
-extern const u8 cero_d_png[];
-extern const u32 cero_d_png_size;
-
-extern const u8 cero_z_png[];
-extern const u32 cero_z_png_size;
-
-extern const u8 channel_btn_png[];
-extern const u32 channel_btn_png_size;
-
-extern const u8 checkBoxSelection_png[];
-extern const u32 checkBoxSelection_png_size;
-
-extern const u8 classiccontroller_png[];
-extern const u32 classiccontroller_png_size;
-
-extern const u8 classiccontrollerR_png[];
-extern const u32 classiccontrollerR_png_size;
-
-extern const u8 closebutton_png[];
-extern const u32 closebutton_png_size;
-
-extern const u8 credits_bg_png[];
-extern const u32 credits_bg_png_size;
-
-extern const u8 credits_button_png[];
-extern const u32 credits_button_png_size;
-
-extern const u8 credits_button_over_png[];
-extern const u32 credits_button_over_png_size;
-
-extern const u8 dancepad_png[];
-extern const u32 dancepad_png_size;
-
-extern const u8 dancepadR_png[];
-extern const u32 dancepadR_png_size;
-
-extern const u8 dialogue_box_png[];
-extern const u32 dialogue_box_png_size;
-
-extern const u8 dialogue_box_startgame_png[];
-extern const u32 dialogue_box_startgame_png_size;
-
-extern const u8 drums_png[];
-extern const u32 drums_png_size;
-
-extern const u8 drumsR_png[];
-extern const u32 drumsR_png_size;
-
-extern const u8 dvd_png[];
-extern const u32 dvd_png_size;
-
-extern const u8 dvd_gray_png[];
-extern const u32 dvd_gray_png_size;
-
-extern const u8 esrb_ao_png[];
-extern const u32 esrb_ao_png_size;
-
-extern const u8 esrb_e_png[];
-extern const u32 esrb_e_png_size;
-
-extern const u8 esrb_ec_png[];
-extern const u32 esrb_ec_png_size;
-
-extern const u8 esrb_eten_png[];
-extern const u32 esrb_eten_png_size;
-
-extern const u8 esrb_m_png[];
-extern const u32 esrb_m_png_size;
-
-extern const u8 esrb_t_png[];
-extern const u32 esrb_t_png_size;
-
-extern const u8 exit_bottom_png[];
-extern const u32 exit_bottom_png_size;
-
-extern const u8 exit_bottom_over_png[];
-extern const u32 exit_bottom_over_png_size;
-
-extern const u8 exit_button_png[];
-extern const u32 exit_button_png_size;
-
-extern const u8 exit_top_png[];
-extern const u32 exit_top_png_size;
-
-extern const u8 exit_top_over_png[];
-extern const u32 exit_top_over_png_size;
-
-extern const u8 favIcon_png[];
-extern const u32 favIcon_png_size;
-
-extern const u8 favIcon_gray_png[];
-extern const u32 favIcon_gray_png_size;
-
-extern const u8 favorite_png[];
-extern const u32 favorite_png_size;
-
-extern const u8 gameinfo1_png[];
-extern const u32 gameinfo1_png_size;
-
-extern const u8 gameinfo1a_png[];
-extern const u32 gameinfo1a_png_size;
-
-extern const u8 gameinfo2_png[];
-extern const u32 gameinfo2_png_size;
-
-extern const u8 gameinfo2a_png[];
-extern const u32 gameinfo2a_png_size;
-
-extern const u8 gcncontroller_png[];
-extern const u32 gcncontroller_png_size;
-
-extern const u8 gcncontrollerR_png[];
-extern const u32 gcncontrollerR_png_size;
-
-extern const u8 gc_banner_bg_png[];
-extern const u32 gc_banner_bg_png_size;
-
-extern const u8 gc_icon_bg_png[];
-extern const u32 gc_icon_bg_png_size;
-
-extern const u8 guitar_png[];
-extern const u32 guitar_png_size;
-
-extern const u8 guitarR_png[];
-extern const u32 guitarR_png_size;
-
-extern const u8 gxlogo_png[];
-extern const u32 gxlogo_png_size;
-
-extern const u8 icon_folder_png[];
-extern const u32 icon_folder_png_size;
-
-extern const u8 keyboard_backspace_over_png[];
-extern const u32 keyboard_backspace_over_png_size;
-
-extern const u8 keyboard_clear_over_png[];
-extern const u32 keyboard_clear_over_png_size;
-
-extern const u8 keyboard_key_png[];
-extern const u32 keyboard_key_png_size;
-
-extern const u8 keyboard_key_over_png[];
-extern const u32 keyboard_key_over_png_size;
-
-extern const u8 keyboard_largekey_over_png[];
-extern const u32 keyboard_largekey_over_png_size;
-
-extern const u8 keyboard_mediumkey_over_png[];
-extern const u32 keyboard_mediumkey_over_png_size;
-
-extern const u8 keyboard_textbox_png[];
-extern const u32 keyboard_textbox_png_size;
-
-extern const u8 little_star_png[];
-extern const u32 little_star_png_size;
-
-extern const u8 loader_mode_png[];
-extern const u32 loader_mode_png_size;
-
-extern const u8 lock_png[];
-extern const u32 lock_png_size;
-
-extern const u8 lock_gray_png[];
-extern const u32 lock_gray_png_size;
-
-extern const u8 menu_button_png[];
-extern const u32 menu_button_png_size;
-
-extern const u8 menu_button_over_png[];
-extern const u32 menu_button_over_png_size;
-
-extern const u8 microphone_png[];
-extern const u32 microphone_png_size;
-
-extern const u8 microphoneR_png[];
-extern const u32 microphoneR_png_size;
-
-extern const u8 motionplus_png[];
-extern const u32 motionplus_png_size;
-
-extern const u8 motionplusR_png[];
-extern const u32 motionplusR_png_size;
-
-extern const u8 new_png[];
-extern const u32 new_png_size;
-
-extern const u8 nintendods_png[];
-extern const u32 nintendods_png_size;
-
-extern const u8 nintendodsR_png[];
-extern const u32 nintendodsR_png_size;
-
-extern const u8 nocover_png[];
-extern const u32 nocover_png_size;
-
-extern const u8 nocoverFlat_png[];
-extern const u32 nocoverFlat_png_size;
-
-extern const u8 nocoverFull_png[];
-extern const u32 nocoverFull_png_size;
-
-extern const u8 nodisc_png[];
-extern const u32 nodisc_png_size;
-
-extern const u8 norating_png[];
-extern const u32 norating_png_size;
-
-extern const u8 not_favorite_png[];
-extern const u32 not_favorite_png_size;
-
-extern const u8 nunchuk_png[];
-extern const u32 nunchuk_png_size;
-
-extern const u8 nunchukR_png[];
-extern const u32 nunchukR_png_size;
-
-extern const u8 one_png[];
-extern const u32 one_png_size;
-
-extern const u8 oneButtonScroll_png[];
-extern const u32 oneButtonScroll_png_size;
-
-extern const u8 pageindicator_png[];
-extern const u32 pageindicator_png_size;
-
-extern const u8 pegi_12_png[];
-extern const u32 pegi_12_png_size;
-
-extern const u8 pegi_16_png[];
-extern const u32 pegi_16_png_size;
-
-extern const u8 pegi_18_png[];
-extern const u32 pegi_18_png_size;
-
-extern const u8 pegi_3_png[];
-extern const u32 pegi_3_png_size;
-
-extern const u8 pegi_7_png[];
-extern const u32 pegi_7_png_size;
-
-extern const u8 playCountIcon_png[];
-extern const u32 playCountIcon_png_size;
-
-extern const u8 player1_grab_png[];
-extern const u32 player1_grab_png_size;
-
-extern const u8 player1_point_png[];
-extern const u32 player1_point_png_size;
-
-extern const u8 player2_grab_png[];
-extern const u32 player2_grab_png_size;
-
-extern const u8 player2_point_png[];
-extern const u32 player2_point_png_size;
-
-extern const u8 player3_grab_png[];
-extern const u32 player3_grab_png_size;
-
-extern const u8 player3_point_png[];
-extern const u32 player3_point_png_size;
-
-extern const u8 player4_grab_png[];
-extern const u32 player4_grab_png_size;
-
-extern const u8 player4_point_png[];
-extern const u32 player4_point_png_size;
-
-extern const u8 playersSort_png[];
-extern const u32 playersSort_png_size;
-
-extern const u8 progressbar_png[];
-extern const u32 progressbar_png_size;
-
-extern const u8 progressbar_empty_png[];
-extern const u32 progressbar_empty_png_size;
-
-extern const u8 progressbar_outline_png[];
-extern const u32 progressbar_outline_png_size;
-
-extern const u8 rankIcon_png[];
-extern const u32 rankIcon_png_size;
-
-extern const u8 remove_png[];
-extern const u32 remove_png_size;
-
-extern const u8 rplayer1_point_png[];
-extern const u32 rplayer1_point_png_size;
-
-extern const u8 rplayer2_point_png[];
-extern const u32 rplayer2_point_png_size;
-
-extern const u8 rplayer3_point_png[];
-extern const u32 rplayer3_point_png_size;
-
-extern const u8 rplayer4_point_png[];
-extern const u32 rplayer4_point_png_size;
-
-extern const u8 scrollBarBottom_png[];
-extern const u32 scrollBarBottom_png_size;
-
-extern const u8 scrollBarTile_png[];
-extern const u32 scrollBarTile_png_size;
-
-extern const u8 scrollBarTop_png[];
-extern const u32 scrollBarTop_png_size;
-
-extern const u8 scrollbar_arrowdown_png[];
-extern const u32 scrollbar_arrowdown_png_size;
-
-extern const u8 scrollbar_arrowup_png[];
-extern const u32 scrollbar_arrowup_png_size;
-
-extern const u8 scrollbar_box_png[];
-extern const u32 scrollbar_box_png_size;
-
-extern const u8 sdcard_png[];
-extern const u32 sdcard_png_size;
-
-extern const u8 sdcard_over_png[];
-extern const u32 sdcard_over_png_size;
-
-extern const u8 searchIcon_png[];
-extern const u32 searchIcon_png_size;
-
-extern const u8 searchIcon_gray_png[];
-extern const u32 searchIcon_gray_png_size;
-
-extern const u8 settings_background_png[];
-extern const u32 settings_background_png_size;
-
-extern const u8 settings_button_png[];
-extern const u32 settings_button_png_size;
-
-extern const u8 settings_button_over_png[];
-extern const u32 settings_button_over_png_size;
-
-extern const u8 settings_title_png[];
-extern const u32 settings_title_png_size;
-
-extern const u8 settings_title_over_png[];
-extern const u32 settings_title_over_png_size;
-
-extern const u8 startgame_arrow_left_png[];
-extern const u32 startgame_arrow_left_png_size;
-
-extern const u8 startgame_arrow_right_png[];
-extern const u32 startgame_arrow_right_png_size;
-
-extern const u8 theme_box_png[];
-extern const u32 theme_box_png_size;
-
-extern const u8 theme_dialogue_box_png[];
-extern const u32 theme_dialogue_box_png_size;
-
-extern const u8 tooltip_left_png[];
-extern const u32 tooltip_left_png_size;
-
-extern const u8 tooltip_right_png[];
-extern const u32 tooltip_right_png_size;
-
-extern const u8 tooltip_tile_png[];
-extern const u32 tooltip_tile_png_size;
-
-extern const u8 unlock_png[];
-extern const u32 unlock_png_size;
-
-extern const u8 unlock_gray_png[];
-extern const u32 unlock_gray_png_size;
-
-extern const u8 wbackground_png[];
-extern const u32 wbackground_png_size;
-
-extern const u8 wdialogue_box_startgame_png[];
-extern const u32 wdialogue_box_startgame_png_size;
-
-extern const u8 wheel_png[];
-extern const u32 wheel_png_size;
-
-extern const u8 wheelR_png[];
-extern const u32 wheelR_png_size;
-
-extern const u8 wifi1_png[];
-extern const u32 wifi1_png_size;
-
-extern const u8 wifi10_png[];
-extern const u32 wifi10_png_size;
-
-extern const u8 wifi12_png[];
-extern const u32 wifi12_png_size;
-
-extern const u8 wifi16_png[];
-extern const u32 wifi16_png_size;
-
-extern const u8 wifi2_png[];
-extern const u32 wifi2_png_size;
-
-extern const u8 wifi3_png[];
-extern const u32 wifi3_png_size;
-
-extern const u8 wifi32_png[];
-extern const u32 wifi32_png_size;
-
-extern const u8 wifi4_png[];
-extern const u32 wifi4_png_size;
-
-extern const u8 wifi6_png[];
-extern const u32 wifi6_png_size;
-
-extern const u8 wifi8_png[];
-extern const u32 wifi8_png_size;
-
-extern const u8 wifi_btn_png[];
-extern const u32 wifi_btn_png_size;
-
-extern const u8 wiimote_png[];
-extern const u32 wiimote_png_size;
-
-extern const u8 wiimote1_png[];
-extern const u32 wiimote1_png_size;
-
-extern const u8 wiimote2_png[];
-extern const u32 wiimote2_png_size;
-
-extern const u8 wiimote3_png[];
-extern const u32 wiimote3_png_size;
-
-extern const u8 wiimote4_png[];
-extern const u32 wiimote4_png_size;
-
-extern const u8 wiimote_poweroff_png[];
-extern const u32 wiimote_poweroff_png_size;
-
-extern const u8 wiimote_poweroff_over_png[];
-extern const u32 wiimote_poweroff_over_png_size;
-
-extern const u8 wiispeak_png[];
-extern const u32 wiispeak_png_size;
-
-extern const u8 wiispeakR_png[];
-extern const u32 wiispeakR_png_size;
-
-extern const u8 zapper_png[];
-extern const u32 zapper_png_size;
-
-extern const u8 zapperR_png[];
-extern const u32 zapperR_png_size;
-
-extern const u8 bg_music_ogg[];
-extern const u32 bg_music_ogg_size;
-
-extern const u8 button_click_ogg[];
-extern const u32 button_click_ogg_size;
-
-extern const u8 button_click2_ogg[];
-extern const u32 button_click2_ogg_size;
-
-extern const u8 button_over_ogg[];
-extern const u32 button_over_ogg_size;
-
-extern const u8 gc_banner_ogg[];
-extern const u32 gc_banner_ogg_size;
-
-extern const u8 menuin_ogg[];
-extern const u32 menuin_ogg_size;
-
-extern const u8 menuout_ogg[];
-extern const u32 menuout_ogg_size;
-
-extern const u8 success_ogg[];
-extern const u32 success_ogg_size;
-
-extern const u8 clock_ttf[];
-extern const u32 clock_ttf_size;
-
-extern const u8 font_ttf[];
-extern const u32 font_ttf_size;
-
-extern const u8 app_booter_bin[];
-extern const u32 app_booter_bin_size;
-
-extern const u8 custom_banner_bnr[];
-extern const u32 custom_banner_bnr_size;
-
-extern const u8 stub_bin[];
-extern const u32 stub_bin_size;
+#include "abcIcon_png.h"
+#include "add_png.h"
+#include "addressbar_textbox_png.h"
+#include "arrangeBannerGrid_png.h"
+#include "arrangeBannerGrid_gray_png.h"
+#include "arrangeCarousel_png.h"
+#include "arrangeCarousel_gray_png.h"
+#include "arrangeGrid_png.h"
+#include "arrangeGrid_gray_png.h"
+#include "arrangeList_png.h"
+#include "arrangeList_gray_png.h"
+#include "background_png.h"
+#include "balanceboard_png.h"
+#include "balanceboardR_png.h"
+#include "battery_png.h"
+#include "battery_bar_png.h"
+#include "battery_bar_red_png.h"
+#include "battery_bar_white_png.h"
+#include "battery_red_png.h"
+#include "battery_white_png.h"
+#include "bg_browser_png.h"
+#include "bg_browser_selection_png.h"
+#include "bg_options_png.h"
+#include "bg_options_entry_png.h"
+#include "bg_options_settings_png.h"
+#include "boxBorder_png.h"
+#include "browser_png.h"
+#include "browser_over_png.h"
+#include "button_dialogue_box_png.h"
+#include "button_install_png.h"
+#include "button_install_over_png.h"
+#include "category_png.h"
+#include "categoryPrompt_png.h"
+#include "category_gray_png.h"
+#include "cero_a_png.h"
+#include "cero_b_png.h"
+#include "cero_c_png.h"
+#include "cero_d_png.h"
+#include "cero_z_png.h"
+#include "channel_btn_png.h"
+#include "checkBoxSelection_png.h"
+#include "classiccontroller_png.h"
+#include "classiccontrollerR_png.h"
+#include "closebutton_png.h"
+#include "credits_bg_png.h"
+#include "credits_button_png.h"
+#include "credits_button_over_png.h"
+#include "dancepad_png.h"
+#include "dancepadR_png.h"
+#include "dialogue_box_png.h"
+#include "dialogue_box_startgame_png.h"
+#include "drums_png.h"
+#include "drumsR_png.h"
+#include "dvd_png.h"
+#include "dvd_gray_png.h"
+#include "esrb_ao_png.h"
+#include "esrb_e_png.h"
+#include "esrb_ec_png.h"
+#include "esrb_eten_png.h"
+#include "esrb_m_png.h"
+#include "esrb_t_png.h"
+#include "exit_bottom_png.h"
+#include "exit_bottom_over_png.h"
+#include "exit_button_png.h"
+#include "exit_top_png.h"
+#include "exit_top_over_png.h"
+#include "favIcon_png.h"
+#include "favIcon_gray_png.h"
+#include "favorite_png.h"
+#include "gameinfo1_png.h"
+#include "gameinfo1a_png.h"
+#include "gameinfo2_png.h"
+#include "gameinfo2a_png.h"
+#include "gcncontroller_png.h"
+#include "gcncontrollerR_png.h"
+#include "gc_banner_bg_png.h"
+#include "gc_icon_bg_png.h"
+#include "guitar_png.h"
+#include "guitarR_png.h"
+#include "gxlogo_png.h"
+#include "icon_folder_png.h"
+#include "keyboard_backspace_over_png.h"
+#include "keyboard_clear_over_png.h"
+#include "keyboard_key_png.h"
+#include "keyboard_key_over_png.h"
+#include "keyboard_largekey_over_png.h"
+#include "keyboard_mediumkey_over_png.h"
+#include "keyboard_textbox_png.h"
+#include "little_star_png.h"
+#include "loader_mode_png.h"
+#include "lock_png.h"
+#include "lock_gray_png.h"
+#include "menu_button_png.h"
+#include "menu_button_over_png.h"
+#include "microphone_png.h"
+#include "microphoneR_png.h"
+#include "motionplus_png.h"
+#include "motionplusR_png.h"
+#include "new_png.h"
+#include "nintendods_png.h"
+#include "nintendodsR_png.h"
+#include "nocover_png.h"
+#include "nocoverFlat_png.h"
+#include "nocoverFull_png.h"
+#include "nodisc_png.h"
+#include "norating_png.h"
+#include "not_favorite_png.h"
+#include "nunchuk_png.h"
+#include "nunchukR_png.h"
+#include "one_png.h"
+#include "oneButtonScroll_png.h"
+#include "pageindicator_png.h"
+#include "pegi_12_png.h"
+#include "pegi_16_png.h"
+#include "pegi_18_png.h"
+#include "pegi_3_png.h"
+#include "pegi_7_png.h"
+#include "playCountIcon_png.h"
+#include "player1_grab_png.h"
+#include "player1_point_png.h"
+#include "player2_grab_png.h"
+#include "player2_point_png.h"
+#include "player3_grab_png.h"
+#include "player3_point_png.h"
+#include "player4_grab_png.h"
+#include "player4_point_png.h"
+#include "playersSort_png.h"
+#include "progressbar_png.h"
+#include "progressbar_empty_png.h"
+#include "progressbar_outline_png.h"
+#include "rankIcon_png.h"
+#include "remove_png.h"
+#include "rplayer1_point_png.h"
+#include "rplayer2_point_png.h"
+#include "rplayer3_point_png.h"
+#include "rplayer4_point_png.h"
+#include "scrollBarBottom_png.h"
+#include "scrollBarTile_png.h"
+#include "scrollBarTop_png.h"
+#include "scrollbar_arrowdown_png.h"
+#include "scrollbar_arrowup_png.h"
+#include "scrollbar_box_png.h"
+#include "sdcard_png.h"
+#include "sdcard_over_png.h"
+#include "searchIcon_png.h"
+#include "searchIcon_gray_png.h"
+#include "settings_background_png.h"
+#include "settings_button_png.h"
+#include "settings_button_over_png.h"
+#include "settings_title_png.h"
+#include "settings_title_over_png.h"
+#include "startgame_arrow_left_png.h"
+#include "startgame_arrow_right_png.h"
+#include "theme_box_png.h"
+#include "theme_dialogue_box_png.h"
+#include "tooltip_left_png.h"
+#include "tooltip_right_png.h"
+#include "tooltip_tile_png.h"
+#include "unlock_png.h"
+#include "unlock_gray_png.h"
+#include "wbackground_png.h"
+#include "wdialogue_box_startgame_png.h"
+#include "wheel_png.h"
+#include "wheelR_png.h"
+#include "wifi1_png.h"
+#include "wifi10_png.h"
+#include "wifi12_png.h"
+#include "wifi16_png.h"
+#include "wifi2_png.h"
+#include "wifi3_png.h"
+#include "wifi32_png.h"
+#include "wifi4_png.h"
+#include "wifi6_png.h"
+#include "wifi8_png.h"
+#include "wifi_btn_png.h"
+#include "wiimote_png.h"
+#include "wiimote1_png.h"
+#include "wiimote2_png.h"
+#include "wiimote3_png.h"
+#include "wiimote4_png.h"
+#include "wiimote_poweroff_png.h"
+#include "wiimote_poweroff_over_png.h"
+#include "wiispeak_png.h"
+#include "wiispeakR_png.h"
+#include "zapper_png.h"
+#include "zapperR_png.h"
+#include "bg_music_ogg.h"
+#include "button_click_ogg.h"
+#include "button_click2_ogg.h"
+#include "button_over_ogg.h"
+#include "gc_banner_ogg.h"
+#include "menuin_ogg.h"
+#include "menuout_ogg.h"
+#include "success_ogg.h"
+#include "clock_ttf.h"
+#include "font_ttf.h"
+#include "app_booter_bin.h"
+#include "custom_banner_bnr.h"
+#include "stub_bin.h"
+#include "Resources.h"
 
 RecourceFile Resources::RecourceFiles[] =
 {

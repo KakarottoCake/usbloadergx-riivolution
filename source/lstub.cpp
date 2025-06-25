@@ -8,9 +8,7 @@
 
 #include "lstub.h"
 #include "wad/nandtitle.h"
-
-extern const u8 stub_bin[];
-extern const u32 stub_bin_size;
+#include "stub_bin.h"
 
 s32 Set_Stub(u64 reqID)
 {

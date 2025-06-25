@@ -46,11 +46,11 @@ for i in ${files[@]}
 do
 	filename=${i%.*}
 	extension=${i##*.}
-	$ECHO 'extern const u8 '$filename'_'$extension'[];' >> $outFile
-	$ECHO 'extern const u32 '$filename'_'$extension'_size;' >> $outFile
-	$ECHO '' >> $outFile
+	$ECHO '#include "'$filename'_'$extension'.h"' >> $outFile
 done
 
+$ECHO '#include "Resources.h"' >> $outFile
+$ECHO '' >> $outFile
 $ECHO 'RecourceFile Resources::RecourceFiles[] =' >> $outFile
 $ECHO '{' >> $outFile
 

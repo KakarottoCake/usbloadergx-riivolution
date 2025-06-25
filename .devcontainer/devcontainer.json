@@ -1,20 +1,15 @@
 {
     "name": "devkitPPC",
-    "image": "mcr.microsoft.com/devcontainers/base:jammy",
-    "settings": {
-        "workbench.colorTheme": "Default Dark+",
-        "files.exclude": {
-            "Dockerfile": true
+    "image": "devkitpro/devkitppc:20250527",
+    "customizations": {
+        "vscode": {
+            "settings": {
+                "workbench.colorTheme": "Default Dark Modern",
+                "files.exclude": {
+                    "Dockerfile": true
+                }
+            },
+            "extensions": ["ms-vscode.cpptools-extension-pack"]
         }
-    },
-    "onCreateCommand": "bash .devcontainer/on-create.sh",
-    "containerEnv": {
-        "DEVKITPRO": "/opt/devkitpro",
-        "DEVKITPPC": "/opt/devkitpro/devkitPPC",
-        "PATH": "${localEnv:PATH}:/opt/devkitpro/devkitPPC/bin"
-    },
-    "remoteUser": "root",
-    "extensions": [
-        "ms-vscode.cpptools-extension-pack"
-    ]
+    }
 }

@@ -5,7 +5,7 @@
 #include <network.h>
 #include <ogc/lwp_watchdog.h>
 
-#include "../svnrev.h"
+#include "../version.h"
 #include "gecko.h"
 #include "https.h"
 #include "prompts/ProgressWindow.h"
@@ -516,7 +516,7 @@ void downloadfile(const char *url, struct download *buffer)
                    "Connection: close\r\n"
                    "Pragma: no-cache\r\n"
                    "Cache-Control: no-cache\r\n\r\n",
-                   buffer->gametdbcheck ? "HEAD" : "GET", path, host, GetRev());
+                   buffer->gametdbcheck ? "HEAD" : "GET", path, host, LOADER_REV);
     if ((ret = https_write(&httpinfo, request, len, false)) != len)
     {
 #ifdef DEBUG_NETWORK

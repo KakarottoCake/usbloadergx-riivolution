@@ -12,6 +12,8 @@
 #include <utils/wifi_gecko.h>
 #endif
 
+#define GCC_VERSION (__GNUC__ * 10000 + __GNUC_MINOR__ * 100 + __GNUC_PATCHLEVEL__)
+
 /* init-globals */
 static bool geckoinit = false;
 
@@ -134,6 +136,12 @@ static const devoptab_t gecko_out = {
 #if __GNUC__ > 8
 	NULL,		// lstat_r
 	NULL,		// utimes_r
+#endif
+#if GCC_VERSION > 120100 // devkitPPC r42 (gcc 12.2.0 / libogc 2.3.1)
+	NULL,		// fpathconf_r
+	NULL,		// pathconf_r
+	NULL,		// symlink_r
+	NULL,		// readlink_r
 #endif
 };
 

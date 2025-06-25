@@ -1,19 +1,24 @@
 {
+    "env": {
+        "DEVKITPROWIN": "C:/devkitPro"
+    },
     "configurations": [
         {
             "name": "Win32",
             "includePath": [
                 "${workspaceFolder}/**",
-                "C:/devkitPro/libogc/include/**"
+                "${DEVKITPROWIN}/libogc/include/**"
             ],
             "defines": [
                 "HW_RVL",
-                "GEKKO"
+                "GEKKO",
+                "__wii__",
+                "DEVKITPRO"
             ],
-            "compilerPath": "C:/devkitPro/devkitPPC/bin/powerpc-eabi-gcc.exe",
+            "compilerPath": "${DEVKITPROWIN}/devkitPPC/bin/powerpc-eabi-gcc.exe",
             "cStandard": "gnu17",
             "cppStandard": "gnu++17",
-            "intelliSenseMode": "linux-gcc-x86"
+            "intelliSenseMode": "linux-gcc-arm"
         },
         {
             "name": "Linux",
@@ -23,12 +28,14 @@
             ],
             "defines": [
                 "HW_RVL",
-                "GEKKO"
+                "GEKKO",
+                "__wii__",
+                "DEVKITPRO"
             ],
             "compilerPath": "${env:DEVKITPRO}/devkitPPC/bin/powerpc-eabi-gcc",
             "cStandard": "gnu17",
             "cppStandard": "gnu++17",
-            "intelliSenseMode": "linux-gcc-x86"
+            "intelliSenseMode": "linux-gcc-arm"
         },
         {
             "name": "Mac",
@@ -38,12 +45,14 @@
             ],
             "defines": [
                 "HW_RVL",
-                "GEKKO"
+                "GEKKO",
+                "__wii__",
+                "DEVKITPRO"
             ],
             "compilerPath": "${env:DEVKITPRO}/devkitPPC/bin/powerpc-eabi-gcc",
             "cStandard": "gnu17",
             "cppStandard": "gnu++17",
-            "intelliSenseMode": "linux-gcc-x86"
+            "intelliSenseMode": "linux-gcc-arm"
         }
     ],
     "version": 4

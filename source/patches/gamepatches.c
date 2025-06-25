@@ -1,4 +1,5 @@
 #include <ogc/machine/processor.h>
+#include <ogc/libversion.h>
 #include <gccore.h>
 #include <malloc.h>
 #include <string.h>
@@ -11,7 +12,7 @@
 #include "memory/memory.h"
 #include "memory/mem2.h"
 #include "settings/SettingsEnums.h"
-#include "svnrev.h"
+#include "version.h"
 #include "kirbypatch.h"
 
 /* GCC 11 false positives */
@@ -21,11 +22,30 @@
 #pragma GCC diagnostic ignored "-Wstringop-overread"
 #endif
 
+#define OGC_VERSION (_V_MAJOR_ * 10000 + _V_MINOR_ * 100 + _V_PATCH_)
+
 typedef struct _appDOL
 {
     u8 *dst;
     int len;
 } appDOL;
+
+typedef struct
+{
+    u32 viTVMode;
+    u16 fbWidth;
+    u16 efbHeight;
+    u16 xfbHeight;
+    u16 viXOrigin;
+    u16 viYOrigin;
+    u16 viWidth;
+    u16 viHeight;
+    u32 xfbMode;
+    u8 field_rendering;
+    u8 aa;
+    u8 sample_pattern[12][2];
+    u8 vfilter[7];
+} GXRModeObjRVL;
 
 static appDOL *dolList = NULL;
 static int dolCount = 0;
@@ -674,7 +694,7 @@ s8 do_new_wiimmfi()
     // let the game know the exact USB-Loader version.
     char *fmt = "USB-Loader GX v3.0 R%-21s";
     char patcher[42] = {0};
-    snprintf((char *)&patcher, 42, fmt, GetRev());
+    snprintf((char *)&patcher, 42, fmt, LOADER_REV);
     strncpy(patched, (char *)&patcher, 42);
 
     // Do the plain old patching with the string search
@@ -1093,6 +1113,8 @@ void patch_error_codes(u8 *gameid)
 // viYOrigin is calculated as (576 - 528)/2 in libogc 2.0.0 for the following render modes.
 // But we need to use (574 - 528)/2 so that the render modes match the Revolution SDK.
 
+// An RGB byte was included in libogc 2.11.0, but it might be removed in a future version.
+
 static GXRModeObj TVPal528Prog_RVL = {
     6,             // viDisplayMode
     640,           // fbWidth
@@ -1103,6 +1125,9 @@ static GXRModeObj TVPal528Prog_RVL = {
     640,           // viWidth
     528,           // viHeight
     VI_XFBMODE_SF, // xFBmode
+#if OGC_VERSION == 21100
+    GX_FALSE,      // rgb
+#endif
     GX_FALSE,      // field_rendering
     GX_FALSE,      // aa
 
@@ -1136,6 +1161,9 @@ static GXRModeObj TVPal528ProgSoft_RVL = {
     640,           // viWidth
     528,           // viHeight
     VI_XFBMODE_SF, // xFBmode
+#if OGC_VERSION == 21100
+    GX_FALSE,      // rgb
+#endif
     GX_FALSE,      // field_rendering
     GX_FALSE,      // aa
 
@@ -1169,6 +1197,9 @@ static GXRModeObj TVPal524ProgAa_RVL = {
     640,           // viWidth
     524,           // viHeight
     VI_XFBMODE_SF, // xFBmode
+#if OGC_VERSION == 21100
+    GX_FALSE,      // rgb
+#endif
     GX_FALSE,      // field_rendering
     GX_TRUE,       // aa
 
@@ -1202,6 +1233,9 @@ static GXRModeObj TVPal528Int_RVL = {
     640,           // viWidth
     528,           // viHeight
     VI_XFBMODE_DF, // xFBmode
+#if OGC_VERSION == 21100
+    GX_FALSE,      // rgb
+#endif
     GX_FALSE,      // field_rendering
     GX_FALSE,      // aa
 
@@ -1235,6 +1269,9 @@ static GXRModeObj TVPal528IntDf_RVL = {
     640,           // viWidth
     528,           // viHeight
     VI_XFBMODE_DF, // xFBmode
+#if OGC_VERSION == 21100
+    GX_FALSE,      // rgb
+#endif
     GX_FALSE,      // field_rendering
     GX_FALSE,      // aa
 
@@ -1268,6 +1305,9 @@ static GXRModeObj TVEurgb60Hz480Prog_RVL = {
     640,           // viWidth
     480,           // viHeight
     VI_XFBMODE_SF, // xFBmode
+#if OGC_VERSION == 21100
+    GX_TRUE,       // rgb
+#endif
     GX_FALSE,      // field_rendering
     GX_FALSE,      // aa
 
@@ -1301,6 +1341,9 @@ static GXRModeObj TVEurgb60Hz480ProgSoft_RVL = {
     640,           // viWidth
     480,           // viHeight
     VI_XFBMODE_SF, // xFBmode
+#if OGC_VERSION == 21100
+    GX_TRUE,       // rgb
+#endif
     GX_FALSE,      // field_rendering
     GX_FALSE,      // aa
 
@@ -1334,6 +1377,9 @@ static GXRModeObj TVEurgb60Hz480ProgAa_RVL = {
     640,           // viWidth
     480,           // viHeight
     VI_XFBMODE_SF, // xFBmode
+#if OGC_VERSION == 21100
+    GX_TRUE,       // rgb
+#endif
     GX_FALSE,      // field_rendering
     GX_TRUE,       // aa
 
@@ -1367,6 +1413,9 @@ static GXRModeObj TVPal524IntAa_RVL = {
     640,           // viWidth
     524,           // viHeight
     VI_XFBMODE_DF, // xFBmode
+#if OGC_VERSION == 21100
+    GX_FALSE,      // rgb
+#endif
     GX_FALSE,      // field_rendering
     GX_TRUE,       // aa
 
@@ -1400,6 +1449,9 @@ static GXRModeObj TVPal264Int_RVL = {
     640,           // viWidth
     528,           // viHeight
     VI_XFBMODE_SF, // xFBmode
+#if OGC_VERSION == 21100
+    GX_FALSE,      // rgb
+#endif
     GX_TRUE,       // field_rendering
     GX_FALSE,      // aa
 
@@ -1433,6 +1485,9 @@ static GXRModeObj TVPal264IntAa_RVL = {
     640,           // viWidth
     528,           // viHeight
     VI_XFBMODE_SF, // xFBmode
+#if OGC_VERSION == 21100
+    GX_FALSE,      // rgb
+#endif
     GX_TRUE,       // field_rendering
     GX_TRUE,       // aa
 
@@ -1466,6 +1521,9 @@ static GXRModeObj TVPal264Ds_RVL = {
     640,           // viWidth
     528,           // viHeight
     VI_XFBMODE_SF, // xFBmode
+#if OGC_VERSION == 21100
+    GX_FALSE,      // rgb
+#endif
     GX_FALSE,      // field_rendering
     GX_FALSE,      // aa
 
@@ -1499,6 +1557,9 @@ static GXRModeObj TVPal264DsAa_RVL = {
     640,           // viWidth
     528,           // viHeight
     VI_XFBMODE_SF, // xFBmode
+#if OGC_VERSION == 21100
+    GX_FALSE,      // rgb
+#endif
     GX_FALSE,      // field_rendering
     GX_TRUE,       // aa
 
@@ -1532,6 +1593,9 @@ static GXRModeObj TVMpal240Int_RVL = {
     640,           // viWidth
     480,           // viHeight
     VI_XFBMODE_SF, // xFBmode
+#if OGC_VERSION == 21100
+    GX_FALSE,      // rgb
+#endif
     GX_TRUE,       // field_rendering
     GX_FALSE,      // aa
 
@@ -1565,6 +1629,9 @@ static GXRModeObj TVMpal240IntAa_RVL = {
     640,           // viWidth
     480,           // viHeight
     VI_XFBMODE_SF, // xFBmode
+#if OGC_VERSION == 21100
+    GX_FALSE,      // rgb
+#endif
     GX_TRUE,       // field_rendering
     GX_TRUE,       // aa
 
@@ -1598,6 +1665,9 @@ static GXRModeObj TVMpal480Int_RVL = {
     640,           // viWidth
     480,           // viHeight
     VI_XFBMODE_DF, // xFBmode
+#if OGC_VERSION == 21100
+    GX_FALSE,      // rgb
+#endif
     GX_FALSE,      // field_rendering
     GX_FALSE,      // aa
 
@@ -1631,6 +1701,9 @@ static GXRModeObj TVMpal480ProgSoft_RVL = {
     640,           // viWidth
     480,           // viHeight
     VI_XFBMODE_SF, // xFBmode
+#if OGC_VERSION == 21100
+    GX_FALSE,      // rgb
+#endif
     GX_FALSE,      // field_rendering
     GX_FALSE,      // aa
 
@@ -1664,6 +1737,9 @@ static GXRModeObj TVMpal480ProgAa_RVL = {
     640,           // viWidth
     480,           // viHeight
     VI_XFBMODE_SF, // xFBmode
+#if OGC_VERSION == 21100
+    GX_FALSE,      // rgb
+#endif
     GX_FALSE,      // field_rendering
     GX_TRUE,       // aa
 
@@ -1847,7 +1923,7 @@ static u8 PATTERN_AA[12][2] = {
     {9, 2}, {3, 6}, {9, 10}
 };
 
-static bool compare_videomodes(GXRModeObj *mode1, GXRModeObj *mode2)
+static bool compare_videomodes_rvl(GXRModeObj *mode1, GXRModeObjRVL *mode2)
 {
     if (mode1->viTVMode != mode2->viTVMode || mode1->fbWidth != mode2->fbWidth || mode1->efbHeight != mode2->efbHeight
             || mode1->xfbHeight != mode2->xfbHeight || mode1->viXOrigin != mode2->viXOrigin || mode1->viYOrigin
@@ -1881,7 +1957,41 @@ static bool compare_videomodes(GXRModeObj *mode1, GXRModeObj *mode2)
     }
 }
 
-static void patch_videomode(GXRModeObj *mode1, GXRModeObj *mode2)
+static bool compare_videomodes_ogc(GXRModeObj *mode1, GXRModeObj *mode2)
+{
+    if (mode1->viTVMode != mode2->viTVMode || mode1->fbWidth != mode2->fbWidth || mode1->efbHeight != mode2->efbHeight
+            || mode1->xfbHeight != mode2->xfbHeight || mode1->viXOrigin != mode2->viXOrigin || mode1->viYOrigin
+            != mode2->viYOrigin || mode1->viWidth != mode2->viWidth || mode1->viHeight != mode2->viHeight
+            || mode1->xfbMode != mode2->xfbMode || mode1->field_rendering != mode2->field_rendering || mode1->aa
+            != mode2->aa || mode1->sample_pattern[0][0] != mode2->sample_pattern[0][0] || mode1->sample_pattern[1][0]
+            != mode2->sample_pattern[1][0] || mode1->sample_pattern[2][0] != mode2->sample_pattern[2][0]
+            || mode1->sample_pattern[3][0] != mode2->sample_pattern[3][0] || mode1->sample_pattern[4][0]
+            != mode2->sample_pattern[4][0] || mode1->sample_pattern[5][0] != mode2->sample_pattern[5][0]
+            || mode1->sample_pattern[6][0] != mode2->sample_pattern[6][0] || mode1->sample_pattern[7][0]
+            != mode2->sample_pattern[7][0] || mode1->sample_pattern[8][0] != mode2->sample_pattern[8][0]
+            || mode1->sample_pattern[9][0] != mode2->sample_pattern[9][0] || mode1->sample_pattern[10][0]
+            != mode2->sample_pattern[10][0] || mode1->sample_pattern[11][0] != mode2->sample_pattern[11][0]
+            || mode1->sample_pattern[0][1] != mode2->sample_pattern[0][1] || mode1->sample_pattern[1][1]
+            != mode2->sample_pattern[1][1] || mode1->sample_pattern[2][1] != mode2->sample_pattern[2][1]
+            || mode1->sample_pattern[3][1] != mode2->sample_pattern[3][1] || mode1->sample_pattern[4][1]
+            != mode2->sample_pattern[4][1] || mode1->sample_pattern[5][1] != mode2->sample_pattern[5][1]
+            || mode1->sample_pattern[6][1] != mode2->sample_pattern[6][1] || mode1->sample_pattern[7][1]
+            != mode2->sample_pattern[7][1] || mode1->sample_pattern[8][1] != mode2->sample_pattern[8][1]
+            || mode1->sample_pattern[9][1] != mode2->sample_pattern[9][1] || mode1->sample_pattern[10][1]
+            != mode2->sample_pattern[10][1] || mode1->sample_pattern[11][1] != mode2->sample_pattern[11][1]
+            || mode1->vfilter[0] != mode2->vfilter[0] || mode1->vfilter[1] != mode2->vfilter[1] || mode1->vfilter[2]
+            != mode2->vfilter[2] || mode1->vfilter[3] != mode2->vfilter[3] || mode1->vfilter[4] != mode2->vfilter[4]
+            || mode1->vfilter[5] != mode2->vfilter[5] || mode1->vfilter[6] != mode2->vfilter[6])
+    {
+        return false;
+    }
+    else
+    {
+        return true;
+    }
+}
+
+static void patch_videomode(GXRModeObjRVL *mode1, GXRModeObj *mode2)
 {
     mode1->viTVMode = mode2->viTVMode;
     if (mode1->viWidth == 640 || mode1->viWidth == 708)
@@ -1939,17 +2049,17 @@ static bool Search_and_patch_Video_Modes(u8 *Address, u32 Size, GXRModeObj *Tabl
     bool found = 0;
     u32 i, j;
 
-    while (Size >= sizeof(GXRModeObj))
+    while (Size >= sizeof(GXRModeObjRVL))
     {
         for (i = 0; Table[i]; i += 2)
         {
-            if (compare_videomodes(Table[i], (GXRModeObj *)Addr))
+            if (compare_videomodes_rvl(Table[i], (GXRModeObjRVL *)Addr))
             {
                 u8 current_vmode = 0;
                 u8 target_vmode = 0;
                 for (j = 0; j < sizeof(vmodes) / sizeof(vmodes[0]); j++)
                 {
-                    if (compare_videomodes(Table[i], vmodes[j]))
+                    if (compare_videomodes_ogc(Table[i], vmodes[j]))
                     {
                         current_vmode = j;
                         break;
@@ -1957,18 +2067,18 @@ static bool Search_and_patch_Video_Modes(u8 *Address, u32 Size, GXRModeObj *Tabl
                 }
                 for (j = 0; j < sizeof(vmodes) / sizeof(vmodes[0]); j++)
                 {
-                    if (compare_videomodes(Table[i + 1], vmodes[j]))
+                    if (compare_videomodes_ogc(Table[i + 1], vmodes[j]))
                     {
                         target_vmode = j;
                         break;
                     }
                 }
 
-                gprintf("Video mode found in dol: %s, replaced by: %s \n", vmodes_name[current_vmode], vmodes_name[target_vmode]);
+                gprintf("%s replaced with %s \n", vmodes_name[current_vmode], vmodes_name[target_vmode]);
                 found = 1;
-                patch_videomode((GXRModeObj *)Addr, Table[i + 1]);
-                Addr += (sizeof(GXRModeObj) - 4);
-                Size -= (sizeof(GXRModeObj) - 4);
+                patch_videomode((GXRModeObjRVL *)Addr, Table[i + 1]);
+                Addr += (sizeof(GXRModeObjRVL) - 4);
+                Size -= (sizeof(GXRModeObjRVL) - 4);
                 break;
             }
         }
@@ -1984,9 +2094,9 @@ static bool Search_and_patch_Video_Modes(u8 *Address, u32 Size, GXRModeObj *Tabl
 void patch_vfilters(u8 *addr, u32 len, u8 *vfilter)
 {
     u8 *addr_start = addr;
-    while (len >= sizeof(GXRModeObj))
+    while (len >= sizeof(GXRModeObjRVL))
     {
-        GXRModeObj *vidmode = (GXRModeObj *)addr_start;
+        GXRModeObjRVL *vidmode = (GXRModeObjRVL *)addr_start;
         if ((memcmp(vidmode->sample_pattern, PATTERN, 24) == 0 || memcmp(vidmode->sample_pattern, PATTERN_AA, 24) == 0) &&
             (vidmode->fbWidth == 640 || vidmode->fbWidth == 608 || vidmode->fbWidth == 512) &&
             (vidmode->field_rendering == 0 || vidmode->field_rendering == 1) &&
@@ -1996,8 +2106,8 @@ void patch_vfilters(u8 *addr, u32 len, u8 *vfilter)
                     vidmode->vfilter[0], vidmode->vfilter[1], vidmode->vfilter[2], vidmode->vfilter[3],
                     vidmode->vfilter[4], vidmode->vfilter[5], vidmode->vfilter[6], addr_start);
             memcpy(vidmode->vfilter, vfilter, 7);
-            addr_start += (sizeof(GXRModeObj) - 4);
-            len -= (sizeof(GXRModeObj) - 4);
+            addr_start += (sizeof(GXRModeObjRVL) - 4);
+            len -= (sizeof(GXRModeObjRVL) - 4);
         }
         addr_start += 4;
         len -= 4;
@@ -2046,23 +2156,23 @@ static bool Search_and_patch_Video_To(void *Address, u32 Size, GXRModeObj *Table
     u8 target_vmode = 0;
     for (i = 0; i < sizeof(vmodes) / sizeof(vmodes[0]); i++)
     {
-        if (compare_videomodes(Table[i], rmode))
+        if (compare_videomodes_ogc(Table[i], rmode))
         {
             target_vmode = i;
             break;
         }
     }
 
-    while (Size >= sizeof(GXRModeObj))
+    while (Size >= sizeof(GXRModeObjRVL))
     {
-        if ((memcmp(((GXRModeObj *)Addr)->sample_pattern, PATTERN, 24) == 0 || memcmp(((GXRModeObj *)Addr)->sample_pattern, PATTERN_AA, 24) == 0) &&
-            (((GXRModeObj *)Addr)->fbWidth == 640 || ((GXRModeObj *)Addr)->fbWidth == 608 || ((GXRModeObj *)Addr)->fbWidth == 512) &&
-            (((GXRModeObj *)Addr)->field_rendering == 0 || ((GXRModeObj *)Addr)->field_rendering == 1) &&
-            (((GXRModeObj *)Addr)->aa == 0 || ((GXRModeObj *)Addr)->aa == 1)
+        if ((memcmp(((GXRModeObjRVL *)Addr)->sample_pattern, PATTERN, 24) == 0 || memcmp(((GXRModeObjRVL *)Addr)->sample_pattern, PATTERN_AA, 24) == 0) &&
+            (((GXRModeObjRVL *)Addr)->fbWidth == 640 || ((GXRModeObjRVL *)Addr)->fbWidth == 608 || ((GXRModeObjRVL *)Addr)->fbWidth == 512) &&
+            (((GXRModeObjRVL *)Addr)->field_rendering == 0 || ((GXRModeObjRVL *)Addr)->field_rendering == 1) &&
+            (((GXRModeObjRVL *)Addr)->aa == 0 || ((GXRModeObjRVL *)Addr)->aa == 1)
         )
         {
             // display found video mode patterns
-            GXRModeObj *vidmode = (GXRModeObj *)Addr;
+            GXRModeObjRVL *vidmode = (GXRModeObjRVL *)Addr;
             gprintf("GXRModeObj \t%08x %04x %04x %04x %04x %04x %04x %04x %08x %04x %04x "
                     "%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x "
                     "%02x%02x%02x%02x%02x%02x%02x \n",
@@ -2078,22 +2188,22 @@ static bool Search_and_patch_Video_To(void *Address, u32 Size, GXRModeObj *Table
             found = 0;
             for (i = 0; i < sizeof(vmodes) / sizeof(vmodes[0]); i++)
             {
-                if (compare_videomodes(Table[i], (GXRModeObj *)Addr))
+                if (compare_videomodes_rvl(Table[i], (GXRModeObjRVL *)Addr))
                 {
                     found = 1;
-                    gprintf("Video mode found in dol: %s, replaced by: %s \n", vmodes_name[i], vmodes_name[target_vmode]);
-                    patch_videomode((GXRModeObj *)Addr, rmode);
-                    Addr += (sizeof(GXRModeObj) - 4);
-                    Size -= (sizeof(GXRModeObj) - 4);
+                    gprintf("%s replaced with %s \n", vmodes_name[i], vmodes_name[target_vmode]);
+                    patch_videomode((GXRModeObjRVL *)Addr, rmode);
+                    Addr += (sizeof(GXRModeObjRVL) - 4);
+                    Size -= (sizeof(GXRModeObjRVL) - 4);
                     break;
                 }
             }
             if (patchAll && !found)
             {
-                gprintf("Video mode found in dol: Unknown, replaced by: %s \n", vmodes_name[target_vmode]);
-                patch_videomode((GXRModeObj *)Addr, rmode);
-                Addr += (sizeof(GXRModeObj) - 4);
-                Size -= (sizeof(GXRModeObj) - 4);
+                gprintf("Unknown replaced with %s \n", vmodes_name[target_vmode]);
+                patch_videomode((GXRModeObjRVL *)Addr, rmode);
+                Addr += (sizeof(GXRModeObjRVL) - 4);
+                Size -= (sizeof(GXRModeObjRVL) - 4);
             }
         }
         Addr += 4;

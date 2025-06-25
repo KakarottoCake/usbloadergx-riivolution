@@ -14,6 +14,7 @@
 #include "lstub.h"
 #include "sys.h"
 #include "gecko.h"
+#include "app_booter_bin.h"
 
 /* GCC 11 false positives */
 #if __GNUC__ > 10
@@ -24,9 +25,6 @@
 #define EXECUTE_ADDR	((u8 *) 0x92000000)
 #define BOOTER_ADDR		((u8 *) 0x93000000)
 #define ARGS_ADDR		((u8 *) 0x93200000)
-
-extern const u8 app_booter_bin[];
-extern const u32 app_booter_bin_size;
 
 typedef void (*entrypoint) (void);
 extern "C" { void __exception_closeall(); }
