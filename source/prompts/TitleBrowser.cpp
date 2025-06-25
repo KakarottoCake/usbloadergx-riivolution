@@ -52,12 +52,16 @@ bool TitleSelector(char output[])
 			break;
 		}
 
-		//remove ones not actually installed on the NAND
+		// Remove ones not actually installed on the NAND
 		if (!NandTitles.Exists(tid))
 		{
 			num_titles--;
 		}
 	}
+
+	// +1 if the Wii U Menu channel exists
+	if (NandTitles.Exists(0x0001000248435641LL))
+		num_titles++;
 
 	//make a list of just the tids we are adding to the titlebrowser
 	titleList = (u64*) memalign(32, num_titles * sizeof(u64));
@@ -104,6 +108,26 @@ bool TitleSelector(char output[])
 		options4.SetName(i, "%s", id);
 		options4.SetValue(i, "%s", name ? name : tr( "Unknown" ));
 		titleList[i] = tid;
+		i++;
+	}
+
+	// Add the Wii U Menu channel if it exists
+	if (NandTitles.Exists(0x0001000248435641LL))
+	{
+		char id[5];
+		NandTitles.AsciiTID(0x0001000248435641LL, (char*) &id);
+
+		const char* name = NULL;
+		std::string TitleName;
+
+		if(XML_DB->GetTitle(id, TitleName))
+			name = TitleName.c_str();
+		else
+			name = NandTitles.NameOf(0x0001000248435641LL);
+		
+		options4.SetName(i, "%s", id);
+		options4.SetValue(i, "%s", name ? name : tr( "Unknown" ));
+		titleList[i] = 0x0001000248435641LL;
 		i++;
 	}
 
