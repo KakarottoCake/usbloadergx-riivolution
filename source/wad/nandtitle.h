@@ -12,9 +12,9 @@
 
 #include "wstring.hpp"
 
-#define TITLE_ID(x,y)	   (((u64)(x) << 32) | (y))
-#define TITLE_UPPER(x)	  ((u32)((x) >> 32))
-#define TITLE_LOWER(x)	  ((u32)(x))
+#define TITLE_ID(x,y)     (((u64)(x) << 32) | (y))
+#define TITLE_UPPER(x)    ((u32)((x) >> 32))
+#define TITLE_LOWER(x)    ((u32)(x))
 
 #define TITLE_1(x)	  ((u8)((x) >> 8))
 #define TITLE_2(x)	  ((u8)((x) >> 16))
@@ -26,12 +26,12 @@
 
 #define IMET_MAX_NAME_LEN 0x2a
 
-#define IMET_OFFSET					 0x40
-#define IMET_SIGNATURE		  0x494d4554
-#define DOWNLOADED_CHANNELS	 0x00010001
-#define SYSTEM_CHANNELS		 0x00010002
-#define RF_NEWS_CHANNEL		 0x48414741
-#define RF_FORECAST_CHANNEL	 0x48414641
+#define IMET_OFFSET          0x40
+#define IMET_SIGNATURE       0x494d4554
+#define DOWNLOADED_CHANNELS  0x00010001
+#define SYSTEM_CHANNELS      0x00010002
+#define RF_NEWS_CHANNEL      0x48414741
+#define RF_FORECAST_CHANNEL  0x48414641
 
 typedef struct
 {

@@ -141,18 +141,28 @@ bool NandTitle::GetName(u64 tid, int language, wchar_t* name)
 		return false;
 	}
 
-	if (ISFS_Seek(fd, IMET_OFFSET, SEEK_SET) != IMET_OFFSET)
+	if (ISFS_Read(fd, imet, sizeof(IMET)) != sizeof(IMET))
 	{
 		ISFS_Close(fd);
 		free(imet);
 		return false;
 	}
 
-	if (ISFS_Read(fd, imet, sizeof(IMET)) != sizeof(IMET))
+	// Try reading from 0 first due to WiiGSC
+	if (imet->sig != IMET_SIGNATURE)
 	{
-		ISFS_Close(fd);
-		free(imet);
-		return false;
+		if (ISFS_Seek(fd, IMET_OFFSET, SEEK_SET) != IMET_OFFSET)
+		{
+			ISFS_Close(fd);
+			free(imet);
+			return false;
+		}
+		if (ISFS_Read(fd, imet, sizeof(IMET)) != sizeof(IMET))
+		{
+			ISFS_Close(fd);
+			free(imet);
+			return false;
+		}
 	}
 
 	ISFS_Close(fd);

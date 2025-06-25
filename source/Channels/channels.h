@@ -2,6 +2,7 @@
  * Copyright (C) 2010 by dude
  * Copyright (C) 2011 by Miigotu
  * Copyright (C) 2011 by Dimok
+ * Copyright (C) 2025 by blackb0x
  *
  * This software is provided 'as-is', without any express or implied
  * warranty. In no event will the authors be held liable for any
@@ -40,7 +41,7 @@ public:
 	static u8 GetRequestedIOS(const u64 &title, const char *prefix);
 	static u8 *GetTMD(const u64 &tid, u32 *size, const char *prefix);
 	static u8 *GetDol(const u64 &title, u8 *tmdBuffer, bool &isForwarder);
-	static u8 *GetOpeningBnr(const u64 &title, u32 *outsize, const char *pathPrefix);
+	static u8 *GetOpeningBnr(const u64 &title, u32 *outsize, const char *prefix);
 
 	void GetChannelList();
 	void GetEmuChannelList(bool use_cache = false);

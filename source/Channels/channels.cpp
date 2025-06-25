@@ -2,6 +2,7 @@
  * Copyright (C) 2010 by dude
  * Copyright (C) 2011 by Miigotu
  * Copyright (C) 2011 by Dimok
+ * Copyright (C) 2025 by blackb0x
  *
  * This software is provided 'as-is', without any express or implied
  * warranty. In no event will the authors be held liable for any
@@ -38,6 +39,7 @@
 #include "gecko.h"
 #include "cache/cache.hpp"
 #include "channels.h"
+#include "system/IosLoader.h"
 
 /* GCC 11 false positives */
 #if __GNUC__ > 10
@@ -79,7 +81,7 @@ void Channels::GetEmuChannelList(bool use_cache)
 
     EmuChannels.clear();
 
-    char filepath[1024];
+    char filepath[PATH_MAX];
     int language = CONF_GetLanguage();
 
     snprintf(filepath, sizeof(filepath), "%s/title/00010001", Settings.NandEmuChanPath);
@@ -183,6 +185,9 @@ u8 *Channels::GetDol(const u64 &title, u8 *tmdBuffer, bool &isForwarder)
         return NULL;
 
     _tmd *tmd_file = (_tmd *)SIGNATURE_PAYLOAD((u32 *)tmdBuffer);
+
+    if (tmd_file->title_type == 0 && tmd_file->group_id == 0)
+        isForwarder = true;
 
     if (!Settings.UseChanLauncher)
     {
@@ -293,14 +298,12 @@ u8 Channels::GetRequestedIOS(const u64 &title, const char *prefix)
 
 u8 *Channels::GetTMD(const u64 &tid, u32 *size, const char *prefix)
 {
-    char *filepath = (char *)memalign(32, ISFS_MAXPATH);
-    if (!filepath)
-        return NULL;
+    char filepath[PATH_MAX];
 
     if (!prefix)
         prefix = "";
 
-    snprintf(filepath, ISFS_MAXPATH, "%s/title/%08x/%08x/content/title.tmd", prefix, (unsigned int)TITLE_UPPER(tid), (unsigned int)TITLE_LOWER(tid));
+    snprintf(filepath, sizeof(filepath), "%s/title/%08x/%08x/content/title.tmd", prefix, (unsigned int)TITLE_UPPER(tid), (unsigned int)TITLE_LOWER(tid));
 
     u8 *tmdBuffer = NULL;
     u32 tmdSize = 0;
@@ -311,8 +314,6 @@ u8 *Channels::GetTMD(const u64 &tid, u32 *size, const char *prefix)
         ret = LoadFileToMem(filepath, &tmdBuffer, &tmdSize);
     else
         ret = NandTitle::LoadFileFromNand(filepath, &tmdBuffer, &tmdSize);
-
-    free(filepath);
 
     if (ret < 0)
     {
@@ -398,6 +399,14 @@ u32 Channels::LoadChannel(const u64 &chantitle)
     u32 chanEntryPoint = dolfile->entry_point;
 
     free(dolfile);
+    ISFS_Deinitialize();
+
+    // Force poorly written forwarders to work
+    if (isForwarder)
+    {
+        gprintf("Channel is a forwarder\n");
+        IosLoader::ReloadIosKeepingRights(ios);
+    }
 
     // Preparations
     memset((void *)Disc_ID, 0, 6);
@@ -406,7 +415,6 @@ u32 Channels::LoadChannel(const u64 &chantitle)
     *BI2 = 0x817FE000;                                // BI2, the apploader does this too
     *Bus_Speed = 0x0E7BE2C0;                          // bus speed
     *CPU_Speed = 0x2B73A840;                          // cpu speed
-    *GameID_Address = 0x81000000;                     // Game id address, while there's all 0s at 0x81000000 when using the apploader...
     memcpy((void *)Online_Check, (void *)Disc_ID, 4); // online check
 
     memset((void *)0x817FE000, 0, 0x2000); // Clearing BI2
@@ -416,8 +424,6 @@ u32 Channels::LoadChannel(const u64 &chantitle)
     *(vu32 *)0x80003140 = ((ios << 16)) | 0xFFFF;
     if (!isForwarder)
         *(vu32 *)0x80003188 = ((ios << 16)) | 0xFFFF;
-
-    ISFS_Deinitialize();
 
     return chanEntryPoint;
 }
@@ -652,12 +658,6 @@ bool Channels::GetEmuChanTitle(char *tmdpath, int language, std::string &Title)
     if (!f)
         return false;
 
-    if (fseek(f, IMET_OFFSET, SEEK_SET) != 0)
-    {
-        fclose(f);
-        return false;
-    }
-
     IMET *imet = (IMET *)malloc(sizeof(IMET));
     if (!imet)
     {
@@ -670,6 +670,23 @@ bool Channels::GetEmuChanTitle(char *tmdpath, int language, std::string &Title)
         free(imet);
         fclose(f);
         return false;
+    }
+
+    // Try reading from 0 first due to WiiGSC
+    if (imet->sig != IMET_SIGNATURE)
+    {
+        if (fseek(f, IMET_OFFSET, SEEK_SET) != 0)
+        {
+            free(imet);
+            fclose(f);
+            return false;
+        }
+        if (fread(imet, 1, sizeof(IMET), f) != sizeof(IMET))
+        {
+            free(imet);
+            fclose(f);
+            return false;
+        }
     }
 
     fclose(f);
@@ -706,89 +723,83 @@ bool Channels::GetEmuChanTitle(char *tmdpath, int language, std::string &Title)
     return true;
 }
 
-u8 *Channels::GetOpeningBnr(const u64 &title, u32 *outsize, const char *pathPrefix)
+u8 *Channels::GetOpeningBnr(const u64 &title, u32 *outsize, const char *prefix)
 {
     u8 *banner = NULL;
     u32 high = TITLE_UPPER(title);
     u32 low = TITLE_LOWER(title);
 
-    char *filepath = (char *)memalign(32, ISFS_MAXPATH + strlen(pathPrefix));
-    if (!filepath)
-        return NULL;
+    char filepath[PATH_MAX];
 
-    do
+    snprintf(filepath, sizeof(filepath), "%s/title/%08x/%08x/content/title.tmd", prefix, (unsigned int)high, (unsigned int)low);
+
+    u8 *buffer = NULL;
+    u32 filesize = 0;
+    int ret = 0;
+
+    if (prefix && *prefix != 0)
+        ret = LoadFileToMem(filepath, &buffer, &filesize);
+    else
+        ret = NandTitle::LoadFileFromNand(filepath, &buffer, &filesize);
+
+    if (ret < 0)
+        return banner;
+
+    tmd *tmd_file = (tmd *)SIGNATURE_PAYLOAD((u32 *)buffer);
+    bool found = false;
+    u32 bootcontent = 0;
+    for (u32 i = 0; i < tmd_file->num_contents; ++i)
     {
-        snprintf(filepath, ISFS_MAXPATH, "%s/title/%08x/%08x/content/title.tmd", pathPrefix, (unsigned int)high, (unsigned int)low);
-
-        u8 *buffer = NULL;
-        u32 filesize = 0;
-
-        int ret = 0;
-
-        if (pathPrefix && *pathPrefix != 0)
-            ret = LoadFileToMem(filepath, &buffer, &filesize);
-        else
-            ret = NandTitle::LoadFileFromNand(filepath, &buffer, &filesize);
-
-        if (ret < 0)
-            break;
-
-        _tmd *tmd_file = (_tmd *)SIGNATURE_PAYLOAD((u32 *)buffer);
-        bool found = false;
-        u32 bootcontent = 0;
-        for (u32 i = 0; i < tmd_file->num_contents; ++i)
+        if (tmd_file->contents[i].index == 0)
         {
-            if (tmd_file->contents[i].index == 0)
-            {
-                bootcontent = tmd_file->contents[i].cid;
-                found = true;
-                break;
-            }
-        }
-
-        free(buffer);
-        buffer = NULL;
-        filesize = 0;
-
-        if (!found)
-            break;
-
-        snprintf(filepath, ISFS_MAXPATH, "%s/title/%08x/%08x/content/%08x.app", pathPrefix, (unsigned int)high, (unsigned int)low, (unsigned int)bootcontent);
-
-        if (pathPrefix && *pathPrefix != 0)
-            ret = LoadFileToMem(filepath, &buffer, &filesize);
-        else
-            ret = NandTitle::LoadFileFromNand(filepath, &buffer, &filesize);
-
-        if (ret < 0)
-            break;
-
-        IMET *imet = (IMET *)(buffer + IMET_OFFSET);
-        if (imet->sig != IMET_SIGNATURE)
-        {
-            free(buffer);
+            bootcontent = tmd_file->contents[i].cid;
+            found = true;
             break;
         }
+    }
 
-        // move IMET_OFFSET bytes back
+    free(buffer);
+    buffer = NULL;
+    filesize = 0;
+
+    if (!found)
+        return banner;
+
+    snprintf(filepath, sizeof(filepath), "%s/title/%08x/%08x/content/%08x.app", prefix, (unsigned int)high, (unsigned int)low, (unsigned int)bootcontent);
+
+    if (prefix && *prefix != 0)
+        ret = LoadFileToMem(filepath, &buffer, &filesize);
+    else
+        ret = NandTitle::LoadFileFromNand(filepath, &buffer, &filesize);
+
+    if (ret < 0)
+        return banner;
+
+    u8 IMET_pos = 0;
+    if (((IMET *)(buffer + IMET_OFFSET))->sig == IMET_SIGNATURE)
+    {
         filesize -= IMET_OFFSET;
-
-        banner = (u8 *)memalign(32, filesize);
-        if (!banner)
-        {
-            free(buffer);
-            break;
-        }
-
-        memcpy(banner, buffer + IMET_OFFSET, filesize);
-
+        IMET_pos = IMET_OFFSET;
+    }
+    else if (((IMET *)(buffer))->sig != IMET_SIGNATURE)
+    {
         free(buffer);
+        return banner;
+    }
 
-        if (outsize)
-            *outsize = filesize;
-    } while (0);
+    banner = (u8 *)memalign(32, filesize);
+    if (!banner)
+    {
+        free(buffer);
+        return banner;
+    }
 
-    free(filepath);
+    memcpy(banner, buffer + IMET_pos, filesize);
+
+    free(buffer);
+
+    if (outsize)
+        *outsize = filesize;
 
     return banner;
 }
