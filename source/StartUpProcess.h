@@ -12,7 +12,7 @@ private:
 	StartUpProcess();
 	~StartUpProcess();
 	void LoadIOS(u8 ios, bool boot);
-	int Execute(bool quickGameBoot);
+	int Execute(bool quickGameBoot, bool isBadBoot);
 	int FinalizeExecute();
 	bool USBSpinUp();
 	void TextFade(int direction);

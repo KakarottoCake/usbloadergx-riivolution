@@ -254,6 +254,7 @@ bool StartUpProcess::USBSpinUp()
 
 int StartUpProcess::Run(int argc, char *argv[])
 {
+	bool isBadBoot = false;
 	// A normal launch should always have the first arg be the path
 	char *ptr = strrchr(argv[0], '/');
 	if (ptr && (argv[0][2] == ':' || argv[0][3] == ':'))
@@ -269,11 +270,15 @@ int StartUpProcess::Run(int argc, char *argv[])
 			snprintf(Settings.ConfigPath, sizeof(Settings.ConfigPath), "%s/", argv[0]);
 		gprintf("Loader path: %s\n", Settings.ConfigPath);
 	}
+	// Priiloader breaks updates and passes outdated meta.xml info
+	else if (strncmp(argv[0], "/title/00000001/", 16) == 0)
+		isBadBoot = true;
+
 	int quickGameBoot = ParseArguments(argc, argv);
 
 	StartUpProcess Process;
 
-	int ret = Process.Execute(quickGameBoot != -1);
+	int ret = Process.Execute(quickGameBoot != -1, isBadBoot);
 
 	if (quickGameBoot != -1)
 		return QuickGameBoot(argv[quickGameBoot]);
@@ -293,8 +298,19 @@ void StartUpProcess::LoadIOS(u8 ios, bool boot)
 	SetTextf("Reloaded to IOS%d r%d\n", Settings.LoaderIOS, IOS_GetRevision());
 }
 
-int StartUpProcess::Execute(bool quickGameBoot)
+int StartUpProcess::Execute(bool quickGameBoot, bool isBadBoot)
 {
+	if (isBadBoot)
+	{
+		SetTextf("Install the UNEO channel booter instead\n");
+		sleep(5);
+		*(vu32 *)0x8132FFFB = 0x4461636F;
+		*(vu32 *)0x817FEFF0 = 0x4461636F;
+		DCFlushRange((void *)0x8132FFFB, 4);
+		DCFlushRange((void *)0x817FEFF0, 4);
+		SYS_ResetSystem(SYS_RETURNTOMENU, 0, 0);
+	}
+
 	Settings.EntryIOS = IOS_GetVersion();
 	// Disable AHBPROT
 	IosPatch_AHBPROT(false);
