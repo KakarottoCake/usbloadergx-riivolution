@@ -176,6 +176,8 @@ void CSettings::SetDefault()
 	Hooktype = 0;
 	WiirdDebugger = OFF;
 	WiirdDebuggerPause = OFF;
+	wpadMotor = FALSE;
+	wpadSpeaker = FALSE;
 	ShowPlayCount = ON;
 	bannerFavIcon = BANNER_FAVICON_SINGLE_LINEA;
 	RememberUnlock = ON;
@@ -456,6 +458,8 @@ bool CSettings::Save()
 	fprintf(file, "Hooktype = %d\n", Hooktype);
 	fprintf(file, "WiirdDebugger = %d\n", WiirdDebugger);
 	fprintf(file, "WiirdDebuggerPause = %d\n", WiirdDebuggerPause);
+	fprintf(file, "wpadMotor = %d\n", wpadMotor);
+	fprintf(file, "wpadSpeaker = %d\n", wpadSpeaker);
 	fprintf(file, "ShowPlayCount = %d\n", ShowPlayCount);
 	fprintf(file, "bannerFavIcon = %d\n", bannerFavIcon);
 	fprintf(file, "GameDisplayType = %d\n", GameDisplayType);
@@ -908,6 +912,14 @@ bool CSettings::SetSetting(char *name, char *value)
 	else if(strcmp(name, "WiirdDebuggerPause") == 0)
 	{
 		WiirdDebuggerPause = atoi(value);
+	}
+	else if(strcmp(name, "wpadMotor") == 0)
+	{
+		wpadMotor = atoi(value);
+	}
+	else if(strcmp(name, "wpadSpeaker") == 0)
+	{
+		wpadSpeaker = atoi(value);
 	}
 	else if(strcmp(name, "NandEmuMode") == 0)
 	{

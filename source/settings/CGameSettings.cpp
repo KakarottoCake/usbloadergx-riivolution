@@ -208,6 +208,8 @@ bool CGameSettings::Save()
 		fprintf(f, "NandEmuPath:%s; ", GameList[i].NandEmuPath.c_str());
 		fprintf(f, "Hooktype:%d; ", GameList[i].Hooktype);
 		fprintf(f, "WiirdDebugger:%d; ", GameList[i].WiirdDebugger);
+		fprintf(f, "wpadMotor:%d; ", GameList[i].wpadMotor);
+		fprintf(f, "wpadSpeaker:%d; ", GameList[i].wpadSpeaker);
 		fprintf(f, "GameCubeMode:%d; ", GameList[i].GameCubeMode);
 		fprintf(f, "DMLVideo:%d; ", GameList[i].DMLVideo);
 		fprintf(f, "DMLProgPatch:%d; ", GameList[i].DMLProgPatch);
@@ -378,6 +380,16 @@ bool CGameSettings::SetSetting(GameCFG & game, const char *name, const char *val
 	else if(strcmp(name, "WiirdDebugger") == 0)
 	{
 		game.WiirdDebugger = atoi(value);
+		return true;
+	}
+	else if(strcmp(name, "wpadMotor") == 0)
+	{
+		game.wpadMotor = atoi(value);
+		return true;
+	}
+	else if(strcmp(name, "wpadSpeaker") == 0)
+	{
+		game.wpadSpeaker = atoi(value);
 		return true;
 	}
 	else if(strcmp(name, "Locked") == 0)
@@ -721,6 +733,8 @@ void CGameSettings::SetDefault(GameCFG &game)
 	game.NandEmuPath.clear();
 	game.Hooktype = INHERIT;
 	game.WiirdDebugger = INHERIT;
+	game.wpadMotor = INHERIT;
+	game.wpadSpeaker = INHERIT;
 	game.GameCubeMode = INHERIT;
 	game.DMLVideo = INHERIT;
 	game.DMLProgPatch = INHERIT;

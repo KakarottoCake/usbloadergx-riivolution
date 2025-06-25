@@ -183,6 +183,8 @@ class CSettings
 		short Hooktype;
 		short WiirdDebugger;
 		short WiirdDebuggerPause;
+		short wpadMotor;
+		short wpadSpeaker;
 		short ShowPlayCount;
 		short bannerFavIcon;
 		short RememberUnlock;

@@ -100,7 +100,8 @@ void ClearDOLList()
 }
 
 void gamepatches(u8 videoSelected, u8 videoPatchDol, u8 aspectForce, u8 languageChoice, u8 patchcountrystring,
-                 u8 vipatch, u8 deflicker, u8 sneekVideoPatch, u8 hooktype, u8 videoWidth, u64 returnTo, u8 privateServer, const char *serverAddr)
+                 u8 vipatch, u8 deflicker, u8 disableMotor, u8 disableSpeaker,
+                 u8 sneekVideoPatch, u8 hooktype, u8 videoWidth, u64 returnTo, u8 privateServer, const char *serverAddr)
 {
     int i;
     u8 vfilter_off[7] = {0, 0, 21, 22, 21, 0, 0};
@@ -142,6 +143,12 @@ void gamepatches(u8 videoSelected, u8 videoPatchDol, u8 aspectForce, u8 language
 
         if (!exclude_game((u8 *)0x80000000, false))
         {
+            if (disableMotor)
+                motor_patch(dst, len);
+            
+            if (disableSpeaker)
+                speaker_patch(dst, len);
+
             if (videoWidth == WIDTH_FRAMEBUFFER)
                 patch_width(dst, len);
 
@@ -354,6 +361,53 @@ void dithering_patch(u8 *addr, u32 len)
     }
 }
 */
+
+/** Patch WPADControlSpeaker **/
+void speaker_patch(u8 *addr, u32 len)
+{
+    u32 SpeakerPattern[4] = {0x9421FA00, 0x7C0802A6, 0x90010604, 0x39610600};
+
+    u8 *addr_start = addr;
+    u8 *addr_end = addr + len - sizeof(SpeakerPattern);
+    while (addr_start <= addr_end)
+    {
+        if (memcmp(addr_start, SpeakerPattern, sizeof(SpeakerPattern)) == 0)
+        {
+            *((u32 *)addr_start) = 0x4E800020;
+            gprintf("Patched speaker @ %p\n", addr_start);
+            //hexdump(addr_start, 20);
+            return;
+        }
+        addr_start += 4;
+    }
+}
+
+/** Patch WPADControlMotor **/
+void motor_patch(u8 *addr, u32 len)
+{
+    u32 MotorPatternA[2] = {0x9421FFF0, 0x7C0802A6};
+    u32 MotorPatternB[4] = {0x2C000000, 0x40820020, 0x2C1E0000, 0x40820010};
+    u32 MotorPatternC[5] = {0x48000020, 0x7C9E00D0, 0x38000001, 0x7C84F378, 0x54840FFE};
+    u8 *addr_start = addr;
+    u8 *addr_end = addr + len - sizeof(MotorPatternA) - sizeof(MotorPatternB) - sizeof(MotorPatternC);
+    while (addr_start <= addr_end)
+    {
+        if (memcmp(addr_start, MotorPatternA, sizeof(MotorPatternA)) == 0)
+        {
+            if (memcmp(addr_start + 68, MotorPatternB, sizeof(MotorPatternB)) == 0)
+            {
+                if (memcmp(addr_start + 148, MotorPatternC, sizeof(MotorPatternC)) == 0)
+                {
+                    *(u32 *)addr_start = 0x4E800020;
+                    gprintf("Patched motor @ %p\n", addr_start);
+                    //hexdump(addr_start, 20);
+                    return;
+                }
+            }
+        }
+        addr_start += 4;
+    }
+}
 
 /**
     480p Pixel Fix Patch by leseratte

@@ -315,6 +315,8 @@ void LoaderSettings::SetOptionNames()
 	Options->SetName(Idx++, "%s", tr( "Wiird Debugger" ));
 	Options->SetName(Idx++, "%s", tr( "Debugger Paused Start" ));
 	Options->SetName(Idx++, "%s", tr( "Channel Launcher" ));
+	Options->SetName(Idx++, "%s", tr( "Disable Wiimote Motor" ));
+	Options->SetName(Idx++, "%s", tr( "Disable Wiimote Speaker" ));
 	Options->SetName(Idx++, "%s", tr( "Autoboot Discs" ));
 	Options->SetName(Idx++, "%s", tr( "Autoboot Discs Delay" ));
 	Options->SetName(Idx++, "%s", tr( "=== GameCube Settings" ));
@@ -472,6 +474,12 @@ void LoaderSettings::SetOptionValues()
 
 	//! Settings: Channel Launcher
 	Options->SetValue(Idx++, "%s", tr( ChannelLaunchText[Settings.UseChanLauncher] ));
+
+	//! Settings: Disable Wiimote Motor
+	Options->SetValue(Idx++, "%s", tr( OnOffText[Settings.wpadMotor] ));
+
+	//! Settings: Disable Wiimote Speaker
+	Options->SetValue(Idx++, "%s", tr( OnOffText[Settings.wpadSpeaker] ));
 
 	//! Settings: Autoboot Discs
 	Options->SetValue(Idx++, "%s", tr( OnOffText[Settings.AutobootDiscs] ));
@@ -869,6 +877,18 @@ int LoaderSettings::GetMenuInternal()
 	else if (ret == ++Idx )
 	{
 		if (++Settings.UseChanLauncher >= MAX_ON_OFF) Settings.UseChanLauncher = 0;
+	}
+
+	//! Settings: Disable Wiimote Motor
+	else if (ret == ++Idx )
+	{
+		if (++Settings.wpadMotor >= MAX_ON_OFF) Settings.wpadMotor = 0;
+	}
+
+	//! Settings: Disable Wiimote Speaker
+	else if (ret == ++Idx )
+	{
+		if (++Settings.wpadSpeaker >= MAX_ON_OFF) Settings.wpadSpeaker = 0;
 	}
 
 	//! Settings: Autoboot Discs

@@ -267,6 +267,8 @@ void GameLoadSM::SetOptionNames()
 	}
 	Options->SetName(Idx++, "%s", tr( "Hooktype" ));
 	Options->SetName(Idx++, "%s", tr( "Wiird Debugger" ));
+	Options->SetName(Idx++, "%s", tr( "Disable Wiimote Motor" ));
+	Options->SetName(Idx++, "%s", tr( "Disable Wiimote Speaker" ));
 	//! Only on Wii games
 	if (Header->type == TYPE_GAME_WII_IMG || Header->type == TYPE_GAME_WII_DISC)
 	{
@@ -447,6 +449,18 @@ void GameLoadSM::SetOptionValues()
 		Options->SetValue(Idx++, tr("Use global"));
 	else
 		Options->SetValue(Idx++, "%s", tr( OnOffText[GameConfig.WiirdDebugger] ));
+
+	//! Settings: Disable Wiimote Motor
+	if (GameConfig.wpadMotor == INHERIT)
+		Options->SetValue(Idx++, tr("Use global"));
+	else
+		Options->SetValue(Idx++, "%s", tr( OnOffText[GameConfig.wpadMotor] ));
+
+	//! Settings: Disable Wiimote Speaker
+	if (GameConfig.wpadSpeaker == INHERIT)
+		Options->SetValue(Idx++, tr("Use global"));
+	else
+		Options->SetValue(Idx++, "%s", tr( OnOffText[GameConfig.wpadSpeaker] ));
 
 	//! Only on Wii games
 	if (Header->type == TYPE_GAME_WII_IMG || Header->type == TYPE_GAME_WII_DISC)
@@ -726,6 +740,18 @@ int GameLoadSM::GetMenuInternal()
 	else if (ret == ++Idx)
 	{
 		if (++GameConfig.WiirdDebugger >= MAX_ON_OFF) GameConfig.WiirdDebugger = INHERIT;
+	}
+
+	//! Settings: Disable Wiimote Motor
+	if (ret == ++Idx)
+	{
+		if (++GameConfig.wpadMotor >= MAX_ON_OFF) GameConfig.wpadMotor = INHERIT;
+	}
+
+	//! Settings: Disable Wiimote Speaker
+	if (ret == ++Idx)
+	{
+		if (++GameConfig.wpadSpeaker >= MAX_ON_OFF) GameConfig.wpadSpeaker = INHERIT;
 	}
 
 	//! Only on Wii games

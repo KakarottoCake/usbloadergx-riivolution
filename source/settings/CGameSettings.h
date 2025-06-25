@@ -34,6 +34,8 @@ typedef struct _GameCFG
 	std::string NandEmuPath;
 	short Hooktype;
 	short WiirdDebugger;
+	short wpadMotor;
+	short wpadSpeaker;
 	short GameCubeMode;
 	short DMLVideo;
 	short DMLProgPatch;
@@ -105,6 +107,8 @@ typedef struct _GameCFG
 		this->NandEmuPath = game.NandEmuPath;
 		this->Hooktype = game.Hooktype;
 		this->WiirdDebugger = game.WiirdDebugger;
+		this->wpadMotor = game.wpadMotor;
+		this->wpadSpeaker = game.wpadSpeaker;
 		this->GameCubeMode = game.GameCubeMode;
 		this->DMLVideo = game.DMLVideo;
 		this->DMLProgPatch = game.DMLProgPatch;
