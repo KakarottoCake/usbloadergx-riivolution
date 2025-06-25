@@ -603,13 +603,6 @@ int GameBooter::BootGame(struct discHdr *gameHdr, const s8 useOcarina)
 			Hooktype = 1;
 	}
 
-	//! Disable private server for games that still have official servers.
-	if (memcmp(gameHeader.id, "SC7", 3) == 0 || memcmp(gameHeader.id, "RJA", 3) == 0 ||
-		memcmp(gameHeader.id, "SM8", 3) == 0 || memcmp(gameHeader.id, "SZB", 3) == 0 || memcmp(gameHeader.id, "R9J", 3) == 0)
-	{
-		PrivServChoice = PRIVSERV_OFF; // Private server patching causes error 20100
-	}
-
 	//! Load gameconfig.txt even if ocarina disabled
 	if (Hooktype)
 		LoadGameConfig(Settings.Cheatcodespath);

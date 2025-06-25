@@ -1077,40 +1077,12 @@ bool patch_pop(u8 *gameid)
 void patch_error_codes(u8 *gameid)
 {
     // Thanks to Seeky for the MKWii gecko codes
-    // Thanks to InvoxiPlayGames for the gecko codes for the 23400 fix.
     // Reimplemented by Leseratte without the need for a code handler.
     u32 *patch_addr = 0;
     u32 *patched = 0;
 
-    // Patch error 23400 for CoD (Black Ops, Reflex, MW3) and Rock Band 3 / The Beatles
-    if (memcmp(gameid, "SC7", 3) == 0)
-    {
-        gprintf("Patching error 23400 for %s\n", gameid);
-        *(u32 *)0x8023c954 = 0x41414141;
-    }
-    else if (memcmp(gameid, "RJA", 3) == 0)
-    {
-        gprintf("Patching error 23400 for %s\n", gameid);
-        *(u32 *)0x801b838c = 0x41414141;
-    }
-    else if (memcmp(gameid, "SM8", 3) == 0)
-    {
-        gprintf("Patching error 23400 for %s\n", gameid);
-        *(u32 *)0x80238c74 = 0x41414141;
-    }
-    else if (memcmp(gameid, "SZB", 3) == 0)
-    {
-        gprintf("Patching error 23400 for %s\n", gameid);
-        *(u32 *)0x808e3b20 = 0x41414141;
-    }
-    else if (memcmp(gameid, "R9J", 3) == 0)
-    {
-        gprintf("Patching error 23400 for %s\n", gameid);
-        *(u32 *)0x808d6934 = 0x41414141;
-    }
-
     // Patch RCE vulnerability in MKWii.
-    else if (memcmp(gameid, "RMC", 3) == 0)
+    if (memcmp(gameid, "RMC", 3) == 0)
     {
         switch (gameid[3])
         {
