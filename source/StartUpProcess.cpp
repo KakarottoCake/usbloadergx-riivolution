@@ -380,9 +380,14 @@ int StartUpProcess::Execute(bool quickGameBoot, bool isBadBoot)
 	// Reload to users settings if different than current IOS, and if not using an injected WiiU WiiVC IOS255 (fw.img)
 	if (Settings.LoaderIOS != IOS_GetVersion() && !isWiiVC)
 	{
-		// Shutdown pads
-		sleep(1); // Some Wiimotes won't reconnect as player 1 without this
-		Wpad_Disconnect();
+		// Shutdown pads, but wait for up to 2 seconds so that Wiimotes reconnect correctly
+		for (int i = 0; i < 20; i++)
+		{
+			if (WPAD_GetStatus() == WPAD_STATE_ENABLED)
+				break;
+			usleep(100000);
+		}
+		WPAD_Shutdown();
 
 		// Unmount devices
 		DeviceHandler::DestroyInstance();

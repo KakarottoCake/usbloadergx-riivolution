@@ -21,8 +21,9 @@
  * 3. This notice may not be removed or altered from any source
  * distribution.
  ***************************************************************************/
-#include <gccore.h>
+#include <ogc/libversion.h>
 #include <ogc/machine/processor.h>
+#include <gccore.h>
 #include <unistd.h>
 
 #include "FeatureSettingsMenu.hpp"
@@ -49,6 +50,8 @@
 #include "wad/wad.h"
 #include "sys.h"
 #include "cache/cache.hpp"
+
+#define OGC_VERSION (_V_MAJOR_ * 10000 + _V_MINOR_ * 100 + _V_PATCH_)
 
 static const char * OnOffText[] =
 {
@@ -117,6 +120,9 @@ void FeatureSettingsMenu::SetOptionNames()
 	Options->SetName(Idx++, "%s", tr( "Dump NAND to EmuNAND" ));
 	Options->SetName(Idx++, "%s", tr( "EmuNAND WAD Manager" ));
 	Options->SetName(Idx++, "%s", tr( "Boot Neek System Menu" ));
+#if OGC_VERSION >= 21300
+	Options->SetName(Idx++, "%s", tr( "Reset Wiimote Pairings" ));
+#endif
 	Options->SetName(Idx++, "%s", tr( "Reset All Game Settings" ));
 	if (Settings.CacheTitles)
 		Options->SetName(Idx++, "%s", tr( "Reset Cached Titles" ));
@@ -170,6 +176,11 @@ void FeatureSettingsMenu::SetOptionValues()
 
 	//! Settings: Boot Neek System Menu
 	Options->SetValue(Idx++, " ");
+
+#if OGC_VERSION >= 21300
+	//! Settings: Reset Wiimote Pairings
+	Options->SetValue(Idx++, " ");
+#endif
 
 	//! Settings: Reset All Game Settings
 	Options->SetValue(Idx++, " ");
@@ -667,6 +678,16 @@ int FeatureSettingsMenu::GetMenuInternal()
 			}
 		}
 	}
+
+#if OGC_VERSION >= 21300
+	//! Reset Wiimote Pairings
+	else if(ret == ++Idx)
+	{
+		int choice = WindowPrompt(tr( "Reset Wiimote Pairings" ), tr( "Are you sure you want to reset?" ), tr( "Yes" ), tr( "Cancel" ));
+		if (choice == 1)
+			WPAD_WipeSavedControllers();
+	}
+#endif
 
 	//! Reset All Game Settings
 	else if(ret == ++Idx)

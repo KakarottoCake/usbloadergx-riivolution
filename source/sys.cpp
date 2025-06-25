@@ -124,7 +124,10 @@ void AppCleanUp(void)
 
 	ResourceManager::DestroyInstance();
 
-	Wpad_Disconnect();
+	if (shutdown)
+		Wpad_Disconnect();
+	else
+		WPAD_Shutdown();
 	ISFS_Deinitialize();
 }
 
