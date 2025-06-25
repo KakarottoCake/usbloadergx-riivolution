@@ -1,6 +1,3 @@
-//functions for manipulating the HBC stub by giantpune
-//updated by blackb0x April 2022
-
 #include <string.h>
 #include <ogcsys.h>
 #include <malloc.h>
@@ -8,13 +5,14 @@
 
 #include "lstub.h"
 #include "wad/nandtitle.h"
+#include "settings/CSettings.h"
 #include "stub_bin.h"
 
 s32 Set_Stub(u64 reqID)
 {
 	if (!hbcStubAvailable())
 		return 0;
-	if (NandTitles.IndexOf(reqID) < 0)
+	if (!NandTitles.Exists(reqID))
 		return WII_EINSTALL;
 
 	char *stub = (char *)0x80002662;
@@ -49,31 +47,35 @@ u64 returnTo(bool onlyHBC)
 {
 	if (!onlyHBC)
 	{
+		// Custom setting
+		u64 tid = NandTitles.FindU32(Settings.returnTo);
+		if (tid > 0)
+			return tid;
 		// UNEO
-		if (NandTitles.IndexOf(0x00010001554E454FULL) >= 0)
-			return 0x00010001554E454FULL;
+		if (NandTitles.Exists(0x00010001554E454FLL))
+			return 0x00010001554E454FLL;
 		// ULNR
-		if (NandTitles.IndexOf(0x00010001554C4E52ULL) >= 0)
-			return 0x00010001554C4E52ULL;
+		if (NandTitles.Exists(0x00010001554C4E52LL))
+			return 0x00010001554C4E52LL;
 		// IDCL
-		if (NandTitles.IndexOf(0x000100014944434CULL) >= 0)
-			return 0x000100014944434CULL;
+		if (NandTitles.Exists(0x000100014944434CLL))
+			return 0x000100014944434CLL;
 	}
 	// OHBC
-	if (NandTitles.IndexOf(0x000100014F484243ULL) >= 0)
-		return 0x000100014F484243ULL;
+	if (NandTitles.Exists(0x000100014F484243LL))
+		return 0x000100014F484243LL;
 	// LULZ
-	if (NandTitles.IndexOf(0x000100014C554C5AULL) >= 0)
-		return 0x000100014C554C5AULL;
+	if (NandTitles.Exists(0x000100014C554C5ALL))
+		return 0x000100014C554C5ALL;
 	// 1.0.7
-	if (NandTitles.IndexOf(0x00010001AF1BF516ULL) >= 0)
-		return 0x00010001AF1BF516ULL;
+	if (NandTitles.Exists(0x00010001AF1BF516LL))
+		return 0x00010001AF1BF516LL;
 	// JODI
-	if (NandTitles.IndexOf(0x000100014A4F4449ULL) >= 0)
-		return 0x000100014A4F4449ULL;
+	if (NandTitles.Exists(0x000100014A4F4449LL))
+		return 0x000100014A4F4449LL;
 	// HAXX
-	if (NandTitles.IndexOf(0x0001000148415858ULL) >= 0)
-		return 0x0001000148415858ULL;
+	if (NandTitles.Exists(0x0001000148415858LL))
+		return 0x0001000148415858LL;
 	// System menu
-	return 0x100000002ULL;
+	return 0x100000002LL;
 }
