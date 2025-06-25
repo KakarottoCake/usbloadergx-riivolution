@@ -1132,11 +1132,11 @@ int GameBrowseMenu::MainLoop()
 	{
 		gprintf("\tpoweroffBtn clicked\n");
 		int choice = 0;
-		if(isWiiU())
-			choice = WindowPrompt(tr( "How to Shutdown?" ), 0, tr( "Full shutdown" ), tr("Cancel"));
+		if (CONF_GetShutdownMode() == CONF_SHUTDOWN_STANDBY)
+			choice = WindowPrompt(tr("Shutdown?"), 0, tr("Full shutdown"), tr("Cancel"));
 		else
-			choice = WindowPrompt(tr( "How to Shutdown?" ), 0, tr( "Full shutdown" ), tr( "Standby" ), tr( "Cancel" ));
-		
+			choice = WindowPrompt(tr("How to Shutdown?"), 0, tr("Full shutdown"), tr("Standby"), tr("Cancel"));
+
 		if (choice == 2)
 			Sys_ShutdownToIdle();
 		else if (choice == 1)

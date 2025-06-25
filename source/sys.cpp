@@ -135,7 +135,7 @@ void ExitApp(void)
 	DeviceHandler::DestroyInstance();
 	USBStorage2_Deinit();
 	USB_Deinitialize();
-	if(Settings.PlaylogUpdate)
+	if (Settings.PlaylogUpdate)
 		Playlog_Delete(); // Don't show USB Loader GX in the Wii message board
 
 	MagicPatches(0);
@@ -148,17 +148,12 @@ void Sys_Reboot(void)
 	STM_RebootSystem();
 }
 
-#define ShutdownToDefault   0
-#define ShutdownToIdle	  1
-#define ShutdownToStandby   2
-
-static void _Sys_Shutdown(int SHUTDOWN_MODE)
+static void _Sys_Shutdown(bool standby)
 {
 	ExitApp();
 
 	/* Poweroff console */
-	if ((CONF_GetShutdownMode() == CONF_SHUTDOWN_IDLE && SHUTDOWN_MODE != ShutdownToStandby) || SHUTDOWN_MODE
-			== ShutdownToIdle)
+	if (!standby)
 	{
 		s32 ret;
 
@@ -178,16 +173,19 @@ static void _Sys_Shutdown(int SHUTDOWN_MODE)
 
 void Sys_Shutdown(void)
 {
-	_Sys_Shutdown(ShutdownToDefault);
+	if (CONF_GetShutdownMode() == CONF_SHUTDOWN_IDLE)
+		_Sys_Shutdown(false);
+	else
+		_Sys_Shutdown(true);
 }
-
+// CONF check is done earlier to show/hide the button
 void Sys_ShutdownToIdle(void)
 {
-	_Sys_Shutdown(ShutdownToIdle);
+	_Sys_Shutdown(false);
 }
 void Sys_ShutdownToStandby(void)
 {
-	_Sys_Shutdown(ShutdownToStandby);
+	_Sys_Shutdown(true);
 }
 
 void Sys_LoadMenu(void)

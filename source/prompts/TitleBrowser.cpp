@@ -183,8 +183,10 @@ bool TitleSelector(char output[])
 	{
 		VIDEO_WaitVSync();
 
-		if (shutdown == 1) Sys_Shutdown();
-		if (reset == 1) Sys_Reboot();
+		if (shutdown == 1)
+			Sys_Shutdown();
+		if (reset == 1)
+			Sys_Reboot();
 
 		r = optionBrowser4.GetClickedOption();
 
@@ -429,7 +431,8 @@ int TitleBrowser()
 	{
 		VIDEO_WaitVSync();
 
-		if (shutdown == 1) Sys_Shutdown();
+		if (shutdown == 1)
+			Sys_Shutdown();
 		if (reset == 1)
 			Sys_Reboot();
 
