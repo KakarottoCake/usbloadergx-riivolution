@@ -108,7 +108,6 @@ void gamepatches(u8 videoSelected, u8 videoPatchDol, u8 aspectForce, u8 language
     u8 vfilter_medium[7] = {4, 8, 12, 16, 12, 8, 4};
     u8 vfilter_high[7] = {8, 8, 10, 12, 10, 8, 8};
 
-    // If a wip file is loaded for this game this does nothing - Dimok
     patch_nsmb((u8 *)0x80000000);
     patch_pop((u8 *)0x80000000);
     patch_kirby((u8 *)0x80000000);
