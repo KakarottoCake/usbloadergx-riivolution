@@ -32,8 +32,6 @@
 #include "usbloader/usbstorage2.h"
 #include "settings/CSettings.h"
 
-extern const DISC_INTERFACE __io_sdhc;
-
 /**
  * libogc device names.
  */
@@ -76,7 +74,7 @@ class DeviceHandler
 		bool MountAll();
 		void UnMountAll();
 		bool Mount(int dev);
-		bool IsInserted(int dev);
+		bool IsMounted(int dev);
 		void UnMount(int dev);
 
 		//! Individual Mounts/UnMounts...
@@ -86,7 +84,7 @@ class DeviceHandler
 		bool SD_Inserted() { if(sd) return sd->IsInserted(); return false; }
 		bool USB0_Inserted() { if(usb0) return usb0->IsInserted(); return false; }
 		bool USB1_Inserted() { if(usb1) return usb1->IsInserted(); return false; }
-		void UnMountSD() { if(sd) delete sd; sd = NULL; SDHC_Close(); }
+		void UnMountSD();
 		void UnMountUSB(int pos);
 		void UnMountAllUSB();
 		PartitionHandle * GetSDHandle() const { return sd; }
@@ -95,7 +93,7 @@ class DeviceHandler
 		PartitionHandle * GetUSBHandleFromPartition(int part) const;
 		static const DISC_INTERFACE *GetUSB0Interface() { return (IOS_GetVersion() >= 200) ? &__io_usbstorage2_port0 : &__io_usbstorage; }
 		static const DISC_INTERFACE *GetUSB1Interface() { return (IOS_GetVersion() >= 200) ? &__io_usbstorage2_port1 : NULL; }
-		static const DISC_INTERFACE *GetSDInterface() { return (IOS_GetVersion() >= 200 && Settings.SDMode) ? &__io_sdhc : &__io_wiisd; }
+		static const DISC_INTERFACE *GetSDInterface() { return &__io_wiisd; }
 		static int GetFilesystemType(int dev);
 		static const char * GetFSName(int dev);
 		static int PathToDriveType(const char * path);
@@ -104,6 +102,7 @@ class DeviceHandler
 		static int PartitionToUSBPort(int part);
 		static u16 GetUSBPartitionCount();
 		static int PartitionToPortPartition(int part);
+		static int GetSDPartition();
 	private:
 		DeviceHandler() : sd(0), usb0(0), usb1(0) { }
 		~DeviceHandler();

@@ -26,11 +26,9 @@
 #include "utils/tools.h"
 #include "sys.h"
 #include "version.h"
-#include "usbloader/sdhc.h"
 #include "settings/meta.h"
 
 extern bool isWiiVC; // in sys.cpp
-extern u8 sdhc_mode_sd;
 
 StartUpProcess::StartUpProcess()
 {
@@ -116,12 +114,12 @@ int StartUpProcess::ParseArguments(int argc, char *argv[])
 		gprintf("Boot argument %i: %s\n", i + 1, argv[i]);
 
 		char *ptr = strcasestr(argv[i], "-ios=");
-		if(ptr)
+		if (ptr)
 		{
-			if(atoi(ptr+strlen("-ios=")) == 58)
+			if (atoi(ptr + strlen("-ios=")) == 58)
 				Settings.LoaderIOS = 58;
 			else
-				Settings.LoaderIOS = LIMIT(atoi(ptr+strlen("-ios=")), 200, 255);
+				Settings.LoaderIOS = LIMIT(atoi(ptr + strlen("-ios=")), 200, 255);
 		}
 
 		ptr = strcasestr(argv[i], "-bootios=");
@@ -143,11 +141,7 @@ int StartUpProcess::ParseArguments(int argc, char *argv[])
 		{
 			ptr = strcasestr(argv[i], "-sdmode=");
 			if (ptr)
-			{
 				Settings.SDMode = LIMIT(atoi(ptr + strlen("-sdmode=")), 0, 1);
-				if (Settings.SDMode)
-					sdhc_mode_sd = 1;
-			}
 		}
 
 		if (strlen(argv[i]) == 6 && strchr(argv[i], '=') == 0 && strchr(argv[i], '-') == 0)
@@ -238,7 +232,6 @@ bool StartUpProcess::USBSpinUp()
 		if (sdmodeBtn->GetState() == STATE_CLICKED)
 		{
 			Settings.SDMode = ON;
-			sdhc_mode_sd = 1;
 			break;
 		}
 
@@ -330,10 +323,6 @@ int StartUpProcess::Execute(bool quickGameBoot, bool isBadBoot)
 	// Setup the pads
 	SetupPads();
 
-	// Mount the SD card
-	SetTextf("Initializing SD card\n");
-	DeviceHandler::Instance()->MountSD();
-
 	// Do not mount USB if not needed. USB is not available with WiiU WiiVC injected channel
 	bool USBSuccess = false;
 	if (!isWiiVC && !Settings.SDMode)
@@ -346,6 +335,10 @@ int StartUpProcess::Execute(bool quickGameBoot, bool isBadBoot)
 			gprintf("Completed initialization of USB devices\n");
 		}
 	}
+
+	// Mount the SD card
+	SetTextf("Initializing SD card\n");
+	DeviceHandler::Instance()->MountSD();
 
 	SetTextf("Loading config files\n");
 	gprintf("\tLoading config...%s\n", Settings.Load() ? "done" : "failed");
@@ -397,7 +390,7 @@ int StartUpProcess::Execute(bool quickGameBoot, bool isBadBoot)
 		}
 	}
 
-	if (sdhc_mode_sd)
+	if (!isWiiVC)
 		editMetaArguments();
 
 	if (!IosLoader::IsHermesIOS() && !IosLoader::IsD2X() && !Settings.SDMode)
@@ -428,7 +421,7 @@ int StartUpProcess::Execute(bool quickGameBoot, bool isBadBoot)
 		gprintf("Current IOS: %d - have AHB access: %s\n", IOS_GetVersion(), AHBPROT_DISABLED ? "yes" : "no");
 	}
 
-	// We only initialize once for the whole session
+	// Initialize again
 	ISFS_Initialize();
 
 	// Check MIOS version

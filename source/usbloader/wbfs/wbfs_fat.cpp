@@ -62,7 +62,7 @@ s32 Wbfs_Fat::Open()
 	if (Settings.SDMode)
 	{
 		PartitionHandle *sdHandle = DeviceHandler::Instance()->GetSDHandle();
-		if (lba == sdHandle->GetLBAStart(0))
+		if (lba == sdHandle->GetLBAStart(partition))
 		{
 			snprintf(wbfs_fs_drive, sizeof(wbfs_fs_drive), "sd:");
 			return 0;

@@ -59,7 +59,6 @@
 #include "neek.hpp"
 #include "lstub.h"
 #include "xml/GameTDB.hpp"
-#include "usbloader/sdhc.h"
 #include "wad/nandtitle.h"
 
 /* GCC 11 false positives */
@@ -73,7 +72,6 @@ u32 AppEntrypoint = 0;
 
 extern bool isWiiVC; // in sys.cpp
 extern u32 hdd_sector_size[2];
-extern u8 sdhc_mode_sd;
 extern std::vector<struct d2x> d2x_list;
 extern "C"
 {
@@ -214,9 +212,11 @@ void GameBooter::SetupNandEmu(u8 NandEmuMode, const char *NandEmuPath, struct di
 
 		Enable_Emu(strncmp(NandEmuPath, "usb", 3) == 0 ? EMU_USB : EMU_SD);
 
-		//! Mount USB to start game, SD is not required
+		//! Remount the device
 		if (strncmp(NandEmuPath, "usb", 3) == 0)
 			DeviceHandler::Instance()->Mount(USB1 + partition);
+		else
+			DeviceHandler::Instance()->MountSD();
 	}
 }
 
@@ -245,10 +245,12 @@ int GameBooter::SetupDisc(struct discHdr &gameHeader)
 		gprintf("%d\n", ret);
 		if (ret < 0)
 			return ret;
+		DeviceHandler::Instance()->UnMountSD();
 		ret = set_frag_list(gameHeader.id, Settings.SDMode);
 		if (ret < 0)
 			return ret;
 		gprintf("%s set to game\n", Settings.SDMode ? "SD" : "USB");
+		DeviceHandler::Instance()->MountSD();
 	}
 
 	gprintf("Disc_Open()...");
@@ -260,10 +262,6 @@ int GameBooter::SetupDisc(struct discHdr &gameHeader)
 
 void GameBooter::ShutDownDevices(int gameUSBPort)
 {
-	bool usbconnected = false;
-	if (DeviceHandler::Instance()->USB0_Inserted() || DeviceHandler::Instance()->USB1_Inserted())
-		usbconnected = true;
-
 	gprintf("Shutting down devices...\n");
 	//! Flush all caches and close up all devices
 	WBFS_CloseAll();
@@ -276,7 +274,7 @@ void GameBooter::ShutDownDevices(int gameUSBPort)
 	if (Settings.USBPort == 2)
 		USBStorage2_SetPort(gameUSBPort);
 	USBStorage2_Deinit();
-	if (usbconnected)
+	if (!Settings.SDMode)
 		USB_Deinitialize();
 }
 
@@ -371,7 +369,7 @@ int GameBooter::BootGame(struct discHdr *gameHdr)
 		}
 	}
 
-	if (autoIOS == GAME_IOS_AUTO && d2x_list.size())
+	if (autoIOS == GAME_IOS_AUTO && d2x_list.size() && !isWiiVC)
 	{
 		u8 requestedIOS = 0;
 		if (gameHeader.type == TYPE_GAME_NANDCHAN)
@@ -501,13 +499,6 @@ int GameBooter::BootGame(struct discHdr *gameHdr)
 		if (MountGamePartition(false) < 0)
 			return -1;
 	}
-	//! Boot with custom SD code, otherwise the game ID won't match
-	else if (sdhc_mode_sd)
-	{
-		DeviceHandler::Instance()->UnMountSD();
-		sdhc_mode_sd = 0;
-		DeviceHandler::Instance()->MountSD();
-	}
 
 	//! Modify Wii Message Board to display the game starting here (before NAND Emu)
 	if (Settings.PlaylogUpdate)
@@ -575,7 +566,7 @@ int GameBooter::BootGame(struct discHdr *gameHdr)
 			enable_ES_ioctlv_vector();
 			if (Settings.SDMode)
 			{
-				if (gameList.GetGameFSSD() == PART_FS_WBFS)
+				if (gameList.GetGameFSSD(gameHeader.id) == PART_FS_WBFS)
 					mload_close();
 			}
 			else

@@ -163,6 +163,7 @@ void HardDriveSM::SetOptionValues()
 	else
 	{
 		handle = DeviceHandler::Instance()->GetSDHandle();
+		checkPart = DeviceHandler::GetSDPartition();
 	}
 
 	//! Get the partition name and it's size in GB's
@@ -233,7 +234,6 @@ int HardDriveSM::GetMenuInternal()
 		{
 			if (OldSettingsSDMode)
 			{
-				Settings.partition = 0;
 				fs_type = DeviceHandler::GetFilesystemType(SD);
 			}
 			else

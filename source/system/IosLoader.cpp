@@ -22,7 +22,6 @@
 #include "libs/libruntimeiospatch/runtimeiospatch.h"
 
 extern u32 hdd_sector_size[2];
-extern u8 sdhc_mode_sd;
 
 /*
  * Buffer variables for the IOS info to avoid loading it several times
@@ -106,7 +105,7 @@ void IosLoader::GetD2XInfo()
 {
 	s32 base = 0;
 	ISFS_Initialize();
-	for (s32 i = 255; i >= 200; i--) // Prefer higher slots e.g. 251, 250 & 249
+	for (s32 i = 255; i >= 200; i--) // Prefer higher slots e.g. 251, 250, 249 & 248
 	{
 		if (IsD2XBase(i, &base))
 		{
@@ -181,7 +180,6 @@ s32 IosLoader::LoadGameCios(s32 ios)
 	ret = ReloadIosSafe(ios);
 
 	// Remount devices after reloading IOS.
-	sdhc_mode_sd = 0;
 	DeviceHandler::Instance()->MountSD();
 	if (!Settings.SDMode)
 		DeviceHandler::Instance()->MountAllUSB(true);

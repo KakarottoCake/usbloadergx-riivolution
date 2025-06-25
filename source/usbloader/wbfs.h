@@ -36,6 +36,7 @@ extern "C"
 	s32 WBFS_GetFragList(u8 *id);
 
 	s32 WBFS_OpenAll();
+	s32 WBFS_OpenPartSD();
 	s32 WBFS_OpenPart(int part_num);
 	wbfs_disc_t* WBFS_OpenDisc(u8 *discid);
 	void WBFS_CloseDisc(wbfs_disc_t *disc);

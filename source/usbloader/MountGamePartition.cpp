@@ -79,35 +79,18 @@ static int FindGamePartition()
 
 static int FindGamePartitionSD()
 {
-	// Check for a WBFS partition first in case IOS249 Rev < 18
-	if (DeviceHandler::GetFilesystemType(0) == PART_FS_WBFS)
-	{
-		if (WBFS_OpenPart(0) == 0)
-		{
-			GameTitles.SortTitleList();
-			Settings.partition = 0;
-			return 0;
-		}
-	}
-
-	if (IosLoader::IsWaninkokoIOS() && NandTitles.VersionOf(TITLE_ID(1, IOS_GetVersion())) < 18)
+	if(IosLoader::IsWaninkokoIOS() && NandTitles.VersionOf(TITLE_ID(1, IOS_GetVersion())) < 18)
 		return -1;
 
-	// Check if it's a FAT/NTFS/EXT partition and if it's got games on it
-	if (DeviceHandler::GetFilesystemType(0) == PART_FS_NTFS || DeviceHandler::GetFilesystemType(0) == PART_FS_FAT || DeviceHandler::GetFilesystemType(0) == PART_FS_EXT)
+	if (WBFS_OpenPartSD() == 0)
 	{
-		if (WBFS_OpenPart(0) == 0)
+		u32 count;
+		WBFS_GetCount(Settings.partition, &count);
+
+		if (count > 0)
 		{
-			u32 count;
-			// Get the game count...
-			WBFS_GetCount(0, &count);
-			if (count > 0)
-			{
-				GameTitles.SortTitleList();
-				Settings.partition = 0;
-				return 0;
-			}
-			WBFS_Close(0);
+			GameTitles.SortTitleList();
+			return 0;
 		}
 	}
 
@@ -177,7 +160,7 @@ int MountGamePartition(bool ShowGUI)
 	else
 	{
 		if (Settings.SDMode)
-			ret = WBFS_OpenPart(Settings.partition);
+			ret = WBFS_OpenPartSD();
 		else if (Settings.MultiplePartitions)
 			ret = WBFS_OpenAll();
 		else if (!Settings.FirstTimeRun)
