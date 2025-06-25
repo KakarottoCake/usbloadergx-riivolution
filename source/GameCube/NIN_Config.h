@@ -20,28 +20,29 @@
 #include <gctypes.h>
 
 #define NIN_MAGIC					0x01070CF6
-#define NIN_CFG_VERSION				0x00000009
+#define NIN_CFG_VERSION				0x0000000A
 
-typedef struct NIN_CFG 
+typedef struct NIN_CFG
 {
-	u32		Magicbytes;		// 0x01070CF6
-	u32		Version;		// v4 since v3.354, v5 since v3.358, v6 since v3.368, v7 since v4.424, v8 since v4.431, v9 since v6.487
-	u32		Config;
-	u32		VideoMode;
-	u32		Language;
-	char	GamePath[255];
-	char	CheatPath[255];
-	u32		MaxPads;		// added in r42 - cfg version 2
-	u32		GameID;			// added in r83 - cfg version 2
+	unsigned int Magicbytes; // 0x01070CF6
+	unsigned int Version;    // v4 since v3.354, v5 since v3.358, v6 since v3.368, v7 since v4.424, v8 since v4.431, v9 since v6.487, v10 since v6.493
+	unsigned int Config;
+	unsigned int VideoMode;
+	unsigned int Language;
+	char GamePath[255];
+	char CheatPath[255];
+	unsigned int MaxPads;    // added in r42 - cfg version 2
+	unsigned int GameID;     // added in r83 - cfg version 2
 	union
 	{
-		u32 MemCardBlocks;	// added in v1.135 - cfg version 3 - u32 in v3, Char in v4
+		unsigned int MemCardBlocks;        // added in v1.135 - cfg version 3
 		struct
 		{
-			char		MemCardBlocksV4;// replaced in v3.354 - cfg version 4 - from u32 in v3 to Char in v4
-			char		VideoScale;		// added in v3.354 - cfg version 4
-			char		VideoOffset;	// added in v3.354 - cfg version 4
-			char		NetworkProfile; // added in v6.487 - cfg version 9
+			unsigned char MemCardBlocksV4; // replaced in v3.353 - cfg version 4 (unsigned int in v3 to char in v4)
+			signed char	VideoScale;        // added in v3.354 - cfg version 4
+			signed char	VideoOffset;       // added in v3.354 - cfg version 4
+			unsigned char NetworkProfile;  // added in v6.487 - cfg version 9
+			unsigned int WiiUGamepadSlot;  // added in v6.493 - cfg version 10
 		};
 	};
 } NIN_CFG;
@@ -66,17 +67,17 @@ enum ninconfig
 	NIN_CFG_NATIVE_SI	= (1<<14),	// v2.189
 	NIN_CFG_WIIU_WIDE	= (1<<15),	// v2.258
 	NIN_CFG_ARCADE_MODE = (1<<16),	// v4.424
-	NIN_CFG_CC_RUMBLE	= (1 << 17),// v4.431 cfg version 8
-	NIN_CFG_SKIP_IPL	= (1 << 18),// v4.435
-	NIN_CFG_BBA_EMU		= (1 << 19),// v6.487 cfg version 9
+	NIN_CFG_CC_RUMBLE	= (1<<17),	// v4.431 cfg version 8
+	NIN_CFG_SKIP_IPL	= (1<<18),	// v4.435
+	NIN_CFG_BBA_EMU		= (1<<19),	// v6.487 cfg version 9
 };
 
 enum ninvideomode
 {
 	NIN_VID_AUTO		= (0<<16),
 	NIN_VID_FORCE		= (1<<16),
-	NIN_VID_NONE		= (2<<16), // replaced by FORCE_DF in v2.200 - v2.207
-	NIN_VID_FORCE_DF	= (4<<16), // v2.208+
+	NIN_VID_NONE		= (2<<16),	// replaced by FORCE_DF in v2.200 - v2.207
+	NIN_VID_FORCE_DF	= (4<<16),	// v2.208+
 
 	NIN_VID_MASK		= NIN_VID_AUTO|NIN_VID_FORCE|NIN_VID_NONE|NIN_VID_FORCE_DF,
 
@@ -88,7 +89,7 @@ enum ninvideomode
 	NIN_VID_FORCE_MASK	= NIN_VID_FORCE_PAL50|NIN_VID_FORCE_PAL60|NIN_VID_FORCE_NTSC|NIN_VID_FORCE_MPAL,
 
 	NIN_VID_PROG		= (1<<4),
-	NIN_VID_PATCH_PAL50 = (1<<5),		// v3.368 cfg version 6
+	NIN_VID_PATCH_PAL50 = (1<<5),	// v3.368 cfg version 6
 };
 
 enum ninlanguage

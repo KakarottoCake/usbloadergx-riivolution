@@ -688,7 +688,7 @@ int GameBooter::BootGame(struct discHdr *gameHdr)
 	}
 
 	//! Jump to the entrypoint of the game - the last function of the USB Loader
-	gprintf("Jumping to game entrypoint: 0x%08X.\n", AppEntrypoint);
+	gprintf("Jumping to game entrypoint: 0x%08x.\n", AppEntrypoint);
 	return Disc_JumpToEntrypoint(Hooktype, WDMMenu::GetDolParameter());
 }
 
@@ -1003,7 +1003,7 @@ int GameBooter::BootDevolution(struct discHdr *gameHdr)
 
 	if (gameHdr->type == TYPE_GAME_GC_DISC)
 	{
-		WindowPrompt(tr("Error:"), tr("To run GameCube games from Disc you need to set the GameCube mode to MIOS in the game settings."), tr("OK"));
+		WindowPrompt(tr("Error:"), tr("To run GameCube games from disc you need to set the GameCube mode to MIOS in the game settings."), tr("OK"));
 		return -1;
 	}
 
@@ -1015,7 +1015,7 @@ int GameBooter::BootDevolution(struct discHdr *gameHdr)
 
 	if (!CheckAHBPROT())
 	{
-		WindowPrompt(tr("Error:"), fmt(tr("%s requires AHB access! Please launch USBLoaderGX from HBC or from an updated channel or forwarder."), LoaderName), tr("OK"));
+		WindowPrompt(tr("Error:"), fmt(tr("%s requires AHB access! Please launch USB Loader GX from HBC or from an updated channel or forwarder."), LoaderName), tr("OK"));
 		return -1;
 	}
 
@@ -1126,7 +1126,7 @@ int GameBooter::BootDevolution(struct discHdr *gameHdr)
 		devo_config->options |= DEVO_CFG_CROP_OVERSCAN;
 	if (devoDiscDelayChoice && DEVO_version >= 234)
 		devo_config->options |= DEVO_CFG_DISC_DELAY;
-	//	devo_config->options |= DEVO_CFG_PLAYLOG; // Playlog setting managed by USBLoaderGX features menu
+	//	devo_config->options |= DEVO_CFG_PLAYLOG; // Playlog setting managed by USB Loader GX features menu
 
 	if (devoProgressivePatch && DEVO_version >= 266)
 	{
@@ -1189,6 +1189,7 @@ int GameBooter::BootDevolution(struct discHdr *gameHdr)
 	FILE *iso_file = fopen(disc1, "rb");
 	if (!iso_file)
 	{
+		MEM2_free(loader_bin);
 		WindowPrompt(tr("Error:"), tr("File not found."), tr("OK"));
 		return -1;
 	}
@@ -1267,12 +1268,13 @@ int GameBooter::BootNintendont(struct discHdr *gameHdr)
 	u8 ninSkipIPLChoice = game_cfg->NINSkipIPL == INHERIT ? Settings.NINSkipIPL : game_cfg->NINSkipIPL;
 	u8 ninBBAChoice = game_cfg->NINBBA == INHERIT ? Settings.NINBBA : game_cfg->NINBBA;
 	u8 ninBBAProfileChoice = game_cfg->NINBBAProfile == INHERIT ? Settings.NINBBAProfile : game_cfg->NINBBAProfile;
+	u8 ninGamepadChoice = game_cfg->NINWiiUGamepadSlot == INHERIT ? Settings.NINWiiUGamepadSlot : game_cfg->NINWiiUGamepadSlot;
 
 	const char *ninLoaderPath = game_cfg->NINLoaderPath.size() == 0 ? Settings.NINLoaderPath : game_cfg->NINLoaderPath.c_str();
 
 	if (!CheckAHBPROT())
 	{
-		WindowPrompt(tr("Error:"), fmt(tr("%s requires AHB access! Please launch USBLoaderGX from HBC or from an updated channel or forwarder."), LoaderName), tr("OK"));
+		WindowPrompt(tr("Error:"), fmt(tr("%s requires AHB access! Please launch USB Loader GX from HBC or from an updated channel or forwarder."), LoaderName), tr("OK"));
 		return -1;
 	}
 
@@ -1324,7 +1326,7 @@ int GameBooter::BootNintendont(struct discHdr *gameHdr)
 			strptime("Sep 20 2013 15:27:01", "%b %d %Y %H:%M:%S", &time);
 			if (NINLoaderTime == mktime(&time))
 			{
-				WindowPrompt(tr("Error:"), tr("USBloaderGX r1218 is required for Nintendont Alpha v0.1. Please update your Nintendont boot.dol version."), tr("Ok"));
+				WindowPrompt(tr("Error:"), tr("USB Loader GX r1218 is required for Nintendont Alpha v0.1. Please update your Nintendont boot.dol version."), tr("Ok"));
 				return -1;
 			}
 
@@ -1370,7 +1372,7 @@ int GameBooter::BootNintendont(struct discHdr *gameHdr)
 			strptime("Dec 23 2014 17:28:56", "%b %d %Y %H:%M:%S", &time); // v1.259
 			if (gameHdr->type == TYPE_GAME_GC_DISC && NINLoaderTime < mktime(&time))
 			{
-				WindowPrompt(tr("Error:"), tr("To run GameCube games from Disc you need to set the GameCube mode to MIOS in the game settings."), tr("OK"));
+				WindowPrompt(tr("Error:"), tr("To run GameCube games from disc you need to set the GameCube mode to MIOS in the game settings."), tr("OK"));
 				return -1;
 			}
 
@@ -1403,7 +1405,7 @@ int GameBooter::BootNintendont(struct discHdr *gameHdr)
 		}
 		else
 		{
-			int choice = WindowPrompt(tr("Warning:"), tr("USBloaderGX couldn't verify Nintendont boot.dol file. Launch this boot.dol anyway?"), tr("Yes"), tr("Cancel"));
+			int choice = WindowPrompt(tr("Warning:"), tr("USB Loader GX couldn't verify Nintendont boot.dol file. Launch this boot.dol anyway?"), tr("Yes"), tr("Cancel"));
 			if (choice == 0)
 				return -1;
 		}
@@ -1422,8 +1424,10 @@ int GameBooter::BootNintendont(struct discHdr *gameHdr)
 		NIN_cfg_version = 7;
 	else if (NINRev >= 431 && NINRev < 487)
 		NIN_cfg_version = 8;
-	else if (NINRev >= 487)
+	else if (NINRev >= 487 && NINRev < 493)
 		NIN_cfg_version = 9;
+	else if (NINRev >= 493)
+		NIN_cfg_version = 10;
 
 	// Check USB device
 	if (gameHdr->type != TYPE_GAME_GC_DISC && strncmp(RealPath, "usb", 3) == 0)
@@ -1454,7 +1458,7 @@ int GameBooter::BootNintendont(struct discHdr *gameHdr)
 			return -1;
 		}
 
-		// check if the partition is the first FAT32 of the drive. ExFAT was added to nintendont 4.x but USBLoaderGX can't list games so no need to check that format.
+		// check if the partition is the first FAT32 of the drive. ExFAT was added to nintendont 4.x but USB Loader GX can't list games so no need to check that format.
 		bool found = false;
 		for (int partition = 0; partition <= USBport_partNum; partition++)
 		{
@@ -1530,21 +1534,21 @@ int GameBooter::BootNintendont(struct discHdr *gameHdr)
 					{
 						gprintf("NIN: Couldn't copy %s to %s.\n", kenobiwii_srcpath, kenobiwii_path);
 						RemoveFile(kenobiwii_path);
-						if (WindowPrompt(tr("Warning:"), fmt(tr("To use ocarina with %s you need the %s file."), LoaderName, kenobiwii_path), tr("Continue"), tr("Cancel")) == 0)
+						if (WindowPrompt(tr("Warning:"), fmt(tr("To use Ocarina with %s you need the %s file."), LoaderName, kenobiwii_path), tr("Continue"), tr("Cancel")) == 0)
 							return -1;
 					}
 				}
 				else
 				{
 					gprintf("kenobiwii source path = %s Not found.\n", kenobiwii_srcpath);
-					if (WindowPrompt(tr("Warning:"), fmt(tr("To use ocarina with %s you need the %s file."), LoaderName, kenobiwii_path), tr("Continue"), tr("Cancel")) == 0)
+					if (WindowPrompt(tr("Warning:"), fmt(tr("To use Ocarina with %s you need the %s file."), LoaderName, kenobiwii_path), tr("Continue"), tr("Cancel")) == 0)
 						return -1;
 				}
 			}
 			else
 			{
 				gprintf("kenobiwii path = %s Not found.\n", kenobiwii_path);
-				if (WindowPrompt(tr("Warning:"), fmt(tr("To use ocarina with %s you need the %s file."), LoaderName, kenobiwii_path), tr("Continue"), tr("Cancel")) == 0)
+				if (WindowPrompt(tr("Warning:"), fmt(tr("To use Ocarina with %s you need the %s file."), LoaderName, kenobiwii_path), tr("Continue"), tr("Cancel")) == 0)
 					return -1;
 			}
 		}
@@ -1691,10 +1695,7 @@ int GameBooter::BootNintendont(struct discHdr *gameHdr)
 	if (ninWidescreenChoice)
 		nin_config->Config |= NIN_CFG_FORCE_WIDE;
 	if (ninProgressivePatch)
-	{
 		nin_config->Config |= NIN_CFG_FORCE_PROG;
-		nin_config->VideoMode |= NIN_VID_PROG;
-	}
 	if (ninAutobootChoice)
 		nin_config->Config |= NIN_CFG_AUTO_BOOT;
 	if (ninUSBHIDChoice)
@@ -1734,7 +1735,7 @@ int GameBooter::BootNintendont(struct discHdr *gameHdr)
 	if (NIN_cfg_version == 3)
 		nin_config->MemCardBlocks = ninMCSizeChoice; // NIN_CFG_VERSION 3 v1.135
 	// Memory Card Emulation Blocs size + Aspect ratio with NIN_CFG v4
-	else if (NIN_cfg_version >= 4)
+	if (NIN_cfg_version >= 4)
 	{
 		nin_config->MemCardBlocksV4 = ninMCSizeChoice; // NIN_CFG_VERSION 4 v3.354
 		nin_config->VideoScale = ninVideoScale;		   // v3.354+
@@ -1753,6 +1754,10 @@ int GameBooter::BootNintendont(struct discHdr *gameHdr)
 	if (NIN_cfg_version >= 9 && ninBBAChoice && !isWiiU())
 		nin_config->NetworkProfile = ninBBAProfileChoice; // v6.487+
 
+	// Wii U Gamepad Slot
+	if (NIN_cfg_version >= 10 && isWiiU())
+		nin_config->WiiUGamepadSlot = ninGamepadChoice; // v6.493+
+
 	// Setup Video Mode
 	if (ninVideoChoice == DML_VIDEO_NONE) // No video mode changes
 	{
@@ -1760,10 +1765,10 @@ int GameBooter::BootNintendont(struct discHdr *gameHdr)
 	}
 	else
 	{
-		if (ninVideoChoice == DML_VIDEO_AUTO || ninVideoChoice == DML_VIDEO_FORCE_DISCDEFAULT) // Auto select video mode
+		if (ninVideoChoice == DML_VIDEO_AUTO) // Auto select video mode
 		{
-			Disc_SelectVMode(VIDEO_MODE_DISCDEFAULT, false, NULL, &nin_config->VideoMode);
 			nin_config->VideoMode = NIN_VID_AUTO;
+			Disc_SelectVMode(VIDEO_MODE_DISCDEFAULT, false, NULL, &nin_config->VideoMode);
 		}
 		else // Force user choice
 		{
@@ -1783,6 +1788,9 @@ int GameBooter::BootNintendont(struct discHdr *gameHdr)
 		Disc_SetVMode();
 	}
 
+	if (ninProgressivePatch)
+		nin_config->VideoMode |= NIN_VID_PROG;
+
 	gprintf("NIN: Active device %s\n", nin_config->Config & NIN_CFG_USB ? "USB" : "SD");
 	gprintf("NIN: config 0x%08x\n", nin_config->Config);
 	gprintf("NIN: Video mode 0x%08x\n", nin_config->VideoMode);
@@ -1794,11 +1802,7 @@ int GameBooter::BootNintendont(struct discHdr *gameHdr)
 	}
 	else // console default or other languages
 	{
-		nin_config->Language = NIN_LAN_AUTO;
-		if (CONF_GetLanguage() >= CONF_LANG_ENGLISH && CONF_GetLanguage() <= CONF_LANG_DUTCH)
-		{
-			nin_config->Language = CONF_GetLanguage() - 1;
-		}
+		nin_config->Language = NIN_LAN_AUTO; // Let Nintendont handle it
 	}
 	gprintf("NIN: Language 0x%08x \n", nin_config->Language);
 
@@ -1842,9 +1846,12 @@ int GameBooter::BootNintendont(struct discHdr *gameHdr)
 		else
 		{
 			gprintf("Could not open NINCfgPath in write mode");
-			int choice = WindowPrompt(tr("Warning:"), tr("USBloaderGX couldn't write Nintendont config file. Launch Nintendont anyway?"), tr("Yes"), tr("Cancel"));
+			int choice = WindowPrompt(tr("Warning:"), tr("USB Loader GX couldn't write Nintendont config file. Launch Nintendont anyway?"), tr("Yes"), tr("Cancel"));
 			if (choice == 0)
+			{
+				MEM2_free(nin_config);
 				return -1;
+			}
 		}
 
 		// Copy Nintendont Config file to game path
@@ -1857,8 +1864,11 @@ int GameBooter::BootNintendont(struct discHdr *gameHdr)
 			{
 				gprintf("\nError: Couldn't copy %s to %s.\n", NINCfgPath, NINDestPath);
 				RemoveFile(NINDestPath);
-				if (WindowPrompt(tr("Warning:"), tr("USBloaderGX couldn't write Nintendont config file. Launch Nintendont anyway?"), tr("Yes"), tr("Cancel")) == 0)
+				if (WindowPrompt(tr("Warning:"), tr("USB Loader GX couldn't write Nintendont config file. Launch Nintendont anyway?"), tr("Yes"), tr("Cancel")) == 0)
+				{
+					MEM2_free(nin_config);
 					return -1;
+				}
 			}
 			gprintf("done\n");
 		}
@@ -1872,6 +1882,7 @@ int GameBooter::BootNintendont(struct discHdr *gameHdr)
 		LoadFileToMem(NIN_loader_path, &buffer, &filesize);
 		if (!buffer)
 		{
+			MEM2_free(nin_config);
 			return -1;
 		}
 		FreeHomebrewBuffer();
@@ -1880,11 +1891,14 @@ int GameBooter::BootNintendont(struct discHdr *gameHdr)
 		AddBootArgument(NIN_loader_path);
 		AddBootArgument((char *)nin_config, sizeof(NIN_CFG));
 
+		MEM2_free(nin_config);
+
 		// Launch Nintendont
 		return !(BootHomebrewFromMem() < 0);
 	}
 	else
 	{
+		MEM2_free(nin_config);
 		// Launch Nintendont
 		return !(BootHomebrew(NIN_loader_path) < 0);
 	}

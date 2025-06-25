@@ -229,6 +229,7 @@ bool CGameSettings::Save()
 		fprintf(f, "NINSkipIPL:%d; ", GameList[i].NINSkipIPL);
 		fprintf(f, "NINBBA:%d; ", GameList[i].NINBBA);
 		fprintf(f, "NINBBAProfile:%d; ", GameList[i].NINBBAProfile);
+		fprintf(f, "NINWiiUGamepadSlot:%d; ", GameList[i].NINWiiUGamepadSlot);
 		fprintf(f, "NINMCEmulation:%d; ", GameList[i].NINMCEmulation);
 		fprintf(f, "NINMCSize:%d; ", GameList[i].NINMCSize);
 		fprintf(f, "NINUSBHID:%d; ", GameList[i].NINUSBHID);
@@ -488,6 +489,11 @@ bool CGameSettings::SetSetting(GameCFG & game, const char *name, const char *val
 		game.NINBBAProfile = atoi(value);
 		return true;
 	}
+	else if (strcmp(name, "NINWiiUGamepadSlot") == 0)
+	{
+		game.NINWiiUGamepadSlot = atoi(value);
+		return true;
+	}
 	else if(strcmp(name, "NINMCEmulation") == 0)
 	{
 		game.NINMCEmulation = atoi(value);
@@ -730,6 +736,7 @@ void CGameSettings::SetDefault(GameCFG &game)
 	game.NINSkipIPL = INHERIT;
 	game.NINBBA = INHERIT;
 	game.NINBBAProfile = INHERIT;
+	game.NINWiiUGamepadSlot = INHERIT;
 	game.NINMCEmulation = INHERIT;
 	game.NINMCSize = INHERIT;
 	game.NINUSBHID = INHERIT;

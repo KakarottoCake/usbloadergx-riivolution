@@ -107,6 +107,16 @@ static const char * NINMCText[] =
 	trNOOP( "ON (Multi)" )
 };
 
+// Nintendont screwed this up and made 4 act as off
+static const char * NINGamepadText[] =
+{
+	trNOOP( "1" ),
+	trNOOP( "2" ),
+	trNOOP( "3" ),
+	trNOOP( "4" ),
+	trNOOP( "None" )
+};
+
 static int currentGCmode = 0;
 
 GCGameLoadSM::GCGameLoadSM(struct discHdr *hdr)
@@ -169,7 +179,7 @@ void GCGameLoadSM::SetOptionNames()
 	Options->SetName(Idx++, "%s", tr( "GameCube Mode" ));
 	if(currentGCmode == GC_MODE_MIOS &&IosLoader::GetMIOSInfo() > DEFAULT_MIOS)
 	{
-		Options->SetName(Idx++, "%s", tr( "--==   DIOS MIOS (Lite) " ));
+		Options->SetName(Idx++, "%s", tr( "--==   DIOS MIOS (Lite)" ));
 		Options->SetName(Idx++, "%s", tr( "Video Mode" ));
 		Options->SetName(Idx++, "%s", tr( "Progressive Patch" ));
 		if(IosLoader::GetDMLVersion() >= DML_VERSION_DM_2_1)
@@ -209,6 +219,7 @@ void GCGameLoadSM::SetOptionNames()
 		Options->SetName(Idx++, "%s", tr( "Memory Card Blocks Size" ));
 		Options->SetName(Idx++, "%s", tr( "USB-HID Controller" ));
 		Options->SetName(Idx++, "%s", tr( "GameCube Controller" ));
+		Options->SetName(Idx++, "%s", tr( "Wii U GamePad Slot" ));
 		Options->SetName(Idx++, "%s", tr( "Native Controller" ));
 		Options->SetName(Idx++, "%s", tr( "LED Activity" ));
 		Options->SetName(Idx++, "%s", tr( "Debug" ));
@@ -465,6 +476,12 @@ void GCGameLoadSM::SetOptionValues()
 			Options->SetValue(Idx++, tr("Use global"));
 		else
 			Options->SetValue(Idx++, "%i", GameConfig.NINMaxPads);
+
+		//! Settings: NIN Wii U GamePad Slot
+		if(GameConfig.NINWiiUGamepadSlot == INHERIT)
+			Options->SetValue(Idx++, tr("Use global"));
+		else
+			Options->SetValue(Idx++, "%s", tr(NINGamepadText[GameConfig.NINWiiUGamepadSlot]));
 
 		//! Settings: NIN Native Controller
 		if(GameConfig.NINNativeSI == INHERIT)
@@ -858,6 +875,12 @@ int GCGameLoadSM::GetMenuInternal()
 	else if (currentGCmode == GC_MODE_NINTENDONT && ret == ++Idx)
 	{
 		if (++GameConfig.NINMaxPads >= 5) GameConfig.NINMaxPads = INHERIT;
+	}
+
+	//! Settings: NIN Wii U GamePad Slot
+	else if (currentGCmode == GC_MODE_NINTENDONT && ret == ++Idx)
+	{
+		if (++GameConfig.NINWiiUGamepadSlot >= 5) GameConfig.NINWiiUGamepadSlot = INHERIT;
 	}
 
 	//! Settings: NIN Native Controller

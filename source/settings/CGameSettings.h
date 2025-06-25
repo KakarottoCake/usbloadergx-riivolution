@@ -55,6 +55,7 @@ typedef struct _GameCFG
 	short NINSkipIPL;
 	short NINBBA;
 	short NINBBAProfile;
+	short NINWiiUGamepadSlot;
 	short NINMCEmulation;
 	short NINMCSize;
 	short NINUSBHID;
@@ -124,6 +125,7 @@ typedef struct _GameCFG
 		this->NINSkipIPL = game.NINSkipIPL;
 		this->NINBBA = game.NINBBA;
 		this->NINBBAProfile = game.NINBBAProfile;
+		this->NINWiiUGamepadSlot = game.NINWiiUGamepadSlot;
 		this->NINMCEmulation = game.NINMCEmulation;
 		this->NINMCSize = game.NINMCSize;
 		this->NINUSBHID = game.NINUSBHID;

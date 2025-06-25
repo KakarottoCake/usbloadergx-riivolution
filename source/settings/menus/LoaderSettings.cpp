@@ -151,6 +151,15 @@ static const char * GCSourceText[][3] =
 	{ trNOOP( "SD Path" ), "/", trNOOP( "Main Path" ) }
 };
 
+static const char * NINGamepadText[] =
+{
+	trNOOP( "1" ),
+	trNOOP( "2" ),
+	trNOOP( "3" ),
+	trNOOP( "4" ),
+	trNOOP( "None" )
+};
+
 static const char * DMLVideoText[] =
 {
 	trNOOP( "Auto" ),
@@ -299,7 +308,7 @@ void LoaderSettings::SetOptionNames()
 	Options->SetName(Idx++, "%s", tr( "Force Widescreen" ));
 	Options->SetName(Idx++, "%s", tr( "Debug" ));
 	Options->SetName(Idx++, "%s", tr( "Disc-Select Prompt" ));
-	Options->SetName(Idx++, "%s", tr( "--==   DIOS MIOS (Lite) " ));
+	Options->SetName(Idx++, "%s", tr( "--==   DIOS MIOS (Lite)" ));
 	Options->SetName(Idx++, "%s", tr( "NMM Mode" ));
 	Options->SetName(Idx++, "%s", tr( "PAD Hook" ));
 	Options->SetName(Idx++, "%s", tr( "No Disc+" ));
@@ -328,6 +337,7 @@ void LoaderSettings::SetOptionNames()
 	Options->SetName(Idx++, "%s", tr( "Memory Card Blocks Size" ));
 	Options->SetName(Idx++, "%s", tr( "USB-HID Controller" ));
 	Options->SetName(Idx++, "%s", tr( "GameCube Controller" ));
+	Options->SetName(Idx++, "%s", tr( "Wii U GamePad Slot" ));
 	Options->SetName(Idx++, "%s", tr( "Native Controller" ));
 	Options->SetName(Idx++, "%s", tr( "LED Activity" ));
 	Options->SetName(Idx++, "%s", tr( "OSReport" ));
@@ -558,6 +568,9 @@ void LoaderSettings::SetOptionValues()
 
 	//! Settings: NIN MaxPads - Number of GameCube controllers
 	Options->SetValue(Idx++, "%i", Settings.NINMaxPads);
+
+	//! Settings: NIN Wii U GamePad Slot
+	Options->SetValue(Idx++, "%s", tr(NINGamepadText[Settings.NINWiiUGamepadSlot]));
 
 	//! Settings: NIN Native Controller
 	Options->SetValue(Idx++, "%s", tr(OnOffText[Settings.NINNativeSI]));
@@ -1062,6 +1075,12 @@ int LoaderSettings::GetMenuInternal()
 	else if (ret == ++Idx)
 	{
 		if (++Settings.NINMaxPads >= 5) Settings.NINMaxPads = 0;
+	}
+
+	//! Settings: NIN Wii U GamePad Slot
+	else if (ret == ++Idx)
+	{
+		if (++Settings.NINWiiUGamepadSlot >= 5) Settings.NINWiiUGamepadSlot = 0;
 	}
 
 	//! Settings: NIN Native Controller

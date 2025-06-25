@@ -228,6 +228,7 @@ class CSettings
 		short NINSkipIPL;
 		short NINBBA;
 		short NINBBAProfile;
+		short NINWiiUGamepadSlot;
 		s8 NINMCEmulation;
 		short NINMCSize;
 		short NINAutoboot;
