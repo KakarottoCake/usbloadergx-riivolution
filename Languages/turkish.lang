@@ -1,69 +1,67 @@
 # USB Loader GX language source file.
-# turkish.lang - r848
+# turkish.lang - r1282
 # don't delete/change this line (é).
 msgid ""
 msgstr ""
 "Project-Id-Version: USB Loader GX\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2019-06-15 16:05+0200\n"
-"PO-Revision-Date: 2009-10-01 01:00+0200\n"
-"Last-Translator: omercigingelini\n"
-"Language-Team: omercigingelini\n"
+"POT-Creation-Date: 2025-06-25 09:00+0100\n"
+"PO-Revision-Date: 2025-06-25 09:00+0100\n"
+"Last-Translator: GPT-4o\n"
+"Language-Team: Turkish\n"
 "MIME-Version: 1.0\n"
-"Content-Type: text/plain; charset=utf-8\n"
+"Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"Language: \n"
 
 msgid " could not be downloaded."
 msgstr " indirilemedi."
 
-msgid " has been Saved.  The text has not been verified.  Some of the code may not work right with each other.  If you experience trouble, open the text in a real text editor for more information."
-msgstr " kaydedildi. Metin doğrulanmadı. Bazı kodlar birlikteyken doğru çalışmayabilir. Herhangi bir problem yaşarsanız, daha fazla bilgi için metin dosyasını gerçek bir metin editörüyle açın"
+msgid " has been saved, but you might need to edit some cheats from a computer."
+msgstr " kaydedildi, ancak bazı hileleri bir bilgisayardan düzenlemeniz gerekebilir."
 
 msgid " is not on the server."
-msgstr " sunucuda mevcut değil"
-
-#, c-format
-msgid "%i files not found on the server!"
-msgstr ""
-
-#, c-format
-msgid "%i missing files"
-msgstr ""
+msgstr " sunucuda yok."
 
 #, c-format
 msgid "%i WAD file(s) not processed!"
-msgstr ""
+msgstr "%i WAD dosyası işlenmedi!"
 
 #, c-format
 msgid "%i WAD found."
-msgstr ""
+msgstr "%i WAD bulundu."
+
+#, c-format
+msgid "%i files not found on the server!"
+msgstr "Sunucuda %i dosya bulunamadı!"
 
 #, c-format
 msgid "%s only accepts GameCube backups in ISO format."
-msgstr ""
+msgstr "%s yalnızca ISO formatında GameCube yedeklerini kabul eder."
 
 #, c-format
-msgid "%s requires AHB access! Please launch USBLoaderGX from HBC or from an updated channel or forwarder."
-msgstr ""
+msgid "%s requires AHB access! Please launch USB Loader GX from HBC or from an updated channel or forwarder."
+msgstr "%s AHB erişimi gerektirir! Lütfen USB Loader GX'i HBC'den veya güncellenmiş bir kanaldan veya yönlendiriciden başlatın."
 
 msgid "--==       Devolution"
-msgstr ""
+msgstr "--==       Devolution"
 
 msgid "--==       Nintendont"
-msgstr ""
+msgstr "--==       Nintendont"
 
-msgid "--==   DIOS MIOS (Lite) "
-msgstr ""
+msgid "--==   DIOS MIOS (Lite)"
+msgstr "--==   DIOS MIOS (Lite)"
 
 msgid "--==  DM(L) + Nintendont"
-msgstr ""
+msgstr "--==  DM(L) + Nintendont"
 
 msgid "/\\/\\"
-msgstr ""
+msgstr "/\\/\\"
 
 msgid "0 (Everyone)"
 msgstr "0 (Herkes)"
+
+msgid "1"
+msgstr "1"
 
 msgid "1 (Child 7+)"
 msgstr "1 (Çocuk 7+)"
@@ -72,521 +70,535 @@ msgid "1 hour"
 msgstr "1 saat"
 
 msgid "10 min"
-msgstr "10 dakika"
+msgstr "10 dk"
+
+msgid "2"
+msgstr "2"
 
 msgid "2 (Teen 12+)"
 msgstr "2 (Genç 12+)"
 
 msgid "20 min"
-msgstr "20 dakika"
+msgstr "20 dk"
 
 msgid "2D Cover Path"
 msgstr "2D Kapak Yolu"
+
+msgid "3"
+msgstr "3"
 
 msgid "3 (Mature 16+)"
 msgstr "3 (Yetişkin 16+)"
 
 msgid "3 min"
-msgstr "3 dakika"
+msgstr "3 dk"
 
 msgid "30 min"
-msgstr "30 dakika"
+msgstr "30 dk"
 
 msgid "3D Cover Path"
 msgstr "3D Kapak Yolu"
 
 msgid "3D Covers"
-msgstr "3B Kapaklar"
+msgstr "3D Kapaklar"
+
+msgid "4"
+msgstr "4"
 
 msgid "4 (Adults Only 18+)"
-msgstr "4 (Sadece Yetişkin 18+)"
+msgstr "4 (Yalnızca Yetişkinler 18+)"
 
 msgid "480p Pixel Fix Patch"
-msgstr ""
+msgstr "480p Piksel Düzeltme Yaması"
 
 msgid "5 min"
-msgstr "5 dakika"
+msgstr "5 dk"
 
 msgid "=== GameCube Settings"
-msgstr ""
+msgstr "=== GameCube Ayarları"
 
 msgid "AUTO"
-msgstr "OTOMATIK"
+msgstr "OTOMATİK"
 
 msgid "AXNextFrame"
-msgstr ""
+msgstr "AXSonrakiKare"
 
 msgid "Add category"
-msgstr ""
+msgstr "Kategori ekle"
 
 msgid "Adjust Overscan X"
-msgstr ""
+msgstr "Overscan X'i Ayarla"
 
 msgid "Adjust Overscan Y"
-msgstr ""
+msgstr "Overscan Y'yi Ayarla"
 
 msgid "After zoom"
-msgstr ""
+msgstr "Yakınlaştırmadan sonra"
 
 msgid "All"
-msgstr ""
+msgstr "Tümü"
 
 msgid "All Partitions"
-msgstr ""
-
-msgid "All files extracted."
-msgstr ""
-
-msgid "All images downloaded successfully."
-msgstr ""
-
-msgid "All the features of USB Loader GX are unlocked."
-msgstr "USB Loader GX'in tüm özellikleri kilitli."
+msgstr "Tüm Bölümler"
 
 msgid "All WAD files processed successfully."
-msgstr ""
+msgstr "Tüm WAD dosyaları başarıyla işlendi."
+
+msgid "All files extracted."
+msgstr "Tüm dosyalar çıkarıldı."
+
+msgid "All images downloaded successfully."
+msgstr "Tüm görüntüler başarıyla indirildi."
+
+msgid "All the features of USB Loader GX are unlocked."
+msgstr "USB Loader GX'in tüm özellikleri kilitsiz."
+
+msgid "AltWFC"
+msgstr "AltWFC"
 
 msgid "Alternate DOL"
 msgstr "Alternatif DOL"
 
-msgid "AltWFC"
-msgstr ""
-
 msgid "An example file was created here:"
-msgstr ""
+msgstr "Burada bir örnek dosya oluşturuldu:"
 
 msgid "Animation Start"
-msgstr ""
+msgstr "Animasyon Başlangıcı"
 
 msgid "App Language"
-msgstr "Program Lisani"
+msgstr "Uygulama Dili"
 
 msgid "Apply"
-msgstr ""
+msgstr "Uygula"
 
 msgid "Apr"
 msgstr "Nis"
 
+msgid "Are You Sure You Want to Install on SD?"
+msgstr "SD'ye yüklemek istediğinizden emin misiniz?"
+
 msgid "Are you really sure you want to delete all selected games from the SD card?"
-msgstr ""
+msgstr "Seçilen tüm oyunları SD karttan silmek istediğinizden emin misiniz?"
 
 msgid "Are you sure you want to delete this category?"
-msgstr ""
+msgstr "Bu kategoriyi silmek istediğinizden emin misiniz?"
 
-msgid "Are you sure you want to import game categories from GameTDB?"
-msgstr ""
-
-msgid "Are you sure you want to install on SD?"
-msgstr ""
+msgid "Are you sure you want to import game categories from WiiTDB?"
+msgstr "Oyun kategorilerini WiiTDB'den içe aktarmak istediğinizden emin misiniz?"
 
 msgid "Are you sure you want to lock USB Loader GX?"
-msgstr ""
+msgstr "USB Loader GX'i kilitlemek istediğinizden emin misiniz?"
 
-msgid "Are you sure you want to remount SD?"
-msgstr ""
+msgid "Are you sure you want to redownload everything?"
+msgstr "Her şeyi yeniden indirmek istediğinizden emin misiniz?"
 
 msgid "Are you sure you want to reset?"
-msgstr ""
+msgstr "Sıfırlamak istediğinizden emin misiniz?"
 
 msgid "Are you sure?"
 msgstr "Emin misiniz?"
 
+msgid "Ask"
+msgstr "Sor"
+
 msgid "Aspect Ratio"
-msgstr ""
+msgstr "En Boy Oranı"
 
 msgid "Attention!"
-msgstr ""
+msgstr "Dikkat!"
 
 msgid "Attention: All savegames will be deleted."
-msgstr ""
+msgstr "Dikkat: Tüm kayıtlı oyunlar silinecek."
 
 msgid "Aug"
 msgstr "Ağu"
 
 msgid "Author(s):"
-msgstr ""
+msgstr "Yazar(lar):"
 
 msgid "Auto"
-msgstr ""
+msgstr "Otomatik"
 
 msgid "Auto Boot"
-msgstr ""
+msgstr "Otomatik Başlatma"
 
 msgid "AutoInit Network"
-msgstr "Ağı ototanımla"
+msgstr "Ağ Otomatik Başlatma"
+
+msgid "Autoboot Discs"
+msgstr "Diskleri Otomatik Başlat"
+
+msgid "Autoboot Discs Delay"
+msgstr "Diskleri Otomatik Başlatma Gecikmesi"
+
+msgid "BBA Emulation"
+msgstr "BBA Emülasyonu"
+
+msgid "BBA Net Profile"
+msgstr "BBA Ağ Profili"
 
 msgid "BCA Codes Path"
-msgstr "BCA Kod Yolu"
+msgstr "BCA Kodları Yolu"
 
 msgid "Back"
 msgstr "Geri"
 
 msgid "Back to HBC or Wii Menu"
-msgstr "HBC veya Wii Menüye dönüş"
+msgstr "HBC veya Wii Menüsüne Dön"
 
 msgid "Background Music"
-msgstr "Arkaplan müziği"
+msgstr "Arka Plan Müziği"
 
 msgid "Banner Animation"
-msgstr ""
-
-msgid "Banner Animation Settings"
-msgstr ""
+msgstr "Afiş Animasyonu"
 
 msgid "Banner On Channels"
-msgstr ""
+msgstr "Kanallarda Afiş"
+
+msgid "Banner Settings"
+msgstr "Afiş Ayarları"
 
 msgid "Banner grid layout is only available with AHBPROT! Please consider installing new HBC version."
-msgstr ""
+msgstr "Afiş ızgara düzeni yalnızca AHBPROT ile kullanılabilir! Lütfen yeni HBC sürümünü yüklemeyi düşünün."
 
 msgid "Banner window is only available with AHBPROT! Please consider installing new HBC version."
-msgstr ""
+msgstr "Afiş penceresi yalnızca AHBPROT ile kullanılabilir! Lütfen yeni HBC sürümünü yüklemeyi düşünün."
 
 msgid "Big thanks to:"
-msgstr "Teşekkürler:"
+msgstr "Büyük teşekkürler:"
+
+msgid "Block Banner Settings"
+msgstr "Afiş Ayarlarını Engelle"
 
 msgid "Block Categories Menu"
-msgstr ""
+msgstr "Kategoriler Menüsünü Engelle"
 
 msgid "Block Categories Modify"
-msgstr ""
+msgstr "Kategorileri Değiştirmeyi Engelle"
 
 msgid "Block Cover Downloads"
-msgstr ""
+msgstr "Kapak İndirmelerini Engelle"
 
 msgid "Block Custom Paths"
-msgstr ""
+msgstr "Özel Yolları Engelle"
 
-msgid "Block Feature Settings"
-msgstr ""
+msgid "Block GUI Settings"
+msgstr "GUI Ayarlarını Engelle"
 
 msgid "Block Game Install"
-msgstr ""
+msgstr "Oyun Kurulumunu Engelle"
 
 msgid "Block Game Settings"
-msgstr ""
+msgstr "Oyun Ayarlarını Engelle"
 
-msgid "Block GameID Change"
-msgstr ""
+msgid "Block Game Sources Button"
+msgstr "Oyun Kaynakları Düğmesini Engelle"
+
+msgid "Block Game Type Button"
+msgstr "Oyun Türü Düğmesini Engelle"
 
 msgid "Block Global Settings"
-msgstr ""
-
-msgid "Block Gui Settings"
-msgstr ""
+msgstr "Genel Ayarları Engelle"
 
 msgid "Block HBC Menu"
-msgstr ""
+msgstr "HBC Menüsünü Engelle"
+
+msgid "Block HBC Title Launcher"
+msgstr "HBC Başlık Başlatıcısını Engelle"
 
 msgid "Block Hard Drive Settings"
-msgstr ""
+msgstr "Sabit Disk Ayarlarını Engelle"
 
 msgid "Block IOS Reload"
-msgstr "IOS Yüklemesini Engelle"
+msgstr "IOS Yeniden Yüklemeyi Engelle"
 
 msgid "Block Loader Layout Button"
-msgstr ""
-
-msgid "Block Loader Mode Button"
-msgstr ""
+msgstr "Yükleyici Düzeni Düğmesini Engelle"
 
 msgid "Block Loader Settings"
-msgstr ""
+msgstr "Yükleyici Ayarlarını Engelle"
+
+msgid "Block Miscellaneous Settings"
+msgstr "Çeşitli Ayarları Engelle"
 
 msgid "Block Parental Settings"
-msgstr ""
+msgstr "Ebeveyn Ayarlarını Engelle"
 
 msgid "Block Priiloader Override"
-msgstr ""
+msgstr "Priiloader Geçersiz Kılmayı Engelle"
 
 msgid "Block Reset Settings"
-msgstr ""
+msgstr "Sıfırlama Ayarlarını Engelle"
 
-msgid "Block SD Reload Button"
-msgstr ""
+msgid "Block SD Card Mode Button"
+msgstr "SD Kart Modu Düğmesini Engelle"
 
 msgid "Block Sound Settings"
-msgstr ""
-
-msgid "Block Theme Downloader"
-msgstr ""
+msgstr "Ses Ayarlarını Engelle"
 
 msgid "Block Theme Menu"
-msgstr ""
+msgstr "Tema Menüsünü Engelle"
 
-msgid "Block Title Launcher"
-msgstr ""
-
-msgid "Block Updates"
-msgstr ""
+msgid "Block Update Menu"
+msgstr "Güncelleme Menüsünü Engelle"
 
 msgid "Boot Content"
-msgstr ""
+msgstr "İçeriği Başlat"
 
 msgid "Boot Neek System Menu"
-msgstr ""
+msgstr "Neek Sistem Menüsünü Başlat"
 
 msgid "Boot?"
 msgstr "Başlat?"
 
 msgid "Both"
-msgstr "İkisi de"
+msgstr "Her ikisi"
 
 msgid "Both Ports"
-msgstr ""
+msgstr "Her iki Bağlantı Noktası"
 
 msgid "CC Rumble"
-msgstr ""
+msgstr "CC Titreşim"
 
 msgid "Cache BNR Files"
-msgstr ""
+msgstr "BNR Dosyalarını Önbelleğe Al"
 
 msgid "Cache BNR Files Path"
-msgstr ""
+msgstr "BNR Dosyaları Yolu"
 
 msgid "Cache Path"
-msgstr ""
+msgstr "Önbellek Yolu"
 
 msgid "Cache Titles"
-msgstr ""
+msgstr "Başlıkları Önbelleğe Al"
 
 msgid "Can't be formatted"
 msgstr "Biçimlendirilemiyor"
 
 msgid "Can't create directory"
-msgstr "Klasör olusturulamiyor"
+msgstr "Dizin oluşturulamıyor"
 
 #, c-format
 msgid "Can't create file: %s"
-msgstr ""
-
-#, c-format
-msgid "Can't create path: %s"
-msgstr ""
+msgstr "Dosya oluşturulamıyor: %s"
 
 msgid "Can't delete:"
-msgstr "Silinemiyor"
+msgstr "Silinemiyor:"
 
 msgid "Can't mount or unknown disc format."
-msgstr ""
+msgstr "Bağlanamıyor veya bilinmeyen disk formatı."
 
 #, c-format
 msgid "Can't open file for write: %s"
-msgstr ""
+msgstr "Yazma için dosya açılamıyor: %s"
 
 #, c-format
 msgid "Can't open file: %s"
-msgstr ""
+msgstr "Dosya açılamıyor: %s"
 
 #, c-format
 msgid "Can't read file: %s"
-msgstr ""
-
-msgid "Cancel"
-msgstr "Iptal"
+msgstr "Dosya okunamıyor: %s"
 
 msgid "Can't write to destination."
-msgstr ""
+msgstr "Hedefe yazılamıyor."
+
+msgid "Cancel"
+msgstr "İptal"
 
 msgid "Categories"
-msgstr ""
+msgstr "Kategoriler"
 
 msgid "Categories:"
-msgstr ""
+msgstr "Kategoriler:"
 
 msgid "Change Play Path"
-msgstr ""
+msgstr "Oynatma Yolunu Değiştir"
 
 msgid "Channel Launcher"
-msgstr ""
+msgstr "Kanal Başlatıcı"
 
 msgid "Channel Path"
-msgstr ""
+msgstr "Kanal Yolu"
 
 msgid "Channels"
 msgstr "Kanallar"
 
-msgid "Cheatfile is blank"
+msgid "Cheat file is blank"
 msgstr "Hile dosyası boş"
 
 msgid "Clear"
-msgstr ""
+msgstr "Temizle"
 
 msgid "Click to download covers"
-msgstr "Kapak Indirmek için Tıklayın"
+msgstr "Kapakları indirmek için tıklayın"
 
 msgid "Click to view information"
-msgstr ""
+msgstr "Bilgileri görüntülemek için tıklayın"
 
 msgid "Clock"
 msgstr "Saat"
 
 msgid "Clock Scale Factor"
-msgstr ""
+msgstr "Saat Ölçek Faktörü"
 
 msgid "Close"
 msgstr "Kapat"
 
 msgid "Code Download"
-msgstr "Kod İndirme"
+msgstr "Kod İndir"
 
 #, c-format
 msgid "Coded by: %s"
-msgstr "%s tarafından kodlandı"
+msgstr "Kodlayan: %s"
 
 msgid "Coding:"
 msgstr "Kodlama:"
-
-msgid "Connection to server timed out."
-msgstr ""
 
 msgid "Console"
 msgstr "Konsol"
 
 msgid "Console Default"
-msgstr "Konsol Ayari"
+msgstr "Konsol Varsayılanı"
 
 msgid "Console Locked"
 msgstr "Konsol Kilitli"
 
 msgid "Console must be unlocked for this option."
-msgstr ""
+msgstr "Bu seçenek için konsolun kilidi açılmalıdır."
 
 msgid "Console must be unlocked to be able to use this."
-msgstr ""
+msgstr "Bunu kullanabilmek için konsolun kilidi açılmalıdır."
 
 msgid "Console should be unlocked to modify it."
-msgstr "Degiştirmek için konsolun kilidini açmalısın."
+msgstr "Bunu değiştirmek için konsolun kilidi açılmalıdır."
 
 msgid "Continue"
-msgstr ""
+msgstr "Devam et"
 
-msgid "Continue to install game?"
-msgstr "Oyunu kurmaya devam et?"
+msgid "Continue To Install Game?"
+msgstr "Oyunu Yüklemeye Devam Et?"
 
 msgid "Continue?"
-msgstr ""
+msgstr "Devam et?"
 
-msgid "Controllevel"
-msgstr "Kontrol seviyesi"
+msgid "Control Level"
+msgstr "Kontrol Seviyesi"
 
 msgid "Copy"
-msgstr ""
+msgstr "Kopyala"
 
 msgid "Copying Canceled"
-msgstr ""
+msgstr "Kopyalama İptal Edildi"
 
 msgid "Copying GC game..."
-msgstr ""
+msgstr "GC oyunu kopyalanıyor..."
 
 msgid "Copying files..."
-msgstr ""
+msgstr "Dosyalar kopyalanıyor..."
 
 msgid "Correct Password"
 msgstr "Doğru Şifre"
 
-msgid "Could not connect to the server."
-msgstr ""
+msgid "Could Not Open Disc"
+msgstr "Disk Açılamadı"
 
 msgid "Could not create GCT file"
 msgstr "GCT dosyası oluşturulamadı"
 
 #, c-format
 msgid "Could not create path: %s"
-msgstr ""
+msgstr "Yol oluşturulamadı: %s"
 
 msgid "Could not extract files for:"
-msgstr ""
+msgstr "Dosyalar çıkarılamadı:"
 
 msgid "Could not find info for this game in the wiitdb.xml."
-msgstr ""
+msgstr "wiitdb.xml dosyasında bu oyun için bilgi bulunamadı."
 
 msgid "Could not get free device space for game."
-msgstr ""
+msgstr "Oyun için boş cihaz alanı alınamadı."
 
 msgid "Could not initialize DIP module!"
 msgstr "DIP modülü başlatılamadı!"
 
-msgid "Could not initialize network!"
-msgstr "Ağa bağlanılamadı!"
+msgid "Could not initialize network. Timed out!"
+msgstr "Ağ başlatılamadı. Zaman aşımına uğradı!"
 
-msgid "Could not initialize network, time out!"
-msgstr ""
-
-msgid "Could not open Disc"
+msgid "Could not open disc"
 msgstr "Disk açılamadı"
 
 msgid "Could not open the WiiTDB.xml file."
-msgstr ""
+msgstr "WiiTDB.xml dosyası açılamadı."
 
 msgid "Could not open wiitdb.xml."
-msgstr ""
+msgstr "wiitdb.xml açılamadı."
 
 msgid "Could not save."
-msgstr "Kaydedilemedi"
+msgstr "Kaydedilemedi."
 
 msgid "Could not write file."
-msgstr ""
+msgstr "Dosya yazılamadı."
 
 msgid "Could not write to:"
-msgstr ""
+msgstr "Yazılamadı:"
 
 msgid "Cover Action"
-msgstr ""
+msgstr "Kapak Eylemi"
 
 msgid "Cover Download"
-msgstr "Kapak Indirme"
+msgstr "Kapak İndir"
 
 msgid "Create"
 msgstr "Oluştur"
 
 msgid "Credits"
-msgstr "Emekçiler"
+msgstr "Katkıda Bulunanlar"
 
 msgid "Crop Overscan"
-msgstr ""
+msgstr "Overscan'ı Kırp"
 
 msgid "Current neek files are not neek2o. Game autoboot disabled."
-msgstr ""
-
-msgid "Custom Address"
-msgstr ""
-
-msgid "Custom Banners"
-msgstr ""
-
-msgid "Custom Game IOS"
-msgstr ""
-
-msgid "Custom Games IOS"
-msgstr ""
-
-msgid "Custom Paths"
-msgstr "Kişisel Yollar"
+msgstr "Mevcut neek dosyaları neek2o değil. Oyun otomatik başlatma devre dışı bırakıldı."
 
 msgid "Custom"
-msgstr ""
+msgstr "Özel"
+
+msgid "Custom Address"
+msgstr "Özel Adres"
+
+msgid "Custom Banners"
+msgstr "Özel Afişler"
+
+msgid "Custom Game IOS"
+msgstr "Özel Oyun IOS"
+
+msgid "Custom Games IOS"
+msgstr "Özel Oyunlar IOS"
+
+msgid "Custom Paths"
+msgstr "Özel Yollar"
 
 msgid "Customs"
-msgstr ""
+msgstr "Özel"
 
 msgid "Customs/Original"
-msgstr "Kişisel/Orjinal"
+msgstr "Özel/Orijinal"
 
 msgid "D Buttons"
-msgstr ""
+msgstr "D Düğmeleri"
 
 msgid "DOL Path"
 msgstr "DOL Yolu"
 
 msgid "Debug"
-msgstr ""
+msgstr "Hata Ayıklama"
 
 msgid "Debug Wait"
-msgstr ""
+msgstr "Hata Ayıklama Beklemesi"
 
 msgid "Debugger Paused Start"
-msgstr ""
+msgstr "Hata Ayıklayıcı Duraklatıldı Başlat"
 
 msgid "Dec"
 msgstr "Ara"
@@ -598,520 +610,519 @@ msgid "Default Settings"
 msgstr "Varsayılan Ayarlar"
 
 msgid "Deflicker Filter"
-msgstr ""
+msgstr "Titreşim Giderici Filtre"
 
 msgid "Delete"
 msgstr "Sil"
 
 msgid "Delete Cached Banner"
-msgstr ""
+msgstr "Önbelleğe Alınmış Afişi Sil"
 
 msgid "Delete Cheat GCT"
-msgstr "GCT Hile sil"
+msgstr "Hile GCT'yi Sil"
 
 msgid "Delete Cheat TXT"
-msgstr "TXT Hile sil"
+msgstr "Hile TXT'yi Sil"
 
 msgid "Delete Cover Artwork"
-msgstr "Kapak Görselini Sil"
+msgstr "Kapak Resmini Sil"
 
 msgid "Delete Disc Artwork"
-msgstr "Disk Görselini Sil"
+msgstr "Disk Resmini Sil"
+
+msgid "Delete EmuNAND Saves"
+msgstr "EmuNAND Kayıtlarını Sil"
 
 msgid "Delete category"
-msgstr ""
+msgstr "Kategoriyi sil"
 
 msgid "Deleting directories..."
-msgstr ""
+msgstr "Dizinler siliniyor..."
 
 msgid "Deleting files..."
-msgstr ""
+msgstr "Dosyalar siliniyor..."
 
 msgid "Design:"
 msgstr "Tasarım:"
 
 msgid "Details"
-msgstr ""
+msgstr "Ayrıntılar"
 
 msgid "Developed by"
-msgstr "Geliştirme"
+msgstr "Geliştiren"
 
 msgid "Developer:"
-msgstr ""
+msgstr "Geliştirici:"
 
 msgid "Devolution"
-msgstr ""
+msgstr "Devolution"
 
 msgid "Devolution Loader Path"
-msgstr ""
+msgstr "Devolution Yükleyici Yolu"
 
 msgid "Devolution's loader.bin file can't be loaded."
-msgstr ""
+msgstr "Devolution'un loader.bin dosyası yüklenemiyor."
 
 msgid "Directory does not exist!"
-msgstr "Klasör bulunamadı!"
+msgstr "Dizin mevcut değil!"
+
+msgid "Disable SD Card Mode?"
+msgstr "SD Kart Modunu Devre Dışı Bırak?"
+
+msgid "Disable Wiimote Motor"
+msgstr "Wiimote Motorunu Devre Dışı Bırak"
+
+msgid "Disable Wiimote Speaker"
+msgstr "Wiimote Hoparlörünü Devre Dışı Bırak"
 
 msgid "Disc"
-msgstr ""
+msgstr "Disk"
 
 msgid "Disc 1"
-msgstr ""
+msgstr "Disk 1"
 
 msgid "Disc 2"
-msgstr ""
+msgstr "Disk 2"
 
 msgid "Disc Artwork"
-msgstr ""
+msgstr "Disk Resmi"
 
 msgid "Disc Artwork Download"
-msgstr "Disk Görseli Indirme"
+msgstr "Disk Resmi İndir"
 
 msgid "Disc Artwork Path"
-msgstr "Disk Görsel Yolu"
+msgstr "Disk Resmi Yolu"
 
 msgid "Disc Default"
 msgstr "Disk Varsayılanı"
 
 msgid "Disc Insert Detected"
-msgstr ""
+msgstr "Disk Takma Algılandı"
 
 msgid "Disc Read Delay"
-msgstr ""
+msgstr "Disk Okuma Gecikmesi"
 
 msgid "Disc read error."
-msgstr ""
+msgstr "Disk okuma hatası."
 
 msgid "Disc-Select Prompt"
-msgstr ""
+msgstr "Disk-Seçim İstemi"
 
 msgid "Disc2 needs to be installed in uncompressed format to work with DM(L) v2.6+, are you sure you want to install in compressed format?"
-msgstr ""
+msgstr "Disc2'nin DM(L) v2.6+ ile çalışması için sıkıştırılmamış formatta kurulması gerekiyor, sıkıştırılmış formatta kurmak istediğinizden emin misiniz?"
 
 msgid "DiskFlip"
-msgstr "DiskÇevir"
+msgstr "DiskFlip"
 
 msgid "Display"
-msgstr "Görüntü"
+msgstr "Görüntüle"
 
 msgid "Display as a carousel"
-msgstr "Dönel görünüm"
+msgstr "Döner bir şekilde görüntüle"
 
 msgid "Display as a channel grid"
-msgstr ""
+msgstr "Kanal ızgarası olarak görüntüle"
 
 msgid "Display as a grid"
-msgstr "Izgara görünümü"
+msgstr "Izgara olarak görüntüle"
 
 msgid "Display as a list"
-msgstr "Liste görünümü"
+msgstr "Liste olarak görüntüle"
 
 msgid "Display favorites only"
-msgstr ""
+msgstr "Yalnızca favorileri görüntüle"
 
-msgid "Do you want to apply it now?"
-msgstr ""
+msgid "Displaying EmuNAND games"
+msgstr "EmuNAND oyunları görüntüleniyor"
 
-msgid "Do you want to apply this theme?"
-msgstr ""
+msgid "Displaying GameCube games"
+msgstr "GameCube oyunları görüntüleniyor"
 
-msgid "Do you want to change language?"
+msgid "Displaying NAND games"
+msgstr "NAND oyunları görüntüleniyor"
+
+msgid "Displaying Wii games"
+msgstr "Wii oyunları görüntüleniyor"
+
+msgid "Displaying a custom selection"
+msgstr "Özel bir seçim görüntüleniyor"
+
+msgid "Displaying as a carousel"
+msgstr "Döner bir şekilde görüntüleniyor"
+
+msgid "Displaying as a channel grid"
+msgstr "Kanal ızgarası olarak görüntüleniyor"
+
+msgid "Displaying as a grid"
+msgstr "Izgara olarak görüntüleniyor"
+
+msgid "Displaying as a list"
+msgstr "Liste olarak görüntüleniyor"
+
+msgid "Do You Want To Change Language?"
 msgstr "Dili değiştirmek istiyor musunuz?"
 
+msgid "Do you want to apply this theme?"
+msgstr "Bu temayı uygulamak istiyor musunuz?"
+
 msgid "Do you want to continue with next game?"
-msgstr ""
+msgstr "Sonraki oyuna devam etmek istiyor musunuz?"
 
 msgid "Do you want to copy now?"
-msgstr ""
+msgstr "Şimdi kopyalamak istiyor musunuz?"
 
 msgid "Do you want to copy the game to SD or delete a game on SD?"
-msgstr ""
+msgstr "Oyunu SD'ye kopyalamak mı yoksa SD'deki bir oyunu silmek mi istiyorsunuz?"
 
 msgid "Do you want to delete a game on SD?"
-msgstr ""
+msgstr "SD'deki bir oyunu silmek istiyor musunuz?"
 
 msgid "Do you want to discard changes?"
-msgstr ""
-
-msgid "Do you want to download this theme?"
-msgstr "Bu temayı indirmek istiyor musunuz?"
+msgstr "Değişiklikleri iptal etmek istiyor musunuz?"
 
 msgid "Do you want to extract all the save games?"
-msgstr ""
+msgstr "Tüm kayıtlı oyunları çıkarmak istiyor musunuz?"
 
 msgid "Do you want to extract the save game?"
-msgstr ""
+msgstr "Kayıtlı oyunu çıkarmak istiyor musunuz?"
 
 msgid "Do you want to format:"
-msgstr "Formatlamak istiyor musunuz:"
+msgstr "Format atmak istiyor musunuz:"
 
 msgid "Do you want to install selected games?"
-msgstr ""
+msgstr "Seçilen oyunları yüklemek istiyor musunuz?"
 
 msgid "Do you want to load the default theme?"
-msgstr ""
+msgstr "Varsayılan temayı yüklemek istiyor musunuz?"
 
 msgid "Do you want to move the file(s)? Any existing ones will be deleted!"
-msgstr ""
+msgstr "Dosyaları taşımak istiyor musunuz? Mevcut olanlar silinecek!"
 
 msgid "Do you want to re-init network?"
-msgstr ""
+msgstr "Ağı yeniden başlatmak istiyor musunuz?"
 
 msgid "Do you want to start the game now?"
-msgstr ""
+msgstr "Oyunu şimdi başlatmak istiyor musunuz?"
 
-msgid "Do you want to sync free space info sector on all FAT32 partitions?"
-msgstr ""
+msgid "Do you want to use cheats?"
+msgstr "Hile kullanmak istiyor musunuz?"
 
 msgid "Do you wish to update/download all language files?"
-msgstr "Tüm dil dosyalarını indirmek/güncellemek istiyor musunuz?"
+msgstr "Tüm dil dosyalarını güncellemek/indirmek istiyor musunuz?"
 
 msgid "Dol Video Patch"
-msgstr ""
+msgstr "Dol Video Yaması"
 
 msgid "Download"
 msgstr "İndir"
 
+#, c-format
+msgid "Download %i missing files?"
+msgstr "%i eksik dosyayı indirmek istiyor musunuz?"
+
 msgid "Download Now"
-msgstr "Şimdi indir"
+msgstr "Şimdi İndir"
 
 msgid "Download finished"
-msgstr "Indirme tamamlandı"
+msgstr "İndirme tamamlandı"
 
 msgid "Downloading 3D Covers"
-msgstr ""
+msgstr "3D Kapaklar indiriliyor"
 
 msgid "Downloading Custom Banners"
-msgstr ""
-
-msgid "Downloading Flat Covers"
-msgstr ""
-
-msgid "Downloading Full HQ Covers"
-msgstr ""
-
-msgid "Downloading Full LQ Covers"
-msgstr ""
+msgstr "Özel Afişler indiriliyor"
 
 msgid "Downloading Custom Disc Artwork"
-msgstr ""
+msgstr "Özel Disk Resimleri indiriliyor"
 
-msgid "Downloading file..."
-msgstr ""
+msgid "Downloading Flat Covers"
+msgstr "Düz Kapaklar indiriliyor"
 
-msgid "Downloading image:"
-msgstr "İndirilen resim:"
+msgid "Downloading Full HQ Covers"
+msgstr "Tam HQ Kapaklar indiriliyor"
+
+msgid "Downloading Full LQ Covers"
+msgstr "Tam LQ Kapaklar indiriliyor"
 
 msgid "Downloading Original Disc Artwork"
-msgstr ""
+msgstr "Orijinal Disk Resimleri indiriliyor"
 
-msgid "Downloading pagelist:"
-msgstr ""
+msgid "Downloading file..."
+msgstr "Dosya indiriliyor..."
 
 msgid "Dump NAND to EmuNAND"
-msgstr ""
+msgstr "NAND'ı EmuNAND'a dök"
 
 msgid "During zoom"
-msgstr ""
+msgstr "Yakınlaştırma sırasında"
 
 msgid "Dutch"
-msgstr "Flaman"
+msgstr "Flemenkçe"
 
-msgid "ERROR"
-msgstr "HATA"
-
-msgid "ERROR:"
-msgstr "HATA:"
-
-msgid "ERROR: Can't set up theme."
-msgstr ""
-
-msgid "EmuNAND WAD Manager"
-msgstr ""
+msgid "EmuNAND"
+msgstr "EmuNAND"
 
 msgid "EmuNAND Channel Mode"
-msgstr ""
+msgstr "EmuNAND Kanal Modu"
 
 msgid "EmuNAND Channel Path"
-msgstr ""
-
-msgid "EmuNAND Channels"
-msgstr ""
+msgstr "EmuNAND Kanal Yolu"
 
 msgid "EmuNAND Save Mode"
-msgstr ""
+msgstr "EmuNAND Kayıt Modu"
 
 msgid "EmuNAND Save Path"
-msgstr ""
+msgstr "EmuNAND Kayıt Yolu"
+
+msgid "EmuNAND WAD Manager"
+msgstr "EmuNAND WAD Yöneticisi"
 
 msgid "Emulated NAND"
-msgstr ""
+msgstr "Emüle Edilmiş NAND"
+
+msgid "Enable SD Card Mode?"
+msgstr "SD Kart Modunu etkinleştirmek istiyor musunuz?"
 
 msgid "English"
-msgstr "Ingilizce"
+msgstr "İngilizce"
 
 msgid "Enter Path"
-msgstr ""
+msgstr "Yolu Girin"
 
-msgid "Error"
-msgstr "Hata"
-
-msgid "Error !"
-msgstr "Hata !"
+msgid "Error Reading Disc"
+msgstr "Disk Okuma Hatası"
 
 #, c-format
 msgid "Error creating path: %s"
-msgstr ""
+msgstr "Yol oluşturma hatası: %s"
 
 msgid "Error opening downloaded file"
-msgstr ""
-
-msgid "Error reading Disc"
-msgstr "Disk Okuma Hatası"
+msgstr "İndirilen dosya açma hatası"
 
 msgid "Error reading disc"
-msgstr ""
+msgstr "Disk okuma hatası"
 
-#, c-format
-msgid "Error when downloading file: %i"
-msgstr ""
-
-msgid "Error while downloding file"
-msgstr ""
+msgid "Error while downloading file"
+msgstr "Dosya indirilirken hata"
 
 msgid "Error while opening the zip."
-msgstr ""
+msgstr "Zip dosyası açılırken hata"
 
-msgid "Error while transfering data."
-msgstr "Veri iletiminde hata."
+msgid "Error while transferring data."
+msgstr "Veri aktarılırken hata"
 
 msgid "Error while updating USB Loader GX."
-msgstr ""
+msgstr "USB Loader GX güncellenirken hata"
 
 msgid "Error writing the data."
-msgstr ""
+msgstr "Veri yazma hatası"
 
 msgid "Error:"
 msgstr "Hata:"
 
 msgid "Error: Not enough space on SD."
-msgstr ""
+msgstr "Hata: SD'de yeterli alan yok"
 
-msgid "Errors occured."
-msgstr ""
+msgid "Errors occurred."
+msgstr "Hatalar oluştu"
 
 msgid "Everything"
-msgstr ""
+msgstr "Her şey"
 
 msgid "Exit"
-msgstr ""
+msgstr "Çıkış"
 
 msgid "Exit to where?"
-msgstr ""
+msgstr "Nereye çıkmak istiyorsunuz?"
 
 msgid "Export All Saves to EmuNAND"
-msgstr ""
+msgstr "Tüm Kayıtları EmuNAND'a Aktar"
 
 msgid "Export Miis to EmuNAND"
-msgstr ""
+msgstr "Miis'leri EmuNAND'a Aktar"
 
 msgid "Export SYSCONF to EmuNAND"
-msgstr ""
+msgstr "SYSCONF'u EmuNAND'a Aktar"
 
 msgid "Extract Miis to the EmuNAND?"
-msgstr ""
+msgstr "Miis'leri EmuNAND'a çıkarmak istiyor musunuz?"
 
 msgid "Extract SYSCONF to the EmuNAND?"
-msgstr ""
+msgstr "SYSCONF'u EmuNAND'a çıkarmak istiyor musunuz?"
 
 msgid "Extract Save to EmuNAND"
-msgstr ""
+msgstr "Kaydı EmuNAND'a Çıkar"
+
+msgid "Extracting NAND files:"
+msgstr "NAND dosyaları çıkarılıyor:"
 
 msgid "Extracting file:"
-msgstr ""
+msgstr "Dosya çıkarılıyor:"
 
 msgid "Extracting files..."
 msgstr "Dosyalar çıkarılıyor..."
 
 msgid "Extracting files:"
-msgstr ""
-
-msgid "Extracting NAND files:"
-msgstr ""
+msgstr "Dosyalar çıkarılıyor:"
 
 msgid "F-Zero AX"
-msgstr ""
+msgstr "F-Zero AX"
 
 msgid "Failed"
-msgstr ""
+msgstr "Başarısız"
 
 msgid "Failed copying file"
-msgstr ""
+msgstr "Dosya kopyalama başarısız"
 
-msgid "Failed formating"
-msgstr "Biçimlendirme başarısız"
+msgid "Failed formatting"
+msgstr "Formatlama başarısız"
 
 msgid "Failed to extract all files. Savegame might not exist."
-msgstr ""
-
-msgid "Failed to extract."
-msgstr "Çıkartma başarısız"
+msgstr "Tüm dosyalar çıkarılamadı. Kayıtlı oyun mevcut olmayabilir."
 
 msgid "Failed to initialize the USB storage device."
-msgstr ""
+msgstr "USB depolama cihazı başlatılamadı."
 
 msgid "Failed to open partition"
 msgstr "Bölüm açılamadı"
 
+msgid "Failed to read WAD header."
+msgstr "WAD başlığı okunamadı"
+
 msgid "Failed to read ticket."
-msgstr ""
+msgstr "Bilet okunamadı"
 
 msgid "Failed to read tmd file."
-msgstr ""
-
-msgid "Failed to read WAD header."
-msgstr ""
+msgstr "tmd dosyası okunamadı"
 
 msgid "Failed updating"
-msgstr ""
+msgstr "Güncelleme başarısız"
 
 msgid "Favorite Level"
-msgstr ""
-
-msgid "Features"
-msgstr ""
-
-msgid "Features Settings"
-msgstr ""
+msgstr "Favori Seviye"
 
 msgid "Feb"
 msgstr "Şub"
 
 msgid "File"
-msgstr ""
+msgstr "Dosya"
 
 msgid "File not found."
-msgstr "Dosya bulunamadı"
+msgstr "Dosya bulunamadı."
 
 msgid "File read/write error."
-msgstr ""
+msgstr "Dosya okuma/yazma hatası."
 
 msgid "Files extracted successfully."
-msgstr ""
-
-#, c-format
-msgid "Filesize is %i Byte."
-msgstr ""
-
-msgid "Filesize is 0 Byte."
-msgstr ""
+msgstr "Dosyalar başarıyla çıkarıldı."
 
 msgid "Flat Covers"
-msgstr ""
+msgstr "Düz Kapaklar"
 
 msgid "Flip-X"
-msgstr "Çevir-X"
+msgstr "Yatay Çevir"
 
 msgid "Folder"
-msgstr ""
+msgstr "Klasör"
 
 msgid "Font Scale Factor"
-msgstr ""
+msgstr "Yazı Tipi Ölçek Faktörü"
 
 msgid "Force 16:9"
-msgstr ""
+msgstr "16:9 Zorla"
 
 msgid "Force 4:3"
-msgstr ""
+msgstr "4:3 Zorla"
 
 msgid "Force NTSC"
-msgstr ""
+msgstr "NTSC Zorla"
 
 msgid "Force NTSC480p"
-msgstr ""
+msgstr "NTSC480p Zorla"
 
 msgid "Force PAL480p"
-msgstr ""
+msgstr "PAL480p Zorla"
 
 msgid "Force PAL50"
-msgstr ""
+msgstr "PAL50 Zorla"
 
 msgid "Force PAL60"
-msgstr ""
+msgstr "PAL60 Zorla"
 
 msgid "Force Widescreen"
-msgstr ""
+msgstr "Geniş Ekran Zorla"
 
 msgid "Format"
 msgstr "Biçimlendir"
 
 msgid "Formatting, please wait..."
-msgstr "Biçimlendiriliyor, bekleyiniz..."
+msgstr "Biçimlendiriliyor, lütfen bekleyin..."
 
 msgid "Found missing images"
-msgstr ""
+msgstr "Eksik görüntüler bulundu"
 
 msgid "Frame"
-msgstr ""
+msgstr "Kare"
 
 msgid "Frame Projection Height"
-msgstr ""
+msgstr "Kare Projeksiyon Yüksekliği"
 
 msgid "Frame Projection Width"
-msgstr ""
+msgstr "Kare Projeksiyon Genişliği"
 
 msgid "Frame Projection X-Offset"
-msgstr ""
+msgstr "Kare Projeksiyon X-Ofseti"
 
 msgid "Frame Projection Y-Offset"
-msgstr ""
+msgstr "Kare Projeksiyon Y-Ofseti"
 
 msgid "Framebuffer"
-msgstr ""
+msgstr "Kare Tamponu"
 
 msgid "Frames"
-msgstr ""
+msgstr "Kareler"
 
 msgid "Free Space"
-msgstr "Boş Yer"
+msgstr "Boş Alan"
 
 msgid "French"
 msgstr "Fransızca"
 
 msgid "Full"
-msgstr ""
+msgstr "Tam"
 
 msgid "Full Cover Path"
-msgstr ""
+msgstr "Tam Kapak Yolu"
 
 msgid "Full Covers"
-msgstr ""
-
-msgid "Full Menu"
-msgstr ""
+msgstr "Tam Kapaklar"
 
 msgid "Full Covers Download"
-msgstr ""
+msgstr "Tam Kapakları İndir"
+
+msgid "Full Menu"
+msgstr "Tam Menü"
 
 msgid "Full shutdown"
-msgstr ""
+msgstr "Tam Kapatma"
+
+msgid "Fullscreen"
+msgstr "Tam ekran"
 
 msgid "GAMEID_Gamename"
-msgstr ""
+msgstr "OYUNID_Oyunadı"
 
 msgid "GC Banner Scale"
-msgstr ""
-
-msgid "GC Games"
-msgstr ""
+msgstr "GC Afiş Ölçeği"
 
 msgid "GC Install 32K Aligned"
-msgstr ""
+msgstr "GC Kurulum 32K Hizalı"
 
 msgid "GC Install Compressed"
-msgstr ""
+msgstr "GC Kurulum Sıkıştırılmış"
 
-msgid "GCT Cheatcodes Path"
-msgstr "GCT Hile Yolu"
+msgid "GCT Cheat Codes Path"
+msgstr "GCT Hile Kodları Yolu"
 
 msgid "GCT File created"
 msgstr "GCT Dosyası oluşturuldu"
@@ -1120,22 +1131,19 @@ msgid "GUI Settings"
 msgstr "GUI Ayarları"
 
 msgid "GXDraw"
-msgstr ""
+msgstr "GXDraw"
 
 msgid "GXFlush"
-msgstr ""
-
-msgid "GameCube Games Delete"
-msgstr ""
-
-msgid "GameCube Install Menu"
-msgstr ""
+msgstr "GXFlush"
 
 msgid "Game ID"
 msgstr "Oyun ID"
 
 msgid "Game IOS"
-msgstr ""
+msgstr "Oyun IOS"
+
+msgid "Game Is Already Installed:"
+msgstr "Oyun Zaten Kurulu:"
 
 msgid "Game Language"
 msgstr "Oyun Dili"
@@ -1144,10 +1152,10 @@ msgid "Game Load"
 msgstr "Oyun Yükle"
 
 msgid "Game Lock"
-msgstr ""
+msgstr "Oyun Kilidi"
 
 msgid "Game Only"
-msgstr ""
+msgstr "Sadece Oyun"
 
 msgid "Game Region"
 msgstr "Oyun Bölgesi"
@@ -1159,103 +1167,106 @@ msgid "Game Sound Mode"
 msgstr "Oyun Ses Modu"
 
 msgid "Game Sound Volume"
-msgstr "Oyun Ses Düzeyi"
+msgstr "Oyun Ses Seviyesi"
 
 msgid "Game Split Size"
-msgstr ""
+msgstr "Oyun Bölme Boyutu"
 
 msgid "Game Window Mode"
-msgstr ""
-
-msgid "Game is already installed:"
-msgstr "Oyun zaten kurulu:"
-
-msgid "Games IOS"
-msgstr ""
+msgstr "Oyun Pencere Modu"
 
 msgid "Game/Install Partition"
-msgstr ""
+msgstr "Oyun/Kurulum Bölümü"
 
 msgid "GameCube"
-msgstr ""
+msgstr "GameCube"
 
 msgid "GameCube Controller"
-msgstr ""
+msgstr "GameCube Kontrolcüsü"
+
+msgid "GameCube Games Delete"
+msgstr "GameCube Oyunlarını Sil"
+
+msgid "GameCube Install Menu"
+msgstr "GameCube Kurulum Menüsü"
 
 msgid "GameCube Mode"
-msgstr ""
+msgstr "GameCube Modu"
 
 msgid "GameCube Source"
-msgstr ""
-
-msgid "Gamename [GAMEID]"
-msgstr ""
+msgstr "GameCube Kaynağı"
 
 msgid "GameTDB"
-msgstr ""
+msgstr "GameTDB"
+
+msgid "Gamename [GAMEID]"
+msgstr "Oyunadı [OYUNID]"
 
 msgid "Games"
 msgstr "Oyunlar"
 
+msgid "Games IOS"
+msgstr "Oyunlar IOS"
+
 msgid "Generating GXGameCategories.xml"
-msgstr ""
+msgstr "GXGameCategories.xml oluşturuluyor"
 
 msgid "Genre:"
-msgstr ""
+msgstr "Tür:"
 
 msgid "German"
 msgstr "Almanca"
 
 msgid "Getting file list..."
-msgstr ""
+msgstr "Dosya listesi alınıyor..."
 
 msgid "Getting game folder size..."
-msgstr ""
+msgstr "Oyun klasörü boyutu alınıyor..."
 
 msgid "Global Settings"
-msgstr ""
+msgstr "Genel Ayarlar"
 
 msgid "Grid Scroll Speed"
-msgstr ""
+msgstr "Izgara Kaydırma Hızı"
 
 msgid "HOME Menu"
-msgstr "HOME Menü"
+msgstr "ANA Menü"
 
 msgid "Hard Drive Settings"
-msgstr ""
+msgstr "Sabit Disk Ayarları"
 
 msgid "High Quality"
-msgstr ""
+msgstr "Yüksek Kalite"
 
 msgid "High/Low"
-msgstr ""
+msgstr "Yüksek/Düşük"
 
 msgid "Homebrew Apps Path"
-msgstr "Homebrew Yazılımlarının Yolu"
+msgstr "Homebrew Uygulamaları Yolu"
 
 msgid "Homebrew Channel"
-msgstr ""
+msgstr "Homebrew Kanalı"
 
 msgid "Homebrew Launcher"
 msgstr "Homebrew Başlatıcı"
 
 msgid "Hooktype"
-msgstr ""
+msgstr "Kanca Türü"
 
 msgid "Hour"
 msgstr "Saat"
 
 msgid "How to Shutdown?"
-msgstr "Nasıl Kapansın?"
+msgstr "Nasıl Kapatılır?"
 
 msgid "Import Categories"
-msgstr ""
+msgstr "Kategorileri İçe Aktar"
 
 msgid "Import operation successfully completed."
-msgstr ""
+msgstr "İçe aktarma işlemi başarıyla tamamlandı."
 
 msgid "Importing categories"
-msgstr ""
+msgstr "Kategoriler içe aktarılıyor"
 
 #, c-format
 msgid "Incoming file %0.2fKB"
@@ -1266,67 +1277,70 @@ msgid "Incoming file %0.2fMB"
 msgstr "Gelen dosya %0.2fMB"
 
 msgid "Individual"
-msgstr ""
+msgstr "Bireysel"
 
 msgid "Information"
-msgstr ""
+msgstr "Bilgi"
 
 msgid "Initializing Network"
-msgstr "Ağa Bağlanıyor"
+msgstr "Ağ Başlatılıyor"
 
-msgid "Insert Disk"
-msgstr "Diski Takın"
+msgid "Insert Disc"
+msgstr "Disk Takın"
 
-msgid "Insert a Wii or a GameCube Disc!"
-msgstr ""
+msgid "Insert a Wii or a GameCube disc!"
+msgstr "Bir Wii veya GameCube diski takın!"
 
 msgid "Install"
 msgstr "Kur"
 
 msgid "Install Canceled"
-msgstr ""
+msgstr "Kurulum İptal Edildi"
 
 msgid "Install Directories"
-msgstr ""
+msgstr "Dizinleri Kur"
 
 msgid "Install Error!"
-msgstr "Kurulum Hatasi!"
+msgstr "Kurulum Hatası!"
+
+msgid "Install Finished"
+msgstr "Kurulum Tamamlandı"
 
 msgid "Install Partitions"
-msgstr ""
+msgstr "Bölümleri Kur"
+
+msgid "Install a Game?"
+msgstr "Bir Oyun Kur?"
 
 msgid "Install a game"
-msgstr "Oyun kur"
+msgstr "Bir oyun kur"
 
 msgid "Install error - Cleaning incomplete data."
-msgstr ""
+msgstr "Kurulum hatası - Eksik veriler temizleniyor."
 
-msgid "Install finished"
-msgstr ""
+msgid "Installing Game:"
+msgstr "Oyun Kuruluyor:"
 
 msgid "Installing GameCube Game..."
-msgstr ""
+msgstr "GameCube Oyunu Kuruluyor..."
 
 msgid "Installing content"
-msgstr ""
-
-msgid "Installing game:"
-msgstr "Kurulan oyun:"
+msgstr "İçerik kuruluyor"
 
 msgid "Installing title..."
-msgstr ""
+msgstr "Başlık kuruluyor..."
 
 msgid "Invalid IOS number entered. Number must be -1 for inherit or 200 - 255."
-msgstr ""
+msgstr "Geçersiz IOS numarası girildi. Numara -1 (devral) veya 200 - 255 olmalıdır."
 
 msgid "Invalid WAD file."
-msgstr ""
+msgstr "Geçersiz WAD dosyası."
 
 msgid "It seems that you have some information that will be helpful to us. Please pass this information along to the DEV team."
-msgstr "İşimize yarabilecek bilgilere sahip gibi gözüküyorsunuz. Lütfen bu bilgiyi Geliştirme takımına iletin."
+msgstr "Görünüşe göre bize yardımcı olacak bazı bilgilere sahipsiniz. Lütfen bu bilgileri GELİŞTİRİCİ ekibe iletin."
 
 msgid "Italian"
-msgstr "Italyanca"
+msgstr "İtalyanca"
 
 msgid "Jan"
 msgstr "Oca"
@@ -1335,10 +1349,10 @@ msgid "Japanese"
 msgstr "Japonca"
 
 msgid "Japanese Patch"
-msgstr ""
+msgstr "Japonca Yama"
 
 msgid "Joypad"
-msgstr ""
+msgstr "Joypad"
 
 msgid "July"
 msgstr "Tem"
@@ -1347,7 +1361,7 @@ msgid "June"
 msgstr "Haz"
 
 msgid "KPAD Read"
-msgstr ""
+msgstr "KPAD Oku"
 
 msgid "Keyboard"
 msgstr "Klavye"
@@ -1356,56 +1370,53 @@ msgid "Korean"
 msgstr "Korece"
 
 msgid "LED Activity"
-msgstr ""
+msgstr "LED Aktivitesi"
 
-msgid "Language Files"
-msgstr ""
+msgid "Language Change:"
+msgstr "Dil Değişikliği:"
 
-msgid "Language change:"
-msgstr "Dil değişimi:"
+msgid "Language Path Changed."
+msgstr "Dil Yolu Değiştirildi."
 
-msgid "Languagefiles Path"
-msgstr ""
-
-msgid "Languagepath changed."
-msgstr "Dil dosya yolu değişti."
+msgid "Languages Path"
+msgstr "Diller Yolu"
 
 msgid "Launching Wii games with emulated NAND only works on d2x cIOS! Change game IOS to a d2x cIOS first."
-msgstr ""
+msgstr "Emüle edilmiş NAND ile Wii oyunlarını başlatmak yalnızca d2x cIOS üzerinde çalışır! Önce oyun IOS'unu d2x cIOS olarak değiştirin."
 
 msgid "Launching emulated NAND channels only works on d2x cIOS! Change game IOS to a d2x cIOS first."
-msgstr ""
+msgstr "Emüle edilmiş NAND kanallarını başlatmak yalnızca d2x cIOS üzerinde çalışır! Önce oyun IOS'unu d2x cIOS olarak değiştirin."
 
 msgid "Left"
 msgstr "Sol"
 
 msgid "Like SysMenu"
-msgstr "Sistem Menüsü Gibi"
+msgstr "SysMenu Gibi"
 
 msgid "List on game launch"
-msgstr ""
+msgstr "Oyun başlatıldığında listele"
 
 msgid "Load"
 msgstr "Yükle"
 
-msgid "Load from SD/USB"
-msgstr "SD/USB den yükle"
-
 #, c-format
 msgid "Load file from: %s ?"
-msgstr "Dosya %s 'ten yüklensin mi?"
+msgstr "Dosyayı buradan yükle: %s ?"
+
+msgid "Load from SD/USB"
+msgstr "SD/USB'den Yükle"
 
 msgid "Load this DOL as alternate DOL?"
-msgstr "Bu DOL alternatif DOL olarak mı yüklensin?"
+msgstr "Bu DOL'u alternatif DOL olarak yükle?"
 
 msgid "Loader Settings"
-msgstr ""
+msgstr "Yükleyici Ayarları"
 
 msgid "Loaders IOS"
-msgstr ""
+msgstr "Yükleyiciler IOS"
 
-msgid "Loading standard language."
-msgstr "Standart dil yükleniyor."
+msgid "Loading Standard Language."
+msgstr "Standart Dil Yükleniyor."
 
 msgid "Loading standard music."
 msgstr "Standart müzik yükleniyor."
@@ -1414,259 +1425,232 @@ msgid "Lock Console"
 msgstr "Konsolu Kilitle"
 
 msgid "Lock USB Loader GX"
-msgstr ""
+msgstr "USB Loader GX'i Kilitle"
 
 msgid "Locked"
-msgstr "Kilitlendi"
+msgstr "Kilitli"
 
 msgid "Log to file"
-msgstr ""
+msgstr "Dosyaya kaydet"
 
 msgid "Loop Directory"
-msgstr ""
+msgstr "Dizini Döngüye Al"
 
 msgid "Loop Music"
-msgstr ""
+msgstr "Müziği Döngüye Al"
 
 msgid "Loop Sound"
-msgstr "Döngüdeki Ses"
+msgstr "Sesi Döngüye Al"
 
 msgid "Low Quality"
-msgstr ""
+msgstr "Düşük Kalite"
 
 msgid "Low/High"
-msgstr ""
+msgstr "Düşük/Yüksek"
 
 msgid "MIOS (Default & Customs)"
-msgstr ""
+msgstr "MIOS (Varsayılan & Özel)"
 
 msgid "Main DOL"
-msgstr ""
+msgstr "Ana DOL"
 
 msgid "Main GameCube Games Path"
-msgstr ""
+msgstr "Ana GameCube Oyunları Yolu"
 
 msgid "Main GameCube Path"
-msgstr ""
+msgstr "Ana GameCube Yolu"
 
 msgid "Main Path"
-msgstr ""
+msgstr "Ana Yol"
 
 msgid "Manual (40~120)"
-msgstr ""
+msgstr "Manuel (40~120)"
 
 msgid "Mar"
-msgstr ""
+msgstr "Mar"
 
 msgid "Mark New Games"
-msgstr "Yeni oyunlari imle"
+msgstr "Yeni Oyunları İşaretle"
 
 msgid "May"
-msgstr ""
+msgstr "May"
 
 msgid "Memory Card Blocks Size"
-msgstr ""
+msgstr "Hafıza Kartı Blok Boyutu"
 
 msgid "Memory Card Emulation"
-msgstr ""
+msgstr "Hafıza Kartı Emülasyonu"
 
 msgid "Memory Card with 2043 blocs has issues with Nintendont. Use at your own risk."
-msgstr ""
+msgstr "2043 bloklu Hafıza Kartı Nintendont ile sorunlar yaşar. Kendi sorumluluğunuzda kullanın."
 
 msgid "Messageboard Update"
-msgstr ""
+msgstr "Mesaj Panosu Güncellemesi"
+
+msgid "Miscellaneous Settings"
+msgstr "Çeşitli Ayarlar"
 
 msgid "Motion+ Video"
-msgstr ""
+msgstr "Motion+ Video"
 
 msgid "Mount DVD drive"
-msgstr "DVD sürücüsü bağla"
-
-msgid "Mount USB at launch"
-msgstr ""
+msgstr "DVD sürücüsünü Bağla"
 
 msgid "Move File"
-msgstr ""
+msgstr "Dosyayı Taşı"
 
 msgid "Multiple Partitions"
-msgstr ""
+msgstr "Birden Fazla Bölüm"
 
 msgid "Music Loop Mode"
-msgstr ""
+msgstr "Müzik Döngü Modu"
 
 msgid "Music Volume"
-msgstr "Ses Seviyesi"
+msgstr "Müzik Sesi"
 
-msgid "NMM Mode"
-msgstr ""
+msgid "NAND"
+msgstr "NAND"
 
-msgid "NAND Chan. Emulation"
-msgstr ""
-
-msgid "NAND Channels"
-msgstr ""
-
-msgid "NAND Emu Channel Path"
-msgstr ""
-
-msgid "NAND Emu Path"
-msgstr ""
-
-msgid "NAND Emulation"
-msgstr ""
-
-msgid "NAND emulation is only available on D2X cIOS!"
-msgstr ""
+msgid "NAND emulation is only available on d2x cIOS!"
+msgstr "NAND emülasyonu yalnızca d2x cIOS üzerinde kullanılabilir!"
 
 msgid "NAND emulation only works on FAT/FAT32 partitions!"
-msgstr ""
+msgstr "NAND emülasyonu yalnızca FAT/FAT32 bölümlerinde çalışır!"
 
-msgid "NAND Saves Emulation"
-msgstr ""
+msgid "NMM Mode"
+msgstr "NMM Modu"
 
 msgid "Native Controller"
-msgstr ""
+msgstr "Yerel Kontrolcü"
 
 msgid "Neek"
-msgstr ""
+msgstr "Neek"
 
 msgid "Neek NAND path selection failed."
-msgstr ""
+msgstr "Neek NAND yolu seçimi başarısız oldu."
 
 msgid "Neek kernel file not found."
-msgstr ""
+msgstr "Neek çekirdek dosyası bulunamadı."
 
 msgid "Neek kernel loading failed."
-msgstr ""
+msgstr "Neek çekirdek yüklemesi başarısız oldu."
 
 msgid "Neek2o does not support 'EmuNAND Channel Path' on SD! Please setup Uneek2o instead."
-msgstr ""
+msgstr "Neek2o 'EmuNAND Kanal Yolu'nu SD üzerinde desteklemez! Lütfen bunun yerine Uneek2o kurun."
 
 msgid "Neither"
 msgstr "Hiçbiri"
 
-msgid "Network is not initiated."
-msgstr ""
+msgid "Network is not initalized."
+msgstr "Ağ başlatılmadı."
+
+msgid "Network is not initialized."
+msgstr "Ağ başlatılmadı."
 
 msgid "Next"
-msgstr "Ileri"
+msgstr "Sonraki"
 
 msgid "Nintendont"
-msgstr ""
+msgstr "Nintendont"
 
 msgid "Nintendont Loader Path"
-msgstr ""
+msgstr "Nintendont Yükleyici Yolu"
 
 msgid "No"
 msgstr "Hayır"
 
-msgid "No Cheatfile found"
+msgid "No Cheat file found"
 msgstr "Hile dosyası bulunamadı"
 
 msgid "No DOL file found on disc."
-msgstr "Diskte DOL dosyası bulunamadı"
+msgstr "Diskte DOL dosyası bulunamadı."
+
+msgid "No Disc Inserted"
+msgstr "Disk Takılmadı"
 
 msgid "No Disc+"
-msgstr ""
+msgstr "Disk Yok+"
 
 msgid "No Splitting"
-msgstr ""
-
-msgid "No URL or Path specified."
-msgstr ""
-
-msgid "No WBFS or FAT/NTFS/EXT partition found"
-msgstr ""
-
-msgid "No Wiinnertag.xml found in the config path. Do you want an example file created?"
-msgstr ""
-
-msgid "No change"
-msgstr ""
-
-msgid "No cheats were selected! Should the GCT file be deleted?"
-msgstr ""
-
-msgid "No data could be read."
-msgstr "Hiç veri okunamadı."
-
-msgid "No disc inserted."
-msgstr ""
-
-msgid "No favorites selected."
-msgstr ""
-
-msgid "No files missing!"
-msgstr "Kayıp dosya yok!"
-
-msgid "No games found on the disc"
-msgstr ""
-
-msgid "No language files to update on your devices! Do you want to download new language files?"
-msgstr ""
-
-msgid "No new updates."
-msgstr "Güncelleme yok"
-
-msgid "No themes found on the site."
-msgstr "Bu sitede tema bulunamadı"
-
-msgid "No themes found."
-msgstr ""
+msgstr "Bölme Yok"
 
 msgid "No WAD file found in this folder."
-msgstr ""
+msgstr "Bu klasörde WAD dosyası bulunamadı."
+
+msgid "No WBFS or FAT/NTFS/EXT partition found"
+msgstr "WBFS veya FAT/NTFS/EXT bölümü bulunamadı"
+
+msgid "No Wiinnertag.xml found in the config path. Do you want an example file created?"
+msgstr "Yapılandırma yolunda Wiinnertag.xml bulunamadı. Bir örnek dosya oluşturulsun mu?"
+
+msgid "No change"
+msgstr "Değişiklik yok"
+
+msgid "No cheats were selected! Should the GCT file be deleted?"
+msgstr "Hiçbir hile seçilmedi! GCT dosyası silinsin mi?"
+
+msgid "No data could be read."
+msgstr "Veri okunamadı."
+
+msgid "No favorites selected."
+msgstr "Hiçbir favori seçilmedi."
+
+msgid "No files missing!"
+msgstr "Eksik dosya yok!"
+
+msgid "No games found on the disc"
+msgstr "Diskte oyun bulunamadı"
+
+msgid "No language files to update on your devices! Do you want to download new language files?"
+msgstr "Cihazlarınızda güncellenecek dil dosyası yok! Yeni dil dosyalarını indirmek istiyor musunuz?"
+
+msgid "No new updates."
+msgstr "Yeni güncelleme yok."
+
+msgid "No themes found."
+msgstr "Tema bulunamadı."
 
 msgid "NoSSL only"
-msgstr ""
+msgstr "Yalnızca NoSSL"
 
 msgid "None"
-msgstr ""
+msgstr "Hiçbiri"
 
 msgid "Normal"
-msgstr ""
+msgstr "Normal"
+
+msgid "Not Enough Free Space!"
+msgstr "Yeterli Boş Alan Yok!"
 
 msgid "Not Initialized"
-msgstr ""
+msgstr "Başlatılmadı"
 
 msgid "Not a Wii or a GameCube Disc"
-msgstr ""
-
-msgid "Not a valid URL"
-msgstr ""
-
-msgid "Not a valid URL path"
-msgstr ""
-
-msgid "Not a valid domain"
-msgstr ""
+msgstr "Wii veya GameCube Diski Değil"
 
 msgid "Not enough free memory."
-msgstr "Yeterli boş hafıza yok"
+msgstr "Yeterli boş bellek yok."
 
 msgid "Not enough free space on device."
-msgstr ""
-
-msgid "Not enough free space!"
-msgstr "Yeterli boş yer yok!"
+msgstr "Cihazda yeterli boş alan yok."
 
 msgid "Not enough memory for FST."
-msgstr ""
+msgstr "FST için yeterli bellek yok."
 
 msgid "Not enough memory."
-msgstr ""
+msgstr "Yeterli bellek yok."
 
 msgid "Not required"
-msgstr ""
+msgstr "Gerekli değil"
 
-msgid "Unsupported format!"
-msgstr "Desteklenmeyen format!"
+msgid "Not set"
+msgstr "Ayarlanmadı"
 
 msgid "Nothing selected to delete."
-msgstr ""
+msgstr "Silinecek bir şey seçilmedi."
 
 msgid "Nothing selected to install."
-msgstr ""
+msgstr "Yüklenecek bir şey seçilmedi."
 
 msgid "Nov"
 msgstr "Kas"
@@ -1675,40 +1659,43 @@ msgid "OFF"
 msgstr "KAPALI"
 
 msgid "OFF (Extended)"
-msgstr ""
+msgstr "KAPALI (Genişletilmiş)"
 
 msgid "OFF (Safe)"
-msgstr ""
+msgstr "KAPALI (Güvenli)"
 
 msgid "OK"
-msgstr ""
+msgstr "TAMAM"
 
 msgid "ON"
 msgstr "AÇIK"
 
+msgid "ON (High)"
+msgstr "AÇIK (Yüksek)"
+
 msgid "ON (Low)"
-msgstr ""
+msgstr "AÇIK (Düşük)"
 
 msgid "ON (Medium)"
-msgstr ""
+msgstr "AÇIK (Orta)"
 
 msgid "ON (Multi)"
-msgstr ""
-
-msgid "ON (High)"
-msgstr ""
+msgstr "AÇIK (Çoklu)"
 
 msgid "OSReport"
-msgstr ""
+msgstr "OSRapor"
 
 msgid "OSSleepThread"
-msgstr ""
+msgstr "OSUykuİşParçası"
 
 msgid "Ocarina"
-msgstr ""
+msgstr "Ocarina"
 
 msgid "Ocarina is not supported with neek2o yet. Launch game anyway?"
-msgstr ""
+msgstr "Ocarina henüz neek2o ile desteklenmiyor. Oyunu yine de başlatmak istiyor musunuz?"
+
+msgid "Ocarina:"
+msgstr "Ocarina:"
 
 msgid "Oct"
 msgstr "Eki"
@@ -1717,91 +1704,91 @@ msgid "Official Site:"
 msgstr "Resmi Site:"
 
 msgid "Offset"
-msgstr ""
+msgstr "Ofset"
 
 msgid "Ok"
-msgstr ""
+msgstr "Tamam"
 
 msgid "One Line A"
-msgstr ""
+msgstr "Bir Satır A"
 
 msgid "One Line B"
-msgstr ""
+msgstr "Bir Satır B"
 
 msgid "Only Game Partition"
-msgstr ""
+msgstr "Yalnızca Oyun Bölümü"
 
-msgid "Only for Install"
-msgstr "Sadece Kurulum için"
+msgid "Only for install"
+msgstr "Yalnızca kurulum için"
 
 msgid "Original"
-msgstr ""
+msgstr "Orijinal"
 
 msgid "Original/Customs"
-msgstr "Orjinal/Kişisel"
+msgstr "Orijinal/Özel"
 
 msgid "PAD Hook"
-msgstr ""
+msgstr "PAD Kancası"
 
 msgid "PAL50 Patch"
-msgstr ""
+msgstr "PAL50 Yaması"
 
 msgid "Parental Control"
-msgstr "Ebeveyn kontrolü"
+msgstr "Ebeveyn Kontrolü"
 
 msgid "Partial"
-msgstr ""
+msgstr "Kısmi"
 
 msgid "Partition"
 msgstr "Bölüm"
 
 msgid "Password"
-msgstr "Parola"
+msgstr "Şifre"
 
 msgid "Password Changed"
-msgstr "Parola degiştirildi"
+msgstr "Şifre Değiştirildi"
 
 msgid "Password has been changed"
-msgstr "Parola değiştirildi"
+msgstr "Şifre değiştirildi"
 
 msgid "Patch Country Strings"
-msgstr "Ülke İsimlerini Yamala"
+msgstr "Ülke Dizelerini Yama"
 
 msgid "Path Changed"
-msgstr ""
+msgstr "Yol Değiştirildi"
 
 msgid "Permission denied."
-msgstr ""
+msgstr "İzin reddedildi."
 
 msgid "Pick from a list"
 msgstr "Listeden seç"
 
 msgid "Pixels"
-msgstr ""
+msgstr "Pikseller"
 
 msgid "Play Count"
-msgstr "Oynama Sayısı"
+msgstr "Oynatma Sayısı"
 
 msgid "Play Next"
-msgstr ""
+msgstr "Sonrakini Oynat"
 
 msgid "Play Once"
-msgstr ""
+msgstr "Bir Kez Oynat"
 
 msgid "Play Previous"
-msgstr ""
+msgstr "Öncekini Oynat"
 
 msgid "Playing Music:"
-msgstr ""
+msgstr "Müzik Çalınıyor:"
 
 msgid "Please enter a valid address e.g. wiimmfi.de"
-msgstr ""
+msgstr "Lütfen geçerli bir adres girin, örn. wiimmfi.de"
 
 msgid "Please wait"
-msgstr ""
+msgstr "Lütfen bekleyin"
 
 msgid "Please wait..."
-msgstr "Lütfen bekleyin.."
+msgstr "Lütfen bekleyin..."
 
 msgid "Power off the Wii"
 msgstr "Wii'yi kapat"
@@ -1809,287 +1796,296 @@ msgstr "Wii'yi kapat"
 msgid "Prev"
 msgstr "Önceki"
 
+msgid "Priiloader"
+msgstr "Priiloader"
+
 msgid "Private Server"
-msgstr ""
+msgstr "Özel Sunucu"
 
 msgid "Process finished."
-msgstr ""
+msgstr "İşlem tamamlandı."
 
 msgid "Progressive Patch"
-msgstr ""
+msgstr "İlerleyici Yama"
 
 msgid "Prompts Buttons"
-msgstr "Hız ve Butonlar"
+msgstr "İstem Düğmeleri"
 
 msgid "Published by"
-msgstr "Yayıncı"
+msgstr "Yayınlayan"
 
 msgid "Quick Boot"
 msgstr "Hızlı Başlatma"
 
-msgid "Random Directory Music"
-msgstr ""
-
 msgid "Real NAND"
-msgstr ""
+msgstr "Gerçek NAND"
 
 msgid "Receiving file from:"
-msgstr "Dosyanın alındığı yer:"
+msgstr "Dosya alınıyor:"
 
 msgid "Region Free"
-msgstr ""
+msgstr "Bölge Serbest"
 
 msgid "Region Patch"
-msgstr ""
+msgstr "Bölge Yaması"
+
+msgid "Regional"
+msgstr "Bölgesel"
 
 msgid "Released"
-msgstr "Çıktı"
-
-msgid "Reload SD"
-msgstr "SD'yi yeniden yükle"
+msgstr "Yayınlandı"
 
 msgid "Reloading game list now, please wait..."
-msgstr ""
+msgstr "Oyun listesi yeniden yükleniyor, lütfen bekleyin..."
 
 msgid "Remember Last Game"
-msgstr ""
+msgstr "Son Oyunu Hatırla"
 
 msgid "Remember Unlock"
-msgstr ""
+msgstr "Kilidi Hatırla"
 
 msgid "Remove Read Speed Limit"
-msgstr ""
+msgstr "Okuma Hız Sınırını Kaldır"
 
 msgid "Remove update"
-msgstr ""
+msgstr "Güncellemeyi kaldır"
 
 msgid "Rename Game Title"
-msgstr ""
+msgstr "Oyun Başlığını Yeniden Adlandır"
 
 msgid "Rename category"
-msgstr ""
+msgstr "Kategoriyi Yeniden Adlandır"
+
+msgid "Resample to 48 kHz"
+msgstr "48 kHz'e Yeniden Örnekle"
 
 msgid "Reset"
-msgstr ""
+msgstr "Sıfırla"
 
 msgid "Reset All Game Settings"
-msgstr ""
+msgstr "Tüm Oyun Ayarlarını Sıfırla"
 
 msgid "Reset BG Music"
-msgstr ""
+msgstr "Arka Plan Müziğini Sıfırla"
 
 msgid "Reset Cached Titles"
-msgstr ""
+msgstr "Önbelleğe Alınmış Başlıkları Sıfırla"
 
 msgid "Reset Play Count"
-msgstr "Sayacı sıfırla"
+msgstr "Oynatma Sayısını Sıfırla"
+
+msgid "Reset Wiimote Pairings"
+msgstr "Wiimote Eşleştirmelerini Sıfırla"
 
 msgid "Reset to default BGM?"
-msgstr ""
+msgstr "Varsayılan Arka Plan Müziğine sıfırlansın mı?"
 
 msgid "Restarting..."
-msgstr "Yeniden başlatılıyor"
+msgstr "Yeniden başlatılıyor..."
 
 msgid "Return"
-msgstr "Dönüş"
+msgstr "Dön"
 
 msgid "Return To"
-msgstr ""
+msgstr "Dönüş Yeri"
 
 msgid "Return to Wii Menu"
-msgstr "Wii Menü ye Dön"
+msgstr "Wii Menüsüne Dön"
 
 msgid "Right"
 msgstr "Sağ"
 
 msgid "Rotating Disc"
-msgstr ""
+msgstr "Dönen Disk"
 
 msgid "Round"
-msgstr ""
+msgstr "Yuvarlak"
 
 msgid "Rumble"
 msgstr "Titreşim"
 
 msgid "SChinese"
-msgstr "Basitleştirilmis Çince"
+msgstr "Basitleştirilmiş Çince"
 
 msgid "SD"
-msgstr ""
-
-msgid "SD Card could not be accessed."
-msgstr ""
+msgstr "SD"
 
 msgid "SD Card Mode"
-msgstr ""
+msgstr "SD Kart Modu"
+
+msgid "SD Card could not be accessed."
+msgstr "SD Kartına erişilemedi."
 
 msgid "SD GameCube Games Path"
-msgstr ""
+msgstr "SD GameCube Oyunları Yolu"
 
 msgid "SD GameCube Path"
-msgstr ""
+msgstr "SD GameCube Yolu"
 
 msgid "SD Path"
-msgstr ""
+msgstr "SD Yolu"
 
 msgid "SFX Volume"
-msgstr "Efekt Seviyesi"
+msgstr "SFX Sesi"
 
 msgid "Save"
 msgstr "Kaydet"
 
 msgid "Save Failed. No device inserted?"
-msgstr ""
-
-msgid "Save Game List to"
-msgstr "Oyun Listesini kaydet"
+msgstr "Kaydetme Başarısız. Cihaz takılı değil mi?"
 
 msgid "Save List"
-msgstr ""
+msgstr "Listeyi Kaydet"
 
 msgid "Save Path"
-msgstr ""
+msgstr "Kaydetme Yolu"
+
+msgid "Save game list to"
+msgstr "Oyun listesini kaydet"
 
 msgid "Saved"
 msgstr "Kaydedildi"
 
 msgid "Savegame might not exist for this game."
-msgstr ""
+msgstr "Bu oyun için kayıtlı oyun mevcut olmayabilir."
+
+msgid "Screen Mode"
+msgstr "Ekran Modu"
 
 msgid "Screensaver"
 msgstr "Ekran Koruyucu"
 
 msgid "Screenshot"
-msgstr ""
+msgstr "Ekran Görüntüsü"
 
 msgid "Select"
 msgstr "Seç"
 
 msgid "Select DOL Offset"
-msgstr ""
+msgstr "DOL Ofsetini Seç"
+
+msgid "Select Game Sources"
+msgstr "Oyun Kaynaklarını Seç"
 
 msgid "Select a DOL"
-msgstr "Bir DOL seç"
+msgstr "Bir DOL Seç"
 
 msgid "Select a DOL from game"
-msgstr ""
+msgstr "Oyundan bir DOL seç"
 
 msgid "Select game categories"
-msgstr ""
+msgstr "Oyun kategorilerini seç"
 
-msgid "Select loader mode"
-msgstr ""
+msgid "Select game sources"
+msgstr "Oyun kaynaklarını seç"
 
 msgid "Select the EmuNAND path to use."
-msgstr ""
-
-msgid "Select titles sources."
-msgstr ""
+msgstr "Kullanılacak EmuNAND yolunu seçin."
 
 msgid "Sept"
 msgstr "Eyl"
 
-msgid "Set Search-Filter"
-msgstr "Arama Filtresi Ayarla"
+msgid "Set search filter"
+msgstr "Arama filtresini ayarla"
 
 msgid "Settings"
 msgstr "Ayarlar"
 
 msgid "Settings File"
-msgstr ""
+msgstr "Ayar Dosyası"
 
 msgid "Show Categories"
-msgstr ""
+msgstr "Kategorileri Göster"
 
-msgid "Show Favorite on banner"
-msgstr ""
+msgid "Show Favorite on Banner"
+msgstr "Afişte Favoriyi Göster"
 
 msgid "Show Free Space"
-msgstr ""
+msgstr "Boş Alanı Göster"
 
 msgid "Show Game Count"
-msgstr ""
+msgstr "Oyun Sayısını Göster"
 
 msgid "Show Play Count"
-msgstr ""
+msgstr "Oynatma Sayısını Göster"
 
 msgid "Show SD"
-msgstr ""
+msgstr "SD'yi Göster"
+
+msgid "Shuffle Directory Music"
+msgstr "Dizin Müziğini Karıştır"
 
 msgid "Shutdown System"
 msgstr "Sistemi Kapat"
 
 msgid "Shutdown Wii"
-msgstr ""
+msgstr "Wii'yi Kapat"
+
+msgid "Shutdown?"
+msgstr "Kapatılsın mı?"
+
+msgid "Silent HOME Menu"
+msgstr "Sessiz ANA Menü"
 
 msgid "Skip Errors"
-msgstr ""
+msgstr "Hataları Atla"
 
 msgid "Skip IPL"
-msgstr ""
-
-msgid "BBA Emulation"
-msgstr ""
-
-msgid "BBA Net Profile"
-msgstr ""
+msgstr "IPL'yi Atla"
 
 msgid "Sneek Video Patch"
-msgstr ""
+msgstr "Sneek Video Yaması"
 
-msgid "Sorry, the theme downloader menu is not working anymore because http://wii.spiffy360.com now requires user registration."
-msgstr ""
+msgid "Sorting alphabetically"
+msgstr "Alfabetik sıralama"
 
-msgid "Sort alphabetically"
-msgstr "Alfabetik Diz"
+msgid "Sorting by most played"
+msgstr "En çok oynananlara göre sıralama"
 
-msgid "Sort by number of players"
-msgstr ""
+msgid "Sorting by number of players"
+msgstr "Oyuncu sayısına göre sıralama"
 
-msgid "Sort by rank"
-msgstr "Puana göre diz"
-
-msgid "Sort order by most played"
-msgstr "En çok oynanana göre diz"
-
-msgid "Sound"
-msgstr "Ses"
+msgid "Sorting by rank"
+msgstr "Rütbeye göre sıralama"
 
 msgid "Sound Settings"
-msgstr ""
+msgstr "Ses Ayarları"
 
 msgid "Sound+BGM"
-msgstr "Ses+BGM"
+msgstr "Ses+Arka Plan Müziği"
 
 msgid "Sound+Quiet"
-msgstr "Ses+Quiet"
+msgstr "Ses+Sessiz"
 
 msgid "Spanish"
-msgstr "Ispanyolca"
+msgstr "İspanyolca"
 
 msgid "Special thanks to:"
-msgstr "Özel tesekkürler"
+msgstr "Özel teşekkürler:"
 
 msgid "Split each 2GB"
-msgstr ""
+msgstr "Her 2GB'ı böl"
 
 msgid "Split each 4GB"
-msgstr ""
+msgstr "Her 4GB'ı böl"
 
 msgid "Standby"
-msgstr ""
+msgstr "Bekleme"
 
 msgid "Start"
-msgstr ""
+msgstr "Başlat"
 
 msgid "Success"
 msgstr "Başarılı"
 
 msgid "Success."
-msgstr ""
+msgstr "Başarılı."
 
 msgid "Success:"
 msgstr "Başarılı:"
+
+msgid "Successfully Installed:"
+msgstr "Başarıyla Kuruldu:"
 
 msgid "Successfully Saved"
 msgstr "Başarıyla Kaydedildi"
@@ -2098,89 +2094,62 @@ msgid "Successfully Updated"
 msgstr "Başarıyla Güncellendi"
 
 msgid "Successfully copied"
-msgstr ""
+msgstr "Başarıyla kopyalandı"
 
 msgid "Successfully deleted:"
 msgstr "Başarıyla silindi:"
-
-msgid "Successfully extracted theme."
-msgstr "Tema başarıyla çıkarıldı."
-
-msgid "Successfully installed:"
-msgstr "Başarıyla kuruldu:"
-
-msgid "Successfully updated."
-msgstr ""
-
-msgid "Switching to channel list mode."
-msgstr ""
-
-msgid "Sync FAT32 FS Info"
-msgstr ""
-
-msgid "Synchronizing..."
-msgstr ""
 
 msgid "System Default"
 msgstr "Sistem Varsayılanı"
 
 msgid "System Proxy Settings"
-msgstr ""
+msgstr "Sistem Proxy Ayarları"
 
 msgid "TChinese"
 msgstr "Geleneksel Çince"
 
-msgid "TXT Cheatcodes Path"
-msgstr "TXT Hile Yolu"
-
-msgid "The .them file was not found in the zip."
-msgstr ""
+msgid "TXT Cheat Codes Path"
+msgstr "TXT Hile Kodları Yolu"
 
 msgid "The Force Widescreen setting requires DIOS MIOS v2.1 or more. This setting will be ignored."
-msgstr ""
+msgstr "Geniş Ekran Zorlama ayarı DIOS MIOS v2.1 veya üstü gerektirir. Bu ayar yok sayılacaktır."
 
 msgid "The Miis will be extracted to your EmuNAND path and EmuNAND channel path. Attention: All existing files will be overwritten."
-msgstr ""
+msgstr "Miis'ler EmuNAND yolunuza ve EmuNAND kanal yolunuza çıkarılacaktır. Dikkat: Tüm mevcut dosyalar üzerine yazılacaktır."
 
 msgid "The No Disc+ setting requires DIOS MIOS 2.2 update2. This setting will be ignored."
-msgstr ""
+msgstr "Disk Yok+ ayarı DIOS MIOS 2.2 güncelleme2 gerektirir. Bu ayar yok sayılacaktır."
 
 msgid "The SYSCONF file will be extracted to your EmuNAND path and EmuNAND channel path. Attention: All existing files will be overwritten."
-msgstr ""
-
-msgid "The application might crash if there is currently a read/write access to the SD card!"
-msgstr ""
-
-msgid "The entered directory does not exist. Would you like to create it?"
-msgstr "Girilen klasör mevcut değil. Oluşturmak ister misin?"
-
-msgid "The files will be extracted to your EmuNAND save and channel path. Attention: All existing files will be overwritten."
-msgstr ""
-
-msgid "The game is on SD Card."
-msgstr ""
-
-msgid "The game is on USB."
-msgstr ""
-
-msgid "The save game will be extracted to your EmuNAND path."
-msgstr ""
-
-msgid "The save games will be extracted to your EmuNAND save and channel path. Attention: All existing files will be overwritten."
-msgstr ""
+msgstr "SYSCONF dosyası EmuNAND yolunuza ve EmuNAND kanal yolunuza çıkarılacaktır. Dikkat: Tüm mevcut dosyalar üzerine yazılacaktır."
 
 msgid "The WAD file was installed"
-msgstr ""
+msgstr "WAD dosyası kuruldu"
 
 #, c-format
 msgid "The WAD installation failed with error %i"
-msgstr ""
+msgstr "WAD kurulumu %i hatası ile başarısız oldu"
 
-msgid "Theme Downloader"
-msgstr "Tema İndirici"
+msgid "The entered directory does not exist. Would you like to create it?"
+msgstr "Girilen dizin mevcut değil. Oluşturmak ister misiniz?"
+
+msgid "The files will be extracted to your EmuNAND save and channel path. Attention: All existing files will be overwritten."
+msgstr "Dosyalar EmuNAND kayıt ve kanal yolunuza çıkarılacaktır. Dikkat: Tüm mevcut dosyalar üzerine yazılacaktır."
+
+msgid "The game is on SD Card."
+msgstr "Oyun SD Kartta."
+
+msgid "The game is on USB."
+msgstr "Oyun USB'de."
+
+msgid "The save game will be extracted to your EmuNAND path."
+msgstr "Kayıtlı oyun EmuNAND yolunuza çıkarılacaktır."
+
+msgid "The save games will be extracted to your EmuNAND save and channel path. Attention: All existing files will be overwritten."
+msgstr "Kayıtlı oyunlar EmuNAND kayıt ve kanal yolunuza çıkarılacaktır. Dikkat: Tüm mevcut dosyalar üzerine yazılacaktır."
 
 msgid "Theme Menu"
-msgstr ""
+msgstr "Tema Menüsü"
 
 msgid "Theme Path"
 msgstr "Tema Yolu"
@@ -2188,360 +2157,378 @@ msgstr "Tema Yolu"
 msgid "Theme Title:"
 msgstr "Tema Başlığı:"
 
-msgid "Themes by www.spiffy360.com"
-msgstr ""
+msgid "This IOS is the BootMii IOS. If you are sure it is not BootMii and you have something else installed there then ignore this warning."
+msgstr "Bu IOS BootMii IOS'tur. BootMii olmadığından eminseniz ve orada başka bir şey kuruluysa bu uyarıyı yok sayın."
 
-msgid "This IOS is the BootMii IOS. If you are sure it is not BootMii and you have something else installed there than ignore this warning."
-msgstr ""
+msgid "This IOS is the BootMii ios. If you are sure it is not BootMii and you have something else installed there then ignore this warning."
+msgstr "Bu IOS BootMii ios'tur. BootMii olmadığından eminseniz ve orada başka bir şey kuruluysa bu uyarıyı yok sayın."
 
-msgid "This IOS was not found on the titles list. If you are sure you have it installed than ignore this warning."
-msgstr ""
+msgid "This IOS was not found on the titles list. If you are sure you have it installed then ignore this warning."
+msgstr "Bu IOS başlıklar listesinde bulunamadı. Kurulu olduğundan eminseniz bu uyarıyı yok sayın."
 
 msgid "This Nintendont version does not support games on USB."
-msgstr ""
+msgstr "Bu Nintendont sürümü USB'deki oyunları desteklemiyor."
 
 msgid "This Nintendont version is not correctly supported. Auto boot disabled."
-msgstr ""
+msgstr "Bu Nintendont sürümü doğru şekilde desteklenmiyor. Otomatik başlatma devre dışı bırakıldı."
 
 msgid "This game has multiple discs. Please select the disc to launch."
-msgstr ""
+msgstr "Bu oyunun birden fazla diski var. Lütfen başlatılacak diski seçin."
 
 msgid "This path must be on SD!"
-msgstr ""
+msgstr "Bu yol SD üzerinde olmalıdır!"
 
 msgid "This setting doesn't work in SD card mode."
-msgstr ""
+msgstr "Bu ayar SD kart modunda çalışmaz."
 
 msgid "Time left:"
-msgstr "Kalan zaman:"
+msgstr "Kalan süre:"
 
 msgid "Timer Fix"
-msgstr ""
+msgstr "Zamanlayıcı Düzeltme"
 
 msgid "Title Launcher"
 msgstr "Başlık Başlatıcı"
 
-msgid "Titles Path"
-msgstr ""
-
 msgid "Titles From"
-msgstr ""
+msgstr "Başlıklar"
 
-msgid "To run GameCube games from Disc you need to set the GameCube mode to MIOS in the game settings."
-msgstr ""
+msgid "Titles Path"
+msgstr "Başlıklar Yolu"
+
+msgid "To run GameCube games from disc you need to set the GameCube mode to MIOS in the game settings."
+msgstr "Diskten GameCube oyunları çalıştırmak için oyun ayarlarında GameCube modunu MIOS olarak ayarlamanız gerekir."
 
 #, c-format
 msgid "To run GameCube games with %s you need to place them on an USB FAT32 partition."
-msgstr ""
+msgstr "GameCube oyunlarını %s ile çalıştırmak için onları bir USB FAT32 bölümüne yerleştirmeniz gerekir."
 
 #, c-format
 msgid "To run GameCube games with %s you need to set your 'Main GameCube Path' on the first primary FAT32 partition."
-msgstr ""
+msgstr "GameCube oyunlarını %s ile çalıştırmak için 'Ana GameCube Yolu'nu ilk birincil FAT32 bölümünde ayarlamanız gerekir."
 
 #, c-format
 msgid "To run GameCube games with %s you need to set your 'Main GameCube Path' on the first primary partition of the Hard Drive."
-msgstr ""
+msgstr "GameCube oyunlarını %s ile çalıştırmak için 'Ana GameCube Yolu'nu Sabit Diskin ilk birincil bölümünde ayarlamanız gerekir."
 
 #, c-format
 msgid "To run GameCube games with %s you need to set your 'Main GameCube Path' to an USB FAT32 partition."
-msgstr ""
+msgstr "GameCube oyunlarını %s ile çalıştırmak için 'Ana GameCube Yolu'nu bir USB FAT32 bölümüne ayarlamanız gerekir."
 
 #, c-format
 msgid "To run GameCube games with %s you need to use a 512 bytes/sector Hard Drive."
-msgstr ""
+msgstr "GameCube oyunlarını %s ile çalıştırmak için 512 bayt/sektör Sabit Disk kullanmanız gerekir."
 
 #, c-format
 msgid "To run GameCube games with %s you need to use a partition with 32k bytes/cluster or less."
-msgstr ""
+msgstr "GameCube oyunlarını %s ile çalıştırmak için 32k bayt/küme veya daha az bir bölüm kullanmanız gerekir."
 
 msgid "To run GameCube games with Devolution you need the loader.bin file in your Devolution Loader Path."
-msgstr ""
+msgstr "Devolution ile GameCube oyunlarını çalıştırmak için Devolution Yükleyici Yolunuzda loader.bin dosyasına ihtiyacınız var."
 
 msgid "To run GameCube games with Nintendont you need the boot.dol file in your Nintendont Loader Path."
-msgstr ""
+msgstr "Nintendont ile GameCube oyunlarını çalıştırmak için Nintendont Yükleyici Yolunuzda boot.dol dosyasına ihtiyacınız var."
 
 #, c-format
 msgid "To use HID with %s you need the %s file."
-msgstr ""
-
-msgid "To use neek you need to set your 'EmuNAND Channel Path' on the first primary partition of the Hard Drive."
-msgstr ""
-
-msgid "To use neek you need to set your 'EmuNAND Channel Path' to a FAT32 partition."
-msgstr ""
-
-msgid "To use neek you need to use a 512 bytes/sector Hard Drive."
-msgstr ""
+msgstr "HID kullanmak için %s ile %s dosyasına ihtiyacınız var."
 
 #, c-format
-msgid "To use ocarina with %s you need the %s file."
-msgstr ""
+msgid "To use Ocarina with %s you need the %s file."
+msgstr "Ocarina'yı %s ile kullanmak için %s dosyasına ihtiyacınız var."
+
+msgid "To use neek you need to set your 'EmuNAND Channel Path' on the first primary partition of the Hard Drive."
+msgstr "neek'i kullanmak için 'EmuNAND Kanal Yolu'nu Sabit Diskin ilk birincil bölümünde ayarlamanız gerekir."
+
+msgid "To use neek you need to set your 'EmuNAND Channel Path' to a FAT32 partition."
+msgstr "neek'i kullanmak için 'EmuNAND Kanal Yolu'nu bir FAT32 bölümüne ayarlamanız gerekir."
+
+msgid "To use neek you need to use a 512 bytes/sector Hard Drive."
+msgstr "neek'i kullanmak için 512 bayt/sektör Sabit Disk kullanmanız gerekir."
+
+msgid "Toggle SD card mode"
+msgstr "SD kart modunu değiştir"
 
 msgid "Tooltip Delay"
-msgstr ""
+msgstr "İpucu Gecikmesi"
 
 msgid "Tooltips"
-msgstr "Yardımlar"
-
-msgid "Transfer failed"
-msgstr ""
+msgstr "İpuçları"
 
 msgid "Triforce Arcade Mode"
-msgstr ""
+msgstr "Triforce Arcade Modu"
 
 msgid "Two Lines"
-msgstr ""
+msgstr "İki Satır"
 
 msgid "USB"
-msgstr ""
+msgstr "USB"
 
 msgid "USB Device not initialized."
-msgstr ""
+msgstr "USB Cihazı başlatılmadı."
+
+msgid "USB Loader GX couldn't verify Nintendont boot.dol file. Launch this boot.dol anyway?"
+msgstr "USB Loader GX, Nintendont boot.dol dosyasını doğrulayamadı. Bu boot.dol dosyasını yine de başlatmak istiyor musunuz?"
+
+msgid "USB Loader GX couldn't write Nintendont config file. Launch Nintendont anyway?"
+msgstr "USB Loader GX, Nintendont yapılandırma dosyasını yazamadı. Nintendont'u yine de başlatmak istiyor musunuz?"
 
 msgid "USB Loader GX is protected"
-msgstr "USB Loader GX koruma altında"
+msgstr "USB Loader GX korumalı"
+
+msgid "USB Loader GX needs to be installed to an SD card for this setting to work."
+msgstr "Bu ayarın çalışması için USB Loader GX'in bir SD karta kurulması gerekir."
+
+msgid "USB Loader GX r1218 is required for Nintendont Alpha v0.1. Please update your Nintendont boot.dol version."
+msgstr "Nintendont Alpha v0.1 için USB Loader GX r1218 gereklidir. Lütfen Nintendont boot.dol sürümünüzü güncelleyin."
 
 msgid "USB Port"
-msgstr ""
+msgstr "USB Bağlantı Noktası"
 
 msgid "USB Port changing is only supported on Hermes cIOS."
-msgstr ""
+msgstr "USB Bağlantı Noktası değişikliği yalnızca Hermes cIOS üzerinde desteklenir."
 
 msgid "USB-HID Controller"
-msgstr ""
-
-msgid "USBloaderGX couldn't verify Nintendont boot.dol file. Launch this boot.dol anyway?"
-msgstr ""
-
-msgid "USBloaderGX couldn't write Nintendont config file. Launch Nintendont anyway?"
-msgstr ""
-
-msgid "USBloaderGX r1218 is required for Nintendont Alpha v0.1. Please update your Nintendont boot.dol version."
-msgstr ""
+msgstr "USB-HID Kontrolcüsü"
 
 msgid "Uninstall"
 msgstr "Kaldır"
 
 msgid "Uninstall Game"
-msgstr "Oyun Kaldır"
+msgstr "Oyunu Kaldır"
 
 msgid "Uninstall Menu"
 msgstr "Kaldırma Menüsü"
 
 msgid "Uninstall all"
-msgstr ""
+msgstr "Hepsini Kaldır"
 
 msgid "Unknown"
-msgstr ""
+msgstr "Bilinmiyor"
 
 msgid "Unlock USB Loader GX"
-msgstr ""
+msgstr "USB Loader GX'in Kilidini Aç"
 
 msgid "Unlocked"
-msgstr "Kilit açıldı"
+msgstr "Kilidi Açıldı"
 
-msgid "Unsupported format, try to extract manually TempTheme.zip."
-msgstr ""
+msgid "Unsupported format!"
+msgstr "Desteklenmeyen format!"
 
 msgid "Update"
-msgstr "Güncelleme"
+msgstr "Güncelle"
 
-msgid "Update Files"
-msgstr "Dosyaları Güncelle"
-
-msgid "Update all Language Files"
+msgid "Update All Language Files"
 msgstr "Tüm Dil Dosyalarını Güncelle"
+
+msgid "Update Cheat Files"
+msgstr "Hile Dosyalarını Güncelle"
+
+msgid "Update Cover Files"
+msgstr "Kapak Dosyalarını Güncelle"
 
 msgid "Update Failed"
 msgstr "Güncelleme Başarısız"
 
-msgid "Update Successful"
-msgstr "Güncelleme Başarılı"
+msgid "Update Language Files"
+msgstr "Dil Dosyalarını Güncelle"
+
+msgid "Update Menu"
+msgstr "Güncelleme Menüsü"
+
+msgid "Update Nintendont"
+msgstr "Nintendont'u Güncelle"
+
+msgid "Update USB Loader GX"
+msgstr "USB Loader GX'i Güncelle"
+
+msgid "Update WiiTDB.xml"
+msgstr "WiiTDB.xml'i Güncelle"
 
 msgid "Updating Language Files:"
-msgstr "Güncellenen Dil Dosyaları:"
+msgstr "Dil Dosyaları Güncelleniyor:"
 
 msgid "Uploaded ZIP file installed to homebrew directory."
-msgstr "ZIp dosyası homebrew klasörüne kuruldu"
+msgstr "Yüklenen ZIP dosyası homebrew dizinine kuruldu."
 
 msgid "Use System Font"
-msgstr ""
+msgstr "Sistem Yazı Tipini Kullan"
 
 msgid "Use global"
-msgstr ""
+msgstr "Genel kullan"
 
 msgid "VBI (Default)"
-msgstr ""
+msgstr "VBI (Varsayılan)"
 
 msgid "VIDTV Patch"
 msgstr "VIDTV Yaması"
 
 msgid "Version:"
-msgstr ""
+msgstr "Sürüm:"
 
 #, c-format
 msgid "Version: %s"
-msgstr "Vesiyon: %s"
+msgstr "Sürüm: %s"
 
 msgid "Video Deflicker"
-msgstr ""
+msgstr "Video Titreşim Giderici"
 
 msgid "Video Mode"
 msgstr "Video Modu"
 
 msgid "Video Scale Value"
-msgstr ""
-
-msgid "Video offset"
-msgstr ""
-
-msgid "Video scale"
-msgstr ""
+msgstr "Video Ölçek Değeri"
 
 msgid "Video Width"
-msgstr ""
+msgstr "Video Genişliği"
+
+msgid "Video offset"
+msgstr "Video ofseti"
+
+msgid "Video scale"
+msgstr "Video ölçeği"
 
 msgid "Virtual Pointer Speed"
-msgstr ""
+msgstr "Sanal İşaretçi Hızı"
 
 msgid "WDM Files Path"
-msgstr ""
+msgstr "WDM Dosyaları Yolu"
 
 msgid "WIP Patches Path"
-msgstr ""
+msgstr "WIP Yamaları Yolu"
 
 msgid "Waiting..."
-msgstr "Beklemede..."
+msgstr "Bekleniyor..."
 
 msgid "Warning"
-msgstr ""
+msgstr "Uyarı"
 
 msgid "Warning:"
-msgstr ""
+msgstr "Uyarı:"
 
 msgid "What do you want to do?"
-msgstr ""
-
-msgid "What do you want to update?"
-msgstr "Neyi güncelleme istiyorsun?"
+msgstr "Ne yapmak istiyorsunuz?"
 
 msgid "What should be deleted for this game title:"
-msgstr ""
+msgstr "Bu oyun başlığı için ne silinmeli:"
 
 msgid "What to extract from NAND?"
-msgstr ""
+msgstr "NAND'dan ne çıkarılmalı?"
 
-msgid "Where should the game be installed to?"
-msgstr ""
+msgid "Where Should the Game Be Installed To?"
+msgstr "Oyun Nereye Kurulmalı?"
 
 msgid "Where to dump NAND?"
-msgstr ""
+msgstr "NAND nereye dökülmeli?"
 
 msgid "Which device do you want to use for Nintendont files?"
-msgstr ""
+msgstr "Nintendont dosyaları için hangi cihazı kullanmak istiyorsunuz?"
 
 msgid "Which mode do you want to use?"
-msgstr ""
+msgstr "Hangi modu kullanmak istiyorsunuz?"
 
 msgid "WiFi Features"
 msgstr "WiFi Özellikleri"
 
 msgid "Widescreen Factor"
-msgstr ""
+msgstr "Geniş Ekran Faktörü"
 
 msgid "Widescreen Fix"
-msgstr "Genişekran Çözümü"
+msgstr "Geniş Ekran Düzeltmesi"
 
-msgid "Wii Games"
-msgstr ""
+msgid "Wii"
+msgstr "Wii"
 
 msgid "Wii Menu"
-msgstr "Wii Menü"
+msgstr "Wii Menüsü"
 
 msgid "Wii Settings"
 msgstr "Wii Ayarları"
 
-msgid "WiiTDB.xml"
-msgstr ""
+msgid "Wii U GamePad Slot"
+msgstr "Wii U GamePad Yuvası"
+
+msgid "Wii U Widescreen"
+msgstr "Wii U Geniş Ekran"
 
 msgid "WiiTDB.xml is up to date."
-msgstr ""
-
-msgid "WiiU Widescreen"
-msgstr ""
+msgstr "WiiTDB.xml güncel."
 
 msgid "Wiilight"
-msgstr ""
+msgstr "Wiilight"
 
 msgid "Wiimmfi"
-msgstr ""
+msgstr "Wiimmfi"
 
 msgid "Wiinnertag"
-msgstr ""
+msgstr "Wiinnertag"
 
 msgid "Wiinnertag Path"
-msgstr ""
+msgstr "Wiinnertag Yolu"
 
 msgid "Wiinnertag requires you to enable automatic network connect on application start. Do you want to enable it now?"
-msgstr ""
+msgstr "Wiinnertag, uygulama başlatıldığında otomatik ağ bağlantısını etkinleştirmenizi gerektirir. Şimdi etkinleştirmek istiyor musunuz?"
 
 msgid "Wiird Debugger"
-msgstr ""
+msgstr "Wiird Hata Ayıklayıcı"
 
 #, c-format
 msgid "Write error on file: %s"
-msgstr ""
+msgstr "Dosyada yazma hatası: %s"
 
 msgid "Writing GXGameCategories.xml"
-msgstr ""
+msgstr "GXGameCategories.xml yazılıyor"
 
 msgid "Wrong Password"
-msgstr "Yanlış Parola"
+msgstr "Yanlış Şifre"
 
 msgid "Yes"
 msgstr "Evet"
 
 msgid "You are trying to select a FAT32/NTFS/EXT partition with cIOS 249 Rev < 18. This is not supported. Continue on your own risk."
-msgstr ""
+msgstr "cIOS 249 Rev < 18 ile bir FAT32/NTFS/EXT bölümü seçmeye çalışıyorsunuz. Bu desteklenmiyor. Kendi riskinizle devam edin."
 
 msgid "You can select or format a partition or use the channel loader mode."
-msgstr ""
+msgstr "Bir bölümü seçebilir veya biçimlendirebilir ya da kanal yükleyici modunu kullanabilirsiniz."
 
 msgid "You cannot delete this category."
-msgstr ""
+msgstr "Bu kategoriyi silemezsiniz."
+
+msgid "You have DIOS-MIOS installed, so this game needs to be on a FAT32 USB storage device. You'll need to install DIOS-MIOS Lite to run this game from an SD card."
+msgstr "DIOS-MIOS kurulu, bu nedenle bu oyun bir FAT32 USB depolama cihazında olmalıdır. Bu oyunu bir SD karttan çalıştırmak için DIOS-MIOS Lite kurmanız gerekecek."
 
 msgid "You need neek2o to load EmuNAND from sub-folders."
-msgstr ""
+msgstr "EmuNAND'ı alt klasörlerden yüklemek için neek2o'ya ihtiyacınız var."
 
 msgid "You need to install DIOS MIOS Lite v1.2 or a newer version."
-msgstr ""
+msgstr "DIOS MIOS Lite v1.2 veya daha yeni bir sürüm kurmanız gerekiyor."
 
 msgid "You need to install an additional GameCube loader or select a different GameCube Mode to launch GameCube games from USB or SD card."
-msgstr ""
+msgstr "GameCube oyunlarını USB veya SD karttan başlatmak için ek bir GameCube yükleyici kurmanız veya farklı bir GameCube Modu seçmeniz gerekiyor."
 
 msgid "Your current GameCube partition is not compatible. Please update Nintendont."
-msgstr ""
+msgstr "Mevcut GameCube bölümünüz uyumlu değil. Lütfen Nintendont'u güncelleyin."
 
 msgid "Zoom Duration (Speed)"
-msgstr ""
+msgstr "Yakınlaştırma Süresi (Hız)"
 
 msgid "and translators for language files updates"
-msgstr ""
+msgstr "ve dil dosyası güncellemeleri için çevirmenler"
 
 msgid "does not exist!"
-msgstr "oluşturulmamış!"
+msgstr "mevcut değil!"
 
 msgid "does not exist!  Loading game without cheats."
-msgstr "oluşturulmamış! Oyun hileler olmadan yükleniyor"
+msgstr "mevcut değil! Hilesiz oyun yükleniyor."
 
 msgid "files left"
-msgstr "dosyalar kaldı"
+msgstr "kalan dosyalar"
 
 msgid "for FAT/NTFS support"
-msgstr ""
+msgstr "FAT/NTFS desteği için"
 
 msgid "for GameTDB and hosting covers / disc images"
-msgstr ""
+msgstr "GameTDB ve kapak / disk görüntülerini barındırma için"
 
 msgid "for Ocarina"
 msgstr "Ocarina için"
@@ -2550,409 +2537,25 @@ msgid "for diverse patches"
 msgstr "çeşitli yamalar için"
 
 msgid "for his awesome tool LibWiiGui"
-msgstr "LibWiiGui awesome tool için"
-
-msgid "for hosting the themes"
-msgstr "tema sunucusu icin"
+msgstr "harika aracı LibWiiGui için"
 
 msgid "for the USB Loader source"
-msgstr "USB Loader kaynak kodu için"
+msgstr "USB Loader kaynağı için"
 
 msgid "for their work on the wiki page"
-msgstr ""
+msgstr "wiki sayfasındaki çalışmaları için"
 
 msgid "formatted!"
 msgstr "biçimlendirildi!"
 
 msgid "free"
-msgstr "boş"
+msgstr "ücretsiz"
 
 msgid "ms"
-msgstr ""
-
-msgid "not set"
-msgstr "ayarlanmadı"
+msgstr "ms"
 
 msgid "of"
-msgstr "./"
+msgstr "nin"
 
 msgid "seconds left"
-msgstr "saniye kaldı"
-
-#~ msgid "Error 002 fix"
-#~ msgstr "Error 002 düzeltmesi"
-
-#~ msgid "Boot/Standard"
-#~ msgstr "Boot/Standart"
-
-#~ msgid "Rename Game on WBFS"
-#~ msgstr "WBFS'deki oyunu yeniden isimlendir"
-
-#~ msgid "for hosting the update files"
-#~ msgstr "güncelleme dosyalarını sunduğu için"
-
-#~ msgid "Insert a Wii Disc!"
-#~ msgstr "Bir Wii Diski Takın!"
-
-#~ msgid "No cheats were selected"
-#~ msgstr "Hile seçilmedi"
-
-#~ msgid "Not a Wii Disc"
-#~ msgstr "Wii Diski Değil"
-
-#~ msgid ">> Deleting tickets..."
-#~ msgstr ">> Biletler siliniyor"
-
-#~ msgid ">> Deleting tickets...ERROR! "
-#~ msgstr ">> Biletler siliniyor..HATA!"
-
-#~ msgid ">> Deleting tickets...Ok! "
-#~ msgstr ">> Biletler siliniyor..OK!"
-
-#~ msgid ">> Deleting title ...ERROR! "
-#~ msgstr ">> Başlık siliniyor ..HATA!"
-
-#~ msgid ">> Deleting title ...Ok!"
-#~ msgstr ">> Başlık siliniyor ..Ok!"
-
-#~ msgid ">> Deleting title contents..."
-#~ msgstr ">> Başlık içeriği siliniyor.."
-
-#~ msgid ">> Deleting title contents...ERROR! "
-#~ msgstr ">> Başlık içeriği siliniyor..HATA!"
-
-#~ msgid ">> Deleting title contents...Ok!"
-#~ msgstr ">> Başlık içeriği siliniyor..Ok!"
-
-#~ msgid ">> Deleting title..."
-#~ msgstr ">> Başlık siliniyor.."
-
-#~ msgid ">> Finishing installation..."
-#~ msgstr ">> Kurulum bitiriliyor.."
-
-#~ msgid ">> Installing content #"
-#~ msgstr ">> Kurulan başlık # "
-
-#~ msgid ">> Installing ticket..."
-#~ msgstr ">> Bilet kuruluyor.."
-
-#~ msgid ">> Installing title..."
-#~ msgstr ">> Başlık kuruluyor.."
-
-#~ msgid ">> Reading WAD data..."
-#~ msgstr ">> WAD Bilgisi okunuyor.."
-
-#~ msgid ">> Reading WAD data...ERROR! "
-#~ msgstr ">> WAD Bilgisi okunuyor..HATA!"
-
-#~ msgid ">> Reading WAD data...Ok!"
-#~ msgstr ">> WAD Bilgisi okunuyor..OK!"
-
-#~ msgid "Done!"
-#~ msgstr "Tamam!"
-
-#~ msgid "Error..."
-#~ msgstr "Hata..."
-
-#~ msgid "Finishing installation... Ok!"
-#~ msgstr "Kurulum bitiriliyor.. OK!"
-
-#~ msgid "Installing content... Ok!"
-#~ msgstr "İçerik kuruluyor.. OK!"
-
-#~ msgid "Installing ticket... Ok!"
-#~ msgstr "Bilet kuruluyor.. OK!"
-
-#~ msgid "Installing title... Ok!"
-#~ msgstr "Başlık kuruluyor.. OK!"
-
-#~ msgid "Installing WAD"
-#~ msgstr "Wad kuruluyor"
-
-#~ msgid "Reading WAD data... Ok!"
-#~ msgstr "Wad verisi okunuyor..OK!"
-
-#~ msgid "Uninstalling WAD"
-#~ msgstr "Wad Kaldırılıyor"
-
-#~ msgid "New Disc Detected"
-#~ msgstr "Yeni Disk Bulundu"
-
-#~ msgid "USB Device not found"
-#~ msgstr "USB Aygıtı bulunamadı"
-
-#~ msgid "You need to select or format a partition"
-#~ msgstr "Bir bölüm seçmeniz ya da formatlamanız gerekiyor"
-
-#~ msgid "Language File"
-#~ msgstr "Dil dosyası"
-
-#~ msgid "Titles from WiiTDB"
-#~ msgstr "WiiTDB deki Başlıklar"
-
-#~ msgid "WiiTDB Files"
-#~ msgstr "WiiTDB Dosyaları"
-
-#~ msgid "WiiTDB Path"
-#~ msgstr "WiiTDB Yaması"
-
-#~ msgid "for WiiTDB and hosting covers / disc images"
-#~ msgstr "WiiTDB ve kapak/disk resimlerini sunduğu için"
-
-#~ msgid " Wad Saved as:"
-#~ msgstr " Kaydedilen Wad:"
-
-#~ msgid "Delete ?"
-#~ msgstr "Silinsin mi?"
-
-#~ msgid "Keep"
-#~ msgstr "Sakla"
-
-#~ msgid "Author:"
-#~ msgstr "Yazar:"
-
-#~ msgid "Download Boxart image?"
-#~ msgstr "Kutu resmi indirilsin mi?"
-
-#~ msgid "Download Discart image?"
-#~ msgstr "Disk resmi indirilsin mi?"
-
-#~ msgid "Downloading file"
-#~ msgstr "Indirilen dosya"
-
-#~ msgid "Missing files"
-#~ msgstr "Kayıp dosyalar"
-
-#~ msgid "files not found on the server!"
-#~ msgstr "dosyalar sunucuda bulunamadı!"
-
-#~ msgid "Disc Images"
-#~ msgstr "Disk Resimleri"
-
-#~ msgid "Only Customs"
-#~ msgstr "Sadece Kişiseller"
-
-#~ msgid "Only Original"
-#~ msgstr "Sadece Orjinal"
-
-#~ msgid "Do you really want to delete:"
-#~ msgstr "Gerçekten silmek istiyor musunuz:"
-
-#~ msgid "Do you want to use the alternate DOL that is known to be correct?"
-#~ msgstr "Doğru olduğu bilinen alternatif DOL ü kullanmak ister misiniz?"
-
-#~ msgid "Unlock console to use this option."
-#~ msgstr "Bu seçeneği kullanmak için konsol kilidini açın"
-
-#~ msgid "Full Shutdown"
-#~ msgstr "Tam Kapama"
-
-#~ msgid "If you don't have WiFi, press 1 to get an URL to get your WiiTDB.zip"
-#~ msgstr "Eğer WiFi yoksa, WiiTDB.zip dosyasını alabileceğiniz URL için 1'e basın"
-
-#~ msgid "Paste it into your browser to get your WiiTDB.zip."
-#~ msgstr "WiiTDP.zip için bu adresi tarayıcıya yapıştırın"
-
-#~ msgid "Shutdown to Idle"
-#~ msgstr "Sistemi Beklemeye Al"
-
-#~ msgid "Your URL has been saved in %sWiiTDB_URL.txt."
-#~ msgstr "URL %sWiiTDB_URL.txt dosyasına kaydedildi"
-
-#~ msgid "Can't create file"
-#~ msgstr "Dosya oluşturulamıyor"
-
-#~ msgid "Download failed."
-#~ msgstr "İndirme başarısız"
-
-#~ msgid "Download request failed."
-#~ msgstr "İndirme isteği başarısız"
-
-#~ msgid "Downloading Page List:"
-#~ msgstr "İndirilen Sayfa Listesi:"
-
-#~ msgid "Theme Download Path"
-#~ msgstr "Tema İndirme Yolu"
-
-#~ msgid "Transfer failed."
-#~ msgstr "Transfer başarısız"
-
-#~ msgid "Unsupported format, try to extract manually."
-#~ msgstr "Desteklenmeyen format,elle çıkartmayı deneyin"
-
-#~ msgid "and translaters for language files updates"
-#~ msgstr "ve dil dosya güncellemelerinin çevirmenleri"
-
-#~ msgid "Insert an SD-Card to save."
-#~ msgstr "Kaydedebilmek için SD takın."
-
-#~ msgid "Insert an SD-Card to use this option."
-#~ msgstr "Bu seçeneği kullanmak için SD takın."
-
-#~ msgid "No SD-Card inserted!"
-#~ msgstr "SD-Card takılı değil!"
-
-#~ msgid "Waiting for USB Device"
-#~ msgstr "USB Aygıtı için Bekleniyor"
-
-#~ msgid "Back to Loader"
-#~ msgstr "Yükleyiciye dönüş"
-
-#~ msgid "FAT: Use directories"
-#~ msgstr "FAT: Klasörleri kullanın"
-
-#~ msgid "An Error occured"
-#~ msgstr "Bir Hata oluştu"
-
-#~ msgid "AutoPatch"
-#~ msgstr "OtoYama"
-
-#~ msgid "Checking for Updates"
-#~ msgstr "Güncellemeler kontrol ediliyor"
-
-#~ msgid "Downloading"
-#~ msgstr "Indiriliyor"
-
-#~ msgid "The WAD file was installed.  But It could not be deleted from the SD card."
-#~ msgstr "Wad dosyası kuruldu. Fakat SD den silinemedi"
-
-#~ msgid "The WAD installation failed with error %ld"
-#~ msgstr "Wad kurulumu %ld hatasıyla başarısız oldu"
-
-#~ msgid "Unable to open the WAD that was just downloaded (%s)."
-#~ msgstr "Az önce indirilen WAD açılamıyor(%s)"
-
-#~ msgid "Update to"
-#~ msgstr "Güncellenecek"
-
-#~ msgid "Updating"
-#~ msgstr "Güncelleniyor"
-
-#~ msgid "Updating Language Files..."
-#~ msgstr "Dil Dosyaları Güncelleniyor..."
-
-#~ msgid "Updating WiiTDB.zip"
-#~ msgstr "WiiTDB.zip güncelleniyor"
-
-#~ msgid "%s : %s May not boot correctly if your System Menu is not up to date."
-#~ msgstr "%s: Sisteminiz güncel değil %s doğru şekilde başlatılamayabilir"
-
-#~ msgid "BCA Codes Path changed"
-#~ msgstr "BCA Kod Yolu değişti"
-
-#~ msgid "Back to Wii Menu"
-#~ msgstr "Wii Menüye dönüş"
-
-#~ msgid "Checking existing artwork"
-#~ msgstr "Hazır görsel kontrol ediliyor"
-
-#~ msgid "Confirm"
-#~ msgstr "Onayla"
-
-#~ msgid "Could not find a WBFS partition."
-#~ msgstr "WBFS bölümü bulunamadı"
-
-#~ msgid "Could not open WBFS partition"
-#~ msgstr "WBFS bölümü açılamadı"
-
-#~ msgid "Could not read the disc."
-#~ msgstr "Disk okunamadı"
-
-#~ msgid "Could not set USB."
-#~ msgstr "USB ayarlanamadı"
-
-#~ msgid "Cover Path Changed"
-#~ msgstr "Kapak Yolu Değiştir"
-
-#~ msgid "DOL path changed"
-#~ msgstr "DOL yolu değiştirildi"
-
-#~ msgid "Disc Path Changed"
-#~ msgstr "Disk Yolu Değiştirildi"
-
-#~ msgid "Display favorites"
-#~ msgstr "Görüntü favorileri"
-
-#~ msgid "Do you want to retry for 30 secs?"
-#~ msgstr "30 saniye sonra denemek ister misiniz?"
-
-#~ msgid "Force"
-#~ msgstr "Zorla"
-
-#~ msgid "GCT Cheatcodes Path changed"
-#~ msgstr "GCT Hile Yolu değiştirildi"
-
-#~ msgid "Homebrew Appspath changed"
-#~ msgstr "Homebrew Yazılım Yolu değişti"
-
-#~ msgid "Insert an SD-Card to download images."
-#~ msgstr "Resimleri indirebilmek için SD takın."
-
-#~ msgid "Most likely it has dimensions that are not evenly divisible by 4."
-#~ msgstr "Muhtemelen 4 ile tam bölünemeyen boyutları var."
-
-#~ msgid "Network init error"
-#~ msgstr "Ag baslatma hatasi"
-
-#~ msgid "No .dol or .elf files found."
-#~ msgstr ".dol veya .elf dosyası bulunamadı"
-
-#~ msgid "No Favorites"
-#~ msgstr "Hiç Favori yok"
-
-#~ msgid "No USB Device"
-#~ msgstr "USB Aygıtı yok"
-
-#~ msgid "No USB Device found."
-#~ msgstr "USB Aygıtı bulunamadı"
-
-#~ msgid "Normal Covers"
-#~ msgstr "Normal Kapaklar"
-
-#~ msgid "Not Found"
-#~ msgstr "Bulunamadı"
-
-#~ msgid "Not a DOL/ELF file."
-#~ msgstr "DOL/ELF dosyası değil"
-
-#~ msgid "Save Failed"
-#~ msgstr "Kaydedilemedi"
-
-#~ msgid "Selected DOL"
-#~ msgstr "Seçilen DOL"
-
-#~ msgid "Standard"
-#~ msgstr "Standart"
-
-#~ msgid "TXT Cheatcodes Path changed"
-#~ msgstr "TXT Hile Yolu değiştirildi"
-
-#~ msgid "Theme Download Path changed"
-#~ msgstr "Tema İndirme Yolu değişti"
-
-#~ msgid "Theme Path Changed"
-#~ msgstr "Tema Yolu Değişti"
-
-#~ msgid "USB Loader GX will only run with Hermes CIOS rev 4! Please make sure you have revision 4 installed!"
-#~ msgstr "USB Loader GX sadece Hermes CIOS rev4 ile çalışır! Lütfen rev4 ün yüklü olduğundan emin olun!"
-
-#~ msgid "Update Path changed."
-#~ msgstr "Güncelleme yolu değiştirildi."
-
-#~ msgid "WiiTDB Path changed."
-#~ msgstr "WiiTDB Yolu değişti"
-
-#~ msgid "You are about to delete "
-#~ msgstr "Silmek üzeresiniz"
-
-#~ msgid "You are choosing to display favorites and you do not have any selected."
-#~ msgstr "Favorileri göstermeyi seçtiniz ama hiç seçili yok"
-
-#~ msgid "You have attempted to load a bad image"
-#~ msgstr "Bozuk bir resim yüklemeye çalıştın"
-
-#~ msgid "does not exist!  You Messed something up, Idiot."
-#~ msgstr "oluşturulmamış! Saçmaladın, mal."
-
-#~ msgid "file left"
-#~ msgstr "dosya kaldı"
+msgstr "kalan saniye"

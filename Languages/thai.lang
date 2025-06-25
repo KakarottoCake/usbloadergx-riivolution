@@ -1,78 +1,79 @@
 # USB Loader GX language source file.
-# thai.lang - r826
+# thai.lang - r1282
 # don't delete/change this line (é).
 msgid ""
 msgstr ""
 "Project-Id-Version: USB Loader GX\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2019-06-15 16:05+0200\n"
-"PO-Revision-Date: 2009-10-01 01:00+0200\n"
-"Last-Translator: Nitro_subzero \n"
-"Language-Team: Nitro_subzero\n"
+"POT-Creation-Date: 2025-06-25 09:00+0100\n"
+"PO-Revision-Date: 2025-06-25 09:00+0100\n"
+"Last-Translator: GPT-4o\n"
+"Language-Team: Thai\n"
 "MIME-Version: 1.0\n"
-"Content-Type: text/plain; charset=utf-8\n"
+"Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"Language: \n"
 
 msgid " could not be downloaded."
 msgstr " ไม่สามารถดาวน์โหลดได้"
 
-msgid " has been Saved.  The text has not been verified.  Some of the code may not work right with each other.  If you experience trouble, open the text in a real text editor for more information."
-msgstr " ถูกบันทึกแล้ว ข้อความยังไม่ถูกตรวจสอบ บางส่วนของโค๊ดอาจไม่สามารถทำงานได้ ถ้าคุณพบปัญหา เปิดโปรแกรมแก้ไขข้อความ เพื่อข้อมูลเพิ่มเติม."
+msgid " has been saved, but you might need to edit some cheats from a computer."
+msgstr " ได้รับการบันทึกแล้ว แต่คุณอาจต้องแก้ไขการโกงบางอย่างจากคอมพิวเตอร์"
 
 msgid " is not on the server."
-msgstr " ไม่อยู่บนแม่ข่าย"
-
-#, c-format
-msgid "%i files not found on the server!"
-msgstr ""
-
-#, c-format
-msgid "%i missing files"
-msgstr ""
+msgstr " ไม่อยู่บนเซิร์ฟเวอร์"
 
 #, c-format
 msgid "%i WAD file(s) not processed!"
-msgstr ""
+msgstr "ไฟล์ WAD %i ไม่ได้ถูกประมวลผล!"
 
 #, c-format
 msgid "%i WAD found."
-msgstr ""
+msgstr "พบ WAD %i ไฟล์"
+
+#, c-format
+msgid "%i files not found on the server!"
+msgstr "ไม่พบไฟล์ %i บนเซิร์ฟเวอร์!"
 
 #, c-format
 msgid "%s only accepts GameCube backups in ISO format."
-msgstr ""
+msgstr "%s รับเฉพาะการสำรองข้อมูล GameCube ในรูปแบบ ISO เท่านั้น"
 
 #, c-format
-msgid "%s requires AHB access! Please launch USBLoaderGX from HBC or from an updated channel or forwarder."
-msgstr ""
+msgid "%s requires AHB access! Please launch USB Loader GX from HBC or from an updated channel or forwarder."
+msgstr "%s ต้องการการเข้าถึง AHB! กรุณาเปิด USB Loader GX จาก HBC หรือจากช่องทางหรือโปรแกรมส่งต่อที่อัปเดตแล้ว"
 
 msgid "--==       Devolution"
-msgstr ""
+msgstr "--==       Devolution"
 
 msgid "--==       Nintendont"
-msgstr ""
+msgstr "--==       Nintendont"
 
-msgid "--==   DIOS MIOS (Lite) "
-msgstr ""
+msgid "--==   DIOS MIOS (Lite)"
+msgstr "--==   DIOS MIOS (Lite)"
 
 msgid "--==  DM(L) + Nintendont"
-msgstr ""
+msgstr "--==  DM(L) + Nintendont"
 
 msgid "/\\/\\"
-msgstr ""
+msgstr "/\\/\\"
 
 msgid "0 (Everyone)"
 msgstr "0 (ทุกคน)"
+
+msgid "1"
+msgstr "1"
 
 msgid "1 (Child 7+)"
 msgstr "1 (เด็ก 7+)"
 
 msgid "1 hour"
-msgstr "1 ชม."
+msgstr "1 ชั่วโมง"
 
 msgid "10 min"
 msgstr "10 นาที"
+
+msgid "2"
+msgstr "2"
 
 msgid "2 (Teen 12+)"
 msgstr "2 (วัยรุ่น 12+)"
@@ -81,10 +82,13 @@ msgid "20 min"
 msgstr "20 นาที"
 
 msgid "2D Cover Path"
-msgstr "ที่เก็บ ปก 2D"
+msgstr "เส้นทางปก 2D"
+
+msgid "3"
+msgstr "3"
 
 msgid "3 (Mature 16+)"
-msgstr "3 (เต็มวัย 16+)"
+msgstr "3 (ผู้ใหญ่ 16+)"
 
 msgid "3 min"
 msgstr "3 นาที"
@@ -93,446 +97,454 @@ msgid "30 min"
 msgstr "30 นาที"
 
 msgid "3D Cover Path"
-msgstr "ที่เก็บ ปก 3D"
+msgstr "เส้นทางปก 3D"
 
 msgid "3D Covers"
-msgstr "หน้าปก 3D"
+msgstr "ปก 3D"
+
+msgid "4"
+msgstr "4"
 
 msgid "4 (Adults Only 18+)"
-msgstr "4 (เฉพาะผู้ใหญ่ 18+)"
+msgstr "4 (สำหรับผู้ใหญ่เท่านั้น 18+)"
 
 msgid "480p Pixel Fix Patch"
-msgstr ""
+msgstr "แพทช์แก้ไขพิกเซล 480p"
 
 msgid "5 min"
 msgstr "5 นาที"
 
 msgid "=== GameCube Settings"
-msgstr ""
+msgstr "=== การตั้งค่า GameCube"
 
 msgid "AUTO"
 msgstr "อัตโนมัติ"
 
 msgid "AXNextFrame"
-msgstr ""
+msgstr "AXNextFrame"
 
 msgid "Add category"
-msgstr ""
+msgstr "เพิ่มหมวดหมู่"
 
 msgid "Adjust Overscan X"
-msgstr ""
+msgstr "ปรับ Overscan X"
 
 msgid "Adjust Overscan Y"
-msgstr ""
+msgstr "ปรับ Overscan Y"
 
 msgid "After zoom"
-msgstr ""
+msgstr "หลังการซูม"
 
 msgid "All"
-msgstr ""
+msgstr "ทั้งหมด"
 
 msgid "All Partitions"
-msgstr ""
-
-msgid "All files extracted."
-msgstr ""
-
-msgid "All images downloaded successfully."
-msgstr ""
-
-msgid "All the features of USB Loader GX are unlocked."
-msgstr "ความสามารถทั้งหมดของ USB Loader GX ถูกเปิดให้ใช้."
+msgstr "ทุกพาร์ทิชัน"
 
 msgid "All WAD files processed successfully."
-msgstr ""
+msgstr "ไฟล์ WAD ทั้งหมดประมวลผลสำเร็จแล้ว"
 
-msgid "Alternate DOL"
-msgstr "เปลี่ยน DOL "
+msgid "All files extracted."
+msgstr "ไฟล์ทั้งหมดถูกแยกออกแล้ว"
+
+msgid "All images downloaded successfully."
+msgstr "ดาวน์โหลดภาพทั้งหมดสำเร็จแล้ว"
+
+msgid "All the features of USB Loader GX are unlocked."
+msgstr "คุณสมบัติทั้งหมดของ USB Loader GX ถูกปลดล็อกแล้ว"
 
 msgid "AltWFC"
-msgstr ""
+msgstr "AltWFC"
+
+msgid "Alternate DOL"
+msgstr "DOL ทางเลือก"
 
 msgid "An example file was created here:"
-msgstr ""
+msgstr "ไฟล์ตัวอย่างถูกสร้างที่นี่:"
 
 msgid "Animation Start"
-msgstr ""
+msgstr "เริ่มการเคลื่อนไหว"
 
 msgid "App Language"
-msgstr "ภาษาของโปรแกรม"
+msgstr "ภาษาของแอป"
 
 msgid "Apply"
-msgstr ""
+msgstr "ใช้"
 
 msgid "Apr"
-msgstr "เมษ."
+msgstr "เม.ย."
+
+msgid "Are You Sure You Want to Install on SD?"
+msgstr "คุณแน่ใจหรือว่าต้องการติดตั้งบน SD?"
 
 msgid "Are you really sure you want to delete all selected games from the SD card?"
-msgstr ""
+msgstr "คุณแน่ใจหรือว่าต้องการลบเกมที่เลือกทั้งหมดจากการ์ด SD?"
 
 msgid "Are you sure you want to delete this category?"
-msgstr ""
+msgstr "คุณแน่ใจหรือว่าต้องการลบหมวดหมู่นี้?"
 
-msgid "Are you sure you want to import game categories from GameTDB?"
-msgstr ""
-
-msgid "Are you sure you want to install on SD?"
-msgstr ""
+msgid "Are you sure you want to import game categories from WiiTDB?"
+msgstr "คุณแน่ใจหรือว่าต้องการนำเข้าหมวดหมู่เกมจาก WiiTDB?"
 
 msgid "Are you sure you want to lock USB Loader GX?"
-msgstr ""
+msgstr "คุณแน่ใจหรือว่าต้องการล็อก USB Loader GX?"
 
-msgid "Are you sure you want to remount SD?"
-msgstr ""
+msgid "Are you sure you want to redownload everything?"
+msgstr "คุณแน่ใจหรือว่าต้องการดาวน์โหลดทุกอย่างใหม่?"
 
 msgid "Are you sure you want to reset?"
-msgstr ""
+msgstr "คุณแน่ใจหรือว่าต้องการรีเซ็ต?"
 
 msgid "Are you sure?"
-msgstr "แน่ใจหรือไม่ ?"
+msgstr "คุณแน่ใจหรือ?"
+
+msgid "Ask"
+msgstr "ถาม"
 
 msgid "Aspect Ratio"
-msgstr ""
+msgstr "อัตราส่วนภาพ"
 
 msgid "Attention!"
-msgstr ""
+msgstr "ความสนใจ!"
 
 msgid "Attention: All savegames will be deleted."
-msgstr ""
+msgstr "ความสนใจ: เกมที่บันทึกทั้งหมดจะถูกลบ"
 
 msgid "Aug"
-msgstr "สค."
+msgstr "ส.ค."
 
 msgid "Author(s):"
-msgstr ""
+msgstr "ผู้เขียน:"
 
 msgid "Auto"
-msgstr ""
+msgstr "อัตโนมัติ"
 
 msgid "Auto Boot"
-msgstr ""
+msgstr "บูตอัตโนมัติ"
 
 msgid "AutoInit Network"
-msgstr "ทำการเชื่อมต่อเครือข่าย"
+msgstr "เริ่มต้นเครือข่ายอัตโนมัติ"
+
+msgid "Autoboot Discs"
+msgstr "บูตแผ่นดิสก์อัตโนมัติ"
+
+msgid "Autoboot Discs Delay"
+msgstr "หน่วงเวลาบูตแผ่นดิสก์อัตโนมัติ"
+
+msgid "BBA Emulation"
+msgstr "การจำลอง BBA"
+
+msgid "BBA Net Profile"
+msgstr "โปรไฟล์เครือข่าย BBA"
 
 msgid "BCA Codes Path"
-msgstr ""
+msgstr "เส้นทางรหัส BCA"
 
 msgid "Back"
-msgstr "ย้อนกลับ"
+msgstr "กลับ"
 
 msgid "Back to HBC or Wii Menu"
-msgstr "กลับไป HBC หรือ เมนู Wii"
+msgstr "กลับไปที่ HBC หรือเมนู Wii"
 
 msgid "Background Music"
-msgstr "ดนตรีเบื้องหลัง"
+msgstr "เพลงพื้นหลัง"
 
 msgid "Banner Animation"
-msgstr ""
-
-msgid "Banner Animation Settings"
-msgstr ""
+msgstr "การเคลื่อนไหวของแบนเนอร์"
 
 msgid "Banner On Channels"
-msgstr ""
+msgstr "แบนเนอร์บนช่อง"
+
+msgid "Banner Settings"
+msgstr "การตั้งค่าแบนเนอร์"
 
 msgid "Banner grid layout is only available with AHBPROT! Please consider installing new HBC version."
-msgstr ""
+msgstr "เลย์เอาต์กริดแบนเนอร์ใช้ได้เฉพาะกับ AHBPROT! โปรดพิจารณาติดตั้งเวอร์ชัน HBC ใหม่"
 
 msgid "Banner window is only available with AHBPROT! Please consider installing new HBC version."
-msgstr ""
+msgstr "หน้าต่างแบนเนอร์ใช้ได้เฉพาะกับ AHBPROT! โปรดพิจารณาติดตั้งเวอร์ชัน HBC ใหม่"
 
 msgid "Big thanks to:"
-msgstr "ขอขอบคุณ:"
+msgstr "ขอขอบคุณอย่างยิ่ง:"
+
+msgid "Block Banner Settings"
+msgstr "บล็อกการตั้งค่าแบนเนอร์"
 
 msgid "Block Categories Menu"
-msgstr ""
+msgstr "บล็อกเมนูหมวดหมู่"
 
 msgid "Block Categories Modify"
-msgstr ""
+msgstr "บล็อกการแก้ไขหมวดหมู่"
 
 msgid "Block Cover Downloads"
-msgstr ""
+msgstr "บล็อกการดาวน์โหลดปก"
 
 msgid "Block Custom Paths"
-msgstr ""
+msgstr "บล็อกเส้นทางที่กำหนดเอง"
 
-msgid "Block Feature Settings"
-msgstr ""
+msgid "Block GUI Settings"
+msgstr "บล็อกการตั้งค่า GUI"
 
 msgid "Block Game Install"
-msgstr ""
+msgstr "บล็อกการติดตั้งเกม"
 
 msgid "Block Game Settings"
-msgstr ""
+msgstr "บล็อกการตั้งค่าเกม"
 
-msgid "Block GameID Change"
-msgstr ""
+msgid "Block Game Sources Button"
+msgstr "บล็อกปุ่มแหล่งเกม"
+
+msgid "Block Game Type Button"
+msgstr "บล็อกปุ่มประเภทเกม"
 
 msgid "Block Global Settings"
-msgstr ""
-
-msgid "Block Gui Settings"
-msgstr ""
+msgstr "บล็อกการตั้งค่าทั่วโลก"
 
 msgid "Block HBC Menu"
-msgstr ""
+msgstr "บล็อกเมนู HBC"
+
+msgid "Block HBC Title Launcher"
+msgstr "บล็อกตัวเปิดชื่อ HBC"
 
 msgid "Block Hard Drive Settings"
-msgstr ""
+msgstr "บล็อกการตั้งค่าฮาร์ดไดรฟ์"
 
 msgid "Block IOS Reload"
-msgstr "โหลดบล๊อค IOS อีกครั้ง"
+msgstr "บล็อกการโหลด IOS"
 
 msgid "Block Loader Layout Button"
-msgstr ""
-
-msgid "Block Loader Mode Button"
-msgstr ""
+msgstr "บล็อกปุ่มเลย์เอาต์ตัวโหลด"
 
 msgid "Block Loader Settings"
-msgstr ""
+msgstr "บล็อกการตั้งค่าตัวโหลด"
+
+msgid "Block Miscellaneous Settings"
+msgstr "บล็อกการตั้งค่าจิปาถะ"
 
 msgid "Block Parental Settings"
-msgstr ""
+msgstr "บล็อกการตั้งค่าผู้ปกครอง"
 
 msgid "Block Priiloader Override"
-msgstr ""
+msgstr "บล็อกการแทนที่ Priiloader"
 
 msgid "Block Reset Settings"
-msgstr ""
+msgstr "บล็อกการตั้งค่ารีเซ็ต"
 
-msgid "Block SD Reload Button"
-msgstr ""
+msgid "Block SD Card Mode Button"
+msgstr "บล็อกปุ่มโหมดการ์ด SD"
 
 msgid "Block Sound Settings"
-msgstr ""
-
-msgid "Block Theme Downloader"
-msgstr ""
+msgstr "บล็อกการตั้งค่าเสียง"
 
 msgid "Block Theme Menu"
-msgstr ""
+msgstr "บล็อกเมนูธีม"
 
-msgid "Block Title Launcher"
-msgstr ""
-
-msgid "Block Updates"
-msgstr ""
+msgid "Block Update Menu"
+msgstr "บล็อกเมนูอัปเดต"
 
 msgid "Boot Content"
-msgstr ""
+msgstr "เนื้อหาบูต"
 
 msgid "Boot Neek System Menu"
-msgstr ""
+msgstr "บูตเมนูระบบ Neek"
 
 msgid "Boot?"
 msgstr "บูต?"
 
 msgid "Both"
-msgstr "ทั้งคู่"
+msgstr "ทั้งสอง"
 
 msgid "Both Ports"
-msgstr ""
+msgstr "ทั้งสองพอร์ต"
 
 msgid "CC Rumble"
-msgstr ""
+msgstr "CC Rumble"
 
 msgid "Cache BNR Files"
-msgstr ""
+msgstr "แคชไฟล์ BNR"
 
 msgid "Cache BNR Files Path"
-msgstr ""
+msgstr "เส้นทางแคชไฟล์ BNR"
 
 msgid "Cache Path"
-msgstr ""
+msgstr "เส้นทางแคช"
 
 msgid "Cache Titles"
-msgstr ""
+msgstr "แคชชื่อเรื่อง"
 
 msgid "Can't be formatted"
 msgstr "ไม่สามารถฟอร์แมตได้"
 
 msgid "Can't create directory"
-msgstr "ไม่สามารถสร้างไดเรคทอรี่ได้"
+msgstr "ไม่สามารถสร้างไดเรกทอรีได้"
 
 #, c-format
 msgid "Can't create file: %s"
-msgstr ""
-
-#, c-format
-msgid "Can't create path: %s"
-msgstr ""
+msgstr "ไม่สามารถสร้างไฟล์: %s"
 
 msgid "Can't delete:"
-msgstr "ไม่สามารถลบได้:"
+msgstr "ไม่สามารถลบ:"
 
 msgid "Can't mount or unknown disc format."
-msgstr ""
+msgstr "ไม่สามารถเมานต์หรือรูปแบบดิสก์ไม่รู้จัก"
 
 #, c-format
 msgid "Can't open file for write: %s"
-msgstr ""
+msgstr "ไม่สามารถเปิดไฟล์เพื่อเขียน: %s"
 
 #, c-format
 msgid "Can't open file: %s"
-msgstr ""
+msgstr "ไม่สามารถเปิดไฟล์: %s"
 
 #, c-format
 msgid "Can't read file: %s"
-msgstr ""
+msgstr "ไม่สามารถอ่านไฟล์: %s"
+
+msgid "Can't write to destination."
+msgstr "ไม่สามารถเขียนไปยังปลายทาง"
 
 msgid "Cancel"
 msgstr "ยกเลิก"
 
-msgid "Can't write to destination."
-msgstr ""
-
 msgid "Categories"
-msgstr ""
+msgstr "หมวดหมู่"
 
 msgid "Categories:"
-msgstr ""
+msgstr "หมวดหมู่:"
 
 msgid "Change Play Path"
-msgstr ""
+msgstr "เปลี่ยนเส้นทางการเล่น"
 
 msgid "Channel Launcher"
-msgstr ""
+msgstr "ตัวเปิดช่อง"
 
 msgid "Channel Path"
-msgstr ""
+msgstr "เส้นทางช่อง"
 
 msgid "Channels"
-msgstr "แชนแนล"
+msgstr "ช่อง"
 
-msgid "Cheatfile is blank"
-msgstr "ไฟล์สูตรโกง ว่างเปล่า"
+msgid "Cheat file is blank"
+msgstr "ไฟล์โกงว่างเปล่า"
 
 msgid "Clear"
-msgstr ""
+msgstr "ล้าง"
 
 msgid "Click to download covers"
-msgstr "กดเพื่อดาวน์โหลดหน้าปก"
+msgstr "คลิกเพื่อดาวน์โหลดปก"
 
 msgid "Click to view information"
-msgstr ""
+msgstr "คลิกเพื่อดูข้อมูล"
 
 msgid "Clock"
 msgstr "นาฬิกา"
 
 msgid "Clock Scale Factor"
-msgstr ""
+msgstr "ปัจจัยการปรับขนาดนาฬิกา"
 
 msgid "Close"
 msgstr "ปิด"
 
 msgid "Code Download"
-msgstr "ดาวน์โหลดโค๊ด"
+msgstr "ดาวน์โหลดโค้ด"
 
 #, c-format
 msgid "Coded by: %s"
-msgstr "โค๊ดโดย: %s"
+msgstr "เขียนโค้ดโดย: %s"
 
 msgid "Coding:"
-msgstr "โค๊ด:"
-
-msgid "Connection to server timed out."
-msgstr ""
+msgstr "การเขียนโค้ด:"
 
 msgid "Console"
 msgstr "คอนโซล"
 
 msgid "Console Default"
-msgstr "ค่าตั้งต้นของคอนโซล"
+msgstr "ค่าเริ่มต้นของคอนโซล"
 
 msgid "Console Locked"
-msgstr "คอนโซลถูกล๊อค"
+msgstr "คอนโซลถูกล็อก"
 
 msgid "Console must be unlocked for this option."
-msgstr ""
+msgstr "ต้องปลดล็อกคอนโซลสำหรับตัวเลือกนี้"
 
 msgid "Console must be unlocked to be able to use this."
-msgstr ""
+msgstr "ต้องปลดล็อกคอนโซลเพื่อใช้งานนี้"
 
 msgid "Console should be unlocked to modify it."
-msgstr "ปลดล๊อคคอนโซลก่อน ถึงจะทำการเปลี่ยนแปลงได้"
+msgstr "ควรปลดล็อกคอนโซลเพื่อแก้ไข"
 
 msgid "Continue"
-msgstr ""
+msgstr "ดำเนินการต่อ"
 
-msgid "Continue to install game?"
-msgstr "ทำต่อ เพื่อติดตั้งเกมส์?"
+msgid "Continue To Install Game?"
+msgstr "ดำเนินการติดตั้งเกมต่อ?"
 
 msgid "Continue?"
-msgstr ""
+msgstr "ดำเนินการต่อ?"
 
-msgid "Controllevel"
+msgid "Control Level"
 msgstr "ระดับการควบคุม"
 
 msgid "Copy"
-msgstr ""
+msgstr "คัดลอก"
 
 msgid "Copying Canceled"
-msgstr ""
+msgstr "ยกเลิกการคัดลอก"
 
 msgid "Copying GC game..."
-msgstr ""
+msgstr "กำลังคัดลอกเกม GC..."
 
 msgid "Copying files..."
-msgstr ""
+msgstr "กำลังคัดลอกไฟล์..."
 
 msgid "Correct Password"
 msgstr "รหัสผ่านถูกต้อง"
 
-msgid "Could not connect to the server."
-msgstr ""
+msgid "Could Not Open Disc"
+msgstr "ไม่สามารถเปิดดิสก์ได้"
 
 msgid "Could not create GCT file"
-msgstr "ไม่สามารถสร้างไฟล์ GCT"
+msgstr "ไม่สามารถสร้างไฟล์ GCT ได้"
 
 #, c-format
 msgid "Could not create path: %s"
-msgstr ""
+msgstr "ไม่สามารถสร้างเส้นทาง: %s"
 
 msgid "Could not extract files for:"
-msgstr ""
+msgstr "ไม่สามารถแยกไฟล์สำหรับ:"
 
 msgid "Could not find info for this game in the wiitdb.xml."
-msgstr ""
+msgstr "ไม่พบข้อมูลสำหรับเกมนี้ใน wiitdb.xml"
 
 msgid "Could not get free device space for game."
-msgstr ""
+msgstr "ไม่สามารถรับพื้นที่ว่างของอุปกรณ์สำหรับเกมได้"
 
 msgid "Could not initialize DIP module!"
-msgstr "ไม่สามารถเปิดใช้โมดูล DIP ได้ !"
+msgstr "ไม่สามารถเริ่มต้นโมดูล DIP ได้!"
 
-msgid "Could not initialize network!"
-msgstr "ไม่สามารถเชื่อมต่อกับเครือข่ายได้ !"
+msgid "Could not initialize network. Timed out!"
+msgstr "ไม่สามารถเริ่มต้นเครือข่ายได้ หมดเวลา!"
 
-msgid "Could not initialize network, time out!"
-msgstr ""
-
-msgid "Could not open Disc"
-msgstr "เปิดจากแผ่นไม่ได้ !"
+msgid "Could not open disc"
+msgstr "ไม่สามารถเปิดดิสก์ได้"
 
 msgid "Could not open the WiiTDB.xml file."
-msgstr ""
+msgstr "ไม่สามารถเปิดไฟล์ WiiTDB.xml ได้"
 
 msgid "Could not open wiitdb.xml."
-msgstr ""
+msgstr "ไม่สามารถเปิด wiitdb.xml ได้"
 
 msgid "Could not save."
-msgstr "บันทึกไม่ได้"
+msgstr "ไม่สามารถบันทึกได้"
 
 msgid "Could not write file."
-msgstr ""
+msgstr "ไม่สามารถเขียนไฟล์ได้"
 
 msgid "Could not write to:"
-msgstr ""
+msgstr "ไม่สามารถเขียนไปยัง:"
 
 msgid "Cover Action"
-msgstr ""
+msgstr "การกระทำของปก"
 
 msgid "Cover Download"
 msgstr "ดาวน์โหลดปก"
@@ -544,532 +556,531 @@ msgid "Credits"
 msgstr "เครดิต"
 
 msgid "Crop Overscan"
-msgstr ""
+msgstr "ครอบตัด Overscan"
 
 msgid "Current neek files are not neek2o. Game autoboot disabled."
-msgstr ""
-
-msgid "Custom Address"
-msgstr ""
-
-msgid "Custom Banners"
-msgstr ""
-
-msgid "Custom Game IOS"
-msgstr ""
-
-msgid "Custom Games IOS"
-msgstr ""
-
-msgid "Custom Paths"
-msgstr "กำหนด ที่เก็บ"
+msgstr "ไฟล์ neek ปัจจุบันไม่ใช่ neek2o การบูตเกมอัตโนมัติถูกปิดใช้งาน"
 
 msgid "Custom"
-msgstr ""
+msgstr "กำหนดเอง"
+
+msgid "Custom Address"
+msgstr "ที่อยู่กำหนดเอง"
+
+msgid "Custom Banners"
+msgstr "แบนเนอร์กำหนดเอง"
+
+msgid "Custom Game IOS"
+msgstr "เกม IOS กำหนดเอง"
+
+msgid "Custom Games IOS"
+msgstr "เกม IOS กำหนดเอง"
+
+msgid "Custom Paths"
+msgstr "เส้นทางกำหนดเอง"
 
 msgid "Customs"
-msgstr ""
+msgstr "กำหนดเอง"
 
 msgid "Customs/Original"
 msgstr "กำหนดเอง/ดั้งเดิม"
 
 msgid "D Buttons"
-msgstr ""
+msgstr "ปุ่ม D"
 
 msgid "DOL Path"
-msgstr "ที่เก็บ DOL"
+msgstr "เส้นทาง DOL"
 
 msgid "Debug"
-msgstr ""
+msgstr "ดีบัก"
 
 msgid "Debug Wait"
-msgstr ""
+msgstr "รอดีบัก"
 
 msgid "Debugger Paused Start"
-msgstr ""
+msgstr "เริ่มการหยุดดีบัก"
 
 msgid "Dec"
-msgstr "ธค."
+msgstr "ธ.ค."
 
 msgid "Default"
-msgstr "ค่าแรกกำหนด"
+msgstr "ค่าเริ่มต้น"
 
 msgid "Default Settings"
-msgstr "ค่าแรกกำหนด"
+msgstr "การตั้งค่าเริ่มต้น"
 
 msgid "Deflicker Filter"
-msgstr ""
+msgstr "ฟิลเตอร์ลดการกะพริบ"
 
 msgid "Delete"
 msgstr "ลบ"
 
 msgid "Delete Cached Banner"
-msgstr ""
+msgstr "ลบแบนเนอร์ที่แคชไว้"
 
 msgid "Delete Cheat GCT"
-msgstr "ลบไฟล์โกงเกมส์"
+msgstr "ลบโกง GCT"
 
 msgid "Delete Cheat TXT"
-msgstr "ลบ Cheat TXT"
+msgstr "ลบโกง TXT"
 
 msgid "Delete Cover Artwork"
-msgstr "ลบ ภาพกล่อง"
+msgstr "ลบภาพปก"
 
 msgid "Delete Disc Artwork"
-msgstr "ลบ ภาพแผ่น"
+msgstr "ลบภาพดิสก์"
+
+msgid "Delete EmuNAND Saves"
+msgstr "ลบการบันทึก EmuNAND"
 
 msgid "Delete category"
-msgstr ""
+msgstr "ลบหมวดหมู่"
 
 msgid "Deleting directories..."
-msgstr ""
+msgstr "กำลังลบไดเรกทอรี..."
 
 msgid "Deleting files..."
-msgstr ""
+msgstr "กำลังลบไฟล์..."
 
 msgid "Design:"
 msgstr "ออกแบบ:"
 
 msgid "Details"
-msgstr ""
+msgstr "รายละเอียด"
 
 msgid "Developed by"
-msgstr "พัฒนาโดย "
+msgstr "พัฒนาโดย"
 
 msgid "Developer:"
-msgstr ""
+msgstr "นักพัฒนา:"
 
 msgid "Devolution"
-msgstr ""
+msgstr "Devolution"
 
 msgid "Devolution Loader Path"
-msgstr ""
+msgstr "เส้นทางโหลด Devolution"
 
 msgid "Devolution's loader.bin file can't be loaded."
-msgstr ""
+msgstr "ไม่สามารถโหลดไฟล์ loader.bin ของ Devolution ได้"
 
 msgid "Directory does not exist!"
-msgstr "ไม่พบไดเรคทอรี่นี้ !"
+msgstr "ไดเรกทอรีไม่อยู่!"
+
+msgid "Disable SD Card Mode?"
+msgstr "ปิดใช้งานโหมดการ์ด SD?"
+
+msgid "Disable Wiimote Motor"
+msgstr "ปิดใช้งานมอเตอร์ Wiimote"
+
+msgid "Disable Wiimote Speaker"
+msgstr "ปิดใช้งานลำโพง Wiimote"
 
 msgid "Disc"
-msgstr ""
+msgstr "ดิสก์"
 
 msgid "Disc 1"
-msgstr ""
+msgstr "ดิสก์ 1"
 
 msgid "Disc 2"
-msgstr ""
+msgstr "ดิสก์ 2"
 
 msgid "Disc Artwork"
-msgstr ""
+msgstr "ภาพดิสก์"
 
 msgid "Disc Artwork Download"
-msgstr "ดาวน์โหลดภาพแผ่น"
+msgstr "ดาวน์โหลดภาพดิสก์"
 
 msgid "Disc Artwork Path"
-msgstr "ที่เก็บ ภาพแผ่น"
+msgstr "เส้นทางภาพดิสก์"
 
 msgid "Disc Default"
-msgstr "ค่าตั้งต้นแผ่น"
+msgstr "ดิสก์ค่าเริ่มต้น"
 
 msgid "Disc Insert Detected"
-msgstr ""
+msgstr "ตรวจพบการใส่ดิสก์"
 
 msgid "Disc Read Delay"
-msgstr ""
+msgstr "หน่วงเวลาการอ่านดิสก์"
 
 msgid "Disc read error."
-msgstr ""
+msgstr "ข้อผิดพลาดในการอ่านดิสก์"
 
 msgid "Disc-Select Prompt"
-msgstr ""
+msgstr "พร้อมท์เลือกดิสก์"
 
 msgid "Disc2 needs to be installed in uncompressed format to work with DM(L) v2.6+, are you sure you want to install in compressed format?"
-msgstr ""
+msgstr "Disc2 ต้องติดตั้งในรูปแบบที่ไม่บีบอัดเพื่อใช้งานกับ DM(L) v2.6+ คุณแน่ใจหรือว่าต้องการติดตั้งในรูปแบบที่บีบอัด?"
 
 msgid "DiskFlip"
-msgstr "สลับด้านแผ่น"
+msgstr "DiskFlip"
 
 msgid "Display"
-msgstr "การแสดงผล"
+msgstr "แสดงผล"
 
 msgid "Display as a carousel"
-msgstr "แสดงผลแบบ ม้าหมุน"
+msgstr "แสดงเป็นวงล้อหมุน"
 
 msgid "Display as a channel grid"
-msgstr ""
+msgstr "แสดงเป็นตารางช่อง"
 
 msgid "Display as a grid"
-msgstr "แสดงผลแบบ ตาราง"
+msgstr "แสดงเป็นตาราง"
 
 msgid "Display as a list"
-msgstr "แสดงผลแบบ รายการ"
+msgstr "แสดงเป็นรายการ"
 
 msgid "Display favorites only"
-msgstr ""
+msgstr "แสดงเฉพาะรายการโปรด"
 
-msgid "Do you want to apply it now?"
-msgstr ""
+msgid "Displaying EmuNAND games"
+msgstr "แสดงเกม EmuNAND"
+
+msgid "Displaying GameCube games"
+msgstr "แสดงเกม GameCube"
+
+msgid "Displaying NAND games"
+msgstr "แสดงเกม NAND"
+
+msgid "Displaying Wii games"
+msgstr "แสดงเกม Wii"
+
+msgid "Displaying a custom selection"
+msgstr "แสดงการเลือกที่กำหนดเอง"
+
+msgid "Displaying as a carousel"
+msgstr "แสดงเป็นวงล้อหมุน"
+
+msgid "Displaying as a channel grid"
+msgstr "แสดงเป็นตารางช่อง"
+
+msgid "Displaying as a grid"
+msgstr "แสดงเป็นตาราง"
+
+msgid "Displaying as a list"
+msgstr "แสดงเป็นรายการ"
+
+msgid "Do You Want To Change Language?"
+msgstr "คุณต้องการเปลี่ยนภาษาไหม?"
 
 msgid "Do you want to apply this theme?"
-msgstr ""
-
-msgid "Do you want to change language?"
-msgstr "ต้องการจะเปลี่ยนภาษา ?"
+msgstr "คุณต้องการใช้ธีมนี้ไหม?"
 
 msgid "Do you want to continue with next game?"
-msgstr ""
+msgstr "คุณต้องการดำเนินการต่อกับเกมถัดไปไหม?"
 
 msgid "Do you want to copy now?"
-msgstr ""
+msgstr "คุณต้องการคัดลอกตอนนี้ไหม?"
 
 msgid "Do you want to copy the game to SD or delete a game on SD?"
-msgstr ""
+msgstr "คุณต้องการคัดลอกเกมไปยัง SD หรือจะลบเกมบน SD?"
 
 msgid "Do you want to delete a game on SD?"
-msgstr ""
+msgstr "คุณต้องการลบเกมบน SD ไหม?"
 
 msgid "Do you want to discard changes?"
-msgstr ""
-
-msgid "Do you want to download this theme?"
-msgstr "ต้องการดาวน์โหลดธีมนี้ ?"
+msgstr "คุณต้องการยกเลิกการเปลี่ยนแปลงไหม?"
 
 msgid "Do you want to extract all the save games?"
-msgstr ""
+msgstr "คุณต้องการแยกไฟล์บันทึกเกมทั้งหมดไหม?"
 
 msgid "Do you want to extract the save game?"
-msgstr ""
+msgstr "คุณต้องการแยกไฟล์บันทึกเกมไหม?"
 
 msgid "Do you want to format:"
-msgstr "ต้องการฟอร์แมต:"
+msgstr "คุณต้องการฟอร์แมตไหม:"
 
 msgid "Do you want to install selected games?"
-msgstr ""
+msgstr "คุณต้องการติดตั้งเกมที่เลือกไหม?"
 
 msgid "Do you want to load the default theme?"
-msgstr ""
+msgstr "คุณต้องการโหลดธีมเริ่มต้นไหม?"
 
 msgid "Do you want to move the file(s)? Any existing ones will be deleted!"
-msgstr ""
+msgstr "คุณต้องการย้ายไฟล์ไหม? ไฟล์ที่มีอยู่จะถูกลบ!"
 
 msgid "Do you want to re-init network?"
-msgstr ""
+msgstr "คุณต้องการเริ่มต้นเครือข่ายใหม่ไหม?"
 
 msgid "Do you want to start the game now?"
-msgstr ""
+msgstr "คุณต้องการเริ่มเกมตอนนี้ไหม?"
 
-msgid "Do you want to sync free space info sector on all FAT32 partitions?"
-msgstr ""
+msgid "Do you want to use cheats?"
+msgstr "คุณต้องการใช้โกงไหม?"
 
 msgid "Do you wish to update/download all language files?"
-msgstr "ต้องการอัพเดทหรือดาวน์โหลด ไฟล์ภาษา ทั้งหมด?"
+msgstr "คุณต้องการอัปเดต/ดาวน์โหลดไฟล์ภาษาทั้งหมดไหม?"
 
 msgid "Dol Video Patch"
-msgstr ""
+msgstr "แพทช์วิดีโอ Dol"
 
 msgid "Download"
 msgstr "ดาวน์โหลด"
 
+#, c-format
+msgid "Download %i missing files?"
+msgstr "ดาวน์โหลดไฟล์ที่หายไป %i ไหม?"
+
 msgid "Download Now"
-msgstr "เริ่มการดาวน์โหลด"
+msgstr "ดาวน์โหลดตอนนี้"
 
 msgid "Download finished"
-msgstr "ดาวน์โหลดเสร็จแล้ว"
+msgstr "ดาวน์โหลดเสร็จสิ้น"
 
 msgid "Downloading 3D Covers"
-msgstr ""
+msgstr "กำลังดาวน์โหลดปก 3D"
 
 msgid "Downloading Custom Banners"
-msgstr ""
-
-msgid "Downloading Flat Covers"
-msgstr ""
-
-msgid "Downloading Full HQ Covers"
-msgstr ""
-
-msgid "Downloading Full LQ Covers"
-msgstr ""
+msgstr "กำลังดาวน์โหลดแบนเนอร์กำหนดเอง"
 
 msgid "Downloading Custom Disc Artwork"
-msgstr ""
+msgstr "กำลังดาวน์โหลดภาพดิสก์กำหนดเอง"
 
-msgid "Downloading file..."
-msgstr ""
+msgid "Downloading Flat Covers"
+msgstr "กำลังดาวน์โหลดปกแบน"
 
-msgid "Downloading image:"
-msgstr "ภาพที่กำลังดาวน์โหลด:"
+msgid "Downloading Full HQ Covers"
+msgstr "กำลังดาวน์โหลดปก HQ เต็มรูปแบบ"
+
+msgid "Downloading Full LQ Covers"
+msgstr "กำลังดาวน์โหลดปก LQ เต็มรูปแบบ"
 
 msgid "Downloading Original Disc Artwork"
-msgstr ""
+msgstr "กำลังดาวน์โหลดภาพดิสก์ต้นฉบับ"
 
-msgid "Downloading pagelist:"
-msgstr ""
+msgid "Downloading file..."
+msgstr "กำลังดาวน์โหลดไฟล์..."
 
 msgid "Dump NAND to EmuNAND"
-msgstr ""
+msgstr "ถ่ายโอน NAND ไปยัง EmuNAND"
 
 msgid "During zoom"
-msgstr ""
+msgstr "ระหว่างการซูม"
 
 msgid "Dutch"
-msgstr "เนเธอร์แลนด์"
+msgstr "ดัตช์"
 
-msgid "ERROR"
-msgstr "ผิดพลาด"
-
-msgid "ERROR:"
-msgstr "ผิดพลาด:"
-
-msgid "ERROR: Can't set up theme."
-msgstr ""
-
-msgid "EmuNAND WAD Manager"
-msgstr ""
+msgid "EmuNAND"
+msgstr "EmuNAND"
 
 msgid "EmuNAND Channel Mode"
-msgstr ""
+msgstr "โหมดช่อง EmuNAND"
 
 msgid "EmuNAND Channel Path"
-msgstr ""
-
-msgid "EmuNAND Channels"
-msgstr ""
+msgstr "เส้นทางช่อง EmuNAND"
 
 msgid "EmuNAND Save Mode"
-msgstr ""
+msgstr "โหมดบันทึก EmuNAND"
 
 msgid "EmuNAND Save Path"
-msgstr ""
+msgstr "เส้นทางบันทึก EmuNAND"
+
+msgid "EmuNAND WAD Manager"
+msgstr "ตัวจัดการ WAD ของ EmuNAND"
 
 msgid "Emulated NAND"
-msgstr ""
+msgstr "NAND จำลอง"
+
+msgid "Enable SD Card Mode?"
+msgstr "เปิดใช้งานโหมดการ์ด SD ไหม?"
 
 msgid "English"
 msgstr "อังกฤษ"
 
 msgid "Enter Path"
-msgstr ""
+msgstr "ใส่เส้นทาง"
 
-msgid "Error"
-msgstr "ผิดพลาด"
-
-msgid "Error !"
-msgstr "ผิดพลาด !"
+msgid "Error Reading Disc"
+msgstr "ข้อผิดพลาดในการอ่านดิสก์"
 
 #, c-format
 msgid "Error creating path: %s"
-msgstr ""
+msgstr "ข้อผิดพลาดในการสร้างเส้นทาง: %s"
 
 msgid "Error opening downloaded file"
-msgstr ""
-
-msgid "Error reading Disc"
-msgstr "อ่านแผ่นไม่ได้"
+msgstr "ข้อผิดพลาดในการเปิดไฟล์ที่ดาวน์โหลด"
 
 msgid "Error reading disc"
-msgstr ""
+msgstr "ข้อผิดพลาดในการอ่านดิสก์"
 
-#, c-format
-msgid "Error when downloading file: %i"
-msgstr ""
-
-msgid "Error while downloding file"
-msgstr ""
+msgid "Error while downloading file"
+msgstr "ข้อผิดพลาดขณะดาวน์โหลดไฟล์"
 
 msgid "Error while opening the zip."
-msgstr ""
+msgstr "ข้อผิดพลาดขณะเปิดไฟล์ zip"
 
-msgid "Error while transfering data."
-msgstr "ผิดพลาดขณะรับส่งข้อมูล"
+msgid "Error while transferring data."
+msgstr "ข้อผิดพลาดขณะถ่ายโอนข้อมูล"
 
 msgid "Error while updating USB Loader GX."
-msgstr ""
+msgstr "ข้อผิดพลาดขณะอัปเดต USB Loader GX"
 
 msgid "Error writing the data."
-msgstr ""
+msgstr "ข้อผิดพลาดในการเขียนข้อมูล"
 
 msgid "Error:"
-msgstr "ผิดพลาด:"
+msgstr "ข้อผิดพลาด:"
 
 msgid "Error: Not enough space on SD."
-msgstr ""
+msgstr "ข้อผิดพลาด: พื้นที่บน SD ไม่เพียงพอ"
 
-msgid "Errors occured."
-msgstr ""
+msgid "Errors occurred."
+msgstr "เกิดข้อผิดพลาด"
 
 msgid "Everything"
-msgstr ""
+msgstr "ทุกอย่าง"
 
 msgid "Exit"
-msgstr ""
+msgstr "ออก"
 
 msgid "Exit to where?"
-msgstr ""
+msgstr "ออกไปที่ไหน?"
 
 msgid "Export All Saves to EmuNAND"
-msgstr ""
+msgstr "ส่งออกการบันทึกทั้งหมดไปยัง EmuNAND"
 
 msgid "Export Miis to EmuNAND"
-msgstr ""
+msgstr "ส่งออก Miis ไปยัง EmuNAND"
 
 msgid "Export SYSCONF to EmuNAND"
-msgstr ""
+msgstr "ส่งออก SYSCONF ไปยัง EmuNAND"
 
 msgid "Extract Miis to the EmuNAND?"
-msgstr ""
+msgstr "แยก Miis ไปยัง EmuNAND ไหม?"
 
 msgid "Extract SYSCONF to the EmuNAND?"
-msgstr ""
+msgstr "แยก SYSCONF ไปยัง EmuNAND ไหม?"
 
 msgid "Extract Save to EmuNAND"
-msgstr ""
-
-msgid "Extracting file:"
-msgstr ""
-
-msgid "Extracting files..."
-msgstr "กำลังขยายไฟล์..."
-
-msgid "Extracting files:"
-msgstr ""
+msgstr "แยกการบันทึกไปยัง EmuNAND"
 
 msgid "Extracting NAND files:"
-msgstr ""
+msgstr "กำลังแยกไฟล์ NAND:"
+
+msgid "Extracting file:"
+msgstr "กำลังแยกไฟล์:"
+
+msgid "Extracting files..."
+msgstr "กำลังแยกไฟล์..."
+
+msgid "Extracting files:"
+msgstr "กำลังแยกไฟล์:"
 
 msgid "F-Zero AX"
-msgstr ""
+msgstr "F-Zero AX"
 
 msgid "Failed"
-msgstr ""
+msgstr "ล้มเหลว"
 
 msgid "Failed copying file"
-msgstr ""
+msgstr "การคัดลอกไฟล์ล้มเหลว"
 
-msgid "Failed formating"
-msgstr "ฟอร์แมตไม่ได้"
+msgid "Failed formatting"
+msgstr "การฟอร์แมตล้มเหลว"
 
 msgid "Failed to extract all files. Savegame might not exist."
-msgstr ""
-
-msgid "Failed to extract."
-msgstr "ขยายไฟล์ไม่ได้"
+msgstr "การแยกไฟล์ทั้งหมดล้มเหลว อาจไม่มีไฟล์บันทึกเกม"
 
 msgid "Failed to initialize the USB storage device."
-msgstr ""
+msgstr "การเริ่มต้นอุปกรณ์จัดเก็บข้อมูล USB ล้มเหลว"
 
 msgid "Failed to open partition"
-msgstr "ไม่สามารถเข้าถึงพาร์ทิชั่นได้"
-
-msgid "Failed to read ticket."
-msgstr ""
-
-msgid "Failed to read tmd file."
-msgstr ""
+msgstr "การเปิดพาร์ทิชันล้มเหลว"
 
 msgid "Failed to read WAD header."
-msgstr ""
+msgstr "การอ่านส่วนหัวของ WAD ล้มเหลว"
+
+msgid "Failed to read ticket."
+msgstr "การอ่านตั๋วล้มเหลว"
+
+msgid "Failed to read tmd file."
+msgstr "การอ่านไฟล์ tmd ล้มเหลว"
 
 msgid "Failed updating"
-msgstr ""
+msgstr "การอัปเดตล้มเหลว"
 
 msgid "Favorite Level"
-msgstr ""
-
-msgid "Features"
-msgstr ""
-
-msgid "Features Settings"
-msgstr ""
+msgstr "ระดับที่ชื่นชอบ"
 
 msgid "Feb"
-msgstr "กพ."
+msgstr "ก.พ."
 
 msgid "File"
-msgstr ""
+msgstr "ไฟล์"
 
 msgid "File not found."
 msgstr "ไม่พบไฟล์"
 
 msgid "File read/write error."
-msgstr ""
+msgstr "ข้อผิดพลาดในการอ่าน/เขียนไฟล์"
 
 msgid "Files extracted successfully."
-msgstr ""
-
-#, c-format
-msgid "Filesize is %i Byte."
-msgstr ""
-
-msgid "Filesize is 0 Byte."
-msgstr ""
+msgstr "ไฟล์ถูกแยกออกสำเร็จ"
 
 msgid "Flat Covers"
-msgstr ""
+msgstr "ปกแบน"
 
 msgid "Flip-X"
-msgstr "กลับ-X"
+msgstr "พลิก-X"
 
 msgid "Folder"
-msgstr ""
+msgstr "โฟลเดอร์"
 
 msgid "Font Scale Factor"
-msgstr ""
+msgstr "ปัจจัยการปรับขนาดฟอนต์"
 
 msgid "Force 16:9"
-msgstr ""
+msgstr "บังคับ 16:9"
 
 msgid "Force 4:3"
-msgstr ""
+msgstr "บังคับ 4:3"
 
 msgid "Force NTSC"
-msgstr ""
+msgstr "บังคับ NTSC"
 
 msgid "Force NTSC480p"
-msgstr ""
+msgstr "บังคับ NTSC480p"
 
 msgid "Force PAL480p"
-msgstr ""
+msgstr "บังคับ PAL480p"
 
 msgid "Force PAL50"
-msgstr ""
+msgstr "บังคับ PAL50"
 
 msgid "Force PAL60"
-msgstr ""
+msgstr "บังคับ PAL60"
 
 msgid "Force Widescreen"
-msgstr ""
+msgstr "บังคับจอกว้าง"
 
 msgid "Format"
 msgstr "ฟอร์แมต"
 
 msgid "Formatting, please wait..."
-msgstr "กำลังฟอร์แมต,รอสักครู่..."
+msgstr "กำลังฟอร์แมต กรุณารอ..."
 
 msgid "Found missing images"
-msgstr ""
+msgstr "พบภาพที่หายไป"
 
 msgid "Frame"
-msgstr ""
+msgstr "เฟรม"
 
 msgid "Frame Projection Height"
-msgstr ""
+msgstr "ความสูงของการฉายเฟรม"
 
 msgid "Frame Projection Width"
-msgstr ""
+msgstr "ความกว้างของการฉายเฟรม"
 
 msgid "Frame Projection X-Offset"
-msgstr ""
+msgstr "การชดเชย X ของการฉายเฟรม"
 
 msgid "Frame Projection Y-Offset"
-msgstr ""
+msgstr "การชดเชย Y ของการฉายเฟรม"
 
 msgid "Framebuffer"
-msgstr ""
+msgstr "เฟรมบัฟเฟอร์"
 
 msgid "Frames"
-msgstr ""
+msgstr "เฟรม"
 
 msgid "Free Space"
 msgstr "พื้นที่ว่าง"
@@ -1078,607 +1089,580 @@ msgid "French"
 msgstr "ฝรั่งเศส"
 
 msgid "Full"
-msgstr ""
+msgstr "เต็ม"
 
 msgid "Full Cover Path"
-msgstr ""
+msgstr "เส้นทางปกเต็ม"
 
 msgid "Full Covers"
-msgstr ""
-
-msgid "Full Menu"
-msgstr ""
+msgstr "ปกเต็ม"
 
 msgid "Full Covers Download"
-msgstr ""
+msgstr "ดาวน์โหลดปกเต็ม"
+
+msgid "Full Menu"
+msgstr "เมนูเต็ม"
 
 msgid "Full shutdown"
-msgstr ""
+msgstr "ปิดเครื่องเต็มรูปแบบ"
+
+msgid "Fullscreen"
+msgstr "เต็มหน้าจอ"
 
 msgid "GAMEID_Gamename"
-msgstr ""
+msgstr "GAMEID_ชื่อเกม"
 
 msgid "GC Banner Scale"
-msgstr ""
-
-msgid "GC Games"
-msgstr ""
+msgstr "ขนาดแบนเนอร์ GC"
 
 msgid "GC Install 32K Aligned"
-msgstr ""
+msgstr "ติดตั้ง GC 32K จัดแนว"
 
 msgid "GC Install Compressed"
-msgstr ""
+msgstr "ติดตั้ง GC บีบอัด"
 
-msgid "GCT Cheatcodes Path"
-msgstr "ที่เก็บ สูตรโกง"
+msgid "GCT Cheat Codes Path"
+msgstr "เส้นทางรหัสโกง GCT"
 
 msgid "GCT File created"
 msgstr "ไฟล์ GCT ถูกสร้าง"
 
 msgid "GUI Settings"
-msgstr "ปรับแต่งหน้าจอ"
+msgstr "การตั้งค่า GUI"
 
 msgid "GXDraw"
-msgstr ""
+msgstr "GXDraw"
 
 msgid "GXFlush"
-msgstr ""
-
-msgid "GameCube Games Delete"
-msgstr ""
-
-msgid "GameCube Install Menu"
-msgstr ""
+msgstr "GXFlush"
 
 msgid "Game ID"
-msgstr "เกมส์ ID"
+msgstr "รหัสเกม"
 
 msgid "Game IOS"
-msgstr ""
+msgstr "เกม IOS"
+
+msgid "Game Is Already Installed:"
+msgstr "เกมติดตั้งแล้ว:"
 
 msgid "Game Language"
-msgstr "ภาษาเกมส์"
+msgstr "ภาษาเกม"
 
 msgid "Game Load"
-msgstr "โหลดเกมส์"
+msgstr "โหลดเกม"
 
 msgid "Game Lock"
-msgstr ""
+msgstr "ล็อกเกม"
 
 msgid "Game Only"
-msgstr ""
+msgstr "เฉพาะเกม"
 
 msgid "Game Region"
-msgstr "โซนของเกมส์"
+msgstr "ภูมิภาคเกม"
 
 msgid "Game Size"
-msgstr "ขนาดของเกมส์"
+msgstr "ขนาดเกม"
 
 msgid "Game Sound Mode"
-msgstr "โหมดเสียงในเกมส์"
+msgstr "โหมดเสียงเกม"
 
 msgid "Game Sound Volume"
-msgstr "ระดับเสียงในเกมส์"
+msgstr "ระดับเสียงเกม"
 
 msgid "Game Split Size"
-msgstr ""
+msgstr "ขนาดการแบ่งเกม"
 
 msgid "Game Window Mode"
-msgstr ""
-
-msgid "Game is already installed:"
-msgstr "เกมส์นี้ถูกติดตั้งอยู่แล้ว:"
-
-msgid "Games IOS"
-msgstr ""
+msgstr "โหมดหน้าต่างเกม"
 
 msgid "Game/Install Partition"
-msgstr ""
+msgstr "พาร์ทิชันเกม/ติดตั้ง"
 
 msgid "GameCube"
-msgstr ""
+msgstr "GameCube"
 
 msgid "GameCube Controller"
-msgstr ""
+msgstr "คอนโทรลเลอร์ GameCube"
+
+msgid "GameCube Games Delete"
+msgstr "ลบเกม GameCube"
+
+msgid "GameCube Install Menu"
+msgstr "เมนูติดตั้ง GameCube"
 
 msgid "GameCube Mode"
-msgstr ""
+msgstr "โหมด GameCube"
 
 msgid "GameCube Source"
-msgstr ""
-
-msgid "Gamename [GAMEID]"
-msgstr ""
+msgstr "แหล่งที่มา GameCube"
 
 msgid "GameTDB"
-msgstr ""
+msgstr "GameTDB"
+
+msgid "Gamename [GAMEID]"
+msgstr "ชื่อเกม [GAMEID]"
 
 msgid "Games"
-msgstr "เกมส์"
+msgstr "เกม"
+
+msgid "Games IOS"
+msgstr "เกม IOS"
 
 msgid "Generating GXGameCategories.xml"
-msgstr ""
+msgstr "กำลังสร้าง GXGameCategories.xml"
 
 msgid "Genre:"
-msgstr ""
+msgstr "ประเภท:"
 
 msgid "German"
 msgstr "เยอรมัน"
 
 msgid "Getting file list..."
-msgstr ""
+msgstr "กำลังรับรายการไฟล์..."
 
 msgid "Getting game folder size..."
-msgstr ""
+msgstr "กำลังรับขนาดโฟลเดอร์เกม..."
 
 msgid "Global Settings"
-msgstr ""
+msgstr "การตั้งค่าทั่วโลก"
 
 msgid "Grid Scroll Speed"
-msgstr ""
+msgstr "ความเร็วในการเลื่อนกริด"
 
 msgid "HOME Menu"
 msgstr "เมนู HOME"
 
 msgid "Hard Drive Settings"
-msgstr ""
+msgstr "การตั้งค่าฮาร์ดไดรฟ์"
 
 msgid "High Quality"
-msgstr ""
+msgstr "คุณภาพสูง"
 
 msgid "High/Low"
-msgstr ""
+msgstr "สูง/ต่ำ"
 
 msgid "Homebrew Apps Path"
-msgstr "ที่เก็บโปรแกรม Homebrew"
+msgstr "เส้นทางแอป Homebrew"
 
 msgid "Homebrew Channel"
-msgstr ""
+msgstr "ช่อง Homebrew"
 
 msgid "Homebrew Launcher"
-msgstr "Homebrew Launcher"
+msgstr "ตัวเปิด Homebrew"
 
 msgid "Hooktype"
-msgstr ""
+msgstr "ประเภท Hook"
 
 msgid "Hour"
 msgstr "ชั่วโมง"
 
 msgid "How to Shutdown?"
-msgstr "ต้องการปิดแบบไหน ?"
+msgstr "วิธีปิดเครื่อง?"
 
 msgid "Import Categories"
-msgstr ""
+msgstr "นำเข้าหมวดหมู่"
 
 msgid "Import operation successfully completed."
-msgstr ""
+msgstr "การนำเข้าสำเร็จแล้ว"
 
 msgid "Importing categories"
-msgstr ""
+msgstr "กำลังนำเข้าหมวดหมู่"
 
 #, c-format
 msgid "Incoming file %0.2fKB"
-msgstr "ดาวน์โหลดไฟล์ %0.2fKB"
+msgstr "ไฟล์ที่เข้ามา %0.2fKB"
 
 #, c-format
 msgid "Incoming file %0.2fMB"
-msgstr "ดาวน์โหลดไฟล์ %0.2fMB"
+msgstr "ไฟล์ที่เข้ามา %0.2fMB"
 
 msgid "Individual"
-msgstr ""
+msgstr "บุคคล"
 
 msgid "Information"
-msgstr ""
+msgstr "ข้อมูล"
 
 msgid "Initializing Network"
-msgstr "เชื่อมต่อเครือข่าย"
+msgstr "กำลังเริ่มต้นเครือข่าย"
 
-msgid "Insert Disk"
-msgstr "ใส่แผ่น"
+msgid "Insert Disc"
+msgstr "ใส่ดิสก์"
 
-msgid "Insert a Wii or a GameCube Disc!"
-msgstr ""
+msgid "Insert a Wii or a GameCube disc!"
+msgstr "ใส่ดิสก์ Wii หรือ GameCube!"
 
 msgid "Install"
 msgstr "ติดตั้ง"
 
 msgid "Install Canceled"
-msgstr ""
+msgstr "ยกเลิกการติดตั้ง"
 
 msgid "Install Directories"
-msgstr ""
+msgstr "ติดตั้งไดเรกทอรี"
 
 msgid "Install Error!"
-msgstr "ผิดพลาดขณะติดตั้ง!"
+msgstr "ข้อผิดพลาดในการติดตั้ง!"
+
+msgid "Install Finished"
+msgstr "การติดตั้งเสร็จสิ้น"
 
 msgid "Install Partitions"
-msgstr ""
+msgstr "ติดตั้งพาร์ทิชัน"
+
+msgid "Install a Game?"
+msgstr "ติดตั้งเกม?"
 
 msgid "Install a game"
-msgstr "ติดตั้งเกมส์"
+msgstr "ติดตั้งเกม"
 
 msgid "Install error - Cleaning incomplete data."
-msgstr ""
+msgstr "ข้อผิดพลาดในการติดตั้ง - กำลังล้างข้อมูลที่ไม่สมบูรณ์"
 
-msgid "Install finished"
-msgstr ""
+msgid "Installing Game:"
+msgstr "กำลังติดตั้งเกม:"
 
 msgid "Installing GameCube Game..."
-msgstr ""
+msgstr "กำลังติดตั้งเกม GameCube..."
 
 msgid "Installing content"
-msgstr ""
-
-msgid "Installing game:"
-msgstr "กำลังติดตั้งเกมส์:"
+msgstr "กำลังติดตั้งเนื้อหา"
 
 msgid "Installing title..."
-msgstr ""
+msgstr "กำลังติดตั้งชื่อเรื่อง..."
 
 msgid "Invalid IOS number entered. Number must be -1 for inherit or 200 - 255."
-msgstr ""
+msgstr "หมายเลข IOS ที่ป้อนไม่ถูกต้อง หมายเลขต้องเป็น -1 สำหรับการสืบทอดหรือ 200 - 255"
 
 msgid "Invalid WAD file."
-msgstr ""
+msgstr "ไฟล์ WAD ไม่ถูกต้อง"
 
 msgid "It seems that you have some information that will be helpful to us. Please pass this information along to the DEV team."
-msgstr "ดูเหมือนว่าคุณมีข้อมูลที่จำเป็นต่อการพัฒนาโปรแกรม กรุณาส่งข้อมูลนั้นให้ทีมพัฒนาด้วย."
+msgstr "ดูเหมือนว่าคุณมีข้อมูลที่เป็นประโยชน์กับเรา กรุณาส่งข้อมูลนี้ไปยังทีมพัฒนา"
 
 msgid "Italian"
 msgstr "อิตาลี"
 
 msgid "Jan"
-msgstr "มค."
+msgstr "ม.ค."
 
 msgid "Japanese"
 msgstr "ญี่ปุ่น"
 
 msgid "Japanese Patch"
-msgstr ""
+msgstr "แพทช์ญี่ปุ่น"
 
 msgid "Joypad"
-msgstr ""
+msgstr "จอยแพด"
 
 msgid "July"
-msgstr "กค."
+msgstr "ก.ค."
 
 msgid "June"
-msgstr "มิย."
+msgstr "มิ.ย."
 
 msgid "KPAD Read"
-msgstr ""
+msgstr "อ่าน KPAD"
 
 msgid "Keyboard"
-msgstr "แป้นพิมพ์"
+msgstr "คีย์บอร์ด"
 
 msgid "Korean"
 msgstr "เกาหลี"
 
 msgid "LED Activity"
-msgstr ""
+msgstr "กิจกรรม LED"
 
-msgid "Language Files"
-msgstr ""
-
-msgid "Language change:"
+msgid "Language Change:"
 msgstr "เปลี่ยนภาษา:"
 
-msgid "Languagefiles Path"
-msgstr ""
+msgid "Language Path Changed."
+msgstr "เส้นทางภาษาถูกเปลี่ยน"
 
-msgid "Languagepath changed."
-msgstr "ที่เก็บไฟล์ภาษาถูกเปลี่ยนแปลง"
+msgid "Languages Path"
+msgstr "เส้นทางภาษา"
 
 msgid "Launching Wii games with emulated NAND only works on d2x cIOS! Change game IOS to a d2x cIOS first."
-msgstr ""
+msgstr "การเปิดเกม Wii ด้วย NAND จำลองทำงานได้เฉพาะบน d2x cIOS! เปลี่ยนเกม IOS เป็น d2x cIOS ก่อน"
 
 msgid "Launching emulated NAND channels only works on d2x cIOS! Change game IOS to a d2x cIOS first."
-msgstr ""
+msgstr "การเปิดช่อง NAND จำลองทำงานได้เฉพาะบน d2x cIOS! เปลี่ยนเกม IOS เป็น d2x cIOS ก่อน"
 
 msgid "Left"
 msgstr "ซ้าย"
 
 msgid "Like SysMenu"
-msgstr "คล้าย SysMenu"
+msgstr "เหมือน SysMenu"
 
 msgid "List on game launch"
-msgstr ""
+msgstr "รายการเมื่อเปิดเกม"
 
 msgid "Load"
 msgstr "โหลด"
-
-msgid "Load from SD/USB"
-msgstr "โหลดจาก SD/USB"
 
 #, c-format
 msgid "Load file from: %s ?"
 msgstr "โหลดไฟล์จาก: %s ?"
 
+msgid "Load from SD/USB"
+msgstr "โหลดจาก SD/USB"
+
 msgid "Load this DOL as alternate DOL?"
-msgstr "โหลด DOL นี้เป็น alternate DOL?"
+msgstr "โหลด DOL นี้เป็น DOL ทางเลือก?"
 
 msgid "Loader Settings"
-msgstr ""
+msgstr "การตั้งค่าตัวโหลด"
 
 msgid "Loaders IOS"
-msgstr ""
+msgstr "ตัวโหลด IOS"
 
-msgid "Loading standard language."
-msgstr "โหลดภาษามาตราฐาน."
+msgid "Loading Standard Language."
+msgstr "กำลังโหลดภาษามาตรฐาน"
 
 msgid "Loading standard music."
-msgstr "โหลดเพลงมาตราฐาน"
+msgstr "กำลังโหลดเพลงมาตรฐาน"
 
 msgid "Lock Console"
-msgstr "ล๊อค Console"
+msgstr "ล็อกคอนโซล"
 
 msgid "Lock USB Loader GX"
-msgstr ""
+msgstr "ล็อก USB Loader GX"
 
 msgid "Locked"
-msgstr "ล๊อค"
+msgstr "ล็อกแล้ว"
 
 msgid "Log to file"
-msgstr ""
+msgstr "บันทึกลงไฟล์"
 
 msgid "Loop Directory"
-msgstr ""
+msgstr "วนลูปไดเรกทอรี"
 
 msgid "Loop Music"
-msgstr ""
+msgstr "วนลูปเพลง"
 
 msgid "Loop Sound"
-msgstr "เล่นเสียงซ้ำ"
+msgstr "วนลูปเสียง"
 
 msgid "Low Quality"
-msgstr ""
+msgstr "คุณภาพต่ำ"
 
 msgid "Low/High"
-msgstr ""
+msgstr "ต่ำ/สูง"
 
 msgid "MIOS (Default & Customs)"
-msgstr ""
+msgstr "MIOS (ค่าเริ่มต้น & กำหนดเอง)"
 
 msgid "Main DOL"
-msgstr ""
+msgstr "DOL หลัก"
 
 msgid "Main GameCube Games Path"
-msgstr ""
+msgstr "เส้นทางเกม GameCube หลัก"
 
 msgid "Main GameCube Path"
-msgstr ""
+msgstr "เส้นทาง GameCube หลัก"
 
 msgid "Main Path"
-msgstr ""
+msgstr "เส้นทางหลัก"
 
 msgid "Manual (40~120)"
-msgstr ""
+msgstr "คู่มือ (40~120)"
 
 msgid "Mar"
-msgstr "มีค."
+msgstr "มี.ค."
 
 msgid "Mark New Games"
-msgstr ""
+msgstr "ทำเครื่องหมายเกมใหม่"
 
 msgid "May"
-msgstr "พค."
+msgstr "พ.ค."
 
 msgid "Memory Card Blocks Size"
-msgstr ""
+msgstr "ขนาดบล็อกการ์ดหน่วยความจำ"
 
 msgid "Memory Card Emulation"
-msgstr ""
+msgstr "การจำลองการ์ดหน่วยความจำ"
 
 msgid "Memory Card with 2043 blocs has issues with Nintendont. Use at your own risk."
-msgstr ""
+msgstr "การ์ดหน่วยความจำที่มี 2043 บล็อกมีปัญหากับ Nintendont ใช้ด้วยความเสี่ยงของคุณเอง"
 
 msgid "Messageboard Update"
-msgstr ""
+msgstr "อัปเดตกระดานข้อความ"
+
+msgid "Miscellaneous Settings"
+msgstr "การตั้งค่าจิปาถะ"
 
 msgid "Motion+ Video"
-msgstr ""
+msgstr "วิดีโอ Motion+"
 
 msgid "Mount DVD drive"
-msgstr "เชื่อม DVD ไดร์ฟ"
-
-msgid "Mount USB at launch"
-msgstr ""
+msgstr "เมานต์ไดรฟ์ DVD"
 
 msgid "Move File"
-msgstr ""
+msgstr "ย้ายไฟล์"
 
 msgid "Multiple Partitions"
-msgstr ""
+msgstr "หลายพาร์ทิชัน"
 
 msgid "Music Loop Mode"
-msgstr ""
+msgstr "โหมดวนลูปเพลง"
 
 msgid "Music Volume"
-msgstr "ความดังเสียงเพลง"
+msgstr "ระดับเสียงเพลง"
 
-msgid "NMM Mode"
-msgstr ""
+msgid "NAND"
+msgstr "NAND"
 
-msgid "NAND Chan. Emulation"
-msgstr ""
-
-msgid "NAND Channels"
-msgstr ""
-
-msgid "NAND Emu Channel Path"
-msgstr ""
-
-msgid "NAND Emu Path"
-msgstr ""
-
-msgid "NAND Emulation"
-msgstr ""
-
-msgid "NAND emulation is only available on D2X cIOS!"
-msgstr ""
+msgid "NAND emulation is only available on d2x cIOS!"
+msgstr "การจำลอง NAND ใช้ได้เฉพาะบน d2x cIOS!"
 
 msgid "NAND emulation only works on FAT/FAT32 partitions!"
-msgstr ""
+msgstr "การจำลอง NAND ใช้ได้เฉพาะบนพาร์ทิชัน FAT/FAT32!"
 
-msgid "NAND Saves Emulation"
-msgstr ""
+msgid "NMM Mode"
+msgstr "โหมด NMM"
 
 msgid "Native Controller"
-msgstr ""
+msgstr "คอนโทรลเลอร์เนทีฟ"
 
 msgid "Neek"
-msgstr ""
+msgstr "Neek"
 
 msgid "Neek NAND path selection failed."
-msgstr ""
+msgstr "การเลือกเส้นทาง NAND ของ Neek ล้มเหลว"
 
 msgid "Neek kernel file not found."
-msgstr ""
+msgstr "ไม่พบไฟล์เคอร์เนล Neek"
 
 msgid "Neek kernel loading failed."
-msgstr ""
+msgstr "การโหลดเคอร์เนล Neek ล้มเหลว"
 
 msgid "Neek2o does not support 'EmuNAND Channel Path' on SD! Please setup Uneek2o instead."
-msgstr ""
+msgstr "Neek2o ไม่รองรับ 'เส้นทางช่อง EmuNAND' บน SD! กรุณาตั้งค่า Uneek2o แทน"
 
 msgid "Neither"
-msgstr "ไม่ทั้งสอง"
+msgstr "ไม่ใช่ทั้งสอง"
 
-msgid "Network is not initiated."
-msgstr ""
+msgid "Network is not initalized."
+msgstr "เครือข่ายไม่ได้เริ่มต้น"
+
+msgid "Network is not initialized."
+msgstr "เครือข่ายไม่ได้เริ่มต้น"
 
 msgid "Next"
-msgstr "ต่อไป"
+msgstr "ถัดไป"
 
 msgid "Nintendont"
-msgstr ""
+msgstr "Nintendont"
 
 msgid "Nintendont Loader Path"
-msgstr ""
+msgstr "เส้นทางโหลด Nintendont"
 
 msgid "No"
 msgstr "ไม่"
 
-msgid "No Cheatfile found"
-msgstr "ไม่พบไฟล์โกงเกมส์"
+msgid "No Cheat file found"
+msgstr "ไม่พบไฟล์โกง"
 
 msgid "No DOL file found on disc."
-msgstr "ไม่มีไฟล์ DOL ในแผ่น"
+msgstr "ไม่พบไฟล์ DOL บนดิสก์"
+
+msgid "No Disc Inserted"
+msgstr "ไม่มีดิสก์ใส่"
 
 msgid "No Disc+"
-msgstr ""
+msgstr "ไม่มีดิสก์+"
 
 msgid "No Splitting"
-msgstr ""
-
-msgid "No URL or Path specified."
-msgstr ""
-
-msgid "No WBFS or FAT/NTFS/EXT partition found"
-msgstr ""
-
-msgid "No Wiinnertag.xml found in the config path. Do you want an example file created?"
-msgstr ""
-
-msgid "No change"
-msgstr ""
-
-msgid "No cheats were selected! Should the GCT file be deleted?"
-msgstr ""
-
-msgid "No data could be read."
-msgstr "ไม่มีข้อมูลที่อ่านไม่ได้"
-
-msgid "No disc inserted."
-msgstr ""
-
-msgid "No favorites selected."
-msgstr ""
-
-msgid "No files missing!"
-msgstr "ไม่มีไฟล์ที่หายไป"
-
-msgid "No games found on the disc"
-msgstr ""
-
-msgid "No language files to update on your devices! Do you want to download new language files?"
-msgstr ""
-
-msgid "No new updates."
-msgstr "ไม่มีไฟล์ Update ตัวใหม่"
-
-msgid "No themes found on the site."
-msgstr "ไม่พบธีมบนเวบไซต์"
-
-msgid "No themes found."
-msgstr ""
+msgstr "ไม่แบ่ง"
 
 msgid "No WAD file found in this folder."
-msgstr ""
+msgstr "ไม่พบไฟล์ WAD ในโฟลเดอร์นี้"
+
+msgid "No WBFS or FAT/NTFS/EXT partition found"
+msgstr "ไม่พบพาร์ทิชัน WBFS หรือ FAT/NTFS/EXT"
+
+msgid "No Wiinnertag.xml found in the config path. Do you want an example file created?"
+msgstr "ไม่พบ Wiinnertag.xml ในเส้นทางการกำหนดค่า คุณต้องการสร้างไฟล์ตัวอย่างไหม?"
+
+msgid "No change"
+msgstr "ไม่มีการเปลี่ยนแปลง"
+
+msgid "No cheats were selected! Should the GCT file be deleted?"
+msgstr "ไม่มีการเลือกโกง! ควรลบไฟล์ GCT ไหม?"
+
+msgid "No data could be read."
+msgstr "ไม่สามารถอ่านข้อมูลได้"
+
+msgid "No favorites selected."
+msgstr "ไม่มีการเลือกที่ชื่นชอบ"
+
+msgid "No files missing!"
+msgstr "ไม่มีไฟล์หาย!"
+
+msgid "No games found on the disc"
+msgstr "ไม่พบเกมบนดิสก์"
+
+msgid "No language files to update on your devices! Do you want to download new language files?"
+msgstr "ไม่มีไฟล์ภาษาให้ปรับปรุงบนอุปกรณ์ของคุณ! คุณต้องการดาวน์โหลดไฟล์ภาษาใหม่ไหม?"
+
+msgid "No new updates."
+msgstr "ไม่มีการอัปเดตใหม่"
+
+msgid "No themes found."
+msgstr "ไม่พบธีม"
 
 msgid "NoSSL only"
-msgstr ""
+msgstr "เฉพาะ NoSSL"
 
 msgid "None"
-msgstr ""
+msgstr "ไม่มี"
 
 msgid "Normal"
 msgstr "ปกติ"
 
+msgid "Not Enough Free Space!"
+msgstr "พื้นที่ว่างไม่เพียงพอ!"
+
 msgid "Not Initialized"
-msgstr ""
+msgstr "ไม่ได้เริ่มต้น"
 
 msgid "Not a Wii or a GameCube Disc"
-msgstr ""
-
-msgid "Not a valid URL"
-msgstr ""
-
-msgid "Not a valid URL path"
-msgstr ""
-
-msgid "Not a valid domain"
-msgstr ""
+msgstr "ไม่ใช่ดิสก์ Wii หรือ GameCube"
 
 msgid "Not enough free memory."
-msgstr "มีหน่วยความจำเหลือไม่พอ"
+msgstr "หน่วยความจำว่างไม่เพียงพอ"
 
 msgid "Not enough free space on device."
-msgstr ""
-
-msgid "Not enough free space!"
-msgstr "มีที่ว่างเหลือไม่พอ !"
+msgstr "พื้นที่ว่างบนอุปกรณ์ไม่เพียงพอ"
 
 msgid "Not enough memory for FST."
-msgstr ""
+msgstr "หน่วยความจำไม่เพียงพอสำหรับ FST"
 
 msgid "Not enough memory."
-msgstr ""
+msgstr "หน่วยความจำไม่เพียงพอ"
 
 msgid "Not required"
-msgstr ""
+msgstr "ไม่จำเป็น"
 
-msgid "Unsupported format!"
-msgstr "ไม่รองรับรูปแบบไฟล์นี้"
+msgid "Not set"
+msgstr "ไม่ได้ตั้งค่า"
 
 msgid "Nothing selected to delete."
-msgstr ""
+msgstr "ไม่มีการเลือกที่จะลบ"
 
 msgid "Nothing selected to install."
-msgstr ""
+msgstr "ไม่มีการเลือกที่จะติดตั้ง"
 
 msgid "Nov"
-msgstr "พย."
+msgstr "พ.ย."
 
 msgid "OFF"
 msgstr "ปิด"
 
 msgid "OFF (Extended)"
-msgstr ""
+msgstr "ปิด (ขยาย)"
 
 msgid "OFF (Safe)"
-msgstr ""
+msgstr "ปิด (ปลอดภัย)"
 
 msgid "OK"
 msgstr "ตกลง"
@@ -1686,215 +1670,224 @@ msgstr "ตกลง"
 msgid "ON"
 msgstr "เปิด"
 
+msgid "ON (High)"
+msgstr "เปิด (สูง)"
+
 msgid "ON (Low)"
-msgstr ""
+msgstr "เปิด (ต่ำ)"
 
 msgid "ON (Medium)"
-msgstr ""
+msgstr "เปิด (กลาง)"
 
 msgid "ON (Multi)"
-msgstr ""
-
-msgid "ON (High)"
-msgstr ""
+msgstr "เปิด (หลาย)"
 
 msgid "OSReport"
-msgstr ""
+msgstr "OSReport"
 
 msgid "OSSleepThread"
-msgstr ""
+msgstr "OSSleepThread"
 
 msgid "Ocarina"
-msgstr ""
+msgstr "Ocarina"
 
 msgid "Ocarina is not supported with neek2o yet. Launch game anyway?"
-msgstr ""
+msgstr "Ocarina ยังไม่รองรับกับ neek2o เปิดเกมต่อไหม?"
+
+msgid "Ocarina:"
+msgstr "Ocarina:"
 
 msgid "Oct"
-msgstr "ตค."
+msgstr "ต.ค."
 
 msgid "Official Site:"
-msgstr "เวบไซต์อย่างเป็นทางการ:"
+msgstr "เว็บไซต์ทางการ:"
 
 msgid "Offset"
-msgstr ""
+msgstr "ออฟเซ็ต"
 
 msgid "Ok"
-msgstr ""
+msgstr "ตกลง"
 
 msgid "One Line A"
-msgstr ""
+msgstr "หนึ่งบรรทัด A"
 
 msgid "One Line B"
-msgstr ""
+msgstr "หนึ่งบรรทัด B"
 
 msgid "Only Game Partition"
-msgstr ""
+msgstr "เฉพาะพาร์ทิชันเกม"
 
-msgid "Only for Install"
-msgstr "เฉพาะติดตั้งเท่านั้น"
+msgid "Only for install"
+msgstr "เฉพาะสำหรับการติดตั้ง"
 
 msgid "Original"
-msgstr ""
+msgstr "ต้นฉบับ"
 
 msgid "Original/Customs"
-msgstr "ของแท้/ดัดแปลง"
+msgstr "ต้นฉบับ/กำหนดเอง"
 
 msgid "PAD Hook"
-msgstr ""
+msgstr "PAD Hook"
 
 msgid "PAL50 Patch"
-msgstr ""
+msgstr "แพทช์ PAL50"
 
 msgid "Parental Control"
-msgstr "กำหนดอายุ"
+msgstr "การควบคุมโดยผู้ปกครอง"
 
 msgid "Partial"
-msgstr ""
+msgstr "บางส่วน"
 
 msgid "Partition"
-msgstr "พาร์ติชั่น"
+msgstr "พาร์ทิชัน"
 
 msgid "Password"
 msgstr "รหัสผ่าน"
 
 msgid "Password Changed"
-msgstr "รหัสผ่านถูกเปลี่ยนแปลง"
+msgstr "รหัสผ่านถูกเปลี่ยน"
 
 msgid "Password has been changed"
-msgstr "รหัสผ่านถูกเปลี่ยนแปลง"
+msgstr "รหัสผ่านถูกเปลี่ยนแล้ว"
 
 msgid "Patch Country Strings"
-msgstr "แก้อักขระประเทศ"
+msgstr "แพทช์สตริงประเทศ"
 
 msgid "Path Changed"
-msgstr ""
+msgstr "เส้นทางถูกเปลี่ยน"
 
 msgid "Permission denied."
-msgstr ""
+msgstr "การอนุญาตถูกปฏิเสธ"
 
 msgid "Pick from a list"
 msgstr "เลือกจากรายการ"
 
 msgid "Pixels"
-msgstr ""
+msgstr "พิกเซล"
 
 msgid "Play Count"
-msgstr "จำนวนที่เล่น"
+msgstr "จำนวนการเล่น"
 
 msgid "Play Next"
-msgstr ""
+msgstr "เล่นถัดไป"
 
 msgid "Play Once"
-msgstr ""
+msgstr "เล่นครั้งเดียว"
 
 msgid "Play Previous"
-msgstr ""
+msgstr "เล่นก่อนหน้า"
 
 msgid "Playing Music:"
-msgstr ""
+msgstr "กำลังเล่นเพลง:"
 
 msgid "Please enter a valid address e.g. wiimmfi.de"
-msgstr ""
+msgstr "กรุณาใส่ที่อยู่ที่ถูกต้อง เช่น wiimmfi.de"
 
 msgid "Please wait"
-msgstr ""
+msgstr "กรุณารอ"
 
 msgid "Please wait..."
-msgstr "รอสักครู่"
+msgstr "กรุณารอ..."
 
 msgid "Power off the Wii"
 msgstr "ปิดเครื่อง Wii"
 
 msgid "Prev"
-msgstr "ที่ผ่านมา"
+msgstr "ก่อนหน้า"
+
+msgid "Priiloader"
+msgstr "Priiloader"
 
 msgid "Private Server"
-msgstr ""
+msgstr "เซิร์ฟเวอร์ส่วนตัว"
 
 msgid "Process finished."
-msgstr ""
+msgstr "กระบวนการเสร็จสิ้น"
 
 msgid "Progressive Patch"
-msgstr ""
+msgstr "แพทช์โปรเกรสซีฟ"
 
 msgid "Prompts Buttons"
-msgstr "ปุ่มเตรียมตัว"
+msgstr "ปุ่มพร้อมท์"
 
 msgid "Published by"
 msgstr "เผยแพร่โดย"
 
 msgid "Quick Boot"
-msgstr "บูตแบบเร็ว"
-
-msgid "Random Directory Music"
-msgstr ""
+msgstr "บูตด่วน"
 
 msgid "Real NAND"
-msgstr ""
+msgstr "NAND จริง"
 
 msgid "Receiving file from:"
-msgstr "ได้รับไฟล์จาก:"
+msgstr "รับไฟล์จาก:"
 
 msgid "Region Free"
-msgstr ""
+msgstr "ปลอดภูมิภาค"
 
 msgid "Region Patch"
-msgstr ""
+msgstr "แพทช์ภูมิภาค"
+
+msgid "Regional"
+msgstr "ภูมิภาค"
 
 msgid "Released"
-msgstr "ปล่อย"
-
-msgid "Reload SD"
-msgstr "โหลด SD ใหม่"
+msgstr "เผยแพร่"
 
 msgid "Reloading game list now, please wait..."
-msgstr ""
+msgstr "กำลังโหลดรายการเกมใหม่ กรุณารอ..."
 
 msgid "Remember Last Game"
-msgstr ""
+msgstr "จำเกมล่าสุด"
 
 msgid "Remember Unlock"
-msgstr ""
+msgstr "จำการปลดล็อก"
 
 msgid "Remove Read Speed Limit"
-msgstr ""
+msgstr "ลบขีดจำกัดความเร็วในการอ่าน"
 
 msgid "Remove update"
-msgstr ""
+msgstr "ลบการอัปเดต"
 
 msgid "Rename Game Title"
-msgstr ""
+msgstr "เปลี่ยนชื่อเกม"
 
 msgid "Rename category"
-msgstr ""
+msgstr "เปลี่ยนชื่อหมวดหมู่"
+
+msgid "Resample to 48 kHz"
+msgstr "รีแซมเปิลเป็น 48 kHz"
 
 msgid "Reset"
-msgstr ""
+msgstr "รีเซ็ต"
 
 msgid "Reset All Game Settings"
-msgstr ""
+msgstr "รีเซ็ตการตั้งค่าเกมทั้งหมด"
 
 msgid "Reset BG Music"
-msgstr ""
+msgstr "รีเซ็ตเพลงพื้นหลัง"
 
 msgid "Reset Cached Titles"
-msgstr ""
+msgstr "รีเซ็ตชื่อที่แคชไว้"
 
 msgid "Reset Play Count"
-msgstr "เคลียร์การนับจำนวนที่เล่น"
+msgstr "รีเซ็ตจำนวนการเล่น"
+
+msgid "Reset Wiimote Pairings"
+msgstr "รีเซ็ตการจับคู่ Wiimote"
 
 msgid "Reset to default BGM?"
-msgstr ""
+msgstr "รีเซ็ตเป็นเพลงพื้นหลังเริ่มต้น?"
 
 msgid "Restarting..."
-msgstr "รีสตารท์..."
+msgstr "กำลังรีสตาร์ท..."
 
 msgid "Return"
 msgstr "กลับ"
 
 msgid "Return To"
-msgstr ""
+msgstr "กลับไปที่"
 
 msgid "Return to Wii Menu"
 msgstr "กลับไปที่เมนู Wii"
@@ -1903,160 +1896,160 @@ msgid "Right"
 msgstr "ขวา"
 
 msgid "Rotating Disc"
-msgstr ""
+msgstr "หมุนดิสก์"
 
 msgid "Round"
-msgstr ""
+msgstr "กลม"
 
 msgid "Rumble"
 msgstr "สั่น"
 
 msgid "SChinese"
-msgstr "จีน"
+msgstr "จีนตัวย่อ"
 
 msgid "SD"
-msgstr ""
-
-msgid "SD Card could not be accessed."
-msgstr ""
+msgstr "SD"
 
 msgid "SD Card Mode"
-msgstr ""
+msgstr "โหมดการ์ด SD"
+
+msgid "SD Card could not be accessed."
+msgstr "ไม่สามารถเข้าถึงการ์ด SD ได้"
 
 msgid "SD GameCube Games Path"
-msgstr ""
+msgstr "เส้นทางเกม GameCube บน SD"
 
 msgid "SD GameCube Path"
-msgstr ""
+msgstr "เส้นทาง GameCube บน SD"
 
 msgid "SD Path"
-msgstr ""
+msgstr "เส้นทาง SD"
 
 msgid "SFX Volume"
-msgstr "ความดังของ SFX"
+msgstr "ระดับเสียงเอฟเฟกต์"
 
 msgid "Save"
 msgstr "บันทึก"
 
 msgid "Save Failed. No device inserted?"
-msgstr ""
-
-msgid "Save Game List to"
-msgstr "บันทึกรายชื่อเกมส์ไปที่"
+msgstr "บันทึกล้มเหลว ไม่มีอุปกรณ์ใส่?"
 
 msgid "Save List"
-msgstr ""
+msgstr "บันทึกรายการ"
 
 msgid "Save Path"
-msgstr ""
+msgstr "เส้นทางบันทึก"
+
+msgid "Save game list to"
+msgstr "บันทึกรายการเกมไปที่"
 
 msgid "Saved"
 msgstr "บันทึกแล้ว"
 
 msgid "Savegame might not exist for this game."
-msgstr ""
+msgstr "ไฟล์บันทึกเกมอาจไม่มีสำหรับเกมนี้"
+
+msgid "Screen Mode"
+msgstr "โหมดหน้าจอ"
 
 msgid "Screensaver"
-msgstr "รักษาหน้าจอ"
+msgstr "สกรีนเซฟเวอร์"
 
 msgid "Screenshot"
-msgstr ""
+msgstr "ภาพหน้าจอ"
 
 msgid "Select"
-msgstr ""
+msgstr "เลือก"
 
 msgid "Select DOL Offset"
-msgstr ""
+msgstr "เลือกออฟเซ็ต DOL"
+
+msgid "Select Game Sources"
+msgstr "เลือกแหล่งเกม"
 
 msgid "Select a DOL"
 msgstr "เลือก DOL"
 
 msgid "Select a DOL from game"
-msgstr ""
+msgstr "เลือก DOL จากเกม"
 
 msgid "Select game categories"
-msgstr ""
+msgstr "เลือกหมวดหมู่เกม"
 
-msgid "Select loader mode"
-msgstr ""
+msgid "Select game sources"
+msgstr "เลือกแหล่งเกม"
 
 msgid "Select the EmuNAND path to use."
-msgstr ""
-
-msgid "Select titles sources."
-msgstr ""
+msgstr "เลือกเส้นทาง EmuNAND ที่จะใช้"
 
 msgid "Sept"
-msgstr "กย."
+msgstr "ก.ย."
 
-msgid "Set Search-Filter"
-msgstr "กำหนดเงื่อนไขการค้นหา"
+msgid "Set search filter"
+msgstr "ตั้งค่าตัวกรองการค้นหา"
 
 msgid "Settings"
-msgstr "กำหนดค่า"
+msgstr "การตั้งค่า"
 
 msgid "Settings File"
-msgstr ""
+msgstr "ไฟล์การตั้งค่า"
 
 msgid "Show Categories"
-msgstr ""
+msgstr "แสดงหมวดหมู่"
 
-msgid "Show Favorite on banner"
-msgstr ""
+msgid "Show Favorite on Banner"
+msgstr "แสดงรายการโปรดบนแบนเนอร์"
 
 msgid "Show Free Space"
-msgstr ""
+msgstr "แสดงพื้นที่ว่าง"
 
 msgid "Show Game Count"
-msgstr ""
+msgstr "แสดงจำนวนเกม"
 
 msgid "Show Play Count"
-msgstr ""
+msgstr "แสดงจำนวนการเล่น"
 
 msgid "Show SD"
-msgstr ""
+msgstr "แสดง SD"
+
+msgid "Shuffle Directory Music"
+msgstr "สลับเพลงในไดเรกทอรี"
 
 msgid "Shutdown System"
 msgstr "ปิดระบบ"
 
 msgid "Shutdown Wii"
-msgstr ""
+msgstr "ปิด Wii"
+
+msgid "Shutdown?"
+msgstr "ปิดเครื่อง?"
+
+msgid "Silent HOME Menu"
+msgstr "เมนู HOME เงียบ"
 
 msgid "Skip Errors"
-msgstr ""
+msgstr "ข้ามข้อผิดพลาด"
 
 msgid "Skip IPL"
-msgstr ""
-
-msgid "BBA Emulation"
-msgstr ""
-
-msgid "BBA Net Profile"
-msgstr ""
+msgstr "ข้าม IPL"
 
 msgid "Sneek Video Patch"
-msgstr ""
+msgstr "แพทช์วิดีโอ Sneek"
 
-msgid "Sorry, the theme downloader menu is not working anymore because http://wii.spiffy360.com now requires user registration."
-msgstr ""
-
-msgid "Sort alphabetically"
+msgid "Sorting alphabetically"
 msgstr "เรียงตามตัวอักษร"
 
-msgid "Sort by number of players"
-msgstr ""
+msgid "Sorting by most played"
+msgstr "เรียงตามการเล่นมากที่สุด"
 
-msgid "Sort by rank"
+msgid "Sorting by number of players"
+msgstr "เรียงตามจำนวนผู้เล่น"
+
+msgid "Sorting by rank"
 msgstr "เรียงตามอันดับ"
 
-msgid "Sort order by most played"
-msgstr "เรียงตามความถี่ในการเล่น"
-
-msgid "Sound"
-msgstr "เสียง"
-
 msgid "Sound Settings"
-msgstr ""
+msgstr "การตั้งค่าเสียง"
 
 msgid "Sound+BGM"
 msgstr "เสียง+BGM"
@@ -2068,882 +2061,501 @@ msgid "Spanish"
 msgstr "สเปน"
 
 msgid "Special thanks to:"
-msgstr "ขอขอบคุณอย่างสูง:"
+msgstr "ขอขอบคุณเป็นพิเศษ:"
 
 msgid "Split each 2GB"
-msgstr ""
+msgstr "แบ่งทุก 2GB"
 
 msgid "Split each 4GB"
-msgstr ""
+msgstr "แบ่งทุก 4GB"
 
 msgid "Standby"
-msgstr ""
+msgstr "สแตนด์บาย"
 
 msgid "Start"
-msgstr ""
+msgstr "เริ่ม"
 
 msgid "Success"
 msgstr "สำเร็จ"
 
 msgid "Success."
-msgstr ""
+msgstr "สำเร็จ."
 
 msgid "Success:"
 msgstr "สำเร็จ:"
+
+msgid "Successfully Installed:"
+msgstr "ติดตั้งสำเร็จ:"
 
 msgid "Successfully Saved"
 msgstr "บันทึกสำเร็จ"
 
 msgid "Successfully Updated"
-msgstr "อัพเดทสำเร็จ"
+msgstr "อัปเดตสำเร็จ"
 
 msgid "Successfully copied"
-msgstr ""
+msgstr "คัดลอกสำเร็จ"
 
 msgid "Successfully deleted:"
 msgstr "ลบสำเร็จ:"
-
-msgid "Successfully extracted theme."
-msgstr "ขยายไฟล์ธีมสำเร็จ."
-
-msgid "Successfully installed:"
-msgstr "ติดตั้งสำเร็จ:"
-
-msgid "Successfully updated."
-msgstr ""
-
-msgid "Switching to channel list mode."
-msgstr ""
-
-msgid "Sync FAT32 FS Info"
-msgstr ""
-
-msgid "Synchronizing..."
-msgstr ""
 
 msgid "System Default"
 msgstr "ค่าเริ่มต้นของระบบ"
 
 msgid "System Proxy Settings"
-msgstr ""
+msgstr "การตั้งค่าพร็อกซีของระบบ"
 
 msgid "TChinese"
-msgstr "จีนโบราณ"
+msgstr "จีนตัวเต็ม"
 
-msgid "TXT Cheatcodes Path"
-msgstr "ที่เก็บ TXTCheatcodes"
-
-msgid "The .them file was not found in the zip."
-msgstr ""
+msgid "TXT Cheat Codes Path"
+msgstr "เส้นทางรหัสโกง TXT"
 
 msgid "The Force Widescreen setting requires DIOS MIOS v2.1 or more. This setting will be ignored."
-msgstr ""
+msgstr "การตั้งค่าบังคับจอกว้างต้องใช้ DIOS MIOS v2.1 หรือมากกว่า การตั้งค่านี้จะถูกละเว้น"
 
 msgid "The Miis will be extracted to your EmuNAND path and EmuNAND channel path. Attention: All existing files will be overwritten."
-msgstr ""
+msgstr "Miis จะถูกแยกไปยังเส้นทาง EmuNAND ของคุณและเส้นทางช่อง EmuNAND โปรดทราบ: ไฟล์ที่มีอยู่ทั้งหมดจะถูกเขียนทับ"
 
 msgid "The No Disc+ setting requires DIOS MIOS 2.2 update2. This setting will be ignored."
-msgstr ""
+msgstr "การตั้งค่า No Disc+ ต้องใช้ DIOS MIOS 2.2 update2 การตั้งค่านี้จะถูกละเว้น"
 
 msgid "The SYSCONF file will be extracted to your EmuNAND path and EmuNAND channel path. Attention: All existing files will be overwritten."
-msgstr ""
-
-msgid "The application might crash if there is currently a read/write access to the SD card!"
-msgstr ""
-
-msgid "The entered directory does not exist. Would you like to create it?"
-msgstr "ไม่พบไดเรคทอรี่นี้ ต้องการสร้างใหม่รึไม่ ?"
-
-msgid "The files will be extracted to your EmuNAND save and channel path. Attention: All existing files will be overwritten."
-msgstr ""
-
-msgid "The game is on SD Card."
-msgstr ""
-
-msgid "The game is on USB."
-msgstr ""
-
-msgid "The save game will be extracted to your EmuNAND path."
-msgstr ""
-
-msgid "The save games will be extracted to your EmuNAND save and channel path. Attention: All existing files will be overwritten."
-msgstr ""
+msgstr "ไฟล์ SYSCONF จะถูกแยกไปยังเส้นทาง EmuNAND ของคุณและเส้นทางช่อง EmuNAND โปรดทราบ: ไฟล์ที่มีอยู่ทั้งหมดจะถูกเขียนทับ"
 
 msgid "The WAD file was installed"
-msgstr ""
+msgstr "ไฟล์ WAD ถูกติดตั้ง"
 
 #, c-format
 msgid "The WAD installation failed with error %i"
-msgstr ""
+msgstr "การติดตั้ง WAD ล้มเหลวด้วยข้อผิดพลาด %i"
 
-msgid "Theme Downloader"
-msgstr "ตัวช่วยดาวน์โหลดธีม"
+msgid "The entered directory does not exist. Would you like to create it?"
+msgstr "ไดเรกทอรีที่ป้อนไม่มีอยู่ คุณต้องการสร้างไหม?"
+
+msgid "The files will be extracted to your EmuNAND save and channel path. Attention: All existing files will be overwritten."
+msgstr "ไฟล์จะถูกแยกไปยังเส้นทางบันทึก EmuNAND ของคุณและเส้นทางช่อง EmuNAND โปรดทราบ: ไฟล์ที่มีอยู่ทั้งหมดจะถูกเขียนทับ"
+
+msgid "The game is on SD Card."
+msgstr "เกมอยู่บนการ์ด SD"
+
+msgid "The game is on USB."
+msgstr "เกมอยู่บน USB"
+
+msgid "The save game will be extracted to your EmuNAND path."
+msgstr "ไฟล์บันทึกเกมจะถูกแยกไปยังเส้นทาง EmuNAND ของคุณ"
+
+msgid "The save games will be extracted to your EmuNAND save and channel path. Attention: All existing files will be overwritten."
+msgstr "ไฟล์บันทึกเกมจะถูกแยกไปยังเส้นทางบันทึก EmuNAND ของคุณและเส้นทางช่อง EmuNAND โปรดทราบ: ไฟล์ที่มีอยู่ทั้งหมดจะถูกเขียนทับ"
 
 msgid "Theme Menu"
-msgstr ""
+msgstr "เมนูธีม"
 
 msgid "Theme Path"
-msgstr "ที่อยู่ Theme"
+msgstr "เส้นทางธีม"
 
 msgid "Theme Title:"
 msgstr "ชื่อธีม:"
 
-msgid "Themes by www.spiffy360.com"
-msgstr ""
+msgid "This IOS is the BootMii IOS. If you are sure it is not BootMii and you have something else installed there then ignore this warning."
+msgstr "IOS นี้คือ BootMii IOS หากคุณแน่ใจว่าไม่ใช่ BootMii และคุณมีสิ่งอื่นติดตั้งอยู่ที่นั่น ให้ละเว้นคำเตือนนี้"
 
-msgid "This IOS is the BootMii IOS. If you are sure it is not BootMii and you have something else installed there than ignore this warning."
-msgstr ""
+msgid "This IOS is the BootMii ios. If you are sure it is not BootMii and you have something else installed there then ignore this warning."
+msgstr "IOS นี้คือ BootMii ios หากคุณแน่ใจว่าไม่ใช่ BootMii และคุณมีสิ่งอื่นติดตั้งอยู่ที่นั่น ให้ละเว้นคำเตือนนี้"
 
-msgid "This IOS was not found on the titles list. If you are sure you have it installed than ignore this warning."
-msgstr ""
+msgid "This IOS was not found on the titles list. If you are sure you have it installed then ignore this warning."
+msgstr "ไม่พบ IOS นี้ในรายการชื่อเรื่อง หากคุณแน่ใจว่ามีการติดตั้งแล้ว ให้ละเว้นคำเตือนนี้"
 
 msgid "This Nintendont version does not support games on USB."
-msgstr ""
+msgstr "Nintendont เวอร์ชันนี้ไม่รองรับเกมบน USB"
 
 msgid "This Nintendont version is not correctly supported. Auto boot disabled."
-msgstr ""
+msgstr "Nintendont เวอร์ชันนี้ไม่รองรับอย่างถูกต้อง การบูตอัตโนมัติถูกปิดใช้งาน"
 
 msgid "This game has multiple discs. Please select the disc to launch."
-msgstr ""
+msgstr "เกมนี้มีหลายดิสก์ กรุณาเลือกดิสก์ที่จะเปิด"
 
 msgid "This path must be on SD!"
-msgstr ""
+msgstr "เส้นทางนี้ต้องอยู่บน SD!"
 
 msgid "This setting doesn't work in SD card mode."
-msgstr ""
+msgstr "การตั้งค่านี้ไม่ทำงานในโหมดการ์ด SD"
 
 msgid "Time left:"
-msgstr "เหลือเวลาอีก:"
+msgstr "เวลาที่เหลือ:"
 
 msgid "Timer Fix"
-msgstr ""
+msgstr "แก้ไขตัวจับเวลา"
 
 msgid "Title Launcher"
-msgstr "Title Launcher"
-
-msgid "Titles Path"
-msgstr ""
+msgstr "ตัวเปิดชื่อเรื่อง"
 
 msgid "Titles From"
-msgstr ""
+msgstr "ชื่อเรื่องจาก"
 
-msgid "To run GameCube games from Disc you need to set the GameCube mode to MIOS in the game settings."
-msgstr ""
+msgid "Titles Path"
+msgstr "เส้นทางชื่อเรื่อง"
+
+msgid "To run GameCube games from disc you need to set the GameCube mode to MIOS in the game settings."
+msgstr "ในการเล่นเกม GameCube จากดิสก์ คุณต้องตั้งค่าโหมด GameCube เป็น MIOS ในการตั้งค่าเกม"
 
 #, c-format
 msgid "To run GameCube games with %s you need to place them on an USB FAT32 partition."
-msgstr ""
+msgstr "ในการเล่นเกม GameCube ด้วย %s คุณต้องวางไว้บนพาร์ทิชัน USB FAT32"
 
 #, c-format
 msgid "To run GameCube games with %s you need to set your 'Main GameCube Path' on the first primary FAT32 partition."
-msgstr ""
+msgstr "ในการเล่นเกม GameCube ด้วย %s คุณต้องตั้งค่า 'เส้นทาง GameCube หลัก' ของคุณบนพาร์ทิชัน FAT32 หลักแรก"
 
 #, c-format
 msgid "To run GameCube games with %s you need to set your 'Main GameCube Path' on the first primary partition of the Hard Drive."
-msgstr ""
+msgstr "ในการเล่นเกม GameCube ด้วย %s คุณต้องตั้งค่า 'เส้นทาง GameCube หลัก' ของคุณบนพาร์ทิชันหลักแรกของฮาร์ดไดรฟ์"
 
 #, c-format
 msgid "To run GameCube games with %s you need to set your 'Main GameCube Path' to an USB FAT32 partition."
-msgstr ""
+msgstr "ในการเล่นเกม GameCube ด้วย %s คุณต้องตั้งค่า 'เส้นทาง GameCube หลัก' ของคุณเป็นพาร์ทิชัน USB FAT32"
 
 #, c-format
 msgid "To run GameCube games with %s you need to use a 512 bytes/sector Hard Drive."
-msgstr ""
+msgstr "ในการเล่นเกม GameCube ด้วย %s คุณต้องใช้ฮาร์ดไดรฟ์ 512 ไบต์/เซกเตอร์"
 
 #, c-format
 msgid "To run GameCube games with %s you need to use a partition with 32k bytes/cluster or less."
-msgstr ""
+msgstr "ในการเล่นเกม GameCube ด้วย %s คุณต้องใช้พาร์ทิชันที่มี 32k ไบต์/คลัสเตอร์หรือน้อยกว่า"
 
 msgid "To run GameCube games with Devolution you need the loader.bin file in your Devolution Loader Path."
-msgstr ""
+msgstr "ในการเล่นเกม GameCube ด้วย Devolution คุณต้องมีไฟล์ loader.bin ในเส้นทางโหลด Devolution ของคุณ"
 
 msgid "To run GameCube games with Nintendont you need the boot.dol file in your Nintendont Loader Path."
-msgstr ""
+msgstr "ในการเล่นเกม GameCube ด้วย Nintendont คุณต้องมีไฟล์ boot.dol ในเส้นทางโหลด Nintendont ของคุณ"
 
 #, c-format
 msgid "To use HID with %s you need the %s file."
-msgstr ""
-
-msgid "To use neek you need to set your 'EmuNAND Channel Path' on the first primary partition of the Hard Drive."
-msgstr ""
-
-msgid "To use neek you need to set your 'EmuNAND Channel Path' to a FAT32 partition."
-msgstr ""
-
-msgid "To use neek you need to use a 512 bytes/sector Hard Drive."
-msgstr ""
+msgstr "ในการใช้ HID กับ %s คุณต้องมีไฟล์ %s"
 
 #, c-format
-msgid "To use ocarina with %s you need the %s file."
-msgstr ""
+msgid "To use Ocarina with %s you need the %s file."
+msgstr "ในการใช้ Ocarina กับ %s คุณต้องมีไฟล์ %s"
+
+msgid "To use neek you need to set your 'EmuNAND Channel Path' on the first primary partition of the Hard Drive."
+msgstr "ในการใช้ neek คุณต้องตั้งค่า 'เส้นทางช่อง EmuNAND' ของคุณบนพาร์ทิชันหลักแรกของฮาร์ดไดรฟ์"
+
+msgid "To use neek you need to set your 'EmuNAND Channel Path' to a FAT32 partition."
+msgstr "ในการใช้ neek คุณต้องตั้งค่า 'เส้นทางช่อง EmuNAND' ของคุณเป็นพาร์ทิชัน FAT32"
+
+msgid "To use neek you need to use a 512 bytes/sector Hard Drive."
+msgstr "ในการใช้ neek คุณต้องใช้ฮาร์ดไดรฟ์ 512 ไบต์/เซกเตอร์"
+
+msgid "Toggle SD card mode"
+msgstr "สลับโหมดการ์ด SD"
 
 msgid "Tooltip Delay"
-msgstr ""
+msgstr "หน่วงเวลาคำแนะนำ"
 
 msgid "Tooltips"
 msgstr "คำแนะนำ"
 
-msgid "Transfer failed"
-msgstr ""
-
 msgid "Triforce Arcade Mode"
-msgstr ""
+msgstr "โหมดอาร์เคด Triforce"
 
 msgid "Two Lines"
-msgstr ""
+msgstr "สองบรรทัด"
 
 msgid "USB"
-msgstr ""
+msgstr "USB"
 
 msgid "USB Device not initialized."
-msgstr ""
+msgstr "อุปกรณ์ USB ไม่ได้เริ่มต้น"
+
+msgid "USB Loader GX couldn't verify Nintendont boot.dol file. Launch this boot.dol anyway?"
+msgstr "USB Loader GX ไม่สามารถตรวจสอบไฟล์ boot.dol ของ Nintendont ได้ เปิด boot.dol นี้ต่อไหม?"
+
+msgid "USB Loader GX couldn't write Nintendont config file. Launch Nintendont anyway?"
+msgstr "USB Loader GX ไม่สามารถเขียนไฟล์ config ของ Nintendont ได้ เปิด Nintendont ต่อไหม?"
 
 msgid "USB Loader GX is protected"
-msgstr "USB Loader GX 5 ถูกป้องกัน"
+msgstr "USB Loader GX ถูกป้องกัน"
+
+msgid "USB Loader GX needs to be installed to an SD card for this setting to work."
+msgstr "USB Loader GX ต้องติดตั้งบนการ์ด SD เพื่อให้การตั้งค่านี้ทำงานได้"
+
+msgid "USB Loader GX r1218 is required for Nintendont Alpha v0.1. Please update your Nintendont boot.dol version."
+msgstr "USB Loader GX r1218 จำเป็นสำหรับ Nintendont Alpha v0.1 กรุณาอัปเดตเวอร์ชัน boot.dol ของ Nintendont ของคุณ"
 
 msgid "USB Port"
-msgstr ""
+msgstr "พอร์ต USB"
 
 msgid "USB Port changing is only supported on Hermes cIOS."
-msgstr ""
+msgstr "การเปลี่ยนพอร์ต USB รองรับเฉพาะบน Hermes cIOS"
 
 msgid "USB-HID Controller"
-msgstr ""
-
-msgid "USBloaderGX couldn't verify Nintendont boot.dol file. Launch this boot.dol anyway?"
-msgstr ""
-
-msgid "USBloaderGX couldn't write Nintendont config file. Launch Nintendont anyway?"
-msgstr ""
-
-msgid "USBloaderGX r1218 is required for Nintendont Alpha v0.1. Please update your Nintendont boot.dol version."
-msgstr ""
+msgstr "คอนโทรลเลอร์ USB-HID"
 
 msgid "Uninstall"
 msgstr "ถอนการติดตั้ง"
 
 msgid "Uninstall Game"
-msgstr "ถอนการติดตั้ง"
+msgstr "ถอนการติดตั้งเกม"
 
 msgid "Uninstall Menu"
-msgstr "ถอนการติดตั้ง"
+msgstr "เมนูถอนการติดตั้ง"
 
 msgid "Uninstall all"
-msgstr ""
+msgstr "ถอนการติดตั้งทั้งหมด"
 
 msgid "Unknown"
-msgstr ""
+msgstr "ไม่รู้จัก"
 
 msgid "Unlock USB Loader GX"
-msgstr ""
+msgstr "ปลดล็อก USB Loader GX"
 
 msgid "Unlocked"
-msgstr "ปลดล๊อค"
+msgstr "ปลดล็อกแล้ว"
 
-msgid "Unsupported format, try to extract manually TempTheme.zip."
-msgstr ""
+msgid "Unsupported format!"
+msgstr "รูปแบบไม่รองรับ!"
 
 msgid "Update"
-msgstr "อัพเดท"
+msgstr "อัปเดต"
 
-msgid "Update Files"
-msgstr "อัพเดทไฟล์"
+msgid "Update All Language Files"
+msgstr "อัปเดตไฟล์ภาษาทั้งหมด"
 
-msgid "Update all Language Files"
-msgstr "อัพเดทภาษาทั้งหมด"
+msgid "Update Cheat Files"
+msgstr "อัปเดตไฟล์โกง"
+
+msgid "Update Cover Files"
+msgstr "อัปเดตไฟล์ปก"
 
 msgid "Update Failed"
-msgstr "อัพเดทล้มเหลว"
+msgstr "การอัปเดตล้มเหลว"
 
-msgid "Update Successful"
-msgstr ""
+msgid "Update Language Files"
+msgstr "อัปเดตไฟล์ภาษา"
+
+msgid "Update Menu"
+msgstr "เมนูอัปเดต"
+
+msgid "Update Nintendont"
+msgstr "อัปเดต Nintendont"
+
+msgid "Update USB Loader GX"
+msgstr "อัปเดต USB Loader GX"
+
+msgid "Update WiiTDB.xml"
+msgstr "อัปเดต WiiTDB.xml"
 
 msgid "Updating Language Files:"
-msgstr "กำลังอัพเดทไฟล์ภาษา:"
+msgstr "กำลังอัปเดตไฟล์ภาษา:"
 
 msgid "Uploaded ZIP file installed to homebrew directory."
-msgstr "อัพโหลดไฟล์ zip ไปที่ไดเรคทอรี่ homebrew"
+msgstr "ไฟล์ ZIP ที่อัปโหลดติดตั้งในไดเรกทอรี homebrew"
 
 msgid "Use System Font"
-msgstr ""
+msgstr "ใช้ฟอนต์ระบบ"
 
 msgid "Use global"
-msgstr ""
+msgstr "ใช้ทั่วโลก"
 
 msgid "VBI (Default)"
-msgstr ""
+msgstr "VBI (ค่าเริ่มต้น)"
 
 msgid "VIDTV Patch"
-msgstr "ปรับแก้ VIDTV"
+msgstr "แพทช์ VIDTV"
 
 msgid "Version:"
-msgstr ""
+msgstr "เวอร์ชัน:"
 
 #, c-format
 msgid "Version: %s"
-msgstr "เวอร์ชั่น: %s"
+msgstr "เวอร์ชัน: %s"
 
 msgid "Video Deflicker"
-msgstr ""
+msgstr "ลดการกะพริบวิดีโอ"
 
 msgid "Video Mode"
-msgstr "โหมดการแสดงผลภาพ"
+msgstr "โหมดวิดีโอ"
 
 msgid "Video Scale Value"
-msgstr ""
-
-msgid "Video offset"
-msgstr ""
-
-msgid "Video scale"
-msgstr ""
+msgstr "ค่าการปรับขนาดวิดีโอ"
 
 msgid "Video Width"
-msgstr ""
+msgstr "ความกว้างวิดีโอ"
+
+msgid "Video offset"
+msgstr "การชดเชยวิดีโอ"
+
+msgid "Video scale"
+msgstr "การปรับขนาดวิดีโอ"
 
 msgid "Virtual Pointer Speed"
-msgstr ""
+msgstr "ความเร็วตัวชี้เสมือน"
 
 msgid "WDM Files Path"
-msgstr ""
+msgstr "เส้นทางไฟล์ WDM"
 
 msgid "WIP Patches Path"
-msgstr ""
+msgstr "เส้นทางแพทช์ WIP"
 
 msgid "Waiting..."
 msgstr "กำลังรอ..."
 
 msgid "Warning"
-msgstr ""
+msgstr "คำเตือน"
 
 msgid "Warning:"
-msgstr ""
+msgstr "คำเตือน:"
 
 msgid "What do you want to do?"
-msgstr ""
-
-msgid "What do you want to update?"
-msgstr "คุณต้องการอัพเดทอะไร ?"
+msgstr "คุณต้องการทำอะไร?"
 
 msgid "What should be deleted for this game title:"
-msgstr ""
+msgstr "ควรลบอะไรสำหรับชื่อเกมนี้:"
 
 msgid "What to extract from NAND?"
-msgstr ""
+msgstr "จะแยกอะไรจาก NAND?"
 
-msgid "Where should the game be installed to?"
-msgstr ""
+msgid "Where Should the Game Be Installed To?"
+msgstr "ควรติดตั้งเกมที่ไหน?"
 
 msgid "Where to dump NAND?"
-msgstr ""
+msgstr "จะถ่ายโอน NAND ไปที่ไหน?"
 
 msgid "Which device do you want to use for Nintendont files?"
-msgstr ""
+msgstr "คุณต้องการใช้อุปกรณ์ใดสำหรับไฟล์ Nintendont?"
 
 msgid "Which mode do you want to use?"
-msgstr ""
+msgstr "คุณต้องการใช้โหมดใด?"
 
 msgid "WiFi Features"
-msgstr "ความสามารถของ Wi Fi"
+msgstr "คุณสมบัติ WiFi"
 
 msgid "Widescreen Factor"
-msgstr ""
+msgstr "ปัจจัยจอกว้าง"
 
 msgid "Widescreen Fix"
-msgstr "จอกว้าง"
+msgstr "แก้ไขจอกว้าง"
 
-msgid "Wii Games"
-msgstr ""
+msgid "Wii"
+msgstr "Wii"
 
 msgid "Wii Menu"
 msgstr "เมนู Wii"
 
 msgid "Wii Settings"
-msgstr "การปรับแต่ง Wii"
+msgstr "การตั้งค่า Wii"
 
-msgid "WiiTDB.xml"
-msgstr ""
+msgid "Wii U GamePad Slot"
+msgstr "ช่อง Wii U GamePad"
+
+msgid "Wii U Widescreen"
+msgstr "Wii U จอกว้าง"
 
 msgid "WiiTDB.xml is up to date."
-msgstr ""
-
-msgid "WiiU Widescreen"
-msgstr ""
+msgstr "WiiTDB.xml เป็นปัจจุบัน"
 
 msgid "Wiilight"
-msgstr "ความสว่างของ Wii"
+msgstr "Wiilight"
 
 msgid "Wiimmfi"
-msgstr ""
+msgstr "Wiimmfi"
 
 msgid "Wiinnertag"
-msgstr ""
+msgstr "Wiinnertag"
 
 msgid "Wiinnertag Path"
-msgstr ""
+msgstr "เส้นทาง Wiinnertag"
 
 msgid "Wiinnertag requires you to enable automatic network connect on application start. Do you want to enable it now?"
-msgstr ""
+msgstr "Wiinnertag ต้องการให้คุณเปิดใช้งานการเชื่อมต่อเครือข่ายอัตโนมัติเมื่อเริ่มแอปพลิเคชัน คุณต้องการเปิดใช้งานตอนนี้ไหม?"
 
 msgid "Wiird Debugger"
-msgstr ""
+msgstr "ดีบักเกอร์ Wiird"
 
 #, c-format
 msgid "Write error on file: %s"
-msgstr ""
+msgstr "ข้อผิดพลาดในการเขียนไฟล์: %s"
 
 msgid "Writing GXGameCategories.xml"
-msgstr ""
+msgstr "กำลังเขียน GXGameCategories.xml"
 
 msgid "Wrong Password"
-msgstr "รหัสผ่านผิดพลาด"
+msgstr "รหัสผ่านผิด"
 
 msgid "Yes"
 msgstr "ใช่"
 
 msgid "You are trying to select a FAT32/NTFS/EXT partition with cIOS 249 Rev < 18. This is not supported. Continue on your own risk."
-msgstr ""
+msgstr "คุณกำลังพยายามเลือกพาร์ทิชัน FAT32/NTFS/EXT ด้วย cIOS 249 Rev < 18 ซึ่งไม่รองรับ ดำเนินการต่อด้วยความเสี่ยงของคุณเอง"
 
 msgid "You can select or format a partition or use the channel loader mode."
-msgstr ""
+msgstr "คุณสามารถเลือกหรือฟอร์แมตพาร์ทิชันหรือใช้โหมดโหลดช่อง"
 
 msgid "You cannot delete this category."
-msgstr ""
+msgstr "คุณไม่สามารถลบหมวดหมู่นี้ได้"
+
+msgid "You have DIOS-MIOS installed, so this game needs to be on a FAT32 USB storage device. You'll need to install DIOS-MIOS Lite to run this game from an SD card."
+msgstr "คุณได้ติดตั้ง DIOS-MIOS ดังนั้นเกมนี้ต้องอยู่บนอุปกรณ์จัดเก็บข้อมูล USB FAT32 คุณจะต้องติดตั้ง DIOS-MIOS Lite เพื่อเล่นเกมนี้จากการ์ด SD"
 
 msgid "You need neek2o to load EmuNAND from sub-folders."
-msgstr ""
+msgstr "คุณต้องใช้ neek2o เพื่อโหลด EmuNAND จากโฟลเดอร์ย่อย"
 
 msgid "You need to install DIOS MIOS Lite v1.2 or a newer version."
-msgstr ""
+msgstr "คุณต้องติดตั้ง DIOS MIOS Lite v1.2 หรือเวอร์ชันใหม่กว่า"
 
 msgid "You need to install an additional GameCube loader or select a different GameCube Mode to launch GameCube games from USB or SD card."
-msgstr ""
+msgstr "คุณต้องติดตั้งตัวโหลด GameCube เพิ่มเติมหรือเลือกโหมด GameCube ที่แตกต่างกันเพื่อเปิดเกม GameCube จาก USB หรือการ์ด SD"
 
 msgid "Your current GameCube partition is not compatible. Please update Nintendont."
-msgstr ""
+msgstr "พาร์ทิชัน GameCube ปัจจุบันของคุณไม่เข้ากัน กรุณาอัปเดต Nintendont"
 
 msgid "Zoom Duration (Speed)"
-msgstr ""
+msgstr "ระยะเวลาการซูม (ความเร็ว)"
 
 msgid "and translators for language files updates"
-msgstr ""
+msgstr "และผู้แปลสำหรับการอัปเดตไฟล์ภาษา"
 
 msgid "does not exist!"
-msgstr "ไม่มี!"
+msgstr "ไม่มีอยู่!"
 
 msgid "does not exist!  Loading game without cheats."
-msgstr "ไม่มี! โหลดเกมส์โดยไม่ใช้การโกงเกมส์."
+msgstr "ไม่มีอยู่! กำลังโหลดเกมโดยไม่ใช้โกง"
 
 msgid "files left"
-msgstr "ไฟล์ที่ยังเหลือ"
+msgstr "ไฟล์ที่เหลือ"
 
 msgid "for FAT/NTFS support"
-msgstr ""
+msgstr "สำหรับการรองรับ FAT/NTFS"
 
 msgid "for GameTDB and hosting covers / disc images"
-msgstr ""
+msgstr "สำหรับ GameTDB และการโฮสต์ปก / ภาพดิสก์"
 
 msgid "for Ocarina"
 msgstr "สำหรับ Ocarina"
 
 msgid "for diverse patches"
-msgstr "แก้ diverse"
+msgstr "สำหรับแพทช์ที่หลากหลาย"
 
 msgid "for his awesome tool LibWiiGui"
-msgstr "สำหรับสุดยอด tool ของเค้า LibWiiGui"
-
-msgid "for hosting the themes"
-msgstr "สำหรับให้ฝากธีม"
+msgstr "สำหรับเครื่องมือที่ยอดเยี่ยมของเขา LibWiiGui"
 
 msgid "for the USB Loader source"
-msgstr "สำหรับรหัสโปรแกรม USB Loader"
+msgstr "สำหรับแหล่งที่มาของ USB Loader"
 
 msgid "for their work on the wiki page"
-msgstr ""
+msgstr "สำหรับงานของพวกเขาบนหน้า wiki"
 
 msgid "formatted!"
-msgstr "ฟอร์แมต!"
+msgstr "ฟอร์แมตแล้ว!"
 
 msgid "free"
-msgstr "ว่างอยู่"
+msgstr "ฟรี"
 
 msgid "ms"
-msgstr ""
-
-msgid "not set"
-msgstr "ไม่ได้กำหนด"
+msgstr "มิลลิวินาที"
 
 msgid "of"
-msgstr "จาก"
+msgstr "ของ"
 
 msgid "seconds left"
 msgstr "วินาทีที่เหลือ"
-
-#~ msgid "Anti"
-#~ msgstr "ต้าน"
-
-#~ msgid "Error 002 fix"
-#~ msgstr "แก้ไข Error002"
-
-#~ msgid "Boot/Standard"
-#~ msgstr "บูต/มาตราฐาน"
-
-#~ msgid "Rename Game on WBFS"
-#~ msgstr "เปลี่ยนชื่อเกมส์บน WBFS"
-
-#~ msgid "for hosting the update files"
-#~ msgstr "สำหรับที่เก็บไฟล์อัพเดท"
-
-#~ msgid "Insert a Wii Disc!"
-#~ msgstr "ใส่แผ่น Wii !"
-
-#~ msgid "No cheats were selected"
-#~ msgstr "ไม่ได้เลือกการโกงเกมส์ไว้"
-
-#~ msgid "Not a Wii Disc"
-#~ msgstr "ไม่ใช่แผ่นเกมส์ Wii"
-
-#~ msgid ">> Deleting tickets..."
-#~ msgstr ">> ลบ Tickets..."
-
-#~ msgid ">> Deleting tickets...ERROR! "
-#~ msgstr ">> ลบ tickets...ผิดพลาด ! "
-
-#~ msgid ">> Deleting tickets...Ok! "
-#~ msgstr ">> ลบ tickets...สำเร็จ ! "
-
-#~ msgid ">> Deleting title ...ERROR! "
-#~ msgstr ">> ลบ Title...ผิดพลาด ! "
-
-#~ msgid ">> Deleting title ...Ok!"
-#~ msgstr ">> ลบ Title...สำเร็จ ! "
-
-#~ msgid ">> Deleting title contents..."
-#~ msgstr ">> ลบเนื้อหา Title..."
-
-#~ msgid ">> Deleting title contents...ERROR! "
-#~ msgstr ">> ลบเนื้อหา Title...ผิดพลาด ! "
-
-#~ msgid ">> Deleting title contents...Ok!"
-#~ msgstr ">> ลบเนื้อหา Title...สำเร็จ ! "
-
-#~ msgid ">> Deleting title..."
-#~ msgstr ">> ลบ Title..."
-
-#~ msgid ">> Finishing installation..."
-#~ msgstr ">> ติดตั้งเสร็จแล้ว..."
-
-#~ msgid ">> Installing content #"
-#~ msgstr ">> กำลังติดตั้ง เนื้อหา #"
-
-#~ msgid ">> Installing ticket..."
-#~ msgstr ">> กำลังติดตั้ง ticket..."
-
-#~ msgid ">> Installing title..."
-#~ msgstr ">> กำลังติดตั้ง title..."
-
-#~ msgid ">> Reading WAD data..."
-#~ msgstr ">> กำลังอ่านข้อมูล WAD..."
-
-#~ msgid ">> Reading WAD data...ERROR! "
-#~ msgstr ">> กำลังอ่านข้อมูล WAD...ผิดพลาด ! "
-
-#~ msgid ">> Reading WAD data...Ok!"
-#~ msgstr ">> กำลังอ่านข้อมูล WAD...สำเร็จ !"
-
-#~ msgid "Done!"
-#~ msgstr "เสร็จ!"
-
-#~ msgid "Error..."
-#~ msgstr "ผิดพลาด..."
-
-#~ msgid "Finishing installation... Ok!"
-#~ msgstr "การติดตั้งเสร็จแล้ว !"
-
-#~ msgid "Installing content... Ok!"
-#~ msgstr "ติดตั้งเนื้อหา... สำเร็จ!"
-
-#~ msgid "Installing ticket... Ok!"
-#~ msgstr "ติดตั้ง ticket... สำเร็จ!"
-
-#~ msgid "Installing title... Ok!"
-#~ msgstr "ติดตั้ง Title... สำเร็จ!"
-
-#~ msgid "Installing WAD"
-#~ msgstr "ติดตั้ง WAD"
-
-#~ msgid "Reading WAD data... Ok!"
-#~ msgstr "อ่านข้อมูล WAD... สำเร็จ!"
-
-#~ msgid "Uninstalling WAD"
-#~ msgstr "ถอนการติดตั้ง WAD"
-
-#~ msgid "New Disc Detected"
-#~ msgstr "พบแผ่นเกมส์ใหม่"
-
-#~ msgid "USB Device not found"
-#~ msgstr "ไม่พบอุปกรณ์ USB"
-
-#~ msgid "Language File"
-#~ msgstr "ไฟล์ภาษา"
-
-#~ msgid "Titles from WiiTDB"
-#~ msgstr "Title จาก WiiTDB"
-
-#~ msgid "WiiTDB Files"
-#~ msgstr "ไฟล์ WiiTDB"
-
-#~ msgid "WiiTDB Path"
-#~ msgstr "ที่อยู่ WiiTDB"
-
-#~ msgid "for WiiTDB and hosting covers / disc images"
-#~ msgstr "สำหรับ WiiTDB และ ปก/รูปแผ่นดิสก์"
-
-#~ msgid " Wad Saved as:"
-#~ msgstr " บันทึก Wad เป็น:"
-
-#~ msgid "Delete ?"
-#~ msgstr "ลบ ?"
-
-#~ msgid "Keep"
-#~ msgstr "เก็บ"
-
-#~ msgid "Author:"
-#~ msgstr "ผู้แต่ง:"
-
-#~ msgid "Download Boxart image?"
-#~ msgstr "ดาวน์โหลดภาพกล่อง ?"
-
-#~ msgid "Download Discart image?"
-#~ msgstr "ดาวน์โหลดภาพแผ่น ?"
-
-#~ msgid "Downloading file"
-#~ msgstr "กำลังดาวน์โหลดไฟล์:"
-
-#~ msgid "Missing files"
-#~ msgstr "ไฟล์ที่หาไม่พบ"
-
-#~ msgid "files not found on the server!"
-#~ msgstr "ไม่พบไฟล์/i บนเซิฟเวอร์!"
-
-#~ msgid "Disc Images"
-#~ msgstr "ภาพแผ่น"
-
-#~ msgid "Only Customs"
-#~ msgstr "เฉพาะที่ดัดแปลง"
-
-#~ msgid "Only Original"
-#~ msgstr "เฉพาะของแท้"
-
-#~ msgid "Do you really want to delete:"
-#~ msgstr "ต้องการที่จะลบใช่ไหม:"
-
-#~ msgid "Do you want to use the alternate DOL that is known to be correct?"
-#~ msgstr "ต้องการจะใช้ alt DOL เฉพาะที่รู้ว่าถูกต้อง?"
-
-#~ msgid "Unlock console to use this option."
-#~ msgstr "ปลดล๊อค Console ก่อน เพื่อใช้ตัวเลือกนี้"
-
-#~ msgid "Full Shutdown"
-#~ msgstr "ปิดอย่างสมบรูณ์"
-
-#~ msgid "If you don't have WiFi, press 1 to get an URL to get your WiiTDB.zip"
-#~ msgstr "ถ้าไม่มี Wifi กด 1 เพื่อแสดง URL สำหรับดาวน์โหลด WiiTDB.zip"
-
-#~ msgid "Paste it into your browser to get your WiiTDB.zip."
-#~ msgstr "วางในเวบบราวเซอร์เพื่อดึงข้อมูล WiiTDB.zip"
-
-#~ msgid "Shutdown to Idle"
-#~ msgstr "เข้าโหมด Idle"
-
-#~ msgid "Your URL has been saved in %sWiiTDB_URL.txt."
-#~ msgstr "URL ของคุณถูกบันทึกใน %sWiiTDB_URL.txt."
-
-#~ msgid "Can't create file"
-#~ msgstr "สร้างไฟล์ไม่ได้"
-
-#~ msgid "Download failed."
-#~ msgstr "ดาวน์โหลดไม่ได้"
-
-#~ msgid "Download request failed."
-#~ msgstr "ดาวน์โหลดไม่ได้"
-
-#~ msgid "Downloading Page List:"
-#~ msgstr "รายการที่กำลังดาวน์โหลด:"
-
-#~ msgid "Theme Download Path"
-#~ msgstr "ตำแหน่งที่ดาวน์โหลดธีม"
-
-#~ msgid "Transfer failed."
-#~ msgstr "ถ่ายโอนไม่ได้"
-
-#~ msgid "Unsupported format, try to extract manually."
-#~ msgstr "ไม่สนับสนุนไฟล์นี้ ลองขยายไฟล์เอง"
-
-#~ msgid "and translaters for language files updates"
-#~ msgstr "และผู้แปลภาษาสำหรับการอัพเดท"
-
-#~ msgid "Insert an SD-Card to save."
-#~ msgstr "ใส่ SD card เพื่อบันทึก"
-
-#~ msgid "Insert an SD-Card to use this option."
-#~ msgstr "ใส่ SD card เพื่อใช้ตัวเลือกนี้ "
-
-#~ msgid "No SD-Card inserted!"
-#~ msgstr "ไม่ได้เสียบ SD card!"
-
-#~ msgid "Waiting for USB Device"
-#~ msgstr "กำลังรออุปกรณ์ USB"
-
-#~ msgid "Back to Loader"
-#~ msgstr "กลับไปที่ Loader"
-
-#~ msgid "An Error occured"
-#~ msgstr "พบความผิดพลาด"
-
-#~ msgid "AutoPatch"
-#~ msgstr "แก้ไขอัตโนมัติ"
-
-#~ msgid "Checking for Updates"
-#~ msgstr "ตรวจสอบหาอัพเดท"
-
-#~ msgid "Downloading"
-#~ msgstr "กำลังดาวน์โหลด"
-
-#~ msgid "The WAD file was installed.  But It could not be deleted from the SD card."
-#~ msgstr "ไฟล์ Wad ถูกติดตั้งแล้ว แต่ไม่สามารถลบจาก SD card ได้"
-
-#~ msgid "The WAD installation failed with error %ld"
-#~ msgstr "การติดตั้งไฟล์ Wad ล้มเหลวด้วยข้อผิดพลาด %ld"
-
-#~ msgid "Unable to open the WAD that was just downloaded (%s)."
-#~ msgstr "ไม่สามารถเปิดไฟล์ Wad ที่เพิ่งดาวน์โหลดมาได้ (%s)."
-
-#~ msgid "Update to"
-#~ msgstr "อัพเดทเป็น"
-
-#~ msgid "Updating"
-#~ msgstr "กำลังอัพเดท"
-
-#~ msgid "Updating Language Files..."
-#~ msgstr "กำลังอัพเดทไฟล์ภาษา..."
-
-#~ msgid "Updating WiiTDB.zip"
-#~ msgstr "กำลังอัพเดทไฟล์ WiiTDB.zip"
-
-#~ msgid "%s : %s May not boot correctly if your System Menu is not up to date."
-#~ msgstr "%s : %s อาจทำงานผิดปกติ ถ้าระบบของคุณไม่ทันสมัย"
-
-#~ msgid "Back to Wii Menu"
-#~ msgstr "กลับไป เมนู Wii"
-
-#~ msgid "Checking existing artwork"
-#~ msgstr "ตรวจหาอาร์ตเวิรค์"
-
-#~ msgid "Confirm"
-#~ msgstr "ยืนยัน"
-
-#~ msgid "Could not find a WBFS partition."
-#~ msgstr "ไม่พบ WBFS พาร์ติชั่น"
-
-#~ msgid "Could not open WBFS partition"
-#~ msgstr "ไม่สามารถเปิด WBFS พาร์ติชั่นได้"
-
-#~ msgid "Could not read the disc."
-#~ msgstr "อ่านแผ่นไม่ได้ !"
-
-#~ msgid "Could not set USB."
-#~ msgstr "ไม่สามารถตั้งค่า USB ได้"
-
-#~ msgid "Cover Path Changed"
-#~ msgstr "ที่เก็บ ปก ถูกเปลี่ยนแปลง"
-
-#~ msgid "DOL path changed"
-#~ msgstr "ที่เก็บ DOL ถูกเปลี่ยนแปลง"
-
-#~ msgid "Disc Path Changed"
-#~ msgstr "ที่เก็บ ภาพแผ่น ถูกเปลี่ยนแปลง"
-
-#~ msgid "Display favorites"
-#~ msgstr "แสดง แบบเกมส์ที่ชอบ"
-
-#~ msgid "Do you want to retry for 30 secs?"
-#~ msgstr "ต้องการลองใหม่ทุก 30 วินาที?"
-
-#~ msgid "Force"
-#~ msgstr "บังคับ"
-
-#~ msgid "GCT Cheatcodes Path changed"
-#~ msgstr "ที่เก็บ สูตรโกง ถูกเปลี่ยนแปลง"
-
-#~ msgid "Homebrew Appspath changed"
-#~ msgstr "ที่เก็บโปรแกรม Homebrew ถูกเปลี่ยนแปลง"
-
-#~ msgid "Insert an SD-Card to download images."
-#~ msgstr "ใส่ SD card เพื่อดาวน์โหลดภาพ"
-
-#~ msgid "Most likely it has dimensions that are not evenly divisible by 4."
-#~ msgstr "ดูเหมือนว่าขนาดจะหารด้วย 4 ไม่ลงตัว"
-
-#~ msgid "Network init error"
-#~ msgstr "การเชื่อมต่อเครือข่ายผิดพลาด"
-
-#~ msgid "No .dol or .elf files found."
-#~ msgstr "ไม่พบไฟล์ .dol หรือ .elf"
-
-#~ msgid "No Favorites"
-#~ msgstr "ไม่พบเกมส์ที่ชื่นชอบ"
-
-#~ msgid "No USB Device"
-#~ msgstr "ไม่ได้เสียบอุปกรณ์ USB"
-
-#~ msgid "No USB Device found."
-#~ msgstr "ไม่พบอุปกรณ์ USB"
-
-#~ msgid "Normal Covers"
-#~ msgstr "หน้าปกแบบปกติ"
-
-#~ msgid "Not Found"
-#~ msgstr "ไม่พบ"
-
-#~ msgid "Not a DOL/ELF file."
-#~ msgstr "ไม่ใช่ไฟล์ DOL หรือ ELF"
-
-#~ msgid "Save Failed"
-#~ msgstr "การบันทึกไม่สำเร็จ"
-
-#~ msgid "Selected DOL"
-#~ msgstr "DOL ที่เลือก"
-
-#~ msgid "Standard"
-#~ msgstr "มาตราฐาน"
-
-#~ msgid "TXT Cheatcodes Path changed"
-#~ msgstr "ที่เก็บ TXTCheatcodes ถูกเปลี่ยนแปลง"
-
-#~ msgid "Theme Download Path changed"
-#~ msgstr "ตำแหน่งที่ดาวน์โหลดธีมเปลี่ยนแปลง"
-
-#~ msgid "Theme Path Changed"
-#~ msgstr "ที่อยู่ Theme ถูกเปลี่ยนแปลง"
-
-#~ msgid "Update Path changed."
-#~ msgstr "ที่อยู่ Update ถูกเปลี่ยน"
-
-#~ msgid "WiiTDB Path changed."
-#~ msgstr "ที่อยู่ WiiTDB ถูกเปลี่ยนแปลง"
-
-#~ msgid "You are about to delete "
-#~ msgstr "คุณกำลังจะลบ "
-
-#~ msgid "You are choosing to display favorites and you do not have any selected."
-#~ msgstr "คุณเลือกจะแสดงเกมส์ที่ชอบ แต่คุณไม่ได้กำหนดเกมส์ที่ชื่นชอบไว้"
-
-#~ msgid "You have attempted to load a bad image"
-#~ msgstr "คุณพยายามที่จะโหลดรูปภาพที่เสียหาย"
-
-#~ msgid "does not exist!  You Messed something up, Idiot."
-#~ msgstr "ไม่มี! คุณทำให้มันเละไปแล้ว ไอ้โง่ อิอิ."
-
-#~ msgid "file left"
-#~ msgstr "ไฟล์ที่ยังเหลือ"

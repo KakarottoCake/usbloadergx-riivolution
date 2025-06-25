@@ -1,72 +1,70 @@
 # USB Loader GX language source file.
-# greek.lang - r1272
-# don't delete/change this line (e).
+# greek.lang - r1282
+# don't delete/change this line (é).
 msgid ""
 msgstr ""
 "Project-Id-Version: USB Loader GX\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2019-06-15 16:02+0200\n"
-"PO-Revision-Date: 2009-10-01 01:00+0200\n"
-"Last-Translator: nakata6790\n"
-"Language-Team: nakata6790 (aka0107@gmail.com)\n"
+"POT-Creation-Date: 2025-06-25 09:00+0100\n"
+"PO-Revision-Date: 2025-06-25 09:00+0100\n"
+"Last-Translator: GPT-4o\n"
+"Language-Team: Greek\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"Language: \n"
 
 msgid " could not be downloaded."
-msgstr " Η λήψη δεν είναι δυνατή."
+msgstr " δεν μπόρεσε να ληφθεί."
 
-msgid " has been Saved.  The text has not been verified.  Some of the code may not work right with each other.  If you experience trouble, open the text in a real text editor for more information."
-msgstr " Αποθηκεύτηκε. Δεν εχει πιστοποιηθεί. Κάποιοι κωδικοί ίσως να μην δουλεύουν ταυτόχρονα με άλλους. Αν συναντήσετε πρόβλημα, ανοίξτε το αρχείο .txt για περισσότερες πληροφορίες."
+msgid " has been saved, but you might need to edit some cheats from a computer."
+msgstr " έχει αποθηκευτεί, αλλά ίσως χρειαστεί να επεξεργαστείτε μερικά cheats από έναν υπολογιστή."
 
 msgid " is not on the server."
-msgstr " δεν υπάρχει στον server."
-
-#, c-format
-msgid "%i files not found on the server!"
-msgstr "%τα αρχεία δεν βρέθηκαν στον server!"
-
-#, c-format
-msgid "%i missing files"
-msgstr "%τα χαμένα αρχεία"
+msgstr " δεν βρίσκεται στον διακομιστή."
 
 #, c-format
 msgid "%i WAD file(s) not processed!"
-msgstr ""
+msgstr "%i αρχείο(α) WAD δεν επεξεργάστηκαν!"
 
 #, c-format
 msgid "%i WAD found."
-msgstr ""
+msgstr "Βρέθηκαν %i WAD."
+
+#, c-format
+msgid "%i files not found on the server!"
+msgstr "%i αρχεία δεν βρέθηκαν στον διακομιστή!"
 
 #, c-format
 msgid "%s only accepts GameCube backups in ISO format."
-msgstr ""
+msgstr "Το %s δέχεται μόνο αντίγραφα ασφαλείας GameCube σε μορφή ISO."
 
 #, c-format
-msgid "%s requires AHB access! Please launch USBLoaderGX from HBC or from an updated channel or forwarder."
-msgstr ""
+msgid "%s requires AHB access! Please launch USB Loader GX from HBC or from an updated channel or forwarder."
+msgstr "Το %s απαιτεί πρόσβαση AHB! Εκκινήστε το USB Loader GX από το HBC ή από ένα ενημερωμένο κανάλι ή προωθητή."
 
 msgid "--==       Devolution"
-msgstr ""
+msgstr "--==       Devolution"
 
 msgid "--==       Nintendont"
-msgstr ""
+msgstr "--==       Nintendont"
 
-msgid "--==   DIOS MIOS (Lite) "
-msgstr ""
+msgid "--==   DIOS MIOS (Lite)"
+msgstr "--==   DIOS MIOS (Lite)"
 
 msgid "--==  DM(L) + Nintendont"
-msgstr ""
+msgstr "--==  DM(L) + Nintendont"
 
 msgid "/\\/\\"
-msgstr ""
+msgstr "/\\/\\"
 
 msgid "0 (Everyone)"
 msgstr "0 (Όλοι)"
 
+msgid "1"
+msgstr "1"
+
 msgid "1 (Child 7+)"
-msgstr "1 (Παιδιά 7+)"
+msgstr "1 (Παιδί 7+)"
 
 msgid "1 hour"
 msgstr "1 ώρα"
@@ -74,17 +72,23 @@ msgstr "1 ώρα"
 msgid "10 min"
 msgstr "10 λεπτά"
 
+msgid "2"
+msgstr "2"
+
 msgid "2 (Teen 12+)"
-msgstr "2 (Παιδιά 12+)"
+msgstr "2 (Έφηβος 12+)"
 
 msgid "20 min"
 msgstr "20 λεπτά"
 
 msgid "2D Cover Path"
-msgstr "Μονοπάτι εξωφύλλων 2D"
+msgstr "Διαδρομή 2D Εξωφύλλου"
+
+msgid "3"
+msgstr "3"
 
 msgid "3 (Mature 16+)"
-msgstr "3 (Έφηβοι 16+)"
+msgstr "3 (Για ενήλικες 16+)"
 
 msgid "3 min"
 msgstr "3 λεπτά"
@@ -93,300 +97,314 @@ msgid "30 min"
 msgstr "30 λεπτά"
 
 msgid "3D Cover Path"
-msgstr "Τοποθεσία εξωφύλλων 3D"
+msgstr "Διαδρομή 3D Εξωφύλλου"
 
 msgid "3D Covers"
-msgstr "Εξώφυλλα 3D"
+msgstr "3D Εξώφυλλα"
+
+msgid "4"
+msgstr "4"
 
 msgid "4 (Adults Only 18+)"
-msgstr "4 (Μονο για ενήλικες 18+)"
+msgstr "4 (Μόνο για ενήλικες 18+)"
 
 msgid "480p Pixel Fix Patch"
-msgstr ""
+msgstr "Διόρθωση Pixel 480p"
 
 msgid "5 min"
 msgstr "5 λεπτά"
 
 msgid "=== GameCube Settings"
-msgstr ""
+msgstr "=== Ρυθμίσεις GameCube"
 
 msgid "AUTO"
-msgstr "AΥΤΟΜΑΤΑ"
+msgstr "ΑΥΤΟΜΑΤΟ"
 
 msgid "AXNextFrame"
-msgstr "AXΕπόμενοΚαρέ"
+msgstr "AXNextFrame"
 
 msgid "Add category"
-msgstr "Πρόσθεσε κατηγορία"
+msgstr "Προσθήκη κατηγορίας"
 
 msgid "Adjust Overscan X"
-msgstr "Ρύθμισε τον άξονα X"
+msgstr "Ρύθμιση Overscan X"
 
 msgid "Adjust Overscan Y"
-msgstr "Ρύθμισε τον άξονα Y"
+msgstr "Ρύθμιση Overscan Y"
 
 msgid "After zoom"
-msgstr "Μετά το zoom"
+msgstr "Μετά το ζουμ"
 
 msgid "All"
-msgstr "όλα"
+msgstr "Όλα"
 
 msgid "All Partitions"
-msgstr "Όλα τα partitions"
-
-msgid "All files extracted."
-msgstr "όλα τα αρχεία αποσυμπιέστηκαν."
-
-msgid "All images downloaded successfully."
-msgstr "Όλες οι εικόνες λήφθησαν επιτυχώς."
-
-msgid "All the features of USB Loader GX are unlocked."
-msgstr "όλες οι ρυθμίσεις του USB Loader GX είναι ξεκλειδωμένες."
+msgstr "Όλες οι κατατμήσεις"
 
 msgid "All WAD files processed successfully."
-msgstr "Όλα τα αρχεία WAD υποβλήθηκαν σε επεξεργασία με επιτυχία."
+msgstr "Όλα τα αρχεία WAD επεξεργάστηκαν με επιτυχία."
+
+msgid "All files extracted."
+msgstr "Όλα τα αρχεία εξήχθησαν."
+
+msgid "All images downloaded successfully."
+msgstr "Όλες οι εικόνες κατέβηκαν με επιτυχία."
+
+msgid "All the features of USB Loader GX are unlocked."
+msgstr "Όλες οι λειτουργίες του USB Loader GX είναι ξεκλείδωτες."
+
+msgid "AltWFC"
+msgstr "AltWFC"
 
 msgid "Alternate DOL"
 msgstr "Εναλλακτικό DOL"
 
-msgid "AltWFC"
-msgstr ""
-
 msgid "An example file was created here:"
-msgstr "Ένα αρχείο-παράδειγμα δημιουργήθηκε εδώ"
+msgstr "Ένα αρχείο παραδείγματος δημιουργήθηκε εδώ:"
 
 msgid "Animation Start"
-msgstr "Αρχή animation"
+msgstr "Έναρξη Κίνησης"
 
 msgid "App Language"
-msgstr "Γλώσσα εφαρμογής"
+msgstr "Γλώσσα Εφαρμογής"
 
 msgid "Apply"
 msgstr "Εφαρμογή"
 
 msgid "Apr"
-msgstr "Απρίλιος"
+msgstr "Απρ"
+
+msgid "Are You Sure You Want to Install on SD?"
+msgstr "Είστε σίγουροι ότι θέλετε να εγκαταστήσετε στην SD;"
 
 msgid "Are you really sure you want to delete all selected games from the SD card?"
-msgstr "Είστε πραγματικά σίγουροι ότι θέλετε να σβήσετε όλα τα επιλεγμένα παιχνίδια από την κάρτα SD?"
+msgstr "Είστε πραγματικά σίγουροι ότι θέλετε να διαγράψετε όλα τα επιλεγμένα παιχνίδια από την κάρτα SD;"
 
 msgid "Are you sure you want to delete this category?"
-msgstr "Είστε σίγουροι ότι θέλετε να σβήσετε αυτήν την κατηγορία?"
+msgstr "Είστε σίγουροι ότι θέλετε να διαγράψετε αυτήν την κατηγορία;"
 
-msgid "Are you sure you want to import game categories from GameTDB?"
-msgstr "Είστε σίγουροι ότι θέλετε να εισάγετε κατηγορίες τίτλων από το GameTDB?"
-
-msgid "Are you sure you want to install on SD?"
-msgstr "Είστε σίγουροι ότι θέλετε να εγκαταστήσετε στην κάρτα SD?"
+msgid "Are you sure you want to import game categories from WiiTDB?"
+msgstr "Είστε σίγουροι ότι θέλετε να εισάγετε κατηγορίες παιχνιδιών από το WiiTDB;"
 
 msgid "Are you sure you want to lock USB Loader GX?"
-msgstr "Είστε σίγουροι ότι θέλετε να κλειδώσετε το USB Loader GX?"
+msgstr "Είστε σίγουροι ότι θέλετε να κλειδώσετε το USB Loader GX;"
 
-msgid "Are you sure you want to remount SD?"
-msgstr "Είστε σίγουροι ότι θέλετε να επαναγνώσετε την κάρτα SD?"
+msgid "Are you sure you want to redownload everything?"
+msgstr "Είστε σίγουροι ότι θέλετε να κατεβάσετε ξανά τα πάντα;"
 
 msgid "Are you sure you want to reset?"
-msgstr "Είστε σίγουροι ότι θέλετε να επανεκκινήσετε?"
+msgstr "Είστε σίγουροι ότι θέλετε να επαναφέρετε;"
 
 msgid "Are you sure?"
-msgstr "Είστε βέβαιοι?"
+msgstr "Είστε σίγουροι;"
+
+msgid "Ask"
+msgstr "Ρωτήστε"
 
 msgid "Aspect Ratio"
-msgstr "Αναλογία οθόνης"
+msgstr "Αναλογία Διαστάσεων"
 
 msgid "Attention!"
-msgstr "ΠΡΟΣΟΧΗ!"
+msgstr "Προσοχή!"
 
 msgid "Attention: All savegames will be deleted."
-msgstr ""
+msgstr "Προσοχή: Όλα τα αποθηκευμένα παιχνίδια θα διαγραφούν."
 
 msgid "Aug"
-msgstr "Αύγουστος"
+msgstr "Αυγ"
 
 msgid "Author(s):"
-msgstr "Εκδότης-ες:"
+msgstr "Συγγραφέας(είς):"
 
 msgid "Auto"
-msgstr "Aυτόματα"
+msgstr "Αυτόματο"
 
 msgid "Auto Boot"
-msgstr ""
+msgstr "Αυτόματη Εκκίνηση"
 
 msgid "AutoInit Network"
-msgstr "Αυτόματη σύνδεση δικτύου"
+msgstr "Αυτόματη Αρχικοποίηση Δικτύου"
+
+msgid "Autoboot Discs"
+msgstr "Αυτόματη Εκκίνηση Δίσκων"
+
+msgid "Autoboot Discs Delay"
+msgstr "Καθυστέρηση Αυτόματης Εκκίνησης Δίσκων"
+
+msgid "BBA Emulation"
+msgstr "Εξομοίωση BBA"
+
+msgid "BBA Net Profile"
+msgstr "Προφίλ Δικτύου BBA"
 
 msgid "BCA Codes Path"
-msgstr "Μονοπάτι κωδικών BCA"
+msgstr "Διαδρομή Κωδικών BCA"
 
 msgid "Back"
-msgstr ""
+msgstr "Πίσω"
 
 msgid "Back to HBC or Wii Menu"
-msgstr "Μετάβαση στο κανάλι Homebrew ή στο μενού του Wii"
+msgstr "Επιστροφή στο HBC ή στο Μενού Wii"
 
 msgid "Background Music"
-msgstr "Μουσική υπόκρουση"
+msgstr "Μουσική Υποβάθρου"
 
 msgid "Banner Animation"
-msgstr "Αnimation τίτλου"
-
-msgid "Banner Animation Settings"
-msgstr "Ρυθμίσεις animation τίτλου"
+msgstr "Κίνηση Μπάνερ"
 
 msgid "Banner On Channels"
-msgstr "Τίτλοι-ταμπέλες στα κανάλια"
+msgstr "Μπάνερ στα Κανάλια"
+
+msgid "Banner Settings"
+msgstr "Ρυθμίσεις Μπάνερ"
 
 msgid "Banner grid layout is only available with AHBPROT! Please consider installing new HBC version."
-msgstr "Η διάταξη με τίτλους-ταμπέλες είναι διαθέsιμη μόνο με τo AHBROT! Παρακαλούμε εγκαταστήστε μια νεότερη έκδοση του καναλιού Homebrew."
+msgstr "Η διάταξη πλέγματος μπάνερ είναι διαθέσιμη μόνο με AHBPROT! Παρακαλώ σκεφτείτε να εγκαταστήσετε τη νέα έκδοση του HBC."
 
 msgid "Banner window is only available with AHBPROT! Please consider installing new HBC version."
-msgstr "Tίτλοι-ταμπέλες είναι διαθέσιμοι μόνο με τo AHBROT! Παρακαλούμε εγκαταστήστε μια νεότερη έκδοση του καναλιού Homebrew."
+msgstr "Το παράθυρο μπάνερ είναι διαθέσιμο μόνο με AHBPROT! Παρακαλώ σκεφτείτε να εγκαταστήσετε τη νέα έκδοση του HBC."
 
 msgid "Big thanks to:"
-msgstr "Θερμές ευχαριστιες στους:"
+msgstr "Μεγάλες ευχαριστίες σε:"
+
+msgid "Block Banner Settings"
+msgstr "Αποκλεισμός Ρυθμίσεων Μπάνερ"
 
 msgid "Block Categories Menu"
-msgstr "Φραγή μενού Κατηγοριών"
+msgstr "Αποκλεισμός Μενού Κατηγοριών"
 
 msgid "Block Categories Modify"
-msgstr "Φραγή τροποποίησης Κατηγοριών"
+msgstr "Αποκλεισμός Τροποποίησης Κατηγοριών"
 
 msgid "Block Cover Downloads"
-msgstr "Φραγή κατεβάσματος εξωφύλλων"
+msgstr "Αποκλεισμός Λήψεων Εξωφύλλων"
 
 msgid "Block Custom Paths"
-msgstr "Φραγή ορισμένων από τον χρήστη μονοπατιών"
+msgstr "Αποκλεισμός Προσαρμοσμένων Διαδρομών"
 
-msgid "Block Feature Settings"
-msgstr "Φραγή ρυθμίσεων στοιχείων προγράμματος"
+msgid "Block GUI Settings"
+msgstr "Αποκλεισμός Ρυθμίσεων GUI"
 
 msgid "Block Game Install"
-msgstr "Φραγή εγκατάστασης νεων παιχνιδιών"
+msgstr "Αποκλεισμός Εγκατάστασης Παιχνιδιών"
 
 msgid "Block Game Settings"
-msgstr "Φραγή σε τροποποίηση ρυθμίσεων παιχνιδιών"
+msgstr "Αποκλεισμός Ρυθμίσεων Παιχνιδιών"
 
-msgid "Block GameID Change"
-msgstr "Φραγή αλλαγής κωδικού ID κάθε παιχνιδιού"
+msgid "Block Game Sources Button"
+msgstr "Αποκλεισμός Κουμπιού Πηγών Παιχνιδιών"
+
+msgid "Block Game Type Button"
+msgstr "Αποκλεισμός Κουμπιού Τύπου Παιχνιδιών"
 
 msgid "Block Global Settings"
-msgstr "Φραγή γενικών ρυθμίσεων"
-
-msgid "Block Gui Settings"
-msgstr "Φραγή ρυθμίσεων προβολής εικονιδίων"
+msgstr "Αποκλεισμός Παγκόσμιων Ρυθμίσεων"
 
 msgid "Block HBC Menu"
-msgstr "Φραγή προβολής εικονιδίου HBC"
+msgstr "Αποκλεισμός Μενού HBC"
+
+msgid "Block HBC Title Launcher"
+msgstr "Αποκλεισμός Εκκινητή Τίτλων HBC"
 
 msgid "Block Hard Drive Settings"
-msgstr "Φραγή ρυθμίσεων σκληρού δίσκου"
+msgstr "Αποκλεισμός Ρυθμίσεων Σκληρού Δίσκου"
 
 msgid "Block IOS Reload"
-msgstr "Φραγή επαναφόρτωσης IOS"
+msgstr "Αποκλεισμός Επαναφόρτωσης IOS"
 
 msgid "Block Loader Layout Button"
-msgstr ""
-
-msgid "Block Loader Mode Button"
-msgstr "Φραγή εικονιδίου επιλογής παιχνιδιών"
+msgstr "Αποκλεισμός Κουμπιού Διάταξης Φορτωτή"
 
 msgid "Block Loader Settings"
-msgstr "Φραγή ρυθμίσεων Loader"
+msgstr "Αποκλεισμός Ρυθμίσεων Φορτωτή"
+
+msgid "Block Miscellaneous Settings"
+msgstr "Αποκλεισμός Διάφορων Ρυθμίσεων"
 
 msgid "Block Parental Settings"
-msgstr "Φραγή ρυθμίσεων κλειδώματος"
+msgstr "Αποκλεισμός Ρυθμίσεων Γονικού Ελέγχου"
 
 msgid "Block Priiloader Override"
-msgstr "Φραγή εμφάνισης Priiloader"
+msgstr "Αποκλεισμός Παράκαμψης Priiloader"
 
 msgid "Block Reset Settings"
-msgstr "Φραγή επαναφοράς ρυθμίσεων"
+msgstr "Αποκλεισμός Ρυθμίσεων Επαναφοράς"
 
-msgid "Block SD Reload Button"
-msgstr "Φραγή εικονιδίου επαναφόρτωσης SD"
+msgid "Block SD Card Mode Button"
+msgstr "Αποκλεισμός Κουμπιού Λειτουργίας Κάρτας SD"
 
 msgid "Block Sound Settings"
-msgstr "Φραγή ρυθμίσεων ήχου"
-
-msgid "Block Theme Downloader"
-msgstr "Φραγή λήψης νέων θεμάτων"
+msgstr "Αποκλεισμός Ρυθμίσεων Ήχου"
 
 msgid "Block Theme Menu"
-msgstr "Φραγή αλλαγής θεμάτων"
+msgstr "Αποκλεισμός Μενού Θέματος"
 
-msgid "Block Title Launcher"
-msgstr "Φραγή αλλαγής τίτλων"
-
-msgid "Block Updates"
-msgstr "Φραγή αναβαθμίσεων"
+msgid "Block Update Menu"
+msgstr "Αποκλεισμός Μενού Ενημέρωσης"
 
 msgid "Boot Content"
-msgstr "Περιεχόμενο που εκκινεί"
+msgstr "Εκκίνηση Περιεχομένου"
 
 msgid "Boot Neek System Menu"
-msgstr ""
+msgstr "Εκκίνηση Μενού Συστήματος Neek"
 
 msgid "Boot?"
-msgstr "εκκίνηση?"
+msgstr "Εκκίνηση;"
 
 msgid "Both"
-msgstr "και τα δυο"
+msgstr "Και τα δύο"
 
 msgid "Both Ports"
-msgstr "και οι 2 θύρες"
+msgstr "Και οι δύο Θύρες"
 
 msgid "CC Rumble"
-msgstr ""
+msgstr "Δόνηση CC"
 
 msgid "Cache BNR Files"
-msgstr "αποθήκευση αρχείων BNR"
+msgstr "Αρχεία Cache BNR"
 
 msgid "Cache BNR Files Path"
-msgstr "αποθήκευση τοποθεσίας αρχείων BNR"
+msgstr "Διαδρομή Αρχείων Cache BNR"
 
 msgid "Cache Path"
-msgstr ""
+msgstr "Διαδρομή Cache"
 
 msgid "Cache Titles"
-msgstr "Αποθήκευση τίτλων"
+msgstr "Τίτλοι Cache"
 
 msgid "Can't be formatted"
-msgstr "Αδύνατη η ανασυγκρότηση (format)"
+msgstr "Δεν μπορεί να μορφοποιηθεί"
 
 msgid "Can't create directory"
-msgstr "Αδύνατη η δημιουργία φακέλου"
+msgstr "Δεν είναι δυνατή η δημιουργία καταλόγου"
 
 #, c-format
 msgid "Can't create file: %s"
-msgstr "Αδύνατη η δημιουργία αρχείου: %s"
-
-#, c-format
-msgid "Can't create path: %s"
-msgstr "Αδύνατος ο ορισμός διεύθυνσης: %s"
+msgstr "Δεν είναι δυνατή η δημιουργία αρχείου: %s"
 
 msgid "Can't delete:"
-msgstr "Αδύνατη η διαγραφή:"
+msgstr "Δεν είναι δυνατή η διαγραφή:"
 
 msgid "Can't mount or unknown disc format."
-msgstr "Αδυναμία εύρεσης αποθηκευτικού μέσου ή άγνωστο μέσο"
+msgstr "Δεν είναι δυνατή η προσάρτηση ή άγνωστη μορφή δίσκου."
 
 #, c-format
 msgid "Can't open file for write: %s"
-msgstr "Αδυναμία εγγραφής στο αρχείο: %s"
+msgstr "Δεν είναι δυνατή η εγγραφή στο αρχείο: %s"
 
 #, c-format
 msgid "Can't open file: %s"
-msgstr "Αδυναμία ανοίγματος αρχείου: %s"
+msgstr "Δεν είναι δυνατή η ανοίγματος του αρχείου: %s"
 
 #, c-format
 msgid "Can't read file: %s"
-msgstr "Αδυναμία ανάγνωσης αρχείου: %s"
-
-msgid "Cancel"
-msgstr "ʼκυρο"
+msgstr "Δεν είναι δυνατή η ανάγνωση του αρχείου: %s"
 
 msgid "Can't write to destination."
-msgstr "Αδυναμία εγγραφής στον προορισμό."
+msgstr "Δεν είναι δυνατή η εγγραφή στον προορισμό."
+
+msgid "Cancel"
+msgstr "Ακύρωση"
 
 msgid "Categories"
 msgstr "Κατηγορίες"
@@ -395,147 +413,141 @@ msgid "Categories:"
 msgstr "Κατηγορίες:"
 
 msgid "Change Play Path"
-msgstr "Αλλαγή τοποθεσίας παιχνιδιών"
+msgstr "Αλλαγή Διαδρομής Αναπαραγωγής"
 
 msgid "Channel Launcher"
-msgstr "Εκκίνηση καναλιών"
+msgstr "Εκκινητής Καναλιού"
 
 msgid "Channel Path"
-msgstr ""
+msgstr "Διαδρομή Καναλιού"
 
 msgid "Channels"
 msgstr "Κανάλια"
 
-msgid "Cheatfile is blank"
-msgstr "το αρχείο cheat είναι κενό"
+msgid "Cheat file is blank"
+msgstr "Το αρχείο cheat είναι κενό"
 
 msgid "Clear"
-msgstr "Σβήσιμο"
+msgstr "Καθαρισμός"
 
 msgid "Click to download covers"
-msgstr "Κλικ για λήψη εξωφύλλων"
+msgstr "Κάντε κλικ για λήψη εξωφύλλων"
 
 msgid "Click to view information"
-msgstr ""
+msgstr "Κάντε κλικ για προβολή πληροφοριών"
 
 msgid "Clock"
-msgstr "Ρολοϊ"
+msgstr "Ρολόι"
 
 msgid "Clock Scale Factor"
-msgstr "Mέγεθος αριθμών ρολογιού"
+msgstr "Παράγοντας Κλίμακας Ρολογιού"
 
 msgid "Close"
 msgstr "Κλείσιμο"
 
 msgid "Code Download"
-msgstr "Λήψη κωδικού"
+msgstr "Λήψη Κώδικα"
 
 #, c-format
 msgid "Coded by: %s"
-msgstr "Προγραμματισμός: %s"
+msgstr "Κωδικοποιήθηκε από: %s"
 
 msgid "Coding:"
-msgstr "Προγραμματισμός:"
-
-msgid "Connection to server timed out."
-msgstr "Η σύνδεση στον server χάθηκε."
+msgstr "Κωδικοποίηση:"
 
 msgid "Console"
 msgstr "Κονσόλα"
 
 msgid "Console Default"
-msgstr "Βασικές ρυθμίσεις κονσόλας"
+msgstr "Προεπιλογή Κονσόλας"
 
 msgid "Console Locked"
-msgstr "Κλειδώθηκε"
+msgstr "Κονσόλα Κλειδωμένη"
 
 msgid "Console must be unlocked for this option."
-msgstr "Το μενού πρέπει να είναι ξεκλείδωτο για την επιλογή αυτή."
+msgstr "Η κονσόλα πρέπει να είναι ξεκλείδωτη για αυτήν την επιλογή."
 
 msgid "Console must be unlocked to be able to use this."
-msgstr "Το μενού πρέπει να είναι ξεκλείδωτο για να μπορείτε να το χρησιμοποιήσετε."
+msgstr "Η κονσόλα πρέπει να είναι ξεκλείδωτη για να μπορέσετε να το χρησιμοποιήσετε."
 
 msgid "Console should be unlocked to modify it."
-msgstr "Το μενού πρέπει να είναι ξεκλείδωτο για να μπορείτε να το τροποποιήσετε."
+msgstr "Η κονσόλα πρέπει να είναι ξεκλείδωτη για να την τροποποιήσετε."
 
 msgid "Continue"
 msgstr "Συνέχεια"
 
-msgid "Continue to install game?"
-msgstr "Συνέχιση εγκατάστασης παιχνιδιού?"
+msgid "Continue To Install Game?"
+msgstr "Συνέχεια για Εγκατάσταση Παιχνιδιού;"
 
 msgid "Continue?"
-msgstr "Συνέχεια?"
+msgstr "Συνέχεια;"
 
-msgid "Controllevel"
-msgstr ""
+msgid "Control Level"
+msgstr "Επίπεδο Ελέγχου"
 
 msgid "Copy"
 msgstr "Αντιγραφή"
 
 msgid "Copying Canceled"
-msgstr "Αντιγραφή ακυρώθηκε"
+msgstr "Η αντιγραφή ακυρώθηκε"
 
 msgid "Copying GC game..."
-msgstr "Αντιγραφή παιχνιδιού GameCube..."
+msgstr "Αντιγραφή παιχνιδιού GC..."
 
 msgid "Copying files..."
 msgstr "Αντιγραφή αρχείων..."
 
 msgid "Correct Password"
-msgstr "Σωστό Password"
+msgstr "Σωστός Κωδικός"
 
-msgid "Could not connect to the server."
-msgstr "Αδυναμία σύνδεσης στο server."
+msgid "Could Not Open Disc"
+msgstr "Δεν ήταν δυνατή η ανοίγματος του δίσκου"
 
 msgid "Could not create GCT file"
-msgstr "Αδυναμία δημιουργίας αρχείου GCT"
+msgstr "Δεν ήταν δυνατή η δημιουργία αρχείου GCT"
 
 #, c-format
 msgid "Could not create path: %s"
-msgstr "Αδυναμία δημιουργίας μονοπατιού: %s"
+msgstr "Δεν ήταν δυνατή η δημιουργία διαδρομής: %s"
 
 msgid "Could not extract files for:"
-msgstr "Αδυναμία αποσυμπίεσης αρχείων για:"
+msgstr "Δεν ήταν δυνατή η εξαγωγή αρχείων για:"
 
 msgid "Could not find info for this game in the wiitdb.xml."
-msgstr "Δεν βρέθηκαν πληροφορίες για το παιχνίδι αυτό στο αρχείο wiitdb.xml."
+msgstr "Δεν ήταν δυνατή η εύρεση πληροφοριών για αυτό το παιχνίδι στο wiitdb.xml."
 
 msgid "Could not get free device space for game."
-msgstr "Δεν βρέθηκε επαρκής ελεύθερος χώρος για το παιχνίδι."
+msgstr "Δεν ήταν δυνατή η λήψη ελεύθερου χώρου στη συσκευή για το παιχνίδι."
 
 msgid "Could not initialize DIP module!"
-msgstr "Αδυναμία εκκίνησης στοιχείου DIP!"
+msgstr "Δεν ήταν δυνατή η αρχικοποίηση του μονάδας DIP!"
 
-msgid "Could not initialize network!"
-msgstr "Αδυναμία σύνδεσης προγράμματος στο διαδίκτυο!"
+msgid "Could not initialize network. Timed out!"
+msgstr "Δεν ήταν δυνατή η αρχικοποίηση του δικτύου. Χρονικό όριο!"
 
-msgid "Could not initialize network, time out!"
-msgstr "Αδυναμία σύνδεσης προγράμματος στο διαδίκτυο, τέλος χρόνου!"
-
-msgid "Could not open Disc"
-msgstr "Αδυναμία ανάγνωσης δίσκου"
+msgid "Could not open disc"
+msgstr "Δεν ήταν δυνατή η ανοίγματος του δίσκου"
 
 msgid "Could not open the WiiTDB.xml file."
-msgstr "Αδυναμία ανοίγματος αρχείου wiitdb.xml"
+msgstr "Δεν ήταν δυνατή η ανοίγματος του αρχείου WiiTDB.xml."
 
 msgid "Could not open wiitdb.xml."
-msgstr "Αδυναμία ανοίγματο wiitdb.xml."
+msgstr "Δεν ήταν δυνατή η ανοίγματος του wiitdb.xml."
 
 msgid "Could not save."
-msgstr "Αδυναμία αποθήκευσης."
+msgstr "Δεν ήταν δυνατή η αποθήκευση."
 
 msgid "Could not write file."
-msgstr "Δεν είναι δυνατή η εγγραφή του αρχείου."
+msgstr "Δεν ήταν δυνατή η εγγραφή του αρχείου."
 
 msgid "Could not write to:"
-msgstr "Αδυναμία εγγραφής σε:"
+msgstr "Δεν ήταν δυνατή η εγγραφή σε:"
 
 msgid "Cover Action"
-msgstr ""
+msgstr "Ενέργεια Εξωφύλλου"
 
 msgid "Cover Download"
-msgstr "Λήψη εξωφύλλων"
+msgstr "Λήψη Εξωφύλλου"
 
 msgid "Create"
 msgstr "Δημιουργία"
@@ -544,85 +556,88 @@ msgid "Credits"
 msgstr "Συντελεστές"
 
 msgid "Crop Overscan"
-msgstr ""
+msgstr "Περικοπή Overscan"
 
 msgid "Current neek files are not neek2o. Game autoboot disabled."
-msgstr ""
-
-msgid "Custom Address"
-msgstr ""
-
-msgid "Custom Banners"
-msgstr "Τροποποιημένες ταμπέλες-εικονίδια"
-
-msgid "Custom Game IOS"
-msgstr ""
-
-msgid "Custom Games IOS"
-msgstr ""
-
-msgid "Custom Paths"
-msgstr "Τροποποιημένες διευθύνσεις/μονοπάτια αρχείων"
+msgstr "Τα τρέχοντα αρχεία neek δεν είναι neek2o. Η αυτόματη εκκίνηση του παιχνιδιού απενεργοποιήθηκε."
 
 msgid "Custom"
-msgstr ""
+msgstr "Προσαρμοσμένο"
+
+msgid "Custom Address"
+msgstr "Προσαρμοσμένη Διεύθυνση"
+
+msgid "Custom Banners"
+msgstr "Προσαρμοσμένα Μπάνερ"
+
+msgid "Custom Game IOS"
+msgstr "Προσαρμοσμένο IOS Παιχνιδιού"
+
+msgid "Custom Games IOS"
+msgstr "Προσαρμοσμένα IOS Παιχνιδιών"
+
+msgid "Custom Paths"
+msgstr "Προσαρμοσμένες Διαδρομές"
 
 msgid "Customs"
-msgstr "Τροποποιημένα"
+msgstr "Προσαρμοσμένα"
 
 msgid "Customs/Original"
-msgstr "Τροποποιημένα/Αυθεντικά"
+msgstr "Προσαρμοσμένα/Αρχικά"
 
 msgid "D Buttons"
-msgstr ""
+msgstr "Κουμπιά D"
 
 msgid "DOL Path"
-msgstr "Διεύθυνση DOL"
+msgstr "Διαδρομή DOL"
 
 msgid "Debug"
-msgstr ""
+msgstr "Αποσφαλμάτωση"
 
 msgid "Debug Wait"
-msgstr "Αναμονή debugger"
+msgstr "Αναμονή Αποσφαλμάτωσης"
 
 msgid "Debugger Paused Start"
-msgstr "Μεταγενέστερη εκκίνηση debugger"
+msgstr "Ο Αποσφαλματωτής Ξεκίνησε με Παύση"
 
 msgid "Dec"
-msgstr "Δεκέμβριος"
+msgstr "Δεκ"
 
 msgid "Default"
-msgstr "Βασική"
+msgstr "Προεπιλογή"
 
 msgid "Default Settings"
-msgstr "Βασικές ρυθμίσεις"
+msgstr "Προεπιλεγμένες Ρυθμίσεις"
 
 msgid "Deflicker Filter"
-msgstr ""
+msgstr "Φίλτρο Deflicker"
 
 msgid "Delete"
 msgstr "Διαγραφή"
 
 msgid "Delete Cached Banner"
-msgstr "Διαγραφή αποθηκευμένων ετικετών"
+msgstr "Διαγραφή Μπάνερ Cache"
 
 msgid "Delete Cheat GCT"
-msgstr "Διαγραφή αρχείων cheat GCT"
+msgstr "Διαγραφή Cheat GCT"
 
 msgid "Delete Cheat TXT"
-msgstr "Διαγραφή αρχείων cheat TXT"
+msgstr "Διαγραφή Cheat TXT"
 
 msgid "Delete Cover Artwork"
-msgstr "Διαγραφή εξωφύλλων"
+msgstr "Διαγραφή Εξώφυλλου"
 
 msgid "Delete Disc Artwork"
-msgstr "Διαγραφή ετικετών δίσκων"
+msgstr "Διαγραφή Τέχνης Δίσκου"
+
+msgid "Delete EmuNAND Saves"
+msgstr "Διαγραφή Αποθηκεύσεων EmuNAND"
 
 msgid "Delete category"
 msgstr "Διαγραφή κατηγορίας"
 
 msgid "Deleting directories..."
-msgstr "Διαγραφή φακέλων..."
+msgstr "Διαγραφή καταλόγων..."
 
 msgid "Deleting files..."
 msgstr "Διαγραφή αρχείων..."
@@ -634,7 +649,7 @@ msgid "Details"
 msgstr "Λεπτομέρειες"
 
 msgid "Developed by"
-msgstr "Ανάπτυξη από"
+msgstr "Αναπτύχθηκε από"
 
 msgid "Developer:"
 msgstr "Προγραμματιστής:"
@@ -643,261 +658,273 @@ msgid "Devolution"
 msgstr "Devolution"
 
 msgid "Devolution Loader Path"
-msgstr "Τοποθεσία devolution"
+msgstr "Διαδρομή Φορτωτή Devolution"
 
 msgid "Devolution's loader.bin file can't be loaded."
-msgstr "Το αρχείο loader.bin του devolution δεν φορτώθηκε."
+msgstr "Το αρχείο loader.bin του Devolution δεν μπορεί να φορτωθεί."
 
 msgid "Directory does not exist!"
-msgstr "Ο φάκελος δεν υπάρχει!"
+msgstr "Ο κατάλογος δεν υπάρχει!"
+
+msgid "Disable SD Card Mode?"
+msgstr "Απενεργοποίηση Λειτουργίας Κάρτας SD;"
+
+msgid "Disable Wiimote Motor"
+msgstr "Απενεργοποίηση Μοτέρ Wiimote"
+
+msgid "Disable Wiimote Speaker"
+msgstr "Απενεργοποίηση Ηχείου Wiimote"
 
 msgid "Disc"
-msgstr ""
+msgstr "Δίσκος"
 
 msgid "Disc 1"
-msgstr ""
+msgstr "Δίσκος 1"
 
 msgid "Disc 2"
-msgstr ""
+msgstr "Δίσκος 2"
 
 msgid "Disc Artwork"
-msgstr ""
+msgstr "Τέχνη Δίσκου"
 
 msgid "Disc Artwork Download"
-msgstr "Λήψη ετικετών δίσκων"
+msgstr "Λήψη Τέχνης Δίσκου"
 
 msgid "Disc Artwork Path"
-msgstr "Διεύθυνση ετικετών δίσκων"
+msgstr "Διαδρομή Τέχνης Δίσκου"
 
 msgid "Disc Default"
-msgstr "Προεπιλεγμένες παιχνιδιού"
+msgstr "Προεπιλογή Δίσκου"
 
 msgid "Disc Insert Detected"
-msgstr "Ανιχνεύτηκε οπτικός δίσκος"
+msgstr "Εντοπίστηκε Εισαγωγή Δίσκου"
 
 msgid "Disc Read Delay"
-msgstr ""
+msgstr "Καθυστέρηση Ανάγνωσης Δίσκου"
 
 msgid "Disc read error."
-msgstr "Σφάλμα κατα την ανάγνωση δίσκου."
+msgstr "Σφάλμα ανάγνωσης δίσκου."
 
 msgid "Disc-Select Prompt"
-msgstr ""
+msgstr "Προτροπή Επιλογής Δίσκου"
 
 msgid "Disc2 needs to be installed in uncompressed format to work with DM(L) v2.6+, are you sure you want to install in compressed format?"
-msgstr ""
+msgstr "Ο Δίσκος 2 πρέπει να εγκατασταθεί σε μη συμπιεσμένη μορφή για να λειτουργήσει με το DM(L) v2.6+, είστε σίγουροι ότι θέλετε να εγκαταστήσετε σε συμπιεσμένη μορφή;"
 
 msgid "DiskFlip"
-msgstr "Περιστροφή"
+msgstr "Αναστροφή Δίσκου"
 
 msgid "Display"
-msgstr "Απεικόνιση"
+msgstr "Εμφάνιση"
 
 msgid "Display as a carousel"
-msgstr "Προβολή σε καμπύλη"
+msgstr "Εμφάνιση ως καρουζέλ"
 
 msgid "Display as a channel grid"
-msgstr "Προβολή σε κανάλια"
+msgstr "Εμφάνιση ως πλέγμα καναλιών"
 
 msgid "Display as a grid"
-msgstr "Προβολή σε πλέγμα"
+msgstr "Εμφάνιση ως πλέγμα"
 
 msgid "Display as a list"
-msgstr "Προβολή σε λίστα"
+msgstr "Εμφάνιση ως λίστα"
 
 msgid "Display favorites only"
-msgstr "Προβολή μόνο των αγαπημένων"
+msgstr "Εμφάνιση μόνο αγαπημένων"
 
-msgid "Do you want to apply it now?"
-msgstr "Θέλετε να το εφαρμόσετε τώρα?"
+msgid "Displaying EmuNAND games"
+msgstr "Εμφάνιση παιχνιδιών EmuNAND"
+
+msgid "Displaying GameCube games"
+msgstr "Εμφάνιση παιχνιδιών GameCube"
+
+msgid "Displaying NAND games"
+msgstr "Εμφάνιση παιχνιδιών NAND"
+
+msgid "Displaying Wii games"
+msgstr "Εμφάνιση παιχνιδιών Wii"
+
+msgid "Displaying a custom selection"
+msgstr "Εμφάνιση προσαρμοσμένης επιλογής"
+
+msgid "Displaying as a carousel"
+msgstr "Εμφάνιση ως καρουζέλ"
+
+msgid "Displaying as a channel grid"
+msgstr "Εμφάνιση ως πλέγμα καναλιών"
+
+msgid "Displaying as a grid"
+msgstr "Εμφάνιση ως πλέγμα"
+
+msgid "Displaying as a list"
+msgstr "Εμφάνιση ως λίστα"
+
+msgid "Do You Want To Change Language?"
+msgstr "Θέλετε να αλλάξετε γλώσσα;"
 
 msgid "Do you want to apply this theme?"
-msgstr "Θέλετε να ενεργοποιήσετε αυτό το θέμα?"
-
-msgid "Do you want to change language?"
-msgstr "Θέλετε να αλλάξετε γλώσσα?"
+msgstr "Θέλετε να εφαρμόσετε αυτό το θέμα;"
 
 msgid "Do you want to continue with next game?"
-msgstr "Θα θέλατε να προχωρήσετε με τον επόμενο τίτλο?"
+msgstr "Θέλετε να συνεχίσετε με το επόμενο παιχνίδι;"
 
 msgid "Do you want to copy now?"
-msgstr "Θέλετε να αντιγράψετε τώρα?"
+msgstr "Θέλετε να αντιγράψετε τώρα;"
 
 msgid "Do you want to copy the game to SD or delete a game on SD?"
-msgstr "Θέλετε να αντιγράψετε το παιχνίδι στην κάρτα SD ή να το διαγράψετε από εκεί?"
+msgstr "Θέλετε να αντιγράψετε το παιχνίδι στην SD ή να διαγράψετε ένα παιχνίδι στην SD;"
 
 msgid "Do you want to delete a game on SD?"
-msgstr "Θα θέλατε να διαγράψετε ενα παιχνίδι από την κάρτα SD?"
+msgstr "Θέλετε να διαγράψετε ένα παιχνίδι στην SD;"
 
 msgid "Do you want to discard changes?"
-msgstr "Θέλετε να αγνοηθούν οι αλλαγές?"
-
-msgid "Do you want to download this theme?"
-msgstr "Θα θέλατε να κατεβάσετε το συγκεκριμένο θέμα?"
+msgstr "Θέλετε να απορρίψετε τις αλλαγές;"
 
 msgid "Do you want to extract all the save games?"
-msgstr "Θα θέλατε να αντιγράψετε όλα τα saves?"
+msgstr "Θέλετε να εξαγάγετε όλα τα αποθηκευμένα παιχνίδια;"
 
 msgid "Do you want to extract the save game?"
-msgstr "Θα θέλατε να αντιγράψετε το save?"
+msgstr "Θέλετε να εξαγάγετε το αποθηκευμένο παιχνίδι;"
 
 msgid "Do you want to format:"
-msgstr "Θέλετε να κάνετε format (ανασυγκρότηση):"
+msgstr "Θέλετε να μορφοποιήσετε:"
 
 msgid "Do you want to install selected games?"
-msgstr "Θέλετε να εγκαταστήσετε τα επιλεγμένα παιχνίδια?"
+msgstr "Θέλετε να εγκαταστήσετε τα επιλεγμένα παιχνίδια;"
 
 msgid "Do you want to load the default theme?"
-msgstr "Θέλετε να χρησιμποποιήστε το βασικό θέμα?"
+msgstr "Θέλετε να φορτώσετε το προεπιλεγμένο θέμα;"
 
 msgid "Do you want to move the file(s)? Any existing ones will be deleted!"
-msgstr ""
+msgstr "Θέλετε να μετακινήσετε το(τα) αρχείο(α); Οποιαδήποτε υπάρχοντα θα διαγραφούν!"
 
 msgid "Do you want to re-init network?"
-msgstr "Θέλετε να επανασυνδεθεί το πρόγραμμα με το διαδίκτυο?"
+msgstr "Θέλετε να επανεκκινήσετε το δίκτυο;"
 
 msgid "Do you want to start the game now?"
-msgstr "Θέλετε να εκκινήσετε το πρόγραμμα τώρα?"
+msgstr "Θέλετε να ξεκινήσετε το παιχνίδι τώρα;"
 
-msgid "Do you want to sync free space info sector on all FAT32 partitions?"
-msgstr "Θέλετε να συγχρονίσετε τον κενό χώρο από όλα τα FAT32 partitions?"
+msgid "Do you want to use cheats?"
+msgstr "Θέλετε να χρησιμοποιήσετε cheats;"
 
 msgid "Do you wish to update/download all language files?"
-msgstr "Θέλετε να αναβαθμίσετε/κατεβάσετε όλα τα αρχεία μεταφράσεων?"
+msgstr "Θέλετε να ενημερώσετε/κατεβάσετε όλα τα αρχεία γλώσσας;"
 
 msgid "Dol Video Patch"
-msgstr ""
+msgstr "Επιδιόρθωση Βίντεο Dol"
 
 msgid "Download"
 msgstr "Λήψη"
 
+#, c-format
+msgid "Download %i missing files?"
+msgstr "Λήψη %i αρχείων που λείπουν;"
+
 msgid "Download Now"
-msgstr "Κατέβασμα τώρα"
+msgstr "Λήψη Τώρα"
 
 msgid "Download finished"
-msgstr "Ολοκλήρωση λήψης"
+msgstr "Η λήψη ολοκληρώθηκε"
 
 msgid "Downloading 3D Covers"
-msgstr "Λήψη 3D εξωφύλλων..."
+msgstr "Λήψη 3D Εξωφύλλων"
 
 msgid "Downloading Custom Banners"
-msgstr "Λήψη τροποποιημένων ταμπελών..."
-
-msgid "Downloading Flat Covers"
-msgstr "Λήψη 2D εξωφύλλων..."
-
-msgid "Downloading Full HQ Covers"
-msgstr "Λήψη ολοκληρων εξωφύλλων σε υψηλή ποιότητα..."
-
-msgid "Downloading Full LQ Covers"
-msgstr "Λήψη ολοκληρων εξωφύλλων σε χαμηλή ποιότητα..."
+msgstr "Λήψη Προσαρμοσμένων Μπάνερ"
 
 msgid "Downloading Custom Disc Artwork"
-msgstr ""
+msgstr "Λήψη Προσαρμοσμένης Τέχνης Δίσκου"
+
+msgid "Downloading Flat Covers"
+msgstr "Λήψη Επίπεδων Εξωφύλλων"
+
+msgid "Downloading Full HQ Covers"
+msgstr "Λήψη Πλήρων Εξωφύλλων Υψηλής Ποιότητας"
+
+msgid "Downloading Full LQ Covers"
+msgstr "Λήψη Πλήρων Εξωφύλλων Χαμηλής Ποιότητας"
+
+msgid "Downloading Original Disc Artwork"
+msgstr "Λήψη Πρωτότυπης Τέχνης Δίσκου"
 
 msgid "Downloading file..."
 msgstr "Λήψη αρχείου..."
 
-msgid "Downloading image:"
-msgstr "Λήψη εικόνας:"
-
-msgid "Downloading Original Disc Artwork"
-msgstr ""
-
-msgid "Downloading pagelist:"
-msgstr "Λήψη διάταξης σελιδών:"
-
 msgid "Dump NAND to EmuNAND"
-msgstr "Αντιγραφή NAND στην τοποθεσία EmuNAND"
+msgstr "Απόρριψη NAND σε EmuNAND"
 
 msgid "During zoom"
-msgstr "Κατα την εστίαση"
+msgstr "Κατά τη διάρκεια του ζουμ"
 
 msgid "Dutch"
-msgstr "Oλλανδικά"
+msgstr "Ολλανδικά"
 
-msgid "ERROR"
-msgstr "ΣΦΑΛΜΑ"
-
-msgid "ERROR:"
-msgstr "ΣΦΑΛΜΑ:"
-
-msgid "ERROR: Can't set up theme."
-msgstr "ΣΦΑΛΜΑ: Δεν είναι δυνατή η εγκατάσταση θέματος."
-
-msgid "EmuNAND WAD Manager"
-msgstr ""
+msgid "EmuNAND"
+msgstr "EmuNAND"
 
 msgid "EmuNAND Channel Mode"
-msgstr ""
+msgstr "Λειτουργία Καναλιού EmuNAND"
 
 msgid "EmuNAND Channel Path"
-msgstr ""
-
-msgid "EmuNAND Channels"
-msgstr "Κανάλια από την εικονική NAND"
+msgstr "Διαδρομή Καναλιού EmuNAND"
 
 msgid "EmuNAND Save Mode"
-msgstr ""
+msgstr "Λειτουργία Αποθήκευσης EmuNAND"
 
 msgid "EmuNAND Save Path"
-msgstr ""
+msgstr "Διαδρομή Αποθήκευσης EmuNAND"
+
+msgid "EmuNAND WAD Manager"
+msgstr "Διαχειριστής WAD EmuNAND"
 
 msgid "Emulated NAND"
-msgstr "εικονικη NAND"
+msgstr "Εξομοιωμένη NAND"
+
+msgid "Enable SD Card Mode?"
+msgstr "Ενεργοποίηση Λειτουργίας Κάρτας SD;"
 
 msgid "English"
 msgstr "Αγγλικά"
 
 msgid "Enter Path"
-msgstr "Ορίστε την τοποθεσία"
+msgstr "Εισαγωγή Διαδρομής"
 
-msgid "Error"
-msgstr "Σφάλμα"
-
-msgid "Error !"
-msgstr "Σφαλμα !"
+msgid "Error Reading Disc"
+msgstr "Σφάλμα Ανάγνωσης Δίσκου"
 
 #, c-format
 msgid "Error creating path: %s"
-msgstr "Σφάλμα δημιουργίας μονοπατιού: %s"
+msgstr "Σφάλμα δημιουργίας διαδρομής: %s"
 
 msgid "Error opening downloaded file"
-msgstr "Σφάλμα ανοίγματος ληφθέντος αρχείου"
-
-msgid "Error reading Disc"
-msgstr "Σφάλμα ανάγνωσης Δίσκου"
+msgstr "Σφάλμα ανοίγματος του ληφθέντος αρχείου"
 
 msgid "Error reading disc"
 msgstr "Σφάλμα ανάγνωσης δίσκου"
 
-#, c-format
-msgid "Error when downloading file: %i"
-msgstr "Σφάλμα κατα την λήψη αρχείου: %i"
-
-msgid "Error while downloding file"
-msgstr "Σφάλμα κατα την λήψη αρχείου"
+msgid "Error while downloading file"
+msgstr "Σφάλμα κατά τη λήψη του αρχείου"
 
 msgid "Error while opening the zip."
-msgstr "Σφάλμα κατα το άνοιγμα αρχείου zip."
+msgstr "Σφάλμα κατά το άνοιγμα του zip."
 
-msgid "Error while transfering data."
-msgstr "Σφάλμα κατα τη μεταφορά αρχείων."
+msgid "Error while transferring data."
+msgstr "Σφάλμα κατά τη μεταφορά δεδομένων."
 
 msgid "Error while updating USB Loader GX."
-msgstr "Σφάλμα κατα την αναβάθμιση του USB Loader GX."
+msgstr "Σφάλμα κατά την ενημέρωση του USB Loader GX."
 
 msgid "Error writing the data."
-msgstr "Σφάλμα κατα την εγγραφή δεδομένων."
+msgstr "Σφάλμα κατά την εγγραφή των δεδομένων."
 
 msgid "Error:"
 msgstr "Σφάλμα:"
 
 msgid "Error: Not enough space on SD."
-msgstr "Σφάλμα: δεν υπάρχει αρκετός διαθέσιμος χώρος στην κάρτα SD"
+msgstr "Σφάλμα: Δεν υπάρχει αρκετός χώρος στην SD."
 
-msgid "Errors occured."
-msgstr "Σημειώθηκαν λάθη."
+msgid "Errors occurred."
+msgstr "Παρουσιάστηκαν σφάλματα."
 
 msgid "Everything"
 msgstr "Όλα"
@@ -906,85 +933,76 @@ msgid "Exit"
 msgstr "Έξοδος"
 
 msgid "Exit to where?"
-msgstr "Έξοδος προς που?"
+msgstr "Έξοδος προς πού;"
 
 msgid "Export All Saves to EmuNAND"
-msgstr "Αντιγραφή όλων των saves στην εικονική NAND"
+msgstr "Εξαγωγή Όλων των Αποθηκεύσεων σε EmuNAND"
 
 msgid "Export Miis to EmuNAND"
-msgstr "Αντιγραφή των Mii στην εικονική NAND"
+msgstr "Εξαγωγή Miis σε EmuNAND"
 
 msgid "Export SYSCONF to EmuNAND"
-msgstr "Αντιγραφή SYSCONF στην εικονική NAND"
+msgstr "Εξαγωγή SYSCONF σε EmuNAND"
 
 msgid "Extract Miis to the EmuNAND?"
-msgstr "Αντιγραφή των Mii στην εικονική NAND?"
+msgstr "Εξαγωγή Miis στην EmuNAND;"
 
 msgid "Extract SYSCONF to the EmuNAND?"
-msgstr "Αντιγραφή SYSCONF στην εικονική NAND?"
+msgstr "Εξαγωγή SYSCONF στην EmuNAND;"
 
 msgid "Extract Save to EmuNAND"
-msgstr "Αντιγραφή του save στην εικονική NAND"
-
-msgid "Extracting file:"
-msgstr "Αποσυμπίεση αρχείου:"
-
-msgid "Extracting files..."
-msgstr "Αποσυμπίεση αρχείων..."
-
-msgid "Extracting files:"
-msgstr "Αποσυμπίεση αρχείων:"
+msgstr "Εξαγωγή Αποθήκευσης σε EmuNAND"
 
 msgid "Extracting NAND files:"
-msgstr "Αντιγραφή αρχείων από τη μνημη NAND:"
+msgstr "Εξαγωγή αρχείων NAND:"
+
+msgid "Extracting file:"
+msgstr "Εξαγωγή αρχείου:"
+
+msgid "Extracting files..."
+msgstr "Εξαγωγή αρχείων..."
+
+msgid "Extracting files:"
+msgstr "Εξαγωγή αρχείων:"
 
 msgid "F-Zero AX"
-msgstr ""
+msgstr "F-Zero AX"
 
 msgid "Failed"
 msgstr "Απέτυχε"
 
 msgid "Failed copying file"
-msgstr "Μη επιτυχής αντιγραφή αρχείου"
+msgstr "Απέτυχε η αντιγραφή αρχείου"
 
-msgid "Failed formating"
-msgstr "Μη επιτυχής ανασυγκρότηση (format)"
+msgid "Failed formatting"
+msgstr "Απέτυχε η μορφοποίηση"
 
 msgid "Failed to extract all files. Savegame might not exist."
-msgstr "Ανεπιτυχής αντιγραφή όλων των αρχείων. Το save πιθανόν δεν αντεγράφη."
-
-msgid "Failed to extract."
-msgstr "Αποτυχία αποσυμπίεσης."
+msgstr "Απέτυχε η εξαγωγή όλων των αρχείων. Το αποθηκευμένο παιχνίδι μπορεί να μην υπάρχει."
 
 msgid "Failed to initialize the USB storage device."
-msgstr "Αποτυχία έναρξης αποθηκευτικής συσκευής USB."
+msgstr "Απέτυχε η αρχικοποίηση της συσκευής αποθήκευσης USB."
 
 msgid "Failed to open partition"
-msgstr "Αδυναμία ανοίγματος partition"
-
-msgid "Failed to read ticket."
-msgstr "Aδυναμία εύρεσης αρχείου ticket."
-
-msgid "Failed to read tmd file."
-msgstr "Aδυναμία ανοίγματος αρχείου tmd."
+msgstr "Απέτυχε το άνοιγμα της κατάτμησης"
 
 msgid "Failed to read WAD header."
-msgstr "Αδυναμία ανάγνωσης τίτλου του αρχείου WAD."
+msgstr "Απέτυχε η ανάγνωση της κεφαλίδας WAD."
+
+msgid "Failed to read ticket."
+msgstr "Απέτυχε η ανάγνωση του εισιτηρίου."
+
+msgid "Failed to read tmd file."
+msgstr "Απέτυχε η ανάγνωση του αρχείου tmd."
 
 msgid "Failed updating"
-msgstr "Ανεπιτυχής αναβάθμιση"
+msgstr "Απέτυχε η ενημέρωση"
 
 msgid "Favorite Level"
-msgstr "Βαθμολογία"
-
-msgid "Features"
-msgstr "Επιμέρους στοιχεία"
-
-msgid "Features Settings"
-msgstr "Ρυθμίσεις επιμέρους στοιχείων"
+msgstr "Επίπεδο Αγαπημένων"
 
 msgid "Feb"
-msgstr "Φεβρουάριος"
+msgstr "Φεβ"
 
 msgid "File"
 msgstr "Αρχείο"
@@ -993,212 +1011,205 @@ msgid "File not found."
 msgstr "Το αρχείο δεν βρέθηκε."
 
 msgid "File read/write error."
-msgstr "Σφάλμα ανάγνωσης/εγγραφής αρχείου"
+msgstr "Σφάλμα ανάγνωσης/εγγραφής αρχείου."
 
 msgid "Files extracted successfully."
-msgstr "Το αρχείο αποσυμπιέστηκε επιτυχώς."
-
-#, c-format
-msgid "Filesize is %i Byte."
-msgstr "Το μέγεθος του αρχείου είναι %i byte."
-
-msgid "Filesize is 0 Byte."
-msgstr "Το μέγεθος του αρχείου είναι 0 byte."
+msgstr "Τα αρχεία εξήχθησαν με επιτυχία."
 
 msgid "Flat Covers"
-msgstr "2D εξώφυλλα"
+msgstr "Επίπεδα Εξώφυλλα"
 
 msgid "Flip-X"
-msgstr "οριζόντια αναστροφή"
+msgstr "Αναστροφή-X"
 
 msgid "Folder"
-msgstr "Ντοσιέ"
+msgstr "Φάκελος"
 
 msgid "Font Scale Factor"
-msgstr "Μέγεθος γραμματοσειράς"
+msgstr "Παράγοντας Κλίμακας Γραμματοσειράς"
 
 msgid "Force 16:9"
-msgstr "Επιβολή αναλογίας 16:9"
+msgstr "Αναγκαστική 16:9"
 
 msgid "Force 4:3"
-msgstr "Επιβολή αναλογίας  4:3"
+msgstr "Αναγκαστική 4:3"
 
 msgid "Force NTSC"
-msgstr "Επιβολή NTSC"
+msgstr "Αναγκαστική NTSC"
 
 msgid "Force NTSC480p"
-msgstr "Επιβολή NTSC480p"
+msgstr "Αναγκαστική NTSC480p"
 
 msgid "Force PAL480p"
-msgstr "Επιβολή PAL480p"
+msgstr "Αναγκαστική PAL480p"
 
 msgid "Force PAL50"
-msgstr "Επιβολή PAL50"
+msgstr "Αναγκαστική PAL50"
 
 msgid "Force PAL60"
-msgstr "Επιβολή PAL60"
+msgstr "Αναγκαστική PAL60"
 
 msgid "Force Widescreen"
-msgstr ""
+msgstr "Αναγκαστική Ευρεία Οθόνη"
 
 msgid "Format"
-msgstr "Ανασυγκρότηση (format)"
+msgstr "Μορφοποίηση"
 
 msgid "Formatting, please wait..."
-msgstr "Ανασυγκρότηση (format), παρακαλώ περιμένετε..."
+msgstr "Μορφοποίηση, παρακαλώ περιμένετε..."
 
 msgid "Found missing images"
-msgstr "Βρέθηκαν οι εικόνες που λείπουν"
+msgstr "Βρέθηκαν εικόνες που λείπουν"
 
 msgid "Frame"
-msgstr "Καρέ"
+msgstr "Πλαίσιο"
 
 msgid "Frame Projection Height"
-msgstr "Ύψος προβολής καρέ"
+msgstr "Ύψος Προβολής Πλαισίου"
 
 msgid "Frame Projection Width"
-msgstr "Πλάτος προβολής καρέ"
+msgstr "Πλάτος Προβολής Πλαισίου"
 
 msgid "Frame Projection X-Offset"
-msgstr "Οριζόντιο πλάτος προβολής καρέ"
+msgstr "Μετατόπιση X Προβολής Πλαισίου"
 
 msgid "Frame Projection Y-Offset"
-msgstr "Κάθετο ύψος προβολής καρέ"
+msgstr "Μετατόπιση Y Προβολής Πλαισίου"
 
 msgid "Framebuffer"
-msgstr ""
+msgstr "Πλαίσιο Μνήμης"
 
 msgid "Frames"
-msgstr "Καρέ"
+msgstr "Πλαίσια"
 
 msgid "Free Space"
-msgstr "Ελεύθερος χώρος"
+msgstr "Ελεύθερος Χώρος"
 
 msgid "French"
 msgstr "Γαλλικά"
 
 msgid "Full"
-msgstr "Πλήρης/ες"
+msgstr "Πλήρης"
 
 msgid "Full Cover Path"
-msgstr "Πλήρης διεύθυνση εξωφύλλων"
+msgstr "Διαδρομή Πλήρους Εξωφύλλου"
 
 msgid "Full Covers"
-msgstr "Ολόκληρα εξώφυλλα"
-
-msgid "Full Menu"
-msgstr "Πλήρες μενού"
+msgstr "Πλήρη Εξώφυλλα"
 
 msgid "Full Covers Download"
-msgstr "Λήψη ολόκληρων εξωφύλλων"
+msgstr "Λήψη Πλήρων Εξωφύλλων"
+
+msgid "Full Menu"
+msgstr "Πλήρες Μενού"
 
 msgid "Full shutdown"
-msgstr "Πλήρως"
+msgstr "Πλήρης Τερματισμός"
+
+msgid "Fullscreen"
+msgstr "Πλήρης οθόνη"
 
 msgid "GAMEID_Gamename"
-msgstr "IDπαιχνιδιού_Όνομα παιχνιδιού"
+msgstr "GAMEID_ΌνομαΠαιχνιδιού"
 
 msgid "GC Banner Scale"
-msgstr "Μέγεθος ταμπελών τίτλων GC"
-
-msgid "GC Games"
-msgstr "Παιχνίδια GC"
+msgstr "Κλίμακα Μπάνερ GC"
 
 msgid "GC Install 32K Aligned"
-msgstr "Εγκατάσταση τίτλων GC σε σύστημα αρχείων 32Κ"
+msgstr "Εγκατάσταση GC Ευθυγραμμισμένη στα 32K"
 
 msgid "GC Install Compressed"
-msgstr "Εγκατάσταση τίτλων GC σε συμπιεσμένη μορφή"
+msgstr "Εγκατάσταση GC Συμπιεσμένη"
 
-msgid "GCT Cheatcodes Path"
-msgstr "Διεύθυνση αχείων cheat GCT"
+msgid "GCT Cheat Codes Path"
+msgstr "Διαδρομή Κωδικών Cheat GCT"
 
 msgid "GCT File created"
-msgstr "Δημιουργήθηκε αρχείο cheat GCT"
+msgstr "Το αρχείο GCT δημιουργήθηκε"
 
 msgid "GUI Settings"
-msgstr "Ρυθμίσεις γραφικής απεικόνισης μένου"
+msgstr "Ρυθμίσεις GUI"
 
 msgid "GXDraw"
-msgstr ""
+msgstr "GXDraw"
 
 msgid "GXFlush"
-msgstr ""
-
-msgid "GameCube Games Delete"
-msgstr "Διαγραφή παιχνιδιών GameCube"
-
-msgid "GameCube Install Menu"
-msgstr "menu εγκατάστασης παιχνιδιών GameCube"
+msgstr "GXFlush"
 
 msgid "Game ID"
-msgstr "ID παιχνιδιού"
+msgstr "ID Παιχνιδιού"
 
 msgid "Game IOS"
-msgstr "IOS παιχνιδιού"
+msgstr "IOS Παιχνιδιού"
 
-msgid "Game Language"
-msgstr "γλώσσα παιχνιδιού"
-
-msgid "Game Load"
-msgstr "φόρτωση παιχνιδιού"
-
-msgid "Game Lock"
-msgstr "κλέιδωμα παιχνιδιού"
-
-msgid "Game Only"
-msgstr "Μόνο το παιχνίδι"
-
-msgid "Game Region"
-msgstr "προέλευση παιχνιδιού"
-
-msgid "Game Size"
-msgstr "μέγεθος παιχνιδιού"
-
-msgid "Game Sound Mode"
-msgstr "επιλογή ήχου παιχνιδιού-ων"
-
-msgid "Game Sound Volume"
-msgstr "ένταση ήχου παιχνιδιού-ων"
-
-msgid "Game Split Size"
-msgstr "μέγεθος κομματιών παιχνιδιού-ων"
-
-msgid "Game Window Mode"
-msgstr "επιλογή απεικόνισης παραθύρων"
-
-msgid "Game is already installed:"
+msgid "Game Is Already Installed:"
 msgstr "Το παιχνίδι είναι ήδη εγκατεστημένο:"
 
-msgid "Games IOS"
-msgstr ""
+msgid "Game Language"
+msgstr "Γλώσσα Παιχνιδιού"
+
+msgid "Game Load"
+msgstr "Φόρτωση Παιχνιδιού"
+
+msgid "Game Lock"
+msgstr "Κλείδωμα Παιχνιδιού"
+
+msgid "Game Only"
+msgstr "Μόνο Παιχνίδι"
+
+msgid "Game Region"
+msgstr "Περιοχή Παιχνιδιού"
+
+msgid "Game Size"
+msgstr "Μέγεθος Παιχνιδιού"
+
+msgid "Game Sound Mode"
+msgstr "Λειτουργία Ήχου Παιχνιδιού"
+
+msgid "Game Sound Volume"
+msgstr "Ένταση Ήχου Παιχνιδιού"
+
+msgid "Game Split Size"
+msgstr "Μέγεθος Διαχωρισμού Παιχνιδιού"
+
+msgid "Game Window Mode"
+msgstr "Λειτουργία Παραθύρου Παιχνιδιού"
 
 msgid "Game/Install Partition"
-msgstr "partition που θα εγκαταστηαθεί το παιχνίδι."
+msgstr "Κατάτμηση Παιχνιδιού/Εγκατάστασης"
 
 msgid "GameCube"
-msgstr ""
+msgstr "GameCube"
 
 msgid "GameCube Controller"
-msgstr ""
+msgstr "Χειριστήριο GameCube"
+
+msgid "GameCube Games Delete"
+msgstr "Διαγραφή Παιχνιδιών GameCube"
+
+msgid "GameCube Install Menu"
+msgstr "Μενού Εγκατάστασης GameCube"
 
 msgid "GameCube Mode"
-msgstr "Μέθοδος φόρτωσης παιχνιδιών GameCube"
+msgstr "Λειτουργία GameCube"
 
 msgid "GameCube Source"
-msgstr ""
-
-msgid "Gamename [GAMEID]"
-msgstr "όνομα παιχνιδιού [κωδικόςπαιχνιδιού]"
+msgstr "Πηγή GameCube"
 
 msgid "GameTDB"
-msgstr ""
+msgstr "GameTDB"
+
+msgid "Gamename [GAMEID]"
+msgstr "ΌνομαΠαιχνιδιού [GAMEID]"
 
 msgid "Games"
 msgstr "Παιχνίδια"
 
+msgid "Games IOS"
+msgstr "IOS Παιχνιδιών"
+
 msgid "Generating GXGameCategories.xml"
-msgstr "Δημιουργία αρχείου GXGameCategories.xml"
+msgstr "Δημιουργία GXGameCategories.xml"
 
 msgid "Genre:"
 msgstr "Είδος:"
@@ -1207,55 +1218,55 @@ msgid "German"
 msgstr "Γερμανικά"
 
 msgid "Getting file list..."
-msgstr "ʼνοιγμα λίστας αρχείων..."
+msgstr "Λήψη λίστας αρχείων..."
 
 msgid "Getting game folder size..."
-msgstr "ʼνίχνευση μεγέθους φακέλων..."
+msgstr "Λήψη μεγέθους φακέλου παιχνιδιού..."
 
 msgid "Global Settings"
-msgstr "Γενικές ρυθμίσεις"
+msgstr "Παγκόσμιες Ρυθμίσεις"
 
 msgid "Grid Scroll Speed"
-msgstr "Ταχύτητα εναλλαγής εικόνων"
+msgstr "Ταχύτητα Κύλισης Πλέγματος"
 
 msgid "HOME Menu"
-msgstr "Mενού HOME"
+msgstr "Μενού HOME"
 
 msgid "Hard Drive Settings"
-msgstr "Ρυθμίσεις σκληρού δίσκου"
+msgstr "Ρυθμίσεις Σκληρού Δίσκου"
 
 msgid "High Quality"
-msgstr "Υψηλή ποιότητα"
+msgstr "Υψηλή Ποιότητα"
 
 msgid "High/Low"
-msgstr "Υψηλή/Χαμηλή"
+msgstr "Υψηλό/Χαμηλό"
 
 msgid "Homebrew Apps Path"
-msgstr "Τοποθεσία εφαρμογών homebrew"
+msgstr "Διαδρομή Εφαρμογών Homebrew"
 
 msgid "Homebrew Channel"
-msgstr "Κανάλι homebrew"
+msgstr "Κανάλι Homebrew"
 
 msgid "Homebrew Launcher"
-msgstr "εκκίνηση homebrew"
+msgstr "Εκκινητής Homebrew"
 
 msgid "Hooktype"
-msgstr "τύπος hook"
+msgstr "Τύπος Hook"
 
 msgid "Hour"
 msgstr "Ώρα"
 
 msgid "How to Shutdown?"
-msgstr "Πως να τερματιστει η εφαρμογή?"
+msgstr "Πώς να Τερματίσετε;"
 
 msgid "Import Categories"
-msgstr "Εισαγωγή κατηγοριών"
+msgstr "Εισαγωγή Κατηγοριών"
 
 msgid "Import operation successfully completed."
-msgstr "Η εισαγωγή ολοκληρώθηκε επιτυχώς."
+msgstr "Η λειτουργία εισαγωγής ολοκληρώθηκε με επιτυχία."
 
 msgid "Importing categories"
-msgstr "Εισαγωγή κατηγοριών..."
+msgstr "Εισαγωγή κατηγοριών"
 
 #, c-format
 msgid "Incoming file %0.2fKB"
@@ -1266,19 +1277,19 @@ msgid "Incoming file %0.2fMB"
 msgstr "Εισερχόμενο αρχείο %0.2fMB"
 
 msgid "Individual"
-msgstr "Ξεχωριστά"
+msgstr "Ατομικό"
 
 msgid "Information"
-msgstr ""
+msgstr "Πληροφορίες"
 
 msgid "Initializing Network"
-msgstr "Σύνδεση στο διαδίκτυο"
+msgstr "Αρχικοποίηση Δικτύου"
 
-msgid "Insert Disk"
-msgstr "Εισάγετε δίσκο"
+msgid "Insert Disc"
+msgstr "Εισάγετε Δίσκο"
 
-msgid "Insert a Wii or a GameCube Disc!"
-msgstr "Εισάγετε έναν οπτικό δίσκο Wii ή GameCube!"
+msgid "Insert a Wii or a GameCube disc!"
+msgstr "Εισάγετε έναν δίσκο Wii ή GameCube!"
 
 msgid "Install"
 msgstr "Εγκατάσταση"
@@ -1287,515 +1298,491 @@ msgid "Install Canceled"
 msgstr "Η εγκατάσταση ακυρώθηκε"
 
 msgid "Install Directories"
-msgstr "Τοποθεσίες/Φάκελοι εγκατάστασης"
+msgstr "Εγκατάσταση Καταλόγων"
 
 msgid "Install Error!"
-msgstr "Σφάλμα εγκατάστασης!"
+msgstr "Σφάλμα Εγκατάστασης!"
+
+msgid "Install Finished"
+msgstr "Η Εγκατάσταση Ολοκληρώθηκε"
 
 msgid "Install Partitions"
-msgstr "Partitions εγκατάστασης"
+msgstr "Εγκατάσταση Κατατμήσεων"
+
+msgid "Install a Game?"
+msgstr "Εγκατάσταση Παιχνιδιού;"
 
 msgid "Install a game"
-msgstr "Εγκαταστήστε ενα παιχνίδι"
+msgstr "Εγκατάσταση παιχνιδιού"
 
 msgid "Install error - Cleaning incomplete data."
-msgstr ""
+msgstr "Σφάλμα εγκατάστασης - Καθαρισμός μη ολοκληρωμένων δεδομένων."
 
-msgid "Install finished"
-msgstr "Η εγκατάσταση ολοκληρώθηκε"
+msgid "Installing Game:"
+msgstr "Εγκατάσταση Παιχνιδιού:"
 
 msgid "Installing GameCube Game..."
-msgstr "Εγκαθίσταται παιχνίδι GameCube..."
+msgstr "Εγκατάσταση Παιχνιδιού GameCube..."
 
 msgid "Installing content"
-msgstr "Εγκαθίσταται περιεχόμενο"
-
-msgid "Installing game:"
-msgstr "Εγκαθίσταται παιχνίδι:"
+msgstr "Εγκατάσταση περιεχομένου"
 
 msgid "Installing title..."
-msgstr "Εγκαθίσταται τίτλος..."
+msgstr "Εγκατάσταση τίτλου..."
 
 msgid "Invalid IOS number entered. Number must be -1 for inherit or 200 - 255."
-msgstr "Λανθασμένος αριθμός IOS. Πρέπει να είναι μεταξύ 200 και 255 ή -1 για τον βασικό"
+msgstr "Εισήχθη μη έγκυρος αριθμός IOS. Ο αριθμός πρέπει να είναι -1 για κληρονομιά ή 200 - 255."
 
 msgid "Invalid WAD file."
-msgstr "Μη συμβατό αρχείο WAD."
+msgstr "Μη έγκυρο αρχείο WAD."
 
 msgid "It seems that you have some information that will be helpful to us. Please pass this information along to the DEV team."
-msgstr "Φαίνεται ότι έχετε πληροφορίες που θα μπορούσαν να αποβούν χρήσιμες για την εφαρμογή. Παρακαλώ μεταβιβάστε τες στους συντελεστές."
+msgstr "Φαίνεται ότι έχετε κάποιες πληροφορίες που θα μας βοηθήσουν. Παρακαλώ μεταβιβάστε αυτές τις πληροφορίες στην ομάδα DEV."
 
 msgid "Italian"
 msgstr "Ιταλικά"
 
 msgid "Jan"
-msgstr "Ιανουάριος"
+msgstr "Ιαν"
 
 msgid "Japanese"
 msgstr "Ιαπωνικά"
 
 msgid "Japanese Patch"
-msgstr ""
+msgstr "Επιδιόρθωση Ιαπωνικών"
 
 msgid "Joypad"
-msgstr ""
+msgstr "Χειριστήριο"
 
 msgid "July"
-msgstr "Ιούλιος"
+msgstr "Ιουλ"
 
 msgid "June"
-msgstr "Ιούνιος"
+msgstr "Ιουν"
 
 msgid "KPAD Read"
-msgstr ""
+msgstr "Ανάγνωση KPAD"
 
 msgid "Keyboard"
 msgstr "Πληκτρολόγιο"
 
 msgid "Korean"
-msgstr "Κορεάτικα"
+msgstr "Κορεατικά"
 
 msgid "LED Activity"
-msgstr ""
+msgstr "Δραστηριότητα LED"
 
-msgid "Language Files"
-msgstr "αρχεία μεταφράσεων"
+msgid "Language Change:"
+msgstr "Αλλαγή γλώσσας:"
 
-msgid "Language change:"
-msgstr "Επιλογή γλώσσας:"
+msgid "Language Path Changed."
+msgstr "Η διαδρομή γλώσσας άλλαξε."
 
-msgid "Languagefiles Path"
-msgstr "τοποθεσία αρχείων μεταφράσεων"
-
-msgid "Languagepath changed."
-msgstr "Η τοποθεσία αρχείων μεταφράσεων άλλαξε."
+msgid "Languages Path"
+msgstr "Διαδρομή Γλωσσών"
 
 msgid "Launching Wii games with emulated NAND only works on d2x cIOS! Change game IOS to a d2x cIOS first."
-msgstr ""
+msgstr "Η εκκίνηση παιχνιδιών Wii με εξομοιωμένη NAND λειτουργεί μόνο σε d2x cIOS! Αλλάξτε το IOS του παιχνιδιού σε d2x cIOS πρώτα."
 
 msgid "Launching emulated NAND channels only works on d2x cIOS! Change game IOS to a d2x cIOS first."
-msgstr "Η εκκίνηση καναλιών από την εικονική NAND υποστηρίζεται μόνο από το cIOS d2x! Επιλέξτε ένα ΙΟS με d2x για να συνεχίσετε."
+msgstr "Η εκκίνηση καναλιών με εξομοιωμένη NAND λειτουργεί μόνο σε d2x cIOS! Αλλάξτε το IOS του παιχνιδιού σε d2x cIOS πρώτα."
 
 msgid "Left"
 msgstr "Αριστερά"
 
 msgid "Like SysMenu"
-msgstr "όπως στο κεντρικό μενού"
+msgstr "Όπως το SysMenu"
 
 msgid "List on game launch"
-msgstr "Προβολή κατα την εκκίνηση παιχνιδιού"
+msgstr "Λίστα κατά την εκκίνηση του παιχνιδιού"
 
 msgid "Load"
 msgstr "Φόρτωση"
 
-msgid "Load from SD/USB"
-msgstr "ʼνοιγμα από SD/USB"
-
 #, c-format
 msgid "Load file from: %s ?"
-msgstr "ʼνοιγμα αρχείου από: %s ?"
+msgstr "Φόρτωση αρχείου από: %s ;"
+
+msgid "Load from SD/USB"
+msgstr "Φόρτωση από SD/USB"
 
 msgid "Load this DOL as alternate DOL?"
-msgstr "ΦΓόρτωση αυτού του αρχείου DOL ως εναλλακτικό?"
+msgstr "Φόρτωση αυτού του DOL ως εναλλακτικό DOL;"
 
 msgid "Loader Settings"
-msgstr "Ρυθμίσεις προγράμματος"
+msgstr "Ρυθμίσεις Φορτωτή"
 
 msgid "Loaders IOS"
-msgstr ""
+msgstr "IOS Φορτωτών"
 
-msgid "Loading standard language."
-msgstr "Φόρτωση βασικής γλώσσας."
+msgid "Loading Standard Language."
+msgstr "Φόρτωση προεπιλεγμένης γλώσσας."
 
 msgid "Loading standard music."
-msgstr "Φόρτωση βασικής μουσικής."
+msgstr "Φόρτωση προεπιλεγμένης μουσικής."
 
 msgid "Lock Console"
-msgstr "Φραγή μενού"
+msgstr "Κλείδωμα Κονσόλας"
 
 msgid "Lock USB Loader GX"
 msgstr "Κλείδωμα USB Loader GX"
 
 msgid "Locked"
-msgstr "Κλειδώθηκε"
+msgstr "Κλειδωμένο"
 
 msgid "Log to file"
-msgstr ""
+msgstr "Καταγραφή σε αρχείο"
 
 msgid "Loop Directory"
-msgstr "Λούπα των αρχείων στο φάκελο"
+msgstr "Επανάληψη Καταλόγου"
 
 msgid "Loop Music"
-msgstr "Λούπα της μουσικής"
+msgstr "Επανάληψη Μουσικής"
 
 msgid "Loop Sound"
-msgstr "Λούπα του ήχου"
+msgstr "Επανάληψη Ήχου"
 
 msgid "Low Quality"
-msgstr "Χαμηλή ποιότητα"
+msgstr "Χαμηλή Ποιότητα"
 
 msgid "Low/High"
-msgstr "Χαμηλή/Υψηλή"
+msgstr "Χαμηλό/Υψηλό"
 
 msgid "MIOS (Default & Customs)"
-msgstr "MIOS (Βασικό & τροποποιημένα)"
+msgstr "MIOS (Προεπιλογή & Προσαρμοσμένα)"
 
 msgid "Main DOL"
-msgstr "κύριο αρχείο .dol"
+msgstr "Κύριο DOL"
 
 msgid "Main GameCube Games Path"
-msgstr "Βασική τοποθεσία παιχνιδιών GameCube"
+msgstr "Κύρια Διαδρομή Παιχνιδιών GameCube"
 
 msgid "Main GameCube Path"
-msgstr "Βασική τοποθεσία GameCube"
+msgstr "Κύρια Διαδρομή GameCube"
 
 msgid "Main Path"
-msgstr "Βασική τοποθεσία"
+msgstr "Κύρια Διαδρομή"
 
 msgid "Manual (40~120)"
-msgstr ""
+msgstr "Χειροκίνητο (40~120)"
 
 msgid "Mar"
-msgstr "Mάρτιος"
+msgstr "Μαρ"
 
 msgid "Mark New Games"
-msgstr "Μαρκάρισμα νέων παιχνιδιών"
+msgstr "Σήμανση Νέων Παιχνιδιών"
 
 msgid "May"
-msgstr "Mαϊος"
+msgstr "Μάι"
 
 msgid "Memory Card Blocks Size"
-msgstr ""
+msgstr "Μέγεθος Μπλοκ Κάρτας Μνήμης"
 
 msgid "Memory Card Emulation"
-msgstr ""
+msgstr "Εξομοίωση Κάρτας Μνήμης"
 
 msgid "Memory Card with 2043 blocs has issues with Nintendont. Use at your own risk."
-msgstr ""
+msgstr "Η Κάρτα Μνήμης με 2043 μπλοκ έχει προβλήματα με το Nintendont. Χρησιμοποιήστε με δική σας ευθύνη."
 
 msgid "Messageboard Update"
-msgstr "Ενημέρωση messageboard του Wii"
+msgstr "Ενημέρωση Πίνακα Μηνυμάτων"
+
+msgid "Miscellaneous Settings"
+msgstr "Διάφορες Ρυθμίσεις"
 
 msgid "Motion+ Video"
-msgstr "βιντεο motion+"
+msgstr "Βίντεο Motion+"
 
 msgid "Mount DVD drive"
-msgstr "Φόρτωση DVD"
-
-msgid "Mount USB at launch"
-msgstr ""
+msgstr "Προσάρτηση μονάδας DVD"
 
 msgid "Move File"
-msgstr ""
+msgstr "Μετακίνηση Αρχείου"
 
 msgid "Multiple Partitions"
-msgstr "πολλαπλά partitions"
+msgstr "Πολλαπλές Κατατμήσεις"
 
 msgid "Music Loop Mode"
-msgstr "Λειτουργία βρόχου μουσικής"
+msgstr "Λειτουργία Επανάληψης Μουσικής"
 
 msgid "Music Volume"
-msgstr "Ένταση μουσικής"
+msgstr "Ένταση Μουσικής"
 
-msgid "NMM Mode"
-msgstr ""
+msgid "NAND"
+msgstr "NAND"
 
-msgid "NAND Chan. Emulation"
-msgstr "εξομοίωση καναλιών εικονικής NAND"
-
-msgid "NAND Channels"
-msgstr "κανάλια NAND"
-
-msgid "NAND Emu Channel Path"
-msgstr "τοποθεσία καναλιών εικονικής NAND"
-
-msgid "NAND Emu Path"
-msgstr "τοποθεσία εικονικής NAND"
-
-msgid "NAND Emulation"
-msgstr "εξομοίωση εικονικής NAND"
-
-msgid "NAND emulation is only available on D2X cIOS!"
-msgstr "η εξομοίωση εικονικής NAND είναι εφικτή μόνο με cIOS d2x!"
+msgid "NAND emulation is only available on d2x cIOS!"
+msgstr "Η εξομοίωση NAND είναι διαθέσιμη μόνο σε d2x cIOS!"
 
 msgid "NAND emulation only works on FAT/FAT32 partitions!"
-msgstr "η εξομοίωση εικονικής NAND είναι εφικτή μόνο σε partitions FAT/FAT32!"
+msgstr "Η εξομοίωση NAND λειτουργεί μόνο σε κατατμήσεις FAT/FAT32!"
 
-msgid "NAND Saves Emulation"
-msgstr "saves στην εικονική NAND"
+msgid "NMM Mode"
+msgstr "Λειτουργία NMM"
 
 msgid "Native Controller"
-msgstr ""
+msgstr "Εγγενές Χειριστήριο"
 
 msgid "Neek"
-msgstr ""
+msgstr "Neek"
 
 msgid "Neek NAND path selection failed."
-msgstr ""
+msgstr "Η επιλογή διαδρομής NAND Neek απέτυχε."
 
 msgid "Neek kernel file not found."
-msgstr ""
+msgstr "Το αρχείο πυρήνα Neek δεν βρέθηκε."
 
 msgid "Neek kernel loading failed."
-msgstr ""
+msgstr "Η φόρτωση του πυρήνα Neek απέτυχε."
 
 msgid "Neek2o does not support 'EmuNAND Channel Path' on SD! Please setup Uneek2o instead."
-msgstr ""
+msgstr "Το Neek2o δεν υποστηρίζει 'Διαδρομή Καναλιού EmuNAND' σε SD! Παρακαλώ ρυθμίστε το Uneek2o αντ' αυτού."
 
 msgid "Neither"
-msgstr "Κανένα από τα δυο"
+msgstr "Κανένα"
 
-msgid "Network is not initiated."
-msgstr "η σύνδεση στο διαδίκτυο δεν είναι εφικτή."
+msgid "Network is not initalized."
+msgstr "Το δίκτυο δεν έχει αρχικοποιηθεί."
+
+msgid "Network is not initialized."
+msgstr "Το δίκτυο δεν έχει αρχικοποιηθεί."
 
 msgid "Next"
 msgstr "Επόμενο"
 
 msgid "Nintendont"
-msgstr ""
+msgstr "Nintendont"
 
 msgid "Nintendont Loader Path"
-msgstr ""
+msgstr "Διαδρομή Φορτωτή Nintendont"
 
 msgid "No"
-msgstr "Οχι"
+msgstr "Όχι"
 
-msgid "No Cheatfile found"
-msgstr "Δεν βρέθηκε αρχείο cheat"
+msgid "No Cheat file found"
+msgstr "Δεν βρέθηκε αρχείο Cheat"
 
 msgid "No DOL file found on disc."
 msgstr "Δεν βρέθηκε αρχείο DOL στον δίσκο."
 
+msgid "No Disc Inserted"
+msgstr "Δεν έχει εισαχθεί δίσκος"
+
 msgid "No Disc+"
-msgstr ""
+msgstr "Χωρίς Δίσκο+"
 
 msgid "No Splitting"
-msgstr "Χωρίς διαχωρισμό"
+msgstr "Χωρίς Διαχωρισμό"
 
-msgid "No URL or Path specified."
-msgstr "Δεν ορίστηκε URL ή τοποθεσία."
+msgid "No WAD file found in this folder."
+msgstr "Δεν βρέθηκε αρχείο WAD σε αυτόν τον φάκελο."
 
 msgid "No WBFS or FAT/NTFS/EXT partition found"
-msgstr "Δεν βρέθηκε WBFS ή FAT/NTFS/EXT partition"
+msgstr "Δεν βρέθηκε κατάτμηση WBFS ή FAT/NTFS/EXT"
 
 msgid "No Wiinnertag.xml found in the config path. Do you want an example file created?"
-msgstr "Δεν βρέθηκε αρχείο Winnertag.xml. Θέλετε να δημιουργηθεί ένα αρχείο-παράδειγμα?"
+msgstr "Δεν βρέθηκε Wiinnertag.xml στη διαδρομή ρυθμίσεων. Θέλετε να δημιουργηθεί ένα αρχείο παραδείγματος;"
 
 msgid "No change"
 msgstr "Καμία αλλαγή"
 
 msgid "No cheats were selected! Should the GCT file be deleted?"
-msgstr "Δεν επιλέχθηκαν cheats! Θέλετε να διαγραφεί το αρχείο cheat GCT?"
+msgstr "Δεν επιλέχθηκαν cheats! Να διαγραφεί το αρχείο GCT;"
 
 msgid "No data could be read."
-msgstr "Αδύνατη η ανάγνωση δεδομένων."
-
-msgid "No disc inserted."
-msgstr "Δεν εισήχθη δίσκος."
+msgstr "Δεν ήταν δυνατή η ανάγνωση δεδομένων."
 
 msgid "No favorites selected."
 msgstr "Δεν επιλέχθηκαν αγαπημένα."
 
 msgid "No files missing!"
-msgstr "Δεν λείπει κανένα αρχείο!"
+msgstr "Δεν λείπουν αρχεία!"
 
 msgid "No games found on the disc"
 msgstr "Δεν βρέθηκαν παιχνίδια στον δίσκο"
 
 msgid "No language files to update on your devices! Do you want to download new language files?"
-msgstr "Δεν βρέθηκαν αρχεία μεταφράσεως! Θέλετε να κατεβάσετε νέα?"
+msgstr "Δεν υπάρχουν αρχεία γλώσσας για ενημέρωση στις συσκευές σας! Θέλετε να κατεβάσετε νέα αρχεία γλώσσας;"
 
 msgid "No new updates."
-msgstr "Δεν υπάρχουν διαθέσιμες αναβαθμίσεις."
-
-msgid "No themes found on the site."
-msgstr "Δεν βρέθηκαν θέματα στο site."
+msgstr "Δεν υπάρχουν νέες ενημερώσεις."
 
 msgid "No themes found."
 msgstr "Δεν βρέθηκαν θέματα."
 
-msgid "No WAD file found in this folder."
-msgstr ""
-
 msgid "NoSSL only"
-msgstr ""
+msgstr "Μόνο NoSSL"
 
 msgid "None"
 msgstr "Κανένα"
 
 msgid "Normal"
-msgstr "Κανονικά"
+msgstr "Κανονικό"
+
+msgid "Not Enough Free Space!"
+msgstr "Δεν υπάρχει αρκετός ελεύθερος χώρος!"
 
 msgid "Not Initialized"
-msgstr "Δεν ξεκίνησε"
+msgstr "Δεν έχει αρχικοποιηθεί"
 
 msgid "Not a Wii or a GameCube Disc"
-msgstr "Δεν είναι δίσκος Wii/GameCube"
-
-msgid "Not a valid URL"
-msgstr "Μη έγκυρο URL"
-
-msgid "Not a valid URL path"
-msgstr "Μη έγκυρο μονοπάτι URL"
-
-msgid "Not a valid domain"
-msgstr "Μη έγκυρη τοποθεσία"
+msgstr "Δεν είναι δίσκος Wii ή GameCube"
 
 msgid "Not enough free memory."
-msgstr "Δεν υπάρχει αρκετή μνήμη διαθέσιμη."
+msgstr "Δεν υπάρχει αρκετή ελεύθερη μνήμη."
 
 msgid "Not enough free space on device."
-msgstr "Δεν υπάρχει αρκετός διαθέσιμος ελεύθερος χώρος στην συσκευή."
-
-msgid "Not enough free space!"
-msgstr "Δεν υπάρχει αρκετός διαθέσιμος ελεύθερος χώρος!"
+msgstr "Δεν υπάρχει αρκετός ελεύθερος χώρος στη συσκευή."
 
 msgid "Not enough memory for FST."
-msgstr "Δεν υπάρχει αρκετή μνήμη διαθέσιμη για FST."
+msgstr "Δεν υπάρχει αρκετή μνήμη για FST."
 
 msgid "Not enough memory."
-msgstr "Δεν υπάρχει αρκετή μνήμη διαθέσιμη."
+msgstr "Δεν υπάρχει αρκετή μνήμη."
 
 msgid "Not required"
 msgstr "Δεν απαιτείται"
 
-msgid "Unsupported format!"
-msgstr "Ο τύπος αρχείου δεν υποστηρίζεται!"
+msgid "Not set"
+msgstr "Δεν έχει οριστεί"
 
 msgid "Nothing selected to delete."
-msgstr "Τίποτε άλλο δεν επιλέχθηκε προς διαγραφή."
+msgstr "Δεν επιλέχθηκε τίποτα για διαγραφή."
 
 msgid "Nothing selected to install."
-msgstr "Τίποτε άλλο δεν επιλέχθηκε προς εγκατάσταση."
+msgstr "Δεν επιλέχθηκε τίποτα για εγκατάσταση."
 
 msgid "Nov"
-msgstr "Noέμβριος"
+msgstr "Νοε"
 
 msgid "OFF"
-msgstr "OXI"
+msgstr "ΑΝΕΝΕΡΓΟ"
 
 msgid "OFF (Extended)"
-msgstr ""
+msgstr "ΑΝΕΝΕΡΓΟ (Εκτεταμένο)"
 
 msgid "OFF (Safe)"
-msgstr ""
+msgstr "ΑΝΕΝΕΡΓΟ (Ασφαλές)"
 
 msgid "OK"
-msgstr ""
+msgstr "ΕΝΤΑΞΕΙ"
 
 msgid "ON"
-msgstr "NAI"
-
-msgid "ON (Low)"
-msgstr ""
-
-msgid "ON (Medium)"
-msgstr ""
-
-msgid "ON (Multi)"
-msgstr ""
+msgstr "ΕΝΕΡΓΟ"
 
 msgid "ON (High)"
-msgstr ""
+msgstr "ΕΝΕΡΓΟ (Υψηλό)"
+
+msgid "ON (Low)"
+msgstr "ΕΝΕΡΓΟ (Χαμηλό)"
+
+msgid "ON (Medium)"
+msgstr "ΕΝΕΡΓΟ (Μεσαίο)"
+
+msgid "ON (Multi)"
+msgstr "ΕΝΕΡΓΟ (Πολλαπλό)"
 
 msgid "OSReport"
-msgstr ""
+msgstr "OSReport"
 
 msgid "OSSleepThread"
-msgstr ""
+msgstr "OSSleepThread"
 
 msgid "Ocarina"
-msgstr ""
+msgstr "Ocarina"
 
 msgid "Ocarina is not supported with neek2o yet. Launch game anyway?"
-msgstr ""
+msgstr "Το Ocarina δεν υποστηρίζεται ακόμα με το neek2o. Να εκκινήσει το παιχνίδι ούτως ή άλλως;"
+
+msgid "Ocarina:"
+msgstr "Ocarina:"
 
 msgid "Oct"
-msgstr "Oκτώβριος"
+msgstr "Οκτ"
 
 msgid "Official Site:"
-msgstr "Επίσημο Site:"
+msgstr "Επίσημος Ιστότοπος:"
 
 msgid "Offset"
-msgstr ""
+msgstr "Μετατόπιση"
 
 msgid "Ok"
-msgstr ""
+msgstr "Εντάξει"
 
 msgid "One Line A"
-msgstr ""
+msgstr "Μία Γραμμή Α"
 
 msgid "One Line B"
-msgstr ""
+msgstr "Μία Γραμμή Β"
 
 msgid "Only Game Partition"
-msgstr "Mόνο το partition των παιχνιδιών"
+msgstr "Μόνο Κατάτμηση Παιχνιδιού"
 
-msgid "Only for Install"
-msgstr "μόνο για εγκατάσταση"
+msgid "Only for install"
+msgstr "Μόνο για εγκατάσταση"
 
 msgid "Original"
-msgstr "Αυθεντικά"
+msgstr "Αρχικό"
 
 msgid "Original/Customs"
-msgstr "Αυθεντικά/Τροποποιημένα"
+msgstr "Αρχικά/Προσαρμοσμένα"
 
 msgid "PAD Hook"
-msgstr ""
+msgstr "PAD Hook"
 
 msgid "PAL50 Patch"
-msgstr ""
+msgstr "Επιδιόρθωση PAL50"
 
 msgid "Parental Control"
-msgstr "Γονικός έλεγχος"
+msgstr "Γονικός Έλεγχος"
 
 msgid "Partial"
-msgstr "Τμηματική"
+msgstr "Μερικό"
 
 msgid "Partition"
-msgstr "Τμήμα"
+msgstr "Κατάτμηση"
 
 msgid "Password"
-msgstr "Password - Kωδικός"
+msgstr "Κωδικός"
 
 msgid "Password Changed"
-msgstr "Ο κωδικός άλλαξε"
+msgstr "Ο Κωδικός Άλλαξε"
 
 msgid "Password has been changed"
 msgstr "Ο κωδικός έχει αλλάξει"
 
 msgid "Patch Country Strings"
-msgstr "Patch προέλευσης παιχνιδιού"
+msgstr "Επιδιόρθωση Χορδών Χώρας"
 
 msgid "Path Changed"
-msgstr "η τοποθεσία άλλαξε"
+msgstr "Η Διαδρομή Άλλαξε"
 
 msgid "Permission denied."
-msgstr "ʼκυρο."
+msgstr "Η άδεια απορρίφθηκε."
 
 msgid "Pick from a list"
-msgstr "Επιλογή από λίστα"
+msgstr "Επιλέξτε από μια λίστα"
 
 msgid "Pixels"
-msgstr ""
+msgstr "Εικονοστοιχεία"
 
 msgid "Play Count"
-msgstr "Μετρητής χρήσης"
+msgstr "Αριθμός Αναπαραγωγών"
 
 msgid "Play Next"
-msgstr "Αναπαραγωγή επόμενου"
+msgstr "Αναπαραγωγή Επόμενου"
 
 msgid "Play Once"
-msgstr "Αναπαραγωγή μια φορά"
+msgstr "Αναπαραγωγή Μία Φορά"
 
 msgid "Play Previous"
-msgstr "Αναπαραγωγή προηγούμενου"
+msgstr "Αναπαραγωγή Προηγούμενου"
 
 msgid "Playing Music:"
-msgstr "Αναπαραγωγή μουσικής:"
+msgstr "Αναπαραγωγή Μουσικής:"
 
 msgid "Please enter a valid address e.g. wiimmfi.de"
-msgstr ""
+msgstr "Παρακαλώ εισάγετε μια έγκυρη διεύθυνση π.χ. wiimmfi.de"
 
 msgid "Please wait"
 msgstr "Παρακαλώ περιμένετε"
@@ -1804,88 +1791,94 @@ msgid "Please wait..."
 msgstr "Παρακαλώ περιμένετε..."
 
 msgid "Power off the Wii"
-msgstr "Κλείστε το Wii"
+msgstr "Τερματισμός του Wii"
 
 msgid "Prev"
-msgstr "Προηγούμενο."
+msgstr "Προηγ."
+
+msgid "Priiloader"
+msgstr "Priiloader"
 
 msgid "Private Server"
-msgstr ""
+msgstr "Ιδιωτικός Διακομιστής"
 
 msgid "Process finished."
-msgstr "Ολοκλήρωση διαδικασίας."
+msgstr "Η διαδικασία ολοκληρώθηκε."
 
 msgid "Progressive Patch"
-msgstr ""
+msgstr "Επιδιόρθωση Progressive"
 
 msgid "Prompts Buttons"
-msgstr "Ειδοποιήσεις"
+msgstr "Κουμπιά Προτροπών"
 
 msgid "Published by"
-msgstr "Έκδοση από"
+msgstr "Δημοσιεύθηκε από"
 
 msgid "Quick Boot"
-msgstr "ʼμεση εκκίνηση"
-
-msgid "Random Directory Music"
-msgstr "Τυχαίο μουσικό αρχείο από το φάκελο"
+msgstr "Γρήγορη Εκκίνηση"
 
 msgid "Real NAND"
-msgstr "πραγματική μνήμη NAND"
+msgstr "Πραγματική NAND"
 
 msgid "Receiving file from:"
 msgstr "Λήψη αρχείου από:"
 
 msgid "Region Free"
-msgstr ""
+msgstr "Χωρίς Περιοχή"
 
 msgid "Region Patch"
-msgstr "Patch περιοχής προέλευσης"
+msgstr "Επιδιόρθωση Περιοχής"
+
+msgid "Regional"
+msgstr "Περιφερειακό"
 
 msgid "Released"
 msgstr "Κυκλοφόρησε"
 
-msgid "Reload SD"
-msgstr "Επαναφόρτωση κάρτας SD"
-
 msgid "Reloading game list now, please wait..."
-msgstr "Επαναφόρτωση λίστας παιχνιδιών, παρακαλώ περιμένετε..."
+msgstr "Επαναφόρτωση λίστας παιχνιδιών τώρα, παρακαλώ περιμένετε..."
 
 msgid "Remember Last Game"
-msgstr ""
+msgstr "Θυμήσου το Τελευταίο Παιχνίδι"
 
 msgid "Remember Unlock"
-msgstr "Μόνιμο ξεκλείδωμα"
+msgstr "Θυμήσου το Ξεκλείδωμα"
 
 msgid "Remove Read Speed Limit"
-msgstr ""
+msgstr "Αφαίρεση Ορίου Ταχύτητας Ανάγνωσης"
 
 msgid "Remove update"
-msgstr "Απομάκρυνση αρχείων αναβάθμισης."
+msgstr "Αφαίρεση ενημέρωσης"
 
 msgid "Rename Game Title"
-msgstr "Μετονομασία παιχνιδιού"
+msgstr "Μετονομασία Τίτλου Παιχνιδιού"
 
 msgid "Rename category"
 msgstr "Μετονομασία κατηγορίας"
 
+msgid "Resample to 48 kHz"
+msgstr "Επαναδειγματοληψία σε 48 kHz"
+
 msgid "Reset"
-msgstr "Επανεκκίνηση"
+msgstr "Επαναφορά"
 
 msgid "Reset All Game Settings"
-msgstr ""
+msgstr "Επαναφορά Όλων των Ρυθμίσεων Παιχνιδιού"
 
 msgid "Reset BG Music"
-msgstr "Επαναφορά μουσικής υπόκρουσης."
+msgstr "Επαναφορά Μουσικής Υποβάθρου"
 
 msgid "Reset Cached Titles"
-msgstr ""
+msgstr "Επαναφορά Τίτλων Cache"
 
 msgid "Reset Play Count"
-msgstr "Επαναφορά του Playcounter"
+msgstr "Επαναφορά Αριθμού Αναπαραγωγών"
+
+msgid "Reset Wiimote Pairings"
+msgstr "Επαναφορά ζευγοποιήσεων Wiimote"
 
 msgid "Reset to default BGM?"
-msgstr "Επαναφορά στην βασική μουσική υπόκρουση?"
+msgstr "Επαναφορά στην προεπιλεγμένη Μουσική Υποβάθρου;"
 
 msgid "Restarting..."
 msgstr "Επανεκκίνηση..."
@@ -1894,487 +1887,481 @@ msgid "Return"
 msgstr "Επιστροφή"
 
 msgid "Return To"
-msgstr "Επιστροφή σε"
+msgstr "Επιστροφή Σε"
 
 msgid "Return to Wii Menu"
-msgstr "Επιστροφή στο κεντρικό μενού του Wii"
+msgstr "Επιστροφή στο Μενού Wii"
 
 msgid "Right"
 msgstr "Δεξιά"
 
 msgid "Rotating Disc"
-msgstr "Περιστρεφόμενος οπτικός δίσκος"
+msgstr "Περιστροφή Δίσκου"
 
 msgid "Round"
-msgstr ""
+msgstr "Στρογγυλό"
 
 msgid "Rumble"
 msgstr "Δόνηση"
 
 msgid "SChinese"
-msgstr "Απλοποιημένα κινεζικα"
+msgstr "Απλοποιημένα Κινέζικα"
 
 msgid "SD"
-msgstr ""
-
-msgid "SD Card could not be accessed."
-msgstr "Μη προσπελάσιμη SD."
+msgstr "SD"
 
 msgid "SD Card Mode"
-msgstr ""
+msgstr "Λειτουργία Κάρτας SD"
+
+msgid "SD Card could not be accessed."
+msgstr "Δεν ήταν δυνατή η πρόσβαση στην Κάρτα SD."
 
 msgid "SD GameCube Games Path"
-msgstr "Τοποθεσία/μονοπάτι τίτλων GameCube στην κάρτα SD"
+msgstr "Διαδρομή Παιχνιδιών GameCube στην SD"
 
 msgid "SD GameCube Path"
-msgstr "Τοποθεσία/μονοπάτι GameCube στην κάρτα SD"
+msgstr "Διαδρομή GameCube στην SD"
 
 msgid "SD Path"
-msgstr "Τοποθεσία/μονοπάτι SD"
+msgstr "Διαδρομή SD"
 
 msgid "SFX Volume"
-msgstr "Ένταση ηχητικών εφέ"
+msgstr "Ένταση Εφέ Ήχου"
 
 msgid "Save"
 msgstr "Αποθήκευση"
 
 msgid "Save Failed. No device inserted?"
-msgstr "Η αποθήκευση απέτυχε. Μήπως δεν είναι συνδεδεμένο το αποθηκευτικό μέσο?"
-
-msgid "Save Game List to"
-msgstr "Αποθήκευση λίστας σε"
+msgstr "Η αποθήκευση απέτυχε. Δεν έχει εισαχθεί συσκευή;"
 
 msgid "Save List"
-msgstr "Αποθήκευση λίστας"
+msgstr "Αποθήκευση Λίστας"
 
 msgid "Save Path"
-msgstr ""
+msgstr "Διαδρομή Αποθήκευσης"
+
+msgid "Save game list to"
+msgstr "Αποθήκευση λίστας παιχνιδιών σε"
 
 msgid "Saved"
 msgstr "Αποθηκεύτηκε"
 
 msgid "Savegame might not exist for this game."
-msgstr "ίσως να μην υπάρχει save για το παιχνίδι αυτό."
+msgstr "Το αποθηκευμένο παιχνίδι μπορεί να μην υπάρχει για αυτό το παιχνίδι."
+
+msgid "Screen Mode"
+msgstr "Λειτουργία Οθόνης"
 
 msgid "Screensaver"
-msgstr "screen saver"
+msgstr "Προφύλαξη οθόνης"
 
 msgid "Screenshot"
-msgstr ""
+msgstr "Στιγμιότυπο οθόνης"
 
 msgid "Select"
 msgstr "Επιλογή"
 
 msgid "Select DOL Offset"
-msgstr "Επιλογή δευτερεύοντος DOL"
+msgstr "Επιλογή Μετατόπισης DOL"
+
+msgid "Select Game Sources"
+msgstr "Επιλογή Πηγών Παιχνιδιού"
 
 msgid "Select a DOL"
-msgstr "Επιλογή DOL"
+msgstr "Επιλογή ενός DOL"
 
 msgid "Select a DOL from game"
-msgstr "Επιλογή αρχείου DOL από το παιχνίδι"
+msgstr "Επιλογή ενός DOL από το παιχνίδι"
 
 msgid "Select game categories"
-msgstr "Κατηγορίες παιχνιδιών"
+msgstr "Επιλογή κατηγοριών παιχνιδιού"
 
-msgid "Select loader mode"
-msgstr "Επιλογή παιχνιδιών"
+msgid "Select game sources"
+msgstr "Επιλογή πηγών παιχνιδιού"
 
 msgid "Select the EmuNAND path to use."
-msgstr ""
-
-msgid "Select titles sources."
-msgstr "Πηγές παιχνιδιών."
+msgstr "Επιλέξτε τη διαδρομή EmuNAND που θα χρησιμοποιηθεί."
 
 msgid "Sept"
-msgstr "Σεπτέμβριος"
+msgstr "Σεπ"
 
-msgid "Set Search-Filter"
-msgstr "Ρύθμιση αναζήτησης"
+msgid "Set search filter"
+msgstr "Ορισμός φίλτρου αναζήτησης"
 
 msgid "Settings"
-msgstr ""
+msgstr "Ρυθμίσεις"
 
 msgid "Settings File"
-msgstr ""
+msgstr "Αρχείο Ρυθμίσεων"
 
 msgid "Show Categories"
-msgstr "Προβολή κατηγοριών"
+msgstr "Εμφάνιση Κατηγοριών"
 
-msgid "Show Favorite on banner"
-msgstr ""
+msgid "Show Favorite on Banner"
+msgstr "Εμφάνιση Αγαπημένου στο μπάνερ"
 
 msgid "Show Free Space"
-msgstr "Προβολή ελεύθερου εναπομείναντος χώρου"
+msgstr "Εμφάνιση Ελεύθερου Χώρου"
 
 msgid "Show Game Count"
-msgstr ""
+msgstr "Εμφάνιση Αριθμού Παιχνιδιών"
 
 msgid "Show Play Count"
-msgstr "Προβολή συχνότητας χρήσης"
+msgstr "Εμφάνιση Αριθμού Αναπαραγωγών"
 
 msgid "Show SD"
-msgstr "Προβολή κάρτας SD"
+msgstr "Εμφάνιση SD"
+
+msgid "Shuffle Directory Music"
+msgstr "Ανακάτεμα Μουσικής Καταλόγου"
 
 msgid "Shutdown System"
-msgstr "Kλείσιμο συστήματος"
+msgstr "Τερματισμός Συστήματος"
 
 msgid "Shutdown Wii"
-msgstr "Κλείσιμο Wii"
+msgstr "Τερματισμός Wii"
+
+msgid "Shutdown?"
+msgstr "Τερματισμός;"
+
+msgid "Silent HOME Menu"
+msgstr "Αθόρυβο Μενού HOME"
 
 msgid "Skip Errors"
-msgstr "Αγνόηση σφαλμάτων"
+msgstr "Παράκαμψη Σφαλμάτων"
 
 msgid "Skip IPL"
-msgstr ""
-
-msgid "BBA Emulation"
-msgstr ""
-
-msgid "BBA Net Profile"
-msgstr ""
+msgstr "Παράκαμψη IPL"
 
 msgid "Sneek Video Patch"
-msgstr "Patch εικόνας για sneek"
+msgstr "Επιδιόρθωση Βίντεο Sneek"
 
-msgid "Sorry, the theme downloader menu is not working anymore because http://wii.spiffy360.com now requires user registration."
-msgstr ""
+msgid "Sorting alphabetically"
+msgstr "Ταξινόμηση αλφαβητικά"
 
-msgid "Sort alphabetically"
-msgstr "Διάταξη αλφαβητικά"
+msgid "Sorting by most played"
+msgstr "Ταξινόμηση κατά τα πιο παιγμένα"
 
-msgid "Sort by number of players"
-msgstr "Διάταξη με κριτήριο τον αριθμό παικτών"
+msgid "Sorting by number of players"
+msgstr "Ταξινόμηση κατά αριθμό παικτών"
 
-msgid "Sort by rank"
-msgstr "Διάταξη με κριτήριο το βαθμό"
-
-msgid "Sort order by most played"
-msgstr "Διάταξη με κριτήριο την συχνότητα χρήσης"
-
-msgid "Sound"
-msgstr "Ήχος"
+msgid "Sorting by rank"
+msgstr "Ταξινόμηση κατά βαθμό"
 
 msgid "Sound Settings"
-msgstr "Ρυθμίσεις ήχου"
+msgstr "Ρυθμίσεις Ήχου"
 
 msgid "Sound+BGM"
-msgstr "Ήχος+μουσική υπόκρουση."
+msgstr "Ήχος+BGM"
 
 msgid "Sound+Quiet"
-msgstr "Ήχος+παύση"
+msgstr "Ήχος+Ήσυχο"
 
 msgid "Spanish"
 msgstr "Ισπανικά"
 
 msgid "Special thanks to:"
-msgstr "Θερμές ευχαριστίες:"
+msgstr "Ειδικές ευχαριστίες σε:"
 
 msgid "Split each 2GB"
-msgstr "Διαχωρισμός σε τμήματα 2GB"
+msgstr "Διαχωρισμός κάθε 2GB"
 
 msgid "Split each 4GB"
-msgstr "Διαχωρισμός σε τμήματα 4GB"
+msgstr "Διαχωρισμός κάθε 4GB"
 
 msgid "Standby"
 msgstr "Αναμονή"
 
 msgid "Start"
-msgstr ""
+msgstr "Έναρξη"
 
 msgid "Success"
-msgstr "Επιτυχής"
+msgstr "Επιτυχία"
 
 msgid "Success."
-msgstr "Επιτυχής."
+msgstr "Επιτυχία."
 
 msgid "Success:"
-msgstr "Επιτυχής:"
+msgstr "Επιτυχία:"
+
+msgid "Successfully Installed:"
+msgstr "Εγκαταστάθηκε με επιτυχία:"
 
 msgid "Successfully Saved"
-msgstr "Αποθηκεύτηκε"
+msgstr "Αποθηκεύτηκε με επιτυχία"
 
 msgid "Successfully Updated"
-msgstr "Επιτυχής αναβάθμιση"
+msgstr "Ενημερώθηκε με επιτυχία"
 
 msgid "Successfully copied"
-msgstr "Επιτυχής αντιγραφή"
+msgstr "Αντιγράφηκε με επιτυχία"
 
 msgid "Successfully deleted:"
-msgstr "Επιτυχής διαγραφή:"
-
-msgid "Successfully extracted theme."
-msgstr "Επιτυχής μεταφορά θέματος."
-
-msgid "Successfully installed:"
-msgstr "Επιτυχής εγκατάσταση:"
-
-msgid "Successfully updated."
-msgstr "Επιτυχής αναβάθμιση."
-
-msgid "Switching to channel list mode."
-msgstr "Αλλαγή εμφάνισης σε λίστα."
-
-msgid "Sync FAT32 FS Info"
-msgstr "Συγχρονισμός FAT32"
-
-msgid "Synchronizing..."
-msgstr "Συγχρονισμός..."
+msgstr "Διαγράφηκε με επιτυχία:"
 
 msgid "System Default"
-msgstr "Βασικό-η συστήματος"
+msgstr "Προεπιλογή Συστήματος"
 
 msgid "System Proxy Settings"
-msgstr ""
+msgstr "Ρυθμίσεις Διαμεσολαβητή Συστήματος"
 
 msgid "TChinese"
-msgstr "Παραδοσιακά κινέζικα"
+msgstr "Παραδοσιακά Κινέζικα"
 
-msgid "TXT Cheatcodes Path"
-msgstr "τοποθεσία αρχείων cheats TXT"
-
-msgid "The .them file was not found in the zip."
-msgstr "To αρχείο .them δεν βρέθηκε στον φάκελο zip."
+msgid "TXT Cheat Codes Path"
+msgstr "Διαδρομή Κωδικών Cheat TXT"
 
 msgid "The Force Widescreen setting requires DIOS MIOS v2.1 or more. This setting will be ignored."
-msgstr "Η ρύθμιση για επιβολή αναλογίας οθόνης 16:9 απαιτεί DIOS MIOS 2.1 ή νεότερο. Η παρούσα ρύθμιση θα αγνοηθεί."
+msgstr "Η ρύθμιση Αναγκαστικής Ευρείας Οθόνης απαιτεί DIOS MIOS v2.1 ή νεότερη έκδοση. Αυτή η ρύθμιση θα αγνοηθεί."
 
 msgid "The Miis will be extracted to your EmuNAND path and EmuNAND channel path. Attention: All existing files will be overwritten."
-msgstr "Τα Mii θα αντιγραφούν στην τοποθεσία εικονικής NAND. Προσοχή, όλα τα κοινά υπάρχοντα αρχεία θα αντικατασταθούν."
+msgstr "Τα Miis θα εξαχθούν στη διαδρομή EmuNAND και στη διαδρομή καναλιού EmuNAND. Προσοχή: Όλα τα υπάρχοντα αρχεία θα αντικατασταθούν."
 
 msgid "The No Disc+ setting requires DIOS MIOS 2.2 update2. This setting will be ignored."
-msgstr "Η ρύθμιση No Disc+ απαιτεί το DIOS MIOS 2.2 update 2. Η παρούσα ρύθμιση θα αγνοηθεί."
+msgstr "Η ρύθμιση Χωρίς Δίσκο+ απαιτεί DIOS MIOS 2.2 update2. Αυτή η ρύθμιση θα αγνοηθεί."
 
 msgid "The SYSCONF file will be extracted to your EmuNAND path and EmuNAND channel path. Attention: All existing files will be overwritten."
-msgstr "Το αρχείο SYSCONF θα αντιγραφεί στην εικονική NAND. Προσοχή: όλα τα κοινά υπάρχοντα αρχεία θα αντικατασταθούν."
-
-msgid "The application might crash if there is currently a read/write access to the SD card!"
-msgstr "Το πρόγραμμα μπορεί να μπλοκάρει αν υπάρξει ταυτόχρονη ανάγνωση/εγγραφή στην κάρτα SD!"
-
-msgid "The entered directory does not exist. Would you like to create it?"
-msgstr "Η ορισμένη τοποθεσία δεν υπάρχει. Θα θέλατε να δημιουργήσετε τον φάκελο?"
-
-msgid "The files will be extracted to your EmuNAND save and channel path. Attention: All existing files will be overwritten."
-msgstr "Τα αρχεία θα αποσυμπιεστούν στη EmuNAND.Προσοχή:όλα τα προύπάρχοντα αρχεία θα αντικατασταθούν"
-
-msgid "The game is on SD Card."
-msgstr "Το παιχνίδι αυτό βρίσκεται στη κάρτα SD."
-
-msgid "The game is on USB."
-msgstr "Το παιχνίδι αυτό βρίσκεται στον δίσκο USB."
-
-msgid "The save game will be extracted to your EmuNAND path."
-msgstr "Το save σας θα αντιγραφεί στην EmuNAND."
-
-msgid "The save games will be extracted to your EmuNAND save and channel path. Attention: All existing files will be overwritten."
-msgstr "Τα save σας θα αντιγραφούν στην EmuNAND. Προσοχή: όλα τα προϋπάρχοντα αρχεία θα αντικατασταθούν"
+msgstr "Το αρχείο SYSCONF θα εξαχθεί στη διαδρομή EmuNAND και στη διαδρομή καναλιού EmuNAND. Προσοχή: Όλα τα υπάρχοντα αρχεία θα αντικατασταθούν."
 
 msgid "The WAD file was installed"
 msgstr "Το αρχείο WAD εγκαταστάθηκε"
 
 #, c-format
 msgid "The WAD installation failed with error %i"
-msgstr "Η εγκατάσταση του αρχείου WAD απέτυχε, με το λάθος %i"
+msgstr "Η εγκατάσταση του WAD απέτυχε με σφάλμα %i"
 
-msgid "Theme Downloader"
-msgstr "Κατεβάστε νέα θέματα"
+msgid "The entered directory does not exist. Would you like to create it?"
+msgstr "Ο καταχωρημένος κατάλογος δεν υπάρχει. Θέλετε να τον δημιουργήσετε;"
+
+msgid "The files will be extracted to your EmuNAND save and channel path. Attention: All existing files will be overwritten."
+msgstr "Τα αρχεία θα εξαχθούν στη διαδρομή αποθήκευσης και καναλιού EmuNAND. Προσοχή: Όλα τα υπάρχοντα αρχεία θα αντικατασταθούν."
+
+msgid "The game is on SD Card."
+msgstr "Το παιχνίδι είναι στην Κάρτα SD."
+
+msgid "The game is on USB."
+msgstr "Το παιχνίδι είναι στο USB."
+
+msgid "The save game will be extracted to your EmuNAND path."
+msgstr "Το αποθηκευμένο παιχνίδι θα εξαχθεί στη διαδρομή EmuNAND."
+
+msgid "The save games will be extracted to your EmuNAND save and channel path. Attention: All existing files will be overwritten."
+msgstr "Τα αποθηκευμένα παιχνίδια θα εξαχθούν στη διαδρομή αποθήκευσης και καναλιού EmuNAND. Προσοχή: Όλα τα υπάρχοντα αρχεία θα αντικατασταθούν."
 
 msgid "Theme Menu"
-msgstr "Ρυθμίσεις θεμάτων"
+msgstr "Μενού Θέματος"
 
 msgid "Theme Path"
-msgstr "Τοποθεσία θεμάτων"
+msgstr "Διαδρομή Θέματος"
 
 msgid "Theme Title:"
-msgstr "όνομα θέματος:"
+msgstr "Τίτλος Θέματος:"
 
-msgid "Themes by www.spiffy360.com"
-msgstr "Θέματα από την ιστοσελίδα www.spiffy360.com"
+msgid "This IOS is the BootMii IOS. If you are sure it is not BootMii and you have something else installed there then ignore this warning."
+msgstr "Αυτό το IOS είναι το BootMii IOS. Αν είστε σίγουροι ότι δεν είναι το BootMii και έχετε εγκαταστήσει κάτι άλλο εκεί, τότε αγνοήστε αυτήν την προειδοποίηση."
 
-msgid "This IOS is the BootMii IOS. If you are sure it is not BootMii and you have something else installed there than ignore this warning."
-msgstr "Το ΙΟS αυτό είναι του λειτουργικού BootMii. Αν όμως είστε βέβαιος-η ότι δεν είναι, παρακαλώ αγνοήστε αυτή την προειδοποίηση."
+msgid "This IOS is the BootMii ios. If you are sure it is not BootMii and you have something else installed there then ignore this warning."
+msgstr "Αυτό το IOS είναι το BootMii ios. Αν είστε σίγουροι ότι δεν είναι το BootMii και έχετε εγκαταστήσει κάτι άλλο εκεί, τότε αγνοήστε αυτήν την προειδοποίηση."
 
-msgid "This IOS was not found on the titles list. If you are sure you have it installed than ignore this warning."
-msgstr "Το ΙΟS αυτό δεν βρέθηκε στην λίστα. Αν είστε βέβαιος-η ότι το έχετε εγκατεστημένο, παρακαλώ αγνοήστε αυτή την προειδοποίηση."
+msgid "This IOS was not found on the titles list. If you are sure you have it installed then ignore this warning."
+msgstr "Αυτό το IOS δεν βρέθηκε στη λίστα τίτλων. Αν είστε σίγουροι ότι το έχετε εγκαταστήσει, τότε αγνοήστε αυτήν την προειδοποίηση."
 
 msgid "This Nintendont version does not support games on USB."
-msgstr ""
+msgstr "Αυτή η έκδοση του Nintendont δεν υποστηρίζει παιχνίδια σε USB."
 
 msgid "This Nintendont version is not correctly supported. Auto boot disabled."
-msgstr ""
+msgstr "Αυτή η έκδοση του Nintendont δεν υποστηρίζεται σωστά. Η αυτόματη εκκίνηση απενεργοποιήθηκε."
 
 msgid "This game has multiple discs. Please select the disc to launch."
-msgstr ""
+msgstr "Αυτό το παιχνίδι έχει πολλούς δίσκους. Παρακαλώ επιλέξτε τον δίσκο για εκκίνηση."
 
 msgid "This path must be on SD!"
-msgstr "Το μονοπάτι αυτό πρέπει να κατευθύνει σε αρχείο στην κάρτα SD!"
+msgstr "Αυτή η διαδρομή πρέπει να είναι στην SD!"
 
 msgid "This setting doesn't work in SD card mode."
-msgstr ""
+msgstr "Αυτή η ρύθμιση δεν λειτουργεί σε λειτουργία κάρτας SD."
 
 msgid "Time left:"
 msgstr "Χρόνος που απομένει:"
 
 msgid "Timer Fix"
-msgstr ""
+msgstr "Διόρθωση Χρονοδιακόπτη"
 
 msgid "Title Launcher"
-msgstr "Εκκινητής τίτλων"
-
-msgid "Titles Path"
-msgstr ""
+msgstr "Εκκινητής Τίτλου"
 
 msgid "Titles From"
-msgstr ""
+msgstr "Τίτλοι Από"
 
-msgid "To run GameCube games from Disc you need to set the GameCube mode to MIOS in the game settings."
-msgstr "Για αναπαραγωγή τίτλων Gamecube από τους αυθεντικούς δίσκους τους, πρέπει να ορίσετε την επιλογή GameCube σε ΜΙΟS, στις ρυθμίσεις κάθε τίτλου."
+msgid "Titles Path"
+msgstr "Διαδρομή Τίτλων"
+
+msgid "To run GameCube games from disc you need to set the GameCube mode to MIOS in the game settings."
+msgstr "Για να τρέξετε παιχνίδια GameCube από Δίσκο, πρέπει να ορίσετε τη λειτουργία GameCube σε MIOS στις ρυθμίσεις παιχνιδιού."
 
 #, c-format
 msgid "To run GameCube games with %s you need to place them on an USB FAT32 partition."
-msgstr "Για αναπαραγωγή τίτλων GameCube με το πρόγραμμα %s πρέπει να τους τοποθετήσετε σε ενα USB FAT32 partition."
+msgstr "Για να τρέξετε παιχνίδια GameCube με %s, πρέπει να τα τοποθετήσετε σε μια κατάτμηση USB FAT32."
 
 #, c-format
 msgid "To run GameCube games with %s you need to set your 'Main GameCube Path' on the first primary FAT32 partition."
-msgstr ""
+msgstr "Για να τρέξετε παιχνίδια GameCube με %s, πρέπει να ορίσετε τη 'Κύρια Διαδρομή GameCube' στην πρώτη κύρια κατάτμηση FAT32."
 
 #, c-format
 msgid "To run GameCube games with %s you need to set your 'Main GameCube Path' on the first primary partition of the Hard Drive."
-msgstr ""
+msgstr "Για να τρέξετε παιχνίδια GameCube με %s, πρέπει να ορίσετε τη 'Κύρια Διαδρομή GameCube' στην πρώτη κύρια κατάτμηση του Σκληρού Δίσκου."
 
 #, c-format
 msgid "To run GameCube games with %s you need to set your 'Main GameCube Path' to an USB FAT32 partition."
-msgstr ""
+msgstr "Για να τρέξετε παιχνίδια GameCube με %s, πρέπει να ορίσετε τη 'Κύρια Διαδρομή GameCube' σε μια κατάτμηση USB FAT32."
 
 #, c-format
 msgid "To run GameCube games with %s you need to use a 512 bytes/sector Hard Drive."
-msgstr ""
+msgstr "Για να τρέξετε παιχνίδια GameCube με %s, πρέπει να χρησιμοποιήσετε έναν Σκληρό Δίσκο με 512 bytes/sector."
 
 #, c-format
 msgid "To run GameCube games with %s you need to use a partition with 32k bytes/cluster or less."
-msgstr ""
+msgstr "Για να τρέξετε παιχνίδια GameCube με %s, πρέπει να χρησιμοποιήσετε μια κατάτμηση με 32k bytes/cluster ή λιγότερο."
 
 msgid "To run GameCube games with Devolution you need the loader.bin file in your Devolution Loader Path."
-msgstr ""
+msgstr "Για να τρέξετε παιχνίδια GameCube με το Devolution, χρειάζεστε το αρχείο loader.bin στη Διαδρομή Φορτωτή Devolution."
 
 msgid "To run GameCube games with Nintendont you need the boot.dol file in your Nintendont Loader Path."
-msgstr ""
+msgstr "Για να τρέξετε παιχνίδια GameCube με το Nintendont, χρειάζεστε το αρχείο boot.dol στη Διαδρομή Φορτωτή Nintendont."
 
 #, c-format
 msgid "To use HID with %s you need the %s file."
-msgstr ""
-
-msgid "To use neek you need to set your 'EmuNAND Channel Path' on the first primary partition of the Hard Drive."
-msgstr ""
-
-msgid "To use neek you need to set your 'EmuNAND Channel Path' to a FAT32 partition."
-msgstr ""
-
-msgid "To use neek you need to use a 512 bytes/sector Hard Drive."
-msgstr ""
+msgstr "Για να χρησιμοποιήσετε HID με %s, χρειάζεστε το αρχείο %s."
 
 #, c-format
-msgid "To use ocarina with %s you need the %s file."
-msgstr ""
+msgid "To use Ocarina with %s you need the %s file."
+msgstr "Για να χρησιμοποιήσετε το Ocarina με %s, χρειάζεστε το αρχείο %s."
+
+msgid "To use neek you need to set your 'EmuNAND Channel Path' on the first primary partition of the Hard Drive."
+msgstr "Για να χρησιμοποιήσετε το neek, πρέπει να ορίσετε τη 'Διαδρομή Καναλιού EmuNAND' στην πρώτη κύρια κατάτμηση του Σκληρού Δίσκου."
+
+msgid "To use neek you need to set your 'EmuNAND Channel Path' to a FAT32 partition."
+msgstr "Για να χρησιμοποιήσετε το neek, πρέπει να ορίσετε τη 'Διαδρομή Καναλιού EmuNAND' σε μια κατάτμηση FAT32."
+
+msgid "To use neek you need to use a 512 bytes/sector Hard Drive."
+msgstr "Για να χρησιμοποιήσετε το neek, πρέπει να χρησιμοποιήσετε έναν Σκληρό Δίσκο με 512 bytes/sector."
+
+msgid "Toggle SD card mode"
+msgstr "Εναλλαγή λειτουργίας κάρτας SD"
 
 msgid "Tooltip Delay"
-msgstr "Καθυστέρηση εμφάνισης ετικετών"
+msgstr "Καθυστέρηση Εργαλείων"
 
 msgid "Tooltips"
-msgstr "Ετικέτες"
-
-msgid "Transfer failed"
-msgstr "Ανεπιτυχής μεταφορά αρχείων"
+msgstr "Εργαλεία"
 
 msgid "Triforce Arcade Mode"
-msgstr ""
+msgstr "Λειτουργία Triforce Arcade"
 
 msgid "Two Lines"
-msgstr ""
+msgstr "Δύο Γραμμές"
 
 msgid "USB"
-msgstr ""
+msgstr "USB"
 
 msgid "USB Device not initialized."
-msgstr ""
+msgstr "Η συσκευή USB δεν έχει αρχικοποιηθεί."
+
+msgid "USB Loader GX couldn't verify Nintendont boot.dol file. Launch this boot.dol anyway?"
+msgstr "Το USB Loader GX δεν μπόρεσε να επαληθεύσει το αρχείο boot.dol του Nintendont. Να εκκινήσει αυτό το boot.dol ούτως ή άλλως;"
+
+msgid "USB Loader GX couldn't write Nintendont config file. Launch Nintendont anyway?"
+msgstr "Το USB Loader GX δεν μπόρεσε να γράψει το αρχείο ρυθμίσεων του Nintendont. Να εκκινήσει το Nintendont ούτως ή άλλως;"
 
 msgid "USB Loader GX is protected"
 msgstr "Το USB Loader GX είναι προστατευμένο"
+
+msgid "USB Loader GX needs to be installed to an SD card for this setting to work."
+msgstr "Το USB Loader GX πρέπει να εγκατασταθεί σε κάρτα SD για να λειτουργήσει αυτή η ρύθμιση."
+
+msgid "USB Loader GX r1218 is required for Nintendont Alpha v0.1. Please update your Nintendont boot.dol version."
+msgstr "Απαιτείται το USB Loader GX r1218 για το Nintendont Alpha v0.1. Παρακαλώ ενημερώστε την έκδοση του boot.dol του Nintendont."
 
 msgid "USB Port"
 msgstr "Θύρα USB"
 
 msgid "USB Port changing is only supported on Hermes cIOS."
-msgstr "Η αλλαγή θύρας USB υποστηρίζεται μόνο από το cIOS Hermes."
+msgstr "Η αλλαγή θύρας USB υποστηρίζεται μόνο στο Hermes cIOS."
 
 msgid "USB-HID Controller"
-msgstr ""
-
-msgid "USBloaderGX couldn't verify Nintendont boot.dol file. Launch this boot.dol anyway?"
-msgstr ""
-
-msgid "USBloaderGX couldn't write Nintendont config file. Launch Nintendont anyway?"
-msgstr ""
-
-msgid "USBloaderGX r1218 is required for Nintendont Alpha v0.1. Please update your Nintendont boot.dol version."
-msgstr ""
+msgstr "Χειριστήριο USB-HID"
 
 msgid "Uninstall"
 msgstr "Απεγκατάσταση"
 
 msgid "Uninstall Game"
-msgstr "Απεγκατάσταση παιχνιδιού"
+msgstr "Απεγκατάσταση Παιχνιδιού"
 
 msgid "Uninstall Menu"
-msgstr "Απεγκατάσταση μενού"
+msgstr "Μενού Απεγκατάστασης"
 
 msgid "Uninstall all"
 msgstr "Απεγκατάσταση όλων"
 
 msgid "Unknown"
-msgstr "ʼγνωστο"
+msgstr "Άγνωστο"
 
 msgid "Unlock USB Loader GX"
 msgstr "Ξεκλείδωμα USB Loader GX"
 
 msgid "Unlocked"
-msgstr "Ξεκλειδώθηκε"
+msgstr "Ξεκλειδωμένο"
 
-msgid "Unsupported format, try to extract manually TempTheme.zip."
-msgstr "Μη συμβατός τύπος αρχείου, δοκιμάστε να αποσυμπιέσετε τον φάκελο TempTheme.zip."
+msgid "Unsupported format!"
+msgstr "Μη υποστηριζόμενη μορφή!"
 
 msgid "Update"
-msgstr "Aναβάθμιση"
+msgstr "Ενημέρωση"
 
-msgid "Update Files"
-msgstr "Αναβάθμιση αρχείων"
+msgid "Update All Language Files"
+msgstr "Ενημέρωση όλων των Αρχείων Γλώσσας"
 
-msgid "Update all Language Files"
-msgstr "Αναβάθμιση όλων των μεταφράσεων"
+msgid "Update Cheat Files"
+msgstr "Ενημέρωση Αρχείων Cheat"
+
+msgid "Update Cover Files"
+msgstr "Ενημέρωση Αρχείων Εξωφύλλων"
 
 msgid "Update Failed"
-msgstr "Αποτυχία αναβάθμισης"
+msgstr "Η ενημέρωση απέτυχε"
 
-msgid "Update Successful"
-msgstr "Επιτυχής αναβάθμιση"
+msgid "Update Language Files"
+msgstr "Ενημέρωση Αρχείων Γλώσσας"
+
+msgid "Update Menu"
+msgstr "Μενού Ενημέρωσης"
+
+msgid "Update Nintendont"
+msgstr "Ενημέρωση Nintendont"
+
+msgid "Update USB Loader GX"
+msgstr "Ενημέρωση USB Loader GX"
+
+msgid "Update WiiTDB.xml"
+msgstr "Ενημέρωση WiiTDB.xml"
 
 msgid "Updating Language Files:"
-msgstr "Αναβάθμιση αρχείων μεταφράσεων:"
+msgstr "Ενημέρωση Αρχείων Γλώσσας:"
 
 msgid "Uploaded ZIP file installed to homebrew directory."
-msgstr "Αναβαθμίσμένο αρχείο ZIP εγκαταστάθηκε στην κατηγορία Homebrew."
+msgstr "Το ανεβασμένο αρχείο ZIP εγκαταστάθηκε στον κατάλογο homebrew."
 
 msgid "Use System Font"
-msgstr "Χρήση γραμματοσειράς συστήματος"
+msgstr "Χρήση Γραμματοσειράς Συστήματος"
 
 msgid "Use global"
-msgstr "Χρήση βασικού"
+msgstr "Χρήση παγκόσμιου"
 
 msgid "VBI (Default)"
-msgstr "VBI (Προκαθοριμένο)"
+msgstr "VBI (Προεπιλογή)"
 
 msgid "VIDTV Patch"
-msgstr "Patch VIDTV"
+msgstr "Επιδιόρθωση VIDTV"
 
 msgid "Version:"
 msgstr "Έκδοση:"
@@ -2384,197 +2371,191 @@ msgid "Version: %s"
 msgstr "Έκδοση: %s"
 
 msgid "Video Deflicker"
-msgstr ""
+msgstr "Αποθόλωση Βίντεο"
 
 msgid "Video Mode"
-msgstr "Ρύθμιση βίντεο"
+msgstr "Λειτουργία Βίντεο"
 
 msgid "Video Scale Value"
-msgstr ""
-
-msgid "Video offset"
-msgstr ""
-
-msgid "Video scale"
-msgstr ""
+msgstr "Τιμή Κλίμακας Βίντεο"
 
 msgid "Video Width"
-msgstr ""
+msgstr "Πλάτος Βίντεο"
+
+msgid "Video offset"
+msgstr "Μετατόπιση Βίντεο"
+
+msgid "Video scale"
+msgstr "Κλίμακα Βίντεο"
 
 msgid "Virtual Pointer Speed"
-msgstr "Ταχύτητα εικονικού δείκτη"
+msgstr "Ταχύτητα Εικονικού Δείκτη"
 
 msgid "WDM Files Path"
-msgstr "Μονοπάτι αρχείων WDM"
+msgstr "Διαδρομή Αρχείων WDM"
 
 msgid "WIP Patches Path"
-msgstr "Μονοπάτι αρχείων WIP patches"
+msgstr "Διαδρομή Επιδιορθώσεων WIP"
 
 msgid "Waiting..."
-msgstr "Aναμονή..."
+msgstr "Αναμονή..."
 
 msgid "Warning"
-msgstr "Προσοχή"
+msgstr "Προειδοποίηση"
 
 msgid "Warning:"
-msgstr "Προσοχή:"
+msgstr "Προειδοποίηση:"
 
 msgid "What do you want to do?"
-msgstr "Τι θα θέλατε να κάνετε?"
-
-msgid "What do you want to update?"
-msgstr "Τι θα θέλατε να αναβαθμίσετε?"
+msgstr "Τι θέλετε να κάνετε;"
 
 msgid "What should be deleted for this game title:"
-msgstr "Τι θα θέλατε να διαγράψετε από αυτό τον τίτλο:"
+msgstr "Τι πρέπει να διαγραφεί για αυτόν τον τίτλο παιχνιδιού:"
 
 msgid "What to extract from NAND?"
-msgstr "Τι να μεταφερθεί από τη μνήμη NAND?"
+msgstr "Τι να εξαγάγετε από το NAND;"
 
-msgid "Where should the game be installed to?"
-msgstr "Που να εγκατασταθεί το παιχνίδι?"
+msgid "Where Should the Game Be Installed To?"
+msgstr "Πού πρέπει να εγκατασταθεί το παιχνίδι;"
 
 msgid "Where to dump NAND?"
-msgstr ""
+msgstr "Πού να απορρίψετε το NAND;"
 
 msgid "Which device do you want to use for Nintendont files?"
-msgstr ""
+msgstr "Ποια συσκευή θέλετε να χρησιμοποιήσετε για τα αρχεία του Nintendont;"
 
 msgid "Which mode do you want to use?"
-msgstr ""
+msgstr "Ποια λειτουργία θέλετε να χρησιμοποιήσετε;"
 
 msgid "WiFi Features"
-msgstr "Λειτουργίες wi-fi"
+msgstr "Λειτουργίες WiFi"
 
 msgid "Widescreen Factor"
-msgstr "Συντελεστής για widescreen"
+msgstr "Παράγοντας Ευρείας Οθόνης"
 
 msgid "Widescreen Fix"
-msgstr "Διόρθωση για ευρείες οθόνες"
+msgstr "Διόρθωση Ευρείας Οθόνης"
 
-msgid "Wii Games"
-msgstr "Παιχνίδια Wii"
+msgid "Wii"
+msgstr "Wii"
 
 msgid "Wii Menu"
-msgstr "Μενού του Wii"
+msgstr "Μενού Wii"
 
 msgid "Wii Settings"
-msgstr "Ρυθμίσεις του Wii"
+msgstr "Ρυθμίσεις Wii"
 
-msgid "WiiTDB.xml"
-msgstr "WiiTDB.xml"
+msgid "Wii U GamePad Slot"
+msgstr "Υποδοχή GamePad Wii U"
+
+msgid "Wii U Widescreen"
+msgstr "Ευρεία Οθόνη Wii U"
 
 msgid "WiiTDB.xml is up to date."
-msgstr "Το αρχείο WiiTDB.xml είναι ενημερωμένο"
-
-msgid "WiiU Widescreen"
-msgstr ""
+msgstr "Το WiiTDB.xml είναι ενημερωμένο."
 
 msgid "Wiilight"
-msgstr "Λάμπακι DVD drive του Wii"
+msgstr "Wiilight"
 
 msgid "Wiimmfi"
-msgstr ""
+msgstr "Wiimmfi"
 
 msgid "Wiinnertag"
-msgstr ""
+msgstr "Wiinnertag"
 
 msgid "Wiinnertag Path"
-msgstr "Μονοπάτι αρχείων wiinnertag"
+msgstr "Διαδρομή Wiinnertag"
 
 msgid "Wiinnertag requires you to enable automatic network connect on application start. Do you want to enable it now?"
-msgstr "Το Wiinnertag απαιτεί να έχετε ενεργοποιήσει την αυτόματη σύνδεση της εφαρμογής στο διαδίκτυο κατα την εκκίνηση του. Θέλετε να την ενεργοποιήσετε τώρα?"
+msgstr "Το Wiinnertag απαιτεί να ενεργοποιήσετε την αυτόματη σύνδεση δικτύου κατά την εκκίνηση της εφαρμογής. Θέλετε να το ενεργοποιήσετε τώρα;"
 
 msgid "Wiird Debugger"
-msgstr "Χρήση Wiird Debugger"
+msgstr "Αποσφαλματωτής Wiird"
 
 #, c-format
 msgid "Write error on file: %s"
-msgstr "Γράψιμο του λάθους στο αρχείο: %s"
+msgstr "Σφάλμα εγγραφής στο αρχείο: %s"
 
 msgid "Writing GXGameCategories.xml"
-msgstr "Γράφεται το αρχείο Categories.xml"
+msgstr "Γράφοντας GXGameCategories.xml"
 
 msgid "Wrong Password"
-msgstr "Λανθασμένος κωδικός"
+msgstr "Λάθος Κωδικός"
 
 msgid "Yes"
 msgstr "Ναι"
 
 msgid "You are trying to select a FAT32/NTFS/EXT partition with cIOS 249 Rev < 18. This is not supported. Continue on your own risk."
-msgstr "Προσπαθείτε να επιλέξετε ενα partition FAT32/NTFS/EXT με cIOS 249 έκδοσης < 18. Αυτό δεν υποστηρίζεται. Προχωρήστε με δική σας ευθύνη."
+msgstr "Προσπαθείτε να επιλέξετε μια κατάτμηση FAT32/NTFS/EXT με cIOS 249 Rev < 18. Αυτό δεν υποστηρίζεται. Συνεχίστε με δική σας ευθύνη."
 
 msgid "You can select or format a partition or use the channel loader mode."
-msgstr "Μπορείτε να επιλέξετε ή να επανασυγκροτήσετε ενα partition ή να χρησιμοποιήσετε την επιλογή channel loader."
+msgstr "Μπορείτε να επιλέξετε ή να μορφοποιήσετε μια κατάτμηση ή να χρησιμοποιήσετε τη λειτουργία φορτωτή καναλιού."
 
 msgid "You cannot delete this category."
 msgstr "Δεν μπορείτε να διαγράψετε αυτήν την κατηγορία."
 
+msgid "You have DIOS-MIOS installed, so this game needs to be on a FAT32 USB storage device. You'll need to install DIOS-MIOS Lite to run this game from an SD card."
+msgstr "Έχετε εγκαταστήσει το DIOS-MIOS, οπότε αυτό το παιχνίδι πρέπει να βρίσκεται σε μια συσκευή αποθήκευσης USB FAT32. Θα χρειαστεί να εγκαταστήσετε το DIOS-MIOS Lite για να τρέξετε αυτό το παιχνίδι από μια κάρτα SD."
+
 msgid "You need neek2o to load EmuNAND from sub-folders."
-msgstr ""
+msgstr "Χρειάζεστε το neek2o για να φορτώσετε το EmuNAND από υποφακέλους."
 
 msgid "You need to install DIOS MIOS Lite v1.2 or a newer version."
-msgstr "Πρέπει να εγκαταστήσεις το DIOS MIOS Lite v1.2 ή μια νεότερη έκδοση."
+msgstr "Πρέπει να εγκαταστήσετε το DIOS MIOS Lite v1.2 ή νεότερη έκδοση."
 
 msgid "You need to install an additional GameCube loader or select a different GameCube Mode to launch GameCube games from USB or SD card."
-msgstr ""
+msgstr "Πρέπει να εγκαταστήσετε έναν επιπλέον φορτωτή GameCube ή να επιλέξετε διαφορετική Λειτουργία GameCube για να εκκινήσετε παιχνίδια GameCube από USB ή κάρτα SD."
 
 msgid "Your current GameCube partition is not compatible. Please update Nintendont."
-msgstr ""
+msgstr "Η τρέχουσα κατάτμηση GameCube σας δεν είναι συμβατή. Παρακαλώ ενημερώστε το Nintendont."
 
 msgid "Zoom Duration (Speed)"
-msgstr "διάρκεια εστίασης (Ταχύτητα)"
+msgstr "Διάρκεια Ζουμ (Ταχύτητα)"
 
 msgid "and translators for language files updates"
-msgstr "και τους μεταφραστές για τις αναβαθμίσεις στις διαθέσιμες γλώσσες του προγράμματος"
+msgstr "και μεταφραστές για ενημερώσεις αρχείων γλώσσας"
 
 msgid "does not exist!"
 msgstr "δεν υπάρχει!"
 
 msgid "does not exist!  Loading game without cheats."
-msgstr "δεν βρέθηκε. Φόρτωση παιχνιδιού χωρίς cheats."
+msgstr "δεν υπάρχει! Φόρτωση παιχνιδιού χωρίς cheats."
 
 msgid "files left"
-msgstr "εναπομείναντα αρχεία"
+msgstr "αρχεία που απομένουν"
 
 msgid "for FAT/NTFS support"
 msgstr "για υποστήριξη FAT/NTFS"
 
 msgid "for GameTDB and hosting covers / disc images"
-msgstr "για το GameTDB και την αποθήκευση εξωφύλλων / εικόνων δίσκων"
+msgstr "για το GameTDB και τη φιλοξενία εξωφύλλων / εικόνων δίσκων"
 
 msgid "for Ocarina"
 msgstr "για το Ocarina"
 
 msgid "for diverse patches"
-msgstr "για διάφορα patches"
+msgstr "για διάφορες επιδιορθώσεις"
 
 msgid "for his awesome tool LibWiiGui"
-msgstr "για το απίθανο εργαλείο του LibWiiGui"
-
-msgid "for hosting the themes"
-msgstr "για την αποθήκευση των θεμάτων"
+msgstr "για το καταπληκτικό εργαλείο του LibWiiGui"
 
 msgid "for the USB Loader source"
-msgstr "για τον κώδικα του 'USB Loader"
+msgstr "για τον κώδικα του USB Loader"
 
 msgid "for their work on the wiki page"
-msgstr "για την δουλειά τους στην σελίδα μας στο wiki"
+msgstr "για τη δουλειά τους στη σελίδα wiki"
 
 msgid "formatted!"
-msgstr "ανασυγκροτήθηκε!"
+msgstr "μορφοποιήθηκε!"
 
 msgid "free"
-msgstr "ελευθερα"
+msgstr "ελεύθερο"
 
 msgid "ms"
 msgstr "ms"
-
-msgid "not set"
-msgstr "δεν ορίστηκε"
 
 msgid "of"
 msgstr "από"
 
 msgid "seconds left"
-msgstr "δευτερόλεπτα απομένουν"
+msgstr "δευτερόλεπτα που απομένουν"

@@ -1,69 +1,67 @@
 # USB Loader GX language source file.
-# swedish.lang - r898
+# swedish.lang - r1282
 # don't delete/change this line (é).
 msgid ""
 msgstr ""
 "Project-Id-Version: USB Loader GX\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2019-06-15 16:05+0200\n"
-"PO-Revision-Date: 2010-01-19 17:39+0200\n"
-"Last-Translator: Katsurou\n"
-"Language-Team: Katsurou, pirateX\n"
+"POT-Creation-Date: 2025-06-25 09:00+0100\n"
+"PO-Revision-Date: 2025-06-25 09:00+0100\n"
+"Last-Translator: GPT-4o\n"
+"Language-Team: Swedish\n"
 "MIME-Version: 1.0\n"
-"Content-Type: text/plain; charset=utf-8\n"
+"Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"Language: \n"
 
 msgid " could not be downloaded."
-msgstr "Kunde inte laddas ner."
+msgstr " kunde inte laddas ner."
 
-msgid " has been Saved.  The text has not been verified.  Some of the code may not work right with each other.  If you experience trouble, open the text in a real text editor for more information."
-msgstr "har sparats. Texten har inte blivit varifierad. Några av koderna kanske inte fungerar riktigt med varandra. Om du upplever problem, öppna texten i en textredigerare för mer information."
+msgid " has been saved, but you might need to edit some cheats from a computer."
+msgstr " har sparats, men du kan behöva redigera några fusk från en dator."
 
 msgid " is not on the server."
-msgstr "finns inte på servern."
-
-#, c-format
-msgid "%i files not found on the server!"
-msgstr ""
-
-#, c-format
-msgid "%i missing files"
-msgstr ""
+msgstr " finns inte på servern."
 
 #, c-format
 msgid "%i WAD file(s) not processed!"
-msgstr ""
+msgstr "%i WAD-fil(er) inte bearbetade!"
 
 #, c-format
 msgid "%i WAD found."
-msgstr ""
+msgstr "%i WAD hittad."
+
+#, c-format
+msgid "%i files not found on the server!"
+msgstr "%i filer hittades inte på servern!"
 
 #, c-format
 msgid "%s only accepts GameCube backups in ISO format."
-msgstr ""
+msgstr "%s accepterar endast GameCube-backuper i ISO-format."
 
 #, c-format
-msgid "%s requires AHB access! Please launch USBLoaderGX from HBC or from an updated channel or forwarder."
-msgstr ""
+msgid "%s requires AHB access! Please launch USB Loader GX from HBC or from an updated channel or forwarder."
+msgstr "%s kräver AHB-åtkomst! Starta USB Loader GX från HBC eller från en uppdaterad kanal eller vidarebefordrare."
 
 msgid "--==       Devolution"
-msgstr ""
+msgstr "--==       Devolution"
 
 msgid "--==       Nintendont"
-msgstr ""
+msgstr "--==       Nintendont"
 
-msgid "--==   DIOS MIOS (Lite) "
-msgstr ""
+msgid "--==   DIOS MIOS (Lite)"
+msgstr "--==   DIOS MIOS (Lite)"
 
 msgid "--==  DM(L) + Nintendont"
-msgstr ""
+msgstr "--==  DM(L) + Nintendont"
 
 msgid "/\\/\\"
-msgstr ""
+msgstr "/\\/\\"
 
 msgid "0 (Everyone)"
 msgstr "0 (Alla)"
+
+msgid "1"
+msgstr "1"
 
 msgid "1 (Child 7+)"
 msgstr "1 (Barn 7+)"
@@ -72,363 +70,383 @@ msgid "1 hour"
 msgstr "1 timme"
 
 msgid "10 min"
-msgstr ""
+msgstr "10 min"
+
+msgid "2"
+msgstr "2"
 
 msgid "2 (Teen 12+)"
-msgstr "2 (Tonåringar 12+)"
+msgstr "2 (Tonåring 12+)"
 
 msgid "20 min"
-msgstr ""
+msgstr "20 min"
 
 msgid "2D Cover Path"
-msgstr "2D Omslagsmapp"
+msgstr "2D Omslagsväg"
+
+msgid "3"
+msgstr "3"
 
 msgid "3 (Mature 16+)"
-msgstr "3 (Ungdomar 16+)"
+msgstr "3 (Mogen 16+)"
 
 msgid "3 min"
-msgstr ""
+msgstr "3 min"
 
 msgid "30 min"
-msgstr ""
+msgstr "30 min"
 
 msgid "3D Cover Path"
-msgstr "3D Omslagsmapp"
+msgstr "3D Omslagsväg"
 
 msgid "3D Covers"
-msgstr "3D-Omslag"
+msgstr "3D Omslag"
+
+msgid "4"
+msgstr "4"
 
 msgid "4 (Adults Only 18+)"
-msgstr "4 (Endast Vuxna 18+)"
+msgstr "4 (Endast vuxna 18+)"
 
 msgid "480p Pixel Fix Patch"
-msgstr ""
+msgstr "480p Pixel Fix Patch"
 
 msgid "5 min"
-msgstr ""
+msgstr "5 min"
 
 msgid "=== GameCube Settings"
-msgstr ""
+msgstr "=== GameCube-inställningar"
 
 msgid "AUTO"
-msgstr ""
+msgstr "AUTO"
 
 msgid "AXNextFrame"
-msgstr ""
+msgstr "AXNextFrame"
 
 msgid "Add category"
-msgstr ""
+msgstr "Lägg till kategori"
 
 msgid "Adjust Overscan X"
-msgstr ""
+msgstr "Justera Overscan X"
 
 msgid "Adjust Overscan Y"
-msgstr ""
+msgstr "Justera Overscan Y"
 
 msgid "After zoom"
-msgstr ""
+msgstr "Efter zoom"
 
 msgid "All"
-msgstr ""
+msgstr "Alla"
 
 msgid "All Partitions"
-msgstr ""
+msgstr "Alla partitioner"
+
+msgid "All WAD files processed successfully."
+msgstr "Alla WAD-filer bearbetades framgångsrikt."
 
 msgid "All files extracted."
-msgstr ""
+msgstr "Alla filer extraherade."
 
 msgid "All images downloaded successfully."
-msgstr ""
+msgstr "Alla bilder nedladdade framgångsrikt."
 
 msgid "All the features of USB Loader GX are unlocked."
 msgstr "Alla funktioner i USB Loader GX är upplåsta."
 
-msgid "All WAD files processed successfully."
-msgstr ""
+msgid "AltWFC"
+msgstr "AltWFC"
 
 msgid "Alternate DOL"
 msgstr "Alternativ DOL"
 
-msgid "AltWFC"
-msgstr ""
-
 msgid "An example file was created here:"
-msgstr ""
+msgstr "En exempel fil skapades här:"
 
 msgid "Animation Start"
-msgstr ""
+msgstr "Animationsstart"
 
 msgid "App Language"
-msgstr "Programspråk"
+msgstr "App-språk"
 
 msgid "Apply"
-msgstr ""
+msgstr "Tillämpa"
 
 msgid "Apr"
 msgstr "Apr"
 
+msgid "Are You Sure You Want to Install on SD?"
+msgstr "Är du säker på att du vill installera på SD?"
+
 msgid "Are you really sure you want to delete all selected games from the SD card?"
-msgstr ""
+msgstr "Är du verkligen säker på att du vill ta bort alla valda spel från SD-kortet?"
 
 msgid "Are you sure you want to delete this category?"
-msgstr ""
+msgstr "Är du säker på att du vill ta bort denna kategori?"
 
-msgid "Are you sure you want to import game categories from GameTDB?"
-msgstr ""
-
-msgid "Are you sure you want to install on SD?"
-msgstr ""
+msgid "Are you sure you want to import game categories from WiiTDB?"
+msgstr "Är du säker på att du vill importera spelkategorier från WiiTDB?"
 
 msgid "Are you sure you want to lock USB Loader GX?"
-msgstr ""
+msgstr "Är du säker på att du vill låsa USB Loader GX?"
 
-msgid "Are you sure you want to remount SD?"
-msgstr ""
+msgid "Are you sure you want to redownload everything?"
+msgstr "Är du säker på att du vill ladda ner allt igen?"
 
 msgid "Are you sure you want to reset?"
-msgstr ""
+msgstr "Är du säker på att du vill återställa?"
 
 msgid "Are you sure?"
 msgstr "Är du säker?"
 
+msgid "Ask"
+msgstr "Fråga"
+
 msgid "Aspect Ratio"
-msgstr ""
+msgstr "Bildförhållande"
 
 msgid "Attention!"
-msgstr ""
+msgstr "Uppmärksamhet!"
 
 msgid "Attention: All savegames will be deleted."
-msgstr ""
+msgstr "Uppmärksamhet: Alla sparade spel kommer att raderas."
 
 msgid "Aug"
-msgstr ""
+msgstr "Aug"
 
 msgid "Author(s):"
-msgstr ""
+msgstr "Författare:"
 
 msgid "Auto"
-msgstr ""
+msgstr "Auto"
 
 msgid "Auto Boot"
-msgstr ""
+msgstr "Auto Boot"
 
 msgid "AutoInit Network"
-msgstr "Autoinitiera Nätverk"
+msgstr "AutoInit Nätverk"
+
+msgid "Autoboot Discs"
+msgstr "Autoboot Skivor"
+
+msgid "Autoboot Discs Delay"
+msgstr "Fördröjning av Autoboot Skivor"
+
+msgid "BBA Emulation"
+msgstr "BBA Emulering"
+
+msgid "BBA Net Profile"
+msgstr "BBA Nätprofil"
 
 msgid "BCA Codes Path"
-msgstr "BCA kodssökväg"
+msgstr "BCA Kodväg"
 
 msgid "Back"
 msgstr "Tillbaka"
 
 msgid "Back to HBC or Wii Menu"
-msgstr "Tillbaka till HBC eller Wii-Menyn"
+msgstr "Tillbaka till HBC eller Wii Meny"
 
 msgid "Background Music"
 msgstr "Bakgrundsmusik"
 
 msgid "Banner Animation"
-msgstr ""
-
-msgid "Banner Animation Settings"
-msgstr ""
+msgstr "Banneranimation"
 
 msgid "Banner On Channels"
-msgstr ""
+msgstr "Banner på Kanaler"
+
+msgid "Banner Settings"
+msgstr "Bannerinställningar"
 
 msgid "Banner grid layout is only available with AHBPROT! Please consider installing new HBC version."
-msgstr ""
+msgstr "Banner rutnätslayout är endast tillgänglig med AHBPROT! Överväg att installera ny HBC-version."
 
 msgid "Banner window is only available with AHBPROT! Please consider installing new HBC version."
-msgstr ""
+msgstr "Bannerfönster är endast tillgängligt med AHBPROT! Överväg att installera ny HBC-version."
 
 msgid "Big thanks to:"
 msgstr "Stort tack till:"
 
+msgid "Block Banner Settings"
+msgstr "Blockera Bannerinställningar"
+
 msgid "Block Categories Menu"
-msgstr ""
+msgstr "Blockera Kategorimenyn"
 
 msgid "Block Categories Modify"
-msgstr ""
+msgstr "Blockera Kategorier Modifiera"
 
 msgid "Block Cover Downloads"
-msgstr ""
+msgstr "Blockera Omslagsnedladdningar"
 
 msgid "Block Custom Paths"
-msgstr ""
+msgstr "Blockera Anpassade Vägar"
 
-msgid "Block Feature Settings"
-msgstr ""
+msgid "Block GUI Settings"
+msgstr "Blockera GUI-inställningar"
 
 msgid "Block Game Install"
-msgstr ""
+msgstr "Blockera Spelinstallation"
 
 msgid "Block Game Settings"
-msgstr ""
+msgstr "Blockera Spelinställningar"
 
-msgid "Block GameID Change"
-msgstr ""
+msgid "Block Game Sources Button"
+msgstr "Blockera Spelkällor Knapp"
+
+msgid "Block Game Type Button"
+msgstr "Blockera Speltyp Knapp"
 
 msgid "Block Global Settings"
-msgstr ""
-
-msgid "Block Gui Settings"
-msgstr ""
+msgstr "Blockera Globala Inställningar"
 
 msgid "Block HBC Menu"
-msgstr ""
+msgstr "Blockera HBC Meny"
+
+msgid "Block HBC Title Launcher"
+msgstr "Blockera HBC Titelstartare"
 
 msgid "Block Hard Drive Settings"
-msgstr ""
+msgstr "Blockera Hårddiskinställningar"
 
 msgid "Block IOS Reload"
-msgstr "Blockera IOS omladdning"
+msgstr "Blockera IOS Omladdning"
 
 msgid "Block Loader Layout Button"
-msgstr ""
-
-msgid "Block Loader Mode Button"
-msgstr ""
+msgstr "Blockera Laddarens Layout Knapp"
 
 msgid "Block Loader Settings"
-msgstr ""
+msgstr "Blockera Laddarens Inställningar"
+
+msgid "Block Miscellaneous Settings"
+msgstr "Blockera Diverse Inställningar"
 
 msgid "Block Parental Settings"
-msgstr ""
+msgstr "Blockera Föräldrainställningar"
 
 msgid "Block Priiloader Override"
-msgstr ""
+msgstr "Blockera Priiloader Överskrivning"
 
 msgid "Block Reset Settings"
-msgstr ""
+msgstr "Blockera Återställningsinställningar"
 
-msgid "Block SD Reload Button"
-msgstr ""
+msgid "Block SD Card Mode Button"
+msgstr "Blockera SD-kortsläge Knapp"
 
 msgid "Block Sound Settings"
-msgstr ""
-
-msgid "Block Theme Downloader"
-msgstr ""
+msgstr "Blockera Ljudinställningar"
 
 msgid "Block Theme Menu"
-msgstr ""
+msgstr "Blockera Temameny"
 
-msgid "Block Title Launcher"
-msgstr ""
-
-msgid "Block Updates"
-msgstr ""
+msgid "Block Update Menu"
+msgstr "Blockera Uppdateringsmeny"
 
 msgid "Boot Content"
-msgstr ""
+msgstr "Boot Innehåll"
 
 msgid "Boot Neek System Menu"
-msgstr ""
+msgstr "Boot Neek Systemmeny"
 
 msgid "Boot?"
-msgstr "Starta?"
+msgstr "Boot?"
 
 msgid "Both"
 msgstr "Båda"
 
 msgid "Both Ports"
-msgstr ""
+msgstr "Båda Portarna"
 
 msgid "CC Rumble"
-msgstr ""
+msgstr "CC Vibration"
 
 msgid "Cache BNR Files"
-msgstr ""
+msgstr "Cache BNR Filer"
 
 msgid "Cache BNR Files Path"
-msgstr ""
+msgstr "Cache BNR Filväg"
 
 msgid "Cache Path"
-msgstr ""
+msgstr "Cacheväg"
 
 msgid "Cache Titles"
-msgstr ""
+msgstr "Cachetitlar"
 
 msgid "Can't be formatted"
 msgstr "Kan inte formateras"
 
 msgid "Can't create directory"
-msgstr "Kan inte skapa mapp"
+msgstr "Kan inte skapa katalog"
 
 #, c-format
 msgid "Can't create file: %s"
-msgstr ""
-
-#, c-format
-msgid "Can't create path: %s"
-msgstr ""
+msgstr "Kan inte skapa fil: %s"
 
 msgid "Can't delete:"
-msgstr "Kunde inte radera:"
+msgstr "Kan inte radera:"
 
 msgid "Can't mount or unknown disc format."
-msgstr ""
+msgstr "Kan inte montera eller okänt skivformat."
 
 #, c-format
 msgid "Can't open file for write: %s"
-msgstr ""
+msgstr "Kan inte öppna fil för skrivning: %s"
 
 #, c-format
 msgid "Can't open file: %s"
-msgstr ""
+msgstr "Kan inte öppna fil: %s"
 
 #, c-format
 msgid "Can't read file: %s"
-msgstr ""
+msgstr "Kan inte läsa fil: %s"
+
+msgid "Can't write to destination."
+msgstr "Kan inte skriva till destination."
 
 msgid "Cancel"
 msgstr "Avbryt"
 
-msgid "Can't write to destination."
-msgstr ""
-
 msgid "Categories"
-msgstr ""
+msgstr "Kategorier"
 
 msgid "Categories:"
-msgstr ""
+msgstr "Kategorier:"
 
 msgid "Change Play Path"
-msgstr "Ändra spel sökväg"
+msgstr "Ändra Spelväg"
 
 msgid "Channel Launcher"
-msgstr ""
+msgstr "Kanalstartare"
 
 msgid "Channel Path"
-msgstr ""
+msgstr "Kanalväg"
 
 msgid "Channels"
 msgstr "Kanaler"
 
-msgid "Cheatfile is blank"
-msgstr "Fuskfilen är blank"
+msgid "Cheat file is blank"
+msgstr "Fuskfilen är tom"
 
 msgid "Clear"
-msgstr ""
+msgstr "Rensa"
 
 msgid "Click to download covers"
 msgstr "Klicka för att ladda ner omslag"
 
 msgid "Click to view information"
-msgstr ""
+msgstr "Klicka för att visa information"
 
 msgid "Clock"
 msgstr "Klocka"
 
 msgid "Clock Scale Factor"
-msgstr ""
+msgstr "Klockskalfaktor"
 
 msgid "Close"
 msgstr "Stäng"
 
 msgid "Code Download"
-msgstr "Fusknedladdning"
+msgstr "Kodnedladdning"
 
 #, c-format
 msgid "Coded by: %s"
@@ -437,102 +455,96 @@ msgstr "Kodad av: %s"
 msgid "Coding:"
 msgstr "Kodning:"
 
-msgid "Connection to server timed out."
-msgstr ""
-
 msgid "Console"
 msgstr "Konsol"
 
 msgid "Console Default"
-msgstr "Konsolestandard"
+msgstr "Konsolstandard"
 
 msgid "Console Locked"
-msgstr "Konsol låst"
+msgstr "Konsol Låst"
 
 msgid "Console must be unlocked for this option."
-msgstr ""
+msgstr "Konsolen måste vara upplåst för detta alternativ."
 
 msgid "Console must be unlocked to be able to use this."
-msgstr ""
+msgstr "Konsolen måste vara upplåst för att kunna använda detta."
 
 msgid "Console should be unlocked to modify it."
-msgstr "Konsolen måste vara upplåst för att kunna ändra det."
+msgstr "Konsolen bör vara upplåst för att modifiera den."
 
 msgid "Continue"
-msgstr ""
+msgstr "Fortsätt"
 
-msgid "Continue to install game?"
-msgstr "Fortsätt installera spel?"
+msgid "Continue To Install Game?"
+msgstr "Fortsätt att installera spelet?"
 
 msgid "Continue?"
-msgstr ""
+msgstr "Fortsätt?"
 
-msgid "Controllevel"
+msgid "Control Level"
 msgstr "Kontrollnivå"
 
 msgid "Copy"
-msgstr ""
+msgstr "Kopiera"
 
 msgid "Copying Canceled"
-msgstr ""
+msgstr "Kopiering Avbruten"
 
 msgid "Copying GC game..."
-msgstr ""
+msgstr "Kopierar GC-spel..."
 
 msgid "Copying files..."
-msgstr ""
+msgstr "Kopierar filer..."
 
 msgid "Correct Password"
-msgstr "Rätt lösenord"
+msgstr "Korrekt Lösenord"
 
-msgid "Could not connect to the server."
-msgstr ""
+msgid "Could Not Open Disc"
+msgstr "Kunde Inte Öppna Skivan"
 
 msgid "Could not create GCT file"
-msgstr "Kunde inte skapa GCT fil"
+msgstr "Kunde inte skapa GCT-fil"
 
 #, c-format
 msgid "Could not create path: %s"
-msgstr ""
+msgstr "Kunde inte skapa väg: %s"
 
 msgid "Could not extract files for:"
-msgstr ""
+msgstr "Kunde inte extrahera filer för:"
 
 msgid "Could not find info for this game in the wiitdb.xml."
-msgstr ""
+msgstr "Kunde inte hitta info för detta spel i wiitdb.xml."
 
 msgid "Could not get free device space for game."
-msgstr ""
+msgstr "Kunde inte få ledigt utrymme på enheten för spelet."
 
 msgid "Could not initialize DIP module!"
-msgstr "Kunde inte starta DIP-modul!"
+msgstr "Kunde inte initiera DIP-modul!"
 
-msgid "Could not initialize network!"
-msgstr "Kunde inte starta nätverket!"
+msgid "Could not initialize network. Timed out!"
+msgstr "Kunde inte initiera nätverk. Tidsgräns!"
 
-msgid "Could not initialize network, time out!"
-msgstr ""
-
-msgid "Could not open Disc"
+msgid "Could not open disc"
 msgstr "Kunde inte öppna skivan"
 
 msgid "Could not open the WiiTDB.xml file."
-msgstr ""
+msgstr "Kunde inte öppna WiiTDB.xml-filen."
 
 msgid "Could not open wiitdb.xml."
-msgstr ""
+msgstr "Kunde inte öppna wiitdb.xml."
 
 msgid "Could not save."
 msgstr "Kunde inte spara."
 
 msgid "Could not write file."
-msgstr ""
+msgstr "Kunde inte skriva fil."
 
 msgid "Could not write to:"
-msgstr ""
+msgstr "Kunde inte skriva till:"
 
 msgid "Cover Action"
-msgstr ""
+msgstr "Omslagsåtgärd"
 
 msgid "Cover Download"
 msgstr "Omslagsnedladdning"
@@ -541,55 +553,55 @@ msgid "Create"
 msgstr "Skapa"
 
 msgid "Credits"
-msgstr "Medverkande"
+msgstr "Krediter"
 
 msgid "Crop Overscan"
-msgstr ""
+msgstr "Beskär Overscan"
 
 msgid "Current neek files are not neek2o. Game autoboot disabled."
-msgstr ""
-
-msgid "Custom Address"
-msgstr "Anpassad adress"
-
-msgid "Custom Banners"
-msgstr ""
-
-msgid "Custom Game IOS"
-msgstr ""
-
-msgid "Custom Games IOS"
-msgstr ""
-
-msgid "Custom Paths"
-msgstr "Anpassade sökvägar"
+msgstr "Nuvarande neek-filer är inte neek2o. Spelautoboot inaktiverad."
 
 msgid "Custom"
-msgstr "Anpassade"
+msgstr "Anpassad"
+
+msgid "Custom Address"
+msgstr "Anpassad Adress"
+
+msgid "Custom Banners"
+msgstr "Anpassade Bannrar"
+
+msgid "Custom Game IOS"
+msgstr "Anpassad Spel IOS"
+
+msgid "Custom Games IOS"
+msgstr "Anpassade Spel IOS"
+
+msgid "Custom Paths"
+msgstr "Anpassade Vägar"
 
 msgid "Customs"
-msgstr ""
+msgstr "Anpassningar"
 
 msgid "Customs/Original"
-msgstr "Anpassade/Original"
+msgstr "Anpassningar/Original"
 
 msgid "D Buttons"
-msgstr ""
+msgstr "D Knappar"
 
 msgid "DOL Path"
-msgstr "DOL-sökväg"
+msgstr "DOL Väg"
 
 msgid "Debug"
-msgstr ""
+msgstr "Felsökning"
 
 msgid "Debug Wait"
-msgstr ""
+msgstr "Felsökning Vänta"
 
 msgid "Debugger Paused Start"
-msgstr ""
+msgstr "Felsökare Pausad Start"
 
 msgid "Dec"
-msgstr ""
+msgstr "Dec"
 
 msgid "Default"
 msgstr "Standard"
@@ -598,106 +610,118 @@ msgid "Default Settings"
 msgstr "Standardinställningar"
 
 msgid "Deflicker Filter"
-msgstr ""
+msgstr "Deflicker Filter"
 
 msgid "Delete"
 msgstr "Radera"
 
 msgid "Delete Cached Banner"
-msgstr ""
+msgstr "Radera Cachad Banner"
 
 msgid "Delete Cheat GCT"
-msgstr "Radera fusk GCT"
+msgstr "Radera Fusk GCT"
 
 msgid "Delete Cheat TXT"
-msgstr "Radera fusk TXT"
+msgstr "Radera Fusk TXT"
 
 msgid "Delete Cover Artwork"
-msgstr "Radera omslag"
+msgstr "Radera Omslagskonst"
 
 msgid "Delete Disc Artwork"
-msgstr "Radera skivbilder"
+msgstr "Radera Skivkonst"
+
+msgid "Delete EmuNAND Saves"
+msgstr "Radera EmuNAND Sparningar"
 
 msgid "Delete category"
-msgstr ""
+msgstr "Radera kategori"
 
 msgid "Deleting directories..."
-msgstr ""
+msgstr "Raderar kataloger..."
 
 msgid "Deleting files..."
-msgstr ""
+msgstr "Raderar filer..."
 
 msgid "Design:"
-msgstr ""
+msgstr "Design:"
 
 msgid "Details"
-msgstr ""
+msgstr "Detaljer"
 
 msgid "Developed by"
-msgstr "Utvecklat av"
+msgstr "Utvecklad av"
 
 msgid "Developer:"
-msgstr ""
+msgstr "Utvecklare:"
 
 msgid "Devolution"
-msgstr ""
+msgstr "Devolution"
 
 msgid "Devolution Loader Path"
-msgstr ""
+msgstr "Devolution Laddarväg"
 
 msgid "Devolution's loader.bin file can't be loaded."
-msgstr ""
+msgstr "Devolutions loader.bin-fil kan inte laddas."
 
 msgid "Directory does not exist!"
-msgstr "Katalog existerar inte!"
+msgstr "Katalogen finns inte!"
+
+msgid "Disable SD Card Mode?"
+msgstr "Inaktivera SD-kortsläge?"
+
+msgid "Disable Wiimote Motor"
+msgstr "Inaktivera Wiimote Motor"
+
+msgid "Disable Wiimote Speaker"
+msgstr "Inaktivera Wiimote Högtalare"
 
 msgid "Disc"
-msgstr ""
+msgstr "Skiva"
 
 msgid "Disc 1"
-msgstr ""
+msgstr "Skiva 1"
 
 msgid "Disc 2"
-msgstr ""
+msgstr "Skiva 2"
 
 msgid "Disc Artwork"
-msgstr ""
+msgstr "Skivkonst"
 
 msgid "Disc Artwork Download"
-msgstr "Skivbildsnedladdning"
+msgstr "Skivkonst Nedladdning"
 
 msgid "Disc Artwork Path"
-msgstr "Skivbildsmapp"
+msgstr "Skivkonst Väg"
 
 msgid "Disc Default"
-msgstr "Skivans standard"
+msgstr "Skiva Standard"
 
 msgid "Disc Insert Detected"
-msgstr ""
+msgstr "Skivinsättning Upptäckt"
 
 msgid "Disc Read Delay"
-msgstr ""
+msgstr "Skivläsningsfördröjning"
 
 msgid "Disc read error."
-msgstr ""
+msgstr "Skivläsningsfel."
 
 msgid "Disc-Select Prompt"
-msgstr ""
+msgstr "Skivval Uppmaning"
 
 msgid "Disc2 needs to be installed in uncompressed format to work with DM(L) v2.6+, are you sure you want to install in compressed format?"
-msgstr ""
+msgstr "Disc2 måste installeras i okomprimerat format för att fungera med DM(L) v2.6+, är du säker på att du vill installera i komprimerat format?"
 
 msgid "DiskFlip"
-msgstr "Vänd Skiva"
+msgstr "DiskFlip"
 
 msgid "Display"
-msgstr "Visning"
+msgstr "Visa"
 
 msgid "Display as a carousel"
 msgstr "Visa som en karusell"
 
 msgid "Display as a channel grid"
-msgstr ""
+msgstr "Visa som ett kanalnät"
 
 msgid "Display as a grid"
 msgstr "Visa som ett rutnät"
@@ -706,70 +730,95 @@ msgid "Display as a list"
 msgstr "Visa som en lista"
 
 msgid "Display favorites only"
-msgstr ""
+msgstr "Visa endast favoriter"
 
-msgid "Do you want to apply it now?"
-msgstr "Vill du tillämpa det nu?"
+msgid "Displaying EmuNAND games"
+msgstr "Visar EmuNAND-spel"
 
-msgid "Do you want to apply this theme?"
-msgstr ""
+msgid "Displaying GameCube games"
+msgstr "Visar GameCube-spel"
 
-msgid "Do you want to change language?"
+msgid "Displaying NAND games"
+msgstr "Visar NAND-spel"
+
+msgid "Displaying Wii games"
+msgstr "Visar Wii-spel"
+
+msgid "Displaying a custom selection"
+msgstr "Visar ett anpassat urval"
+
+msgid "Displaying as a carousel"
+msgstr "Visar som en karusell"
+
+msgid "Displaying as a channel grid"
+msgstr "Visar som ett kanalnät"
+
+msgid "Displaying as a grid"
+msgstr "Visar som ett rutnät"
+
+msgid "Displaying as a list"
+msgstr "Visar som en lista"
+
+msgid "Do You Want To Change Language?"
 msgstr "Vill du byta språk?"
 
+msgid "Do you want to apply this theme?"
+msgstr "Vill du tillämpa detta tema?"
+
 msgid "Do you want to continue with next game?"
-msgstr ""
+msgstr "Vill du fortsätta med nästa spel?"
 
 msgid "Do you want to copy now?"
-msgstr ""
+msgstr "Vill du kopiera nu?"
 
 msgid "Do you want to copy the game to SD or delete a game on SD?"
-msgstr ""
+msgstr "Vill du kopiera spelet till SD eller radera ett spel på SD?"
 
 msgid "Do you want to delete a game on SD?"
-msgstr ""
+msgstr "Vill du radera ett spel på SD?"
 
 msgid "Do you want to discard changes?"
-msgstr ""
-
-msgid "Do you want to download this theme?"
-msgstr "Vill du ladda ner detta tema?"
+msgstr "Vill du kassera ändringarna?"
 
 msgid "Do you want to extract all the save games?"
-msgstr ""
+msgstr "Vill du extrahera alla sparade spel?"
 
 msgid "Do you want to extract the save game?"
-msgstr ""
+msgstr "Vill du extrahera det sparade spelet?"
 
 msgid "Do you want to format:"
 msgstr "Vill du formatera:"
 
 msgid "Do you want to install selected games?"
-msgstr ""
+msgstr "Vill du installera valda spel?"
 
 msgid "Do you want to load the default theme?"
-msgstr ""
+msgstr "Vill du ladda standardtemat?"
 
 msgid "Do you want to move the file(s)? Any existing ones will be deleted!"
-msgstr ""
+msgstr "Vill du flytta filen/filerna? Eventuella befintliga kommer att raderas!"
 
 msgid "Do you want to re-init network?"
-msgstr ""
+msgstr "Vill du initiera nätverket igen?"
 
 msgid "Do you want to start the game now?"
-msgstr ""
+msgstr "Vill du starta spelet nu?"
 
-msgid "Do you want to sync free space info sector on all FAT32 partitions?"
-msgstr ""
+msgid "Do you want to use cheats?"
+msgstr "Vill du använda fusk?"
 
 msgid "Do you wish to update/download all language files?"
 msgstr "Vill du uppdatera/ladda ner alla språkfiler?"
 
 msgid "Dol Video Patch"
-msgstr ""
+msgstr "Dol Videopatch"
 
 msgid "Download"
 msgstr "Ladda ner"
+
+#, c-format
+msgid "Download %i missing files?"
+msgstr "Ladda ner %i saknade filer?"
 
 msgid "Download Now"
 msgstr "Ladda ner nu"
@@ -778,298 +827,260 @@ msgid "Download finished"
 msgstr "Nedladdning klar"
 
 msgid "Downloading 3D Covers"
-msgstr ""
+msgstr "Laddar ner 3D-omslag"
 
 msgid "Downloading Custom Banners"
-msgstr ""
-
-msgid "Downloading Flat Covers"
-msgstr ""
-
-msgid "Downloading Full HQ Covers"
-msgstr ""
-
-msgid "Downloading Full LQ Covers"
-msgstr ""
+msgstr "Laddar ner anpassade bannrar"
 
 msgid "Downloading Custom Disc Artwork"
-msgstr ""
+msgstr "Laddar ner anpassad skivkonst"
 
-msgid "Downloading file..."
-msgstr ""
+msgid "Downloading Flat Covers"
+msgstr "Laddar ner platta omslag"
 
-msgid "Downloading image:"
-msgstr "Laddar ner bild:"
+msgid "Downloading Full HQ Covers"
+msgstr "Laddar ner fullständiga HQ-omslag"
+
+msgid "Downloading Full LQ Covers"
+msgstr "Laddar ner fullständiga LQ-omslag"
 
 msgid "Downloading Original Disc Artwork"
-msgstr ""
+msgstr "Laddar ner original skivkonst"
 
-msgid "Downloading pagelist:"
-msgstr ""
+msgid "Downloading file..."
+msgstr "Laddar ner fil..."
 
 msgid "Dump NAND to EmuNAND"
-msgstr ""
+msgstr "Dumpa NAND till EmuNAND"
 
 msgid "During zoom"
-msgstr ""
+msgstr "Under zoom"
 
 msgid "Dutch"
-msgstr "Nederländska"
+msgstr "Holländska"
 
-msgid "ERROR"
-msgstr "FEL"
-
-msgid "ERROR:"
-msgstr "FEL:"
-
-msgid "ERROR: Can't set up theme."
-msgstr "FEL: Kan inte ställa in tema"
-
-msgid "EmuNAND WAD Manager"
-msgstr ""
+msgid "EmuNAND"
+msgstr "EmuNAND"
 
 msgid "EmuNAND Channel Mode"
-msgstr ""
+msgstr "EmuNAND-kanalläge"
 
 msgid "EmuNAND Channel Path"
-msgstr ""
-
-msgid "EmuNAND Channels"
-msgstr ""
+msgstr "EmuNAND-kanalväg"
 
 msgid "EmuNAND Save Mode"
-msgstr ""
+msgstr "EmuNAND-sparläge"
 
 msgid "EmuNAND Save Path"
-msgstr ""
+msgstr "EmuNAND-sparväg"
+
+msgid "EmuNAND WAD Manager"
+msgstr "EmuNAND WAD-hanterare"
 
 msgid "Emulated NAND"
-msgstr ""
+msgstr "Emulerad NAND"
+
+msgid "Enable SD Card Mode?"
+msgstr "Aktivera SD-kortsläge?"
 
 msgid "English"
 msgstr "Engelska"
 
 msgid "Enter Path"
-msgstr ""
+msgstr "Ange väg"
 
-msgid "Error"
-msgstr "Fel"
-
-msgid "Error !"
-msgstr "Fel!"
+msgid "Error Reading Disc"
+msgstr "Fel vid läsning av skiva"
 
 #, c-format
 msgid "Error creating path: %s"
-msgstr ""
+msgstr "Fel vid skapande av väg: %s"
 
 msgid "Error opening downloaded file"
-msgstr ""
-
-msgid "Error reading Disc"
-msgstr "Fel vid läsning av skiva"
+msgstr "Fel vid öppning av nedladdad fil"
 
 msgid "Error reading disc"
-msgstr ""
+msgstr "Fel vid läsning av skiva"
 
-#, c-format
-msgid "Error when downloading file: %i"
-msgstr ""
-
-msgid "Error while downloding file"
-msgstr ""
+msgid "Error while downloading file"
+msgstr "Fel vid nedladdning av fil"
 
 msgid "Error while opening the zip."
-msgstr ""
+msgstr "Fel vid öppning av zip-filen."
 
-msgid "Error while transfering data."
-msgstr "Fel vid överförning av data."
+msgid "Error while transferring data."
+msgstr "Fel vid överföring av data."
 
 msgid "Error while updating USB Loader GX."
-msgstr ""
+msgstr "Fel vid uppdatering av USB Loader GX."
 
 msgid "Error writing the data."
-msgstr ""
+msgstr "Fel vid skrivning av data."
 
 msgid "Error:"
 msgstr "Fel:"
 
 msgid "Error: Not enough space on SD."
-msgstr ""
+msgstr "Fel: Inte tillräckligt med utrymme på SD."
 
-msgid "Errors occured."
-msgstr ""
+msgid "Errors occurred."
+msgstr "Fel uppstod."
 
 msgid "Everything"
-msgstr ""
+msgstr "Allt"
 
 msgid "Exit"
-msgstr ""
+msgstr "Avsluta"
 
 msgid "Exit to where?"
-msgstr ""
+msgstr "Avsluta till var?"
 
 msgid "Export All Saves to EmuNAND"
-msgstr ""
+msgstr "Exportera alla sparningar till EmuNAND"
 
 msgid "Export Miis to EmuNAND"
-msgstr ""
+msgstr "Exportera Miis till EmuNAND"
 
 msgid "Export SYSCONF to EmuNAND"
-msgstr ""
+msgstr "Exportera SYSCONF till EmuNAND"
 
 msgid "Extract Miis to the EmuNAND?"
-msgstr ""
+msgstr "Extrahera Miis till EmuNAND?"
 
 msgid "Extract SYSCONF to the EmuNAND?"
-msgstr ""
+msgstr "Extrahera SYSCONF till EmuNAND?"
 
 msgid "Extract Save to EmuNAND"
-msgstr ""
-
-msgid "Extracting file:"
-msgstr ""
-
-msgid "Extracting files..."
-msgstr "Packar upp filer..."
-
-msgid "Extracting files:"
-msgstr ""
+msgstr "Extrahera sparning till EmuNAND"
 
 msgid "Extracting NAND files:"
-msgstr ""
+msgstr "Extraherar NAND-filer:"
+
+msgid "Extracting file:"
+msgstr "Extraherar fil:"
+
+msgid "Extracting files..."
+msgstr "Extraherar filer..."
+
+msgid "Extracting files:"
+msgstr "Extraherar filer:"
 
 msgid "F-Zero AX"
-msgstr ""
+msgstr "F-Zero AX"
 
 msgid "Failed"
-msgstr ""
+msgstr "Misslyckades"
 
 msgid "Failed copying file"
-msgstr ""
+msgstr "Misslyckades med att kopiera fil"
 
-msgid "Failed formating"
-msgstr "Formatering misslyckad"
+msgid "Failed formatting"
+msgstr "Misslyckades med formatering"
 
 msgid "Failed to extract all files. Savegame might not exist."
-msgstr ""
-
-msgid "Failed to extract."
-msgstr "Uppackning misslyckades."
+msgstr "Misslyckades med att extrahera alla filer. Sparning kanske inte finns."
 
 msgid "Failed to initialize the USB storage device."
-msgstr ""
+msgstr "Misslyckades med att initiera USB-lagringsenheten."
 
 msgid "Failed to open partition"
-msgstr "Misslyckades att öppna partition"
-
-msgid "Failed to read ticket."
-msgstr ""
-
-msgid "Failed to read tmd file."
-msgstr ""
+msgstr "Misslyckades med att öppna partition"
 
 msgid "Failed to read WAD header."
-msgstr ""
+msgstr "Misslyckades med att läsa WAD-huvud."
+
+msgid "Failed to read ticket."
+msgstr "Misslyckades med att läsa biljett."
+
+msgid "Failed to read tmd file."
+msgstr "Misslyckades med att läsa tmd-fil."
 
 msgid "Failed updating"
-msgstr ""
+msgstr "Misslyckades med uppdatering"
 
 msgid "Favorite Level"
-msgstr ""
-
-msgid "Features"
-msgstr ""
-
-msgid "Features Settings"
-msgstr ""
+msgstr "Favoritnivå"
 
 msgid "Feb"
-msgstr ""
+msgstr "Feb"
 
 msgid "File"
-msgstr ""
+msgstr "Fil"
 
 msgid "File not found."
-msgstr "Kunde inte hitta fil"
+msgstr "Filen hittades inte."
 
 msgid "File read/write error."
-msgstr ""
+msgstr "Fel vid läsning/skrivning av fil."
 
 msgid "Files extracted successfully."
-msgstr ""
-
-#, c-format
-msgid "Filesize is %i Byte."
-msgstr ""
-
-msgid "Filesize is 0 Byte."
-msgstr ""
+msgstr "Filer extraherade framgångsrikt."
 
 msgid "Flat Covers"
-msgstr ""
+msgstr "Platta omslag"
 
 msgid "Flip-X"
 msgstr "Vänd-X"
 
 msgid "Folder"
-msgstr ""
+msgstr "Mapp"
 
 msgid "Font Scale Factor"
-msgstr ""
+msgstr "Teckensnittsskalfaktor"
 
 msgid "Force 16:9"
-msgstr ""
+msgstr "Tvinga 16:9"
 
 msgid "Force 4:3"
-msgstr ""
+msgstr "Tvinga 4:3"
 
 msgid "Force NTSC"
-msgstr ""
+msgstr "Tvinga NTSC"
 
 msgid "Force NTSC480p"
-msgstr ""
+msgstr "Tvinga NTSC480p"
 
 msgid "Force PAL480p"
-msgstr ""
+msgstr "Tvinga PAL480p"
 
 msgid "Force PAL50"
-msgstr ""
+msgstr "Tvinga PAL50"
 
 msgid "Force PAL60"
-msgstr ""
+msgstr "Tvinga PAL60"
 
 msgid "Force Widescreen"
-msgstr ""
+msgstr "Tvinga bredbild"
 
 msgid "Format"
 msgstr "Formatera"
 
 msgid "Formatting, please wait..."
-msgstr "Formaterar, Vänta..."
+msgstr "Formaterar, vänligen vänta..."
 
 msgid "Found missing images"
-msgstr ""
+msgstr "Hittade saknade bilder"
 
 msgid "Frame"
-msgstr ""
+msgstr "Ram"
 
 msgid "Frame Projection Height"
-msgstr ""
+msgstr "Ramprojektion Höjd"
 
 msgid "Frame Projection Width"
-msgstr ""
+msgstr "Ramprojektion Bredd"
 
 msgid "Frame Projection X-Offset"
-msgstr ""
+msgstr "Ramprojektion X-Offset"
 
 msgid "Frame Projection Y-Offset"
-msgstr ""
+msgstr "Ramprojektion Y-Offset"
 
 msgid "Framebuffer"
-msgstr ""
+msgstr "Ramminne"
 
 msgid "Frames"
-msgstr ""
+msgstr "Ramar"
 
 msgid "Free Space"
 msgstr "Ledigt utrymme"
@@ -1078,76 +1089,73 @@ msgid "French"
 msgstr "Franska"
 
 msgid "Full"
-msgstr ""
+msgstr "Full"
 
 msgid "Full Cover Path"
-msgstr ""
+msgstr "Full Omslagsväg"
 
 msgid "Full Covers"
-msgstr ""
-
-msgid "Full Menu"
-msgstr ""
+msgstr "Fullständiga omslag"
 
 msgid "Full Covers Download"
-msgstr ""
+msgstr "Fullständig omslagsnedladdning"
+
+msgid "Full Menu"
+msgstr "Full meny"
 
 msgid "Full shutdown"
-msgstr ""
+msgstr "Fullständig avstängning"
+
+msgid "Fullscreen"
+msgstr "Fullskärm"
 
 msgid "GAMEID_Gamename"
-msgstr ""
+msgstr "GAMEID_Spelnamn"
 
 msgid "GC Banner Scale"
-msgstr ""
-
-msgid "GC Games"
-msgstr ""
+msgstr "GC Banner Skala"
 
 msgid "GC Install 32K Aligned"
-msgstr ""
+msgstr "GC Installera 32K Justerad"
 
 msgid "GC Install Compressed"
-msgstr ""
+msgstr "GC Installera Komprimerad"
 
-msgid "GCT Cheatcodes Path"
-msgstr "Fusksökväg"
+msgid "GCT Cheat Codes Path"
+msgstr "GCT Fuskkoder Väg"
 
 msgid "GCT File created"
-msgstr "GCT fil skapad"
+msgstr "GCT-fil skapad"
 
 msgid "GUI Settings"
-msgstr "GUI inställningar"
+msgstr "GUI-inställningar"
 
 msgid "GXDraw"
-msgstr ""
+msgstr "GXDraw"
 
 msgid "GXFlush"
-msgstr ""
-
-msgid "GameCube Games Delete"
-msgstr ""
-
-msgid "GameCube Install Menu"
-msgstr ""
+msgstr "GXFlush"
 
 msgid "Game ID"
 msgstr "Spel-ID"
 
 msgid "Game IOS"
-msgstr ""
+msgstr "Spel IOS"
+
+msgid "Game Is Already Installed:"
+msgstr "Spelet är redan installerat:"
 
 msgid "Game Language"
-msgstr "Språk"
+msgstr "Spelspråk"
 
 msgid "Game Load"
-msgstr "Spelinställningar"
+msgstr "Spelladdning"
 
 msgid "Game Lock"
-msgstr ""
+msgstr "Spellås"
 
 msgid "Game Only"
-msgstr ""
+msgstr "Endast spel"
 
 msgid "Game Region"
 msgstr "Spelregion"
@@ -1156,106 +1164,109 @@ msgid "Game Size"
 msgstr "Spelstorlek"
 
 msgid "Game Sound Mode"
-msgstr "Spel ljuds läge"
+msgstr "Spelljudläge"
 
 msgid "Game Sound Volume"
-msgstr "Spel ljuds volym"
+msgstr "Spelljudvolym"
 
 msgid "Game Split Size"
-msgstr ""
+msgstr "Speldelstorlek"
 
 msgid "Game Window Mode"
-msgstr ""
-
-msgid "Game is already installed:"
-msgstr "Spelet är redan installerat:"
-
-msgid "Games IOS"
-msgstr ""
+msgstr "Spelfönsterläge"
 
 msgid "Game/Install Partition"
-msgstr ""
+msgstr "Spel/Installationspartition"
 
 msgid "GameCube"
-msgstr ""
+msgstr "GameCube"
 
 msgid "GameCube Controller"
-msgstr ""
+msgstr "GameCube-kontroller"
+
+msgid "GameCube Games Delete"
+msgstr "Radera GameCube-spel"
+
+msgid "GameCube Install Menu"
+msgstr "GameCube Installationsmeny"
 
 msgid "GameCube Mode"
-msgstr ""
+msgstr "GameCube-läge"
 
 msgid "GameCube Source"
-msgstr ""
-
-msgid "Gamename [GAMEID]"
-msgstr ""
+msgstr "GameCube-källa"
 
 msgid "GameTDB"
-msgstr ""
+msgstr "GameTDB"
+
+msgid "Gamename [GAMEID]"
+msgstr "Spelnamn [GAMEID]"
 
 msgid "Games"
 msgstr "Spel"
 
+msgid "Games IOS"
+msgstr "Spel IOS"
+
 msgid "Generating GXGameCategories.xml"
-msgstr ""
+msgstr "Genererar GXGameCategories.xml"
 
 msgid "Genre:"
-msgstr ""
+msgstr "Genre:"
 
 msgid "German"
 msgstr "Tyska"
 
 msgid "Getting file list..."
-msgstr ""
+msgstr "Hämtar fillista..."
 
 msgid "Getting game folder size..."
-msgstr ""
+msgstr "Hämtar spelmappens storlek..."
 
 msgid "Global Settings"
-msgstr ""
+msgstr "Globala inställningar"
 
 msgid "Grid Scroll Speed"
-msgstr ""
+msgstr "Rutnät Scrollhastighet"
 
 msgid "HOME Menu"
-msgstr "Hemmeny"
+msgstr "HOME-meny"
 
 msgid "Hard Drive Settings"
-msgstr ""
+msgstr "Hårddiskinställningar"
 
 msgid "High Quality"
-msgstr ""
+msgstr "Hög kvalitet"
 
 msgid "High/Low"
-msgstr ""
+msgstr "Hög/Låg"
 
 msgid "Homebrew Apps Path"
-msgstr "Homebrew Apps"
+msgstr "Homebrew-appar Väg"
 
 msgid "Homebrew Channel"
-msgstr ""
+msgstr "Homebrew-kanal"
 
 msgid "Homebrew Launcher"
-msgstr "Homebrew Startare"
+msgstr "Homebrew-startare"
 
 msgid "Hooktype"
-msgstr ""
+msgstr "Hooktype"
 
 msgid "Hour"
-msgstr "Timmars"
+msgstr "Timme"
 
 msgid "How to Shutdown?"
-msgstr "Hur vill du stänga av?"
+msgstr "Hur stänger man av?"
 
 msgid "Import Categories"
-msgstr ""
+msgstr "Importera kategorier"
 
 msgid "Import operation successfully completed."
-msgstr ""
+msgstr "Importoperationen slutförd framgångsrikt."
 
 msgid "Importing categories"
-msgstr ""
+msgstr "Importerar kategorier"
 
 #, c-format
 msgid "Incoming file %0.2fKB"
@@ -1266,79 +1277,82 @@ msgid "Incoming file %0.2fMB"
 msgstr "Inkommande fil %0.2fMB"
 
 msgid "Individual"
-msgstr ""
+msgstr "Individuell"
 
 msgid "Information"
-msgstr ""
+msgstr "Information"
 
 msgid "Initializing Network"
-msgstr "Startar nätverk"
+msgstr "Initierar nätverk"
 
-msgid "Insert Disk"
-msgstr "Sätt i en skiva"
+msgid "Insert Disc"
+msgstr "Sätt i skiva"
 
-msgid "Insert a Wii or a GameCube Disc!"
-msgstr ""
+msgid "Insert a Wii or a GameCube disc!"
+msgstr "Sätt i en Wii- eller GameCube-skiva!"
 
 msgid "Install"
 msgstr "Installera"
 
 msgid "Install Canceled"
-msgstr ""
+msgstr "Installation avbruten"
 
 msgid "Install Directories"
-msgstr ""
+msgstr "Installera kataloger"
 
 msgid "Install Error!"
-msgstr "Fel vid installering!"
+msgstr "Installationsfel!"
+
+msgid "Install Finished"
+msgstr "Installation slutförd"
 
 msgid "Install Partitions"
-msgstr ""
+msgstr "Installera partitioner"
+
+msgid "Install a Game?"
+msgstr "Installera ett spel?"
 
 msgid "Install a game"
 msgstr "Installera ett spel"
 
 msgid "Install error - Cleaning incomplete data."
-msgstr ""
+msgstr "Installationsfel - Rensar ofullständiga data."
 
-msgid "Install finished"
-msgstr ""
-
-msgid "Installing GameCube Game..."
-msgstr ""
-
-msgid "Installing content"
-msgstr ""
-
-msgid "Installing game:"
+msgid "Installing Game:"
 msgstr "Installerar spel:"
 
+msgid "Installing GameCube Game..."
+msgstr "Installerar GameCube-spel..."
+
+msgid "Installing content"
+msgstr "Installerar innehåll"
+
 msgid "Installing title..."
-msgstr ""
+msgstr "Installerar titel..."
 
 msgid "Invalid IOS number entered. Number must be -1 for inherit or 200 - 255."
-msgstr ""
+msgstr "Ogiltigt IOS-nummer angivet. Numret måste vara -1 för att ärva eller 200 - 255."
 
 msgid "Invalid WAD file."
-msgstr ""
+msgstr "Ogiltig WAD-fil."
 
 msgid "It seems that you have some information that will be helpful to us. Please pass this information along to the DEV team."
-msgstr "Det verkar som om du har information som kan vara till nytta för oss. Vänligen skicka informationen vidare till DEV team."
+msgstr "Det verkar som att du har information som kan vara till hjälp för oss. Vänligen vidarebefordra denna information till DEV-teamet."
 
 msgid "Italian"
 msgstr "Italienska"
 
 msgid "Jan"
-msgstr ""
+msgstr "Jan"
 
 msgid "Japanese"
 msgstr "Japanska"
 
 msgid "Japanese Patch"
-msgstr ""
+msgstr "Japansk patch"
 
 msgid "Joypad"
-msgstr ""
+msgstr "Joypad"
 
 msgid "July"
 msgstr "Juli"
@@ -1347,7 +1361,7 @@ msgid "June"
 msgstr "Juni"
 
 msgid "KPAD Read"
-msgstr ""
+msgstr "KPAD Läs"
 
 msgid "Keyboard"
 msgstr "Tangentbord"
@@ -1356,107 +1370,104 @@ msgid "Korean"
 msgstr "Koreanska"
 
 msgid "LED Activity"
-msgstr ""
+msgstr "LED-aktivitet"
 
-msgid "Language Files"
-msgstr ""
-
-msgid "Language change:"
+msgid "Language Change:"
 msgstr "Språkbyte:"
 
-msgid "Languagefiles Path"
-msgstr ""
+msgid "Language Path Changed."
+msgstr "Språkväg ändrad."
 
-msgid "Languagepath changed."
-msgstr "Sökväg till språk ändrad"
+msgid "Languages Path"
+msgstr "Språkväg"
 
 msgid "Launching Wii games with emulated NAND only works on d2x cIOS! Change game IOS to a d2x cIOS first."
-msgstr ""
+msgstr "Att starta Wii-spel med emulerad NAND fungerar endast på d2x cIOS! Ändra spel-IOS till en d2x cIOS först."
 
 msgid "Launching emulated NAND channels only works on d2x cIOS! Change game IOS to a d2x cIOS first."
-msgstr ""
+msgstr "Att starta emulerade NAND-kanaler fungerar endast på d2x cIOS! Ändra spel-IOS till en d2x cIOS först."
 
 msgid "Left"
 msgstr "Vänster"
 
 msgid "Like SysMenu"
-msgstr "Som System-menyn"
+msgstr "Som SysMenu"
 
 msgid "List on game launch"
-msgstr ""
+msgstr "Lista vid spelstart"
 
 msgid "Load"
 msgstr "Ladda"
 
-msgid "Load from SD/USB"
-msgstr "Ladda från SD/USB"
-
 #, c-format
 msgid "Load file from: %s ?"
-msgstr "Ladda fil från: %s?"
+msgstr "Ladda fil från: %s ?"
+
+msgid "Load from SD/USB"
+msgstr "Ladda från SD/USB"
 
 msgid "Load this DOL as alternate DOL?"
 msgstr "Ladda denna DOL som alternativ DOL?"
 
 msgid "Loader Settings"
-msgstr ""
+msgstr "Laddarinställningar"
 
 msgid "Loaders IOS"
-msgstr ""
+msgstr "Laddarens IOS"
 
-msgid "Loading standard language."
+msgid "Loading Standard Language."
 msgstr "Laddar standard språk."
 
 msgid "Loading standard music."
-msgstr "Laddar standard musik."
+msgstr "Laddar standardmusik."
 
 msgid "Lock Console"
 msgstr "Lås konsol"
 
 msgid "Lock USB Loader GX"
-msgstr ""
+msgstr "Lås USB Loader GX"
 
 msgid "Locked"
 msgstr "Låst"
 
 msgid "Log to file"
-msgstr ""
+msgstr "Logga till fil"
 
 msgid "Loop Directory"
-msgstr ""
+msgstr "Loop-katalog"
 
 msgid "Loop Music"
-msgstr ""
+msgstr "Loop-musik"
 
 msgid "Loop Sound"
-msgstr "Loopa ljudet"
+msgstr "Loop-ljud"
 
 msgid "Low Quality"
-msgstr ""
+msgstr "Låg kvalitet"
 
 msgid "Low/High"
-msgstr ""
+msgstr "Låg/Hög"
 
 msgid "MIOS (Default & Customs)"
-msgstr ""
+msgstr "MIOS (Standard & Anpassade)"
 
 msgid "Main DOL"
-msgstr ""
+msgstr "Huvud-DOL"
 
 msgid "Main GameCube Games Path"
-msgstr ""
+msgstr "Huvud GameCube-spelväg"
 
 msgid "Main GameCube Path"
-msgstr ""
+msgstr "Huvud GameCube-väg"
 
 msgid "Main Path"
-msgstr ""
+msgstr "Huvudväg"
 
 msgid "Manual (40~120)"
-msgstr ""
+msgstr "Manuell (40~120)"
 
 msgid "Mar"
-msgstr ""
+msgstr "Mar"
 
 msgid "Mark New Games"
 msgstr "Markera nya spel"
@@ -1465,340 +1476,316 @@ msgid "May"
 msgstr "Maj"
 
 msgid "Memory Card Blocks Size"
-msgstr ""
+msgstr "Minneskort blockstorlek"
 
 msgid "Memory Card Emulation"
-msgstr ""
+msgstr "Minneskortsemulering"
 
 msgid "Memory Card with 2043 blocs has issues with Nintendont. Use at your own risk."
-msgstr ""
+msgstr "Minneskort med 2043 block har problem med Nintendont. Använd på egen risk."
 
 msgid "Messageboard Update"
-msgstr ""
+msgstr "Meddelandetavla uppdatering"
+
+msgid "Miscellaneous Settings"
+msgstr "Diverse inställningar"
 
 msgid "Motion+ Video"
-msgstr ""
+msgstr "Motion+ Video"
 
 msgid "Mount DVD drive"
-msgstr "Montera DVD läsare"
-
-msgid "Mount USB at launch"
-msgstr ""
+msgstr "Montera DVD-enhet"
 
 msgid "Move File"
-msgstr ""
+msgstr "Flytta fil"
 
 msgid "Multiple Partitions"
-msgstr ""
+msgstr "Flera partitioner"
 
 msgid "Music Loop Mode"
-msgstr "Musik Återuppspelningsläge"
+msgstr "Musikloop-läge"
 
 msgid "Music Volume"
-msgstr "Volym"
+msgstr "Musikvolym"
 
-msgid "NMM Mode"
-msgstr ""
+msgid "NAND"
+msgstr "NAND"
 
-msgid "NAND Chan. Emulation"
-msgstr ""
-
-msgid "NAND Channels"
-msgstr ""
-
-msgid "NAND Emu Channel Path"
-msgstr ""
-
-msgid "NAND Emu Path"
-msgstr ""
-
-msgid "NAND Emulation"
-msgstr ""
-
-msgid "NAND emulation is only available on D2X cIOS!"
-msgstr ""
+msgid "NAND emulation is only available on d2x cIOS!"
+msgstr "NAND-emulering är endast tillgänglig på d2x cIOS!"
 
 msgid "NAND emulation only works on FAT/FAT32 partitions!"
-msgstr ""
+msgstr "NAND-emulering fungerar endast på FAT/FAT32-partitioner!"
 
-msgid "NAND Saves Emulation"
-msgstr ""
+msgid "NMM Mode"
+msgstr "NMM-läge"
 
 msgid "Native Controller"
-msgstr ""
+msgstr "Inbyggd kontroller"
 
 msgid "Neek"
-msgstr ""
+msgstr "Neek"
 
 msgid "Neek NAND path selection failed."
-msgstr ""
+msgstr "Neek NAND-vägval misslyckades."
 
 msgid "Neek kernel file not found."
-msgstr ""
+msgstr "Neek-kärnfil hittades inte."
 
 msgid "Neek kernel loading failed."
-msgstr ""
+msgstr "Neek-kärnladdning misslyckades."
 
 msgid "Neek2o does not support 'EmuNAND Channel Path' on SD! Please setup Uneek2o instead."
-msgstr ""
+msgstr "Neek2o stöder inte 'EmuNAND-kanalväg' på SD! Vänligen ställ in Uneek2o istället."
 
 msgid "Neither"
-msgstr "Inget"
+msgstr "Ingendera"
 
-msgid "Network is not initiated."
-msgstr ""
+msgid "Network is not initalized."
+msgstr "Nätverket är inte initierat."
+
+msgid "Network is not initialized."
+msgstr "Nätverket är inte initierat."
 
 msgid "Next"
 msgstr "Nästa"
 
 msgid "Nintendont"
-msgstr ""
+msgstr "Nintendont"
 
 msgid "Nintendont Loader Path"
-msgstr ""
+msgstr "Nintendont laddarväg"
 
 msgid "No"
 msgstr "Nej"
 
-msgid "No Cheatfile found"
+msgid "No Cheat file found"
 msgstr "Ingen fuskfil hittades"
 
 msgid "No DOL file found on disc."
 msgstr "Ingen DOL-fil hittades på skivan."
 
+msgid "No Disc Inserted"
+msgstr "Ingen skiva isatt"
+
 msgid "No Disc+"
-msgstr ""
+msgstr "Ingen skiva+"
 
 msgid "No Splitting"
-msgstr ""
+msgstr "Ingen delning"
 
-msgid "No URL or Path specified."
-msgstr ""
+msgid "No WAD file found in this folder."
+msgstr "Ingen WAD-fil hittades i denna mapp."
 
 msgid "No WBFS or FAT/NTFS/EXT partition found"
-msgstr ""
+msgstr "Ingen WBFS- eller FAT/NTFS/EXT-partition hittades"
 
 msgid "No Wiinnertag.xml found in the config path. Do you want an example file created?"
-msgstr ""
+msgstr "Ingen Wiinnertag.xml hittades i konfigurationsvägen. Vill du skapa en exempel fil?"
 
 msgid "No change"
-msgstr ""
+msgstr "Ingen förändring"
 
 msgid "No cheats were selected! Should the GCT file be deleted?"
-msgstr ""
+msgstr "Inga fusk valdes! Ska GCT-filen raderas?"
 
 msgid "No data could be read."
 msgstr "Ingen data kunde läsas."
 
-msgid "No disc inserted."
-msgstr ""
-
 msgid "No favorites selected."
-msgstr ""
+msgstr "Inga favoriter valda."
 
 msgid "No files missing!"
 msgstr "Inga filer saknas!"
 
 msgid "No games found on the disc"
-msgstr ""
+msgstr "Inga spel hittades på skivan"
 
 msgid "No language files to update on your devices! Do you want to download new language files?"
-msgstr ""
+msgstr "Inga språkfiler att uppdatera på dina enheter! Vill du ladda ner nya språkfiler?"
 
 msgid "No new updates."
-msgstr "Inga nya uppdateringar"
-
-msgid "No themes found on the site."
-msgstr "Inga teman hittades på sidan."
+msgstr "Inga nya uppdateringar."
 
 msgid "No themes found."
-msgstr ""
-
-msgid "No WAD file found in this folder."
-msgstr ""
+msgstr "Inga teman hittades."
 
 msgid "NoSSL only"
-msgstr ""
+msgstr "Endast NoSSL"
 
 msgid "None"
-msgstr ""
+msgstr "Ingen"
 
 msgid "Normal"
-msgstr "Vanlig"
+msgstr "Normal"
+
+msgid "Not Enough Free Space!"
+msgstr "Inte tillräckligt med ledigt utrymme!"
 
 msgid "Not Initialized"
-msgstr ""
+msgstr "Inte initierad"
 
 msgid "Not a Wii or a GameCube Disc"
-msgstr ""
-
-msgid "Not a valid URL"
-msgstr ""
-
-msgid "Not a valid URL path"
-msgstr ""
-
-msgid "Not a valid domain"
-msgstr ""
+msgstr "Inte en Wii- eller GameCube-skiva"
 
 msgid "Not enough free memory."
 msgstr "Inte tillräckligt med ledigt minne."
 
 msgid "Not enough free space on device."
-msgstr ""
-
-msgid "Not enough free space!"
-msgstr "Inte tillräckligt med ledigt utrymme!"
+msgstr "Inte tillräckligt med ledigt utrymme på enheten."
 
 msgid "Not enough memory for FST."
-msgstr ""
+msgstr "Inte tillräckligt med minne för FST."
 
 msgid "Not enough memory."
-msgstr ""
+msgstr "Inte tillräckligt med minne."
 
 msgid "Not required"
-msgstr ""
+msgstr "Inte nödvändigt"
 
-msgid "Unsupported format!"
-msgstr "Formatet stöds inte!"
+msgid "Not set"
+msgstr "Inte inställt"
 
 msgid "Nothing selected to delete."
-msgstr ""
+msgstr "Inget valt att radera."
 
 msgid "Nothing selected to install."
-msgstr ""
+msgstr "Inget valt att installera."
 
 msgid "Nov"
-msgstr ""
+msgstr "Nov"
 
 msgid "OFF"
 msgstr "AV"
 
 msgid "OFF (Extended)"
-msgstr ""
+msgstr "AV (Utökad)"
 
 msgid "OFF (Safe)"
-msgstr ""
+msgstr "AV (Säker)"
 
 msgid "OK"
-msgstr ""
+msgstr "OK"
 
 msgid "ON"
 msgstr "PÅ"
 
+msgid "ON (High)"
+msgstr "PÅ (Hög)"
+
 msgid "ON (Low)"
-msgstr ""
+msgstr "PÅ (Låg)"
 
 msgid "ON (Medium)"
-msgstr ""
+msgstr "PÅ (Medium)"
 
 msgid "ON (Multi)"
-msgstr ""
-
-msgid "ON (High)"
-msgstr ""
+msgstr "PÅ (Multi)"
 
 msgid "OSReport"
-msgstr ""
+msgstr "OSReport"
 
 msgid "OSSleepThread"
-msgstr ""
+msgstr "OSSleepThread"
 
 msgid "Ocarina"
-msgstr ""
+msgstr "Ocarina"
 
 msgid "Ocarina is not supported with neek2o yet. Launch game anyway?"
-msgstr ""
+msgstr "Ocarina stöds inte med neek2o ännu. Starta spelet ändå?"
+
+msgid "Ocarina:"
+msgstr "Ocarina:"
 
 msgid "Oct"
 msgstr "Okt"
 
 msgid "Official Site:"
-msgstr "Officiell sida:"
+msgstr "Officiell webbplats:"
 
 msgid "Offset"
-msgstr ""
+msgstr "Offset"
 
 msgid "Ok"
-msgstr ""
+msgstr "Ok"
 
 msgid "One Line A"
-msgstr ""
+msgstr "En rad A"
 
 msgid "One Line B"
-msgstr ""
+msgstr "En rad B"
 
 msgid "Only Game Partition"
-msgstr ""
+msgstr "Endast spelpartition"
 
-msgid "Only for Install"
-msgstr "Endast för installering"
+msgid "Only for install"
+msgstr "Endast för installation"
 
 msgid "Original"
-msgstr ""
+msgstr "Original"
 
 msgid "Original/Customs"
-msgstr "Original/Anpassade"
+msgstr "Original/Anpassningar"
 
 msgid "PAD Hook"
-msgstr ""
+msgstr "PAD Hook"
 
 msgid "PAL50 Patch"
-msgstr ""
+msgstr "PAL50 Patch"
 
 msgid "Parental Control"
 msgstr "Föräldrakontroll"
 
 msgid "Partial"
-msgstr ""
+msgstr "Delvis"
 
 msgid "Partition"
-msgstr ""
+msgstr "Partition"
 
 msgid "Password"
 msgstr "Lösenord"
 
 msgid "Password Changed"
-msgstr "Lösenordet ändrat"
+msgstr "Lösenord ändrat"
 
 msgid "Password has been changed"
 msgstr "Lösenordet har ändrats"
 
 msgid "Patch Country Strings"
-msgstr "Ställ in landssträngar"
+msgstr "Patcha landssträngar"
 
 msgid "Path Changed"
-msgstr ""
+msgstr "Väg ändrad"
 
 msgid "Permission denied."
-msgstr ""
+msgstr "Åtkomst nekad."
 
 msgid "Pick from a list"
 msgstr "Välj från en lista"
 
 msgid "Pixels"
-msgstr ""
+msgstr "Pixlar"
 
 msgid "Play Count"
-msgstr "Spelat"
+msgstr "Spelantal"
 
 msgid "Play Next"
 msgstr "Spela nästa"
 
 msgid "Play Once"
-msgstr ""
+msgstr "Spela en gång"
 
 msgid "Play Previous"
-msgstr "Spela förgående"
+msgstr "Spela föregående"
 
 msgid "Playing Music:"
-msgstr "Spela musik:"
+msgstr "Spelar musik:"
 
 msgid "Please enter a valid address e.g. wiimmfi.de"
-msgstr ""
+msgstr "Vänligen ange en giltig adress, t.ex. wiimmfi.de"
 
 msgid "Please wait"
-msgstr ""
+msgstr "Vänligen vänta"
 
 msgid "Please wait..."
 msgstr "Vänligen vänta..."
@@ -1807,85 +1794,91 @@ msgid "Power off the Wii"
 msgstr "Stäng av Wii"
 
 msgid "Prev"
-msgstr "Förra"
+msgstr "Föreg"
+
+msgid "Priiloader"
+msgstr "Priiloader"
 
 msgid "Private Server"
-msgstr ""
+msgstr "Privat server"
 
 msgid "Process finished."
-msgstr ""
+msgstr "Processen avslutad."
 
 msgid "Progressive Patch"
-msgstr ""
+msgstr "Progressiv patch"
 
 msgid "Prompts Buttons"
-msgstr "Dialogknappar"
+msgstr "Uppmaningsknappar"
 
 msgid "Published by"
-msgstr "Publicerat av"
+msgstr "Publicerad av"
 
 msgid "Quick Boot"
 msgstr "Snabbstart"
 
-msgid "Random Directory Music"
-msgstr ""
-
 msgid "Real NAND"
-msgstr ""
+msgstr "Äkta NAND"
 
 msgid "Receiving file from:"
-msgstr "Tar emot filer från:"
+msgstr "Tar emot fil från:"
 
 msgid "Region Free"
-msgstr ""
+msgstr "Regionfri"
 
 msgid "Region Patch"
-msgstr ""
+msgstr "Regionpatch"
+
+msgid "Regional"
+msgstr "Regional"
 
 msgid "Released"
 msgstr "Släppt"
 
-msgid "Reload SD"
-msgstr "Ladda om SD"
-
 msgid "Reloading game list now, please wait..."
-msgstr ""
+msgstr "Laddar om spellistan nu, vänligen vänta..."
 
 msgid "Remember Last Game"
-msgstr ""
+msgstr "Kom ihåg senaste spelet"
 
 msgid "Remember Unlock"
-msgstr ""
+msgstr "Kom ihåg upplåsning"
 
 msgid "Remove Read Speed Limit"
-msgstr ""
+msgstr "Ta bort läshastighetsbegränsning"
 
 msgid "Remove update"
-msgstr ""
+msgstr "Ta bort uppdatering"
 
 msgid "Rename Game Title"
-msgstr ""
+msgstr "Byt namn på speltitel"
 
 msgid "Rename category"
-msgstr ""
+msgstr "Byt namn på kategori"
+
+msgid "Resample to 48 kHz"
+msgstr "Omsampla till 48 kHz"
 
 msgid "Reset"
-msgstr ""
+msgstr "Återställ"
 
 msgid "Reset All Game Settings"
-msgstr ""
+msgstr "Återställ alla spelinställningar"
 
 msgid "Reset BG Music"
-msgstr "återställ BG musik"
+msgstr "Återställ bakgrundsmusik"
 
 msgid "Reset Cached Titles"
-msgstr ""
+msgstr "Återställ cachade titlar"
 
 msgid "Reset Play Count"
-msgstr "Återställ spelat-räknaren"
+msgstr "Återställ spelantal"
+
+msgid "Reset Wiimote Pairings"
+msgstr "Återställ Wiimote-parningar"
 
 msgid "Reset to default BGM?"
-msgstr ""
+msgstr "Återställ till standard BGM?"
 
 msgid "Restarting..."
 msgstr "Startar om..."
@@ -1894,7 +1887,7 @@ msgid "Return"
 msgstr "Återvänd"
 
 msgid "Return To"
-msgstr ""
+msgstr "Återvänd till"
 
 msgid "Return to Wii Menu"
 msgstr "Återvänd till Wii-menyn"
@@ -1903,160 +1896,160 @@ msgid "Right"
 msgstr "Höger"
 
 msgid "Rotating Disc"
-msgstr ""
+msgstr "Roterande skiva"
 
 msgid "Round"
-msgstr ""
+msgstr "Rund"
 
 msgid "Rumble"
 msgstr "Vibration"
 
 msgid "SChinese"
-msgstr "SKinesiska"
+msgstr "Förenklad kinesiska"
 
 msgid "SD"
-msgstr ""
-
-msgid "SD Card could not be accessed."
-msgstr ""
+msgstr "SD"
 
 msgid "SD Card Mode"
-msgstr ""
+msgstr "SD-kortsläge"
+
+msgid "SD Card could not be accessed."
+msgstr "SD-kortet kunde inte nås."
 
 msgid "SD GameCube Games Path"
-msgstr ""
+msgstr "SD GameCube-spelväg"
 
 msgid "SD GameCube Path"
-msgstr ""
+msgstr "SD GameCube-väg"
 
 msgid "SD Path"
-msgstr ""
+msgstr "SD-väg"
 
 msgid "SFX Volume"
-msgstr "SFX Volym"
+msgstr "SFX-volym"
 
 msgid "Save"
 msgstr "Spara"
 
 msgid "Save Failed. No device inserted?"
-msgstr ""
-
-msgid "Save Game List to"
-msgstr "Spara spel lista till"
+msgstr "Sparning misslyckades. Ingen enhet isatt?"
 
 msgid "Save List"
-msgstr ""
+msgstr "Spara lista"
 
 msgid "Save Path"
-msgstr ""
+msgstr "Sparväg"
+
+msgid "Save game list to"
+msgstr "Spara spellista till"
 
 msgid "Saved"
-msgstr "Sparat"
+msgstr "Sparad"
 
 msgid "Savegame might not exist for this game."
-msgstr ""
+msgstr "Sparning kanske inte finns för detta spel."
+
+msgid "Screen Mode"
+msgstr "Skärmläge"
 
 msgid "Screensaver"
 msgstr "Skärmsläckare"
 
 msgid "Screenshot"
-msgstr ""
+msgstr "Skärmdump"
 
 msgid "Select"
 msgstr "Välj"
 
 msgid "Select DOL Offset"
-msgstr ""
+msgstr "Välj DOL-offset"
+
+msgid "Select Game Sources"
+msgstr "Välj spelkällor"
 
 msgid "Select a DOL"
 msgstr "Välj en DOL"
 
 msgid "Select a DOL from game"
-msgstr ""
+msgstr "Välj en DOL från spelet"
 
 msgid "Select game categories"
-msgstr ""
+msgstr "Välj spelkategorier"
 
-msgid "Select loader mode"
-msgstr ""
+msgid "Select game sources"
+msgstr "Välj spelkällor"
 
 msgid "Select the EmuNAND path to use."
-msgstr ""
-
-msgid "Select titles sources."
-msgstr ""
+msgstr "Välj EmuNAND-vägen att använda."
 
 msgid "Sept"
-msgstr ""
+msgstr "Sept"
 
-msgid "Set Search-Filter"
-msgstr "Ställ in sök-filter"
+msgid "Set search filter"
+msgstr "Ställ in sökfilter"
 
 msgid "Settings"
 msgstr "Inställningar"
 
 msgid "Settings File"
-msgstr ""
+msgstr "Inställningsfil"
 
 msgid "Show Categories"
-msgstr ""
+msgstr "Visa kategorier"
 
-msgid "Show Favorite on banner"
-msgstr ""
+msgid "Show Favorite on Banner"
+msgstr "Visa favorit på banner"
 
 msgid "Show Free Space"
-msgstr ""
+msgstr "Visa ledigt utrymme"
 
 msgid "Show Game Count"
-msgstr ""
+msgstr "Visa spelantal"
 
 msgid "Show Play Count"
-msgstr ""
+msgstr "Visa spelantal"
 
 msgid "Show SD"
-msgstr ""
+msgstr "Visa SD"
+
+msgid "Shuffle Directory Music"
+msgstr "Blanda katalogmusik"
 
 msgid "Shutdown System"
-msgstr "Stäng av helt"
+msgstr "Stäng av systemet"
 
 msgid "Shutdown Wii"
-msgstr ""
+msgstr "Stäng av Wii"
+
+msgid "Shutdown?"
+msgstr "Stänga av?"
+
+msgid "Silent HOME Menu"
+msgstr "Tyst HOME-meny"
 
 msgid "Skip Errors"
-msgstr ""
+msgstr "Hoppa över fel"
 
 msgid "Skip IPL"
-msgstr ""
-
-msgid "BBA Emulation"
-msgstr ""
-
-msgid "BBA Net Profile"
-msgstr ""
+msgstr "Hoppa över IPL"
 
 msgid "Sneek Video Patch"
-msgstr ""
+msgstr "Sneek-videopatch"
 
-msgid "Sorry, the theme downloader menu is not working anymore because http://wii.spiffy360.com now requires user registration."
-msgstr ""
+msgid "Sorting alphabetically"
+msgstr "Sorterar alfabetiskt"
 
-msgid "Sort alphabetically"
-msgstr "Sortera alfabetiskt"
+msgid "Sorting by most played"
+msgstr "Sorterar efter mest spelade"
 
-msgid "Sort by number of players"
-msgstr ""
+msgid "Sorting by number of players"
+msgstr "Sorterar efter antal spelare"
 
-msgid "Sort by rank"
-msgstr "Sortera efter rank"
-
-msgid "Sort order by most played"
-msgstr "Sortera efter mest spelade"
-
-msgid "Sound"
-msgstr "Ljud"
+msgid "Sorting by rank"
+msgstr "Sorterar efter rank"
 
 msgid "Sound Settings"
-msgstr ""
+msgstr "Ljudinställningar"
 
 msgid "Sound+BGM"
 msgstr "Ljud+BGM"
@@ -2071,253 +2064,232 @@ msgid "Special thanks to:"
 msgstr "Speciellt tack till:"
 
 msgid "Split each 2GB"
-msgstr ""
+msgstr "Dela varje 2GB"
 
 msgid "Split each 4GB"
-msgstr ""
+msgstr "Dela varje 4GB"
 
 msgid "Standby"
-msgstr ""
+msgstr "Standby"
 
 msgid "Start"
-msgstr ""
+msgstr "Starta"
 
 msgid "Success"
-msgstr "Lyckat"
+msgstr "Framgång"
 
 msgid "Success."
-msgstr ""
+msgstr "Framgång."
 
 msgid "Success:"
-msgstr "Lyckat:"
+msgstr "Framgång:"
+
+msgid "Successfully Installed:"
+msgstr "Framgångsrikt installerad:"
 
 msgid "Successfully Saved"
-msgstr "Lyckad sparning"
+msgstr "Framgångsrikt sparad"
 
 msgid "Successfully Updated"
-msgstr "Uppdateringen lyckades"
+msgstr "Framgångsrikt uppdaterad"
 
 msgid "Successfully copied"
-msgstr ""
+msgstr "Framgångsrikt kopierad"
 
 msgid "Successfully deleted:"
-msgstr "Lyckad radering av:"
-
-msgid "Successfully extracted theme."
-msgstr "Extrahering av tema lyckades."
-
-msgid "Successfully installed:"
-msgstr "Lyckad installation av:"
-
-msgid "Successfully updated."
-msgstr ""
-
-msgid "Switching to channel list mode."
-msgstr ""
-
-msgid "Sync FAT32 FS Info"
-msgstr ""
-
-msgid "Synchronizing..."
-msgstr ""
+msgstr "Framgångsrikt raderad:"
 
 msgid "System Default"
-msgstr "Systemets standard"
+msgstr "Systemstandard"
 
 msgid "System Proxy Settings"
-msgstr ""
+msgstr "Systemproxyinställningar"
 
 msgid "TChinese"
-msgstr "TKinesiska"
+msgstr "Traditionell kinesiska"
 
-msgid "TXT Cheatcodes Path"
-msgstr "Sökväg till txt koder"
-
-msgid "The .them file was not found in the zip."
-msgstr ""
+msgid "TXT Cheat Codes Path"
+msgstr "TXT Fuskkoder Väg"
 
 msgid "The Force Widescreen setting requires DIOS MIOS v2.1 or more. This setting will be ignored."
-msgstr ""
+msgstr "Inställningen Force Widescreen kräver DIOS MIOS v2.1 eller högre. Denna inställning kommer att ignoreras."
 
 msgid "The Miis will be extracted to your EmuNAND path and EmuNAND channel path. Attention: All existing files will be overwritten."
-msgstr ""
+msgstr "Miis kommer att extraheras till din EmuNAND-väg och EmuNAND-kanalväg. Uppmärksamhet: Alla befintliga filer kommer att skrivas över."
 
 msgid "The No Disc+ setting requires DIOS MIOS 2.2 update2. This setting will be ignored."
-msgstr ""
+msgstr "Inställningen No Disc+ kräver DIOS MIOS 2.2 update2. Denna inställning kommer att ignoreras."
 
 msgid "The SYSCONF file will be extracted to your EmuNAND path and EmuNAND channel path. Attention: All existing files will be overwritten."
-msgstr ""
-
-msgid "The application might crash if there is currently a read/write access to the SD card!"
-msgstr ""
-
-msgid "The entered directory does not exist. Would you like to create it?"
-msgstr "Den angivna katalogen existerar inte. Vill du skapa den?"
-
-msgid "The files will be extracted to your EmuNAND save and channel path. Attention: All existing files will be overwritten."
-msgstr ""
-
-msgid "The game is on SD Card."
-msgstr ""
-
-msgid "The game is on USB."
-msgstr ""
-
-msgid "The save game will be extracted to your EmuNAND path."
-msgstr ""
-
-msgid "The save games will be extracted to your EmuNAND save and channel path. Attention: All existing files will be overwritten."
-msgstr ""
+msgstr "SYSCONF-filen kommer att extraheras till din EmuNAND-väg och EmuNAND-kanalväg. Uppmärksamhet: Alla befintliga filer kommer att skrivas över."
 
 msgid "The WAD file was installed"
-msgstr ""
+msgstr "WAD-filen installerades"
 
 #, c-format
 msgid "The WAD installation failed with error %i"
-msgstr ""
+msgstr "WAD-installationen misslyckades med fel %i"
 
-msgid "Theme Downloader"
-msgstr "Tema Nedladdare"
+msgid "The entered directory does not exist. Would you like to create it?"
+msgstr "Den angivna katalogen finns inte. Vill du skapa den?"
+
+msgid "The files will be extracted to your EmuNAND save and channel path. Attention: All existing files will be overwritten."
+msgstr "Filerna kommer att extraheras till din EmuNAND-sparväg och EmuNAND-kanalväg. Uppmärksamhet: Alla befintliga filer kommer att skrivas över."
+
+msgid "The game is on SD Card."
+msgstr "Spelet är på SD-kortet."
+
+msgid "The game is on USB."
+msgstr "Spelet är på USB."
+
+msgid "The save game will be extracted to your EmuNAND path."
+msgstr "Sparspelet kommer att extraheras till din EmuNAND-väg."
+
+msgid "The save games will be extracted to your EmuNAND save and channel path. Attention: All existing files will be overwritten."
+msgstr "Sparspelen kommer att extraheras till din EmuNAND-sparväg och EmuNAND-kanalväg. Uppmärksamhet: Alla befintliga filer kommer att skrivas över."
 
 msgid "Theme Menu"
-msgstr ""
+msgstr "Temameny"
 
 msgid "Theme Path"
-msgstr "Tema-mapp"
+msgstr "Temaväg"
 
 msgid "Theme Title:"
-msgstr "Tema titel:"
+msgstr "Tematitel:"
 
-msgid "Themes by www.spiffy360.com"
-msgstr ""
+msgid "This IOS is the BootMii IOS. If you are sure it is not BootMii and you have something else installed there then ignore this warning."
+msgstr "Denna IOS är BootMii IOS. Om du är säker på att det inte är BootMii och du har något annat installerat där, ignorera denna varning."
 
-msgid "This IOS is the BootMii IOS. If you are sure it is not BootMii and you have something else installed there than ignore this warning."
-msgstr ""
+msgid "This IOS is the BootMii ios. If you are sure it is not BootMii and you have something else installed there then ignore this warning."
+msgstr "Denna IOS är BootMii ios. Om du är säker på att det inte är BootMii och du har något annat installerat där, ignorera denna varning."
 
-msgid "This IOS was not found on the titles list. If you are sure you have it installed than ignore this warning."
-msgstr ""
+msgid "This IOS was not found on the titles list. If you are sure you have it installed then ignore this warning."
+msgstr "Denna IOS hittades inte i titellistan. Om du är säker på att du har den installerad, ignorera denna varning."
 
 msgid "This Nintendont version does not support games on USB."
-msgstr ""
+msgstr "Denna version av Nintendont stöder inte spel på USB."
 
 msgid "This Nintendont version is not correctly supported. Auto boot disabled."
-msgstr ""
+msgstr "Denna version av Nintendont stöds inte korrekt. Automatisk start inaktiverad."
 
 msgid "This game has multiple discs. Please select the disc to launch."
-msgstr ""
+msgstr "Detta spel har flera skivor. Vänligen välj skivan att starta."
 
 msgid "This path must be on SD!"
-msgstr ""
+msgstr "Denna väg måste vara på SD!"
 
 msgid "This setting doesn't work in SD card mode."
-msgstr ""
+msgstr "Denna inställning fungerar inte i SD-kortsläge."
 
 msgid "Time left:"
 msgstr "Tid kvar:"
 
 msgid "Timer Fix"
-msgstr ""
+msgstr "Timerfix"
 
 msgid "Title Launcher"
-msgstr "Titel startare"
-
-msgid "Titles Path"
-msgstr ""
+msgstr "Titelstartare"
 
 msgid "Titles From"
-msgstr ""
+msgstr "Titlar från"
 
-msgid "To run GameCube games from Disc you need to set the GameCube mode to MIOS in the game settings."
-msgstr ""
+msgid "Titles Path"
+msgstr "Titlar väg"
+
+msgid "To run GameCube games from disc you need to set the GameCube mode to MIOS in the game settings."
+msgstr "För att köra GameCube-spel från skiva måste du ställa in GameCube-läget till MIOS i spelinställningarna."
 
 #, c-format
 msgid "To run GameCube games with %s you need to place them on an USB FAT32 partition."
-msgstr ""
+msgstr "För att köra GameCube-spel med %s måste du placera dem på en USB FAT32-partition."
 
 #, c-format
 msgid "To run GameCube games with %s you need to set your 'Main GameCube Path' on the first primary FAT32 partition."
-msgstr ""
+msgstr "För att köra GameCube-spel med %s måste du ställa in din 'Huvud GameCube-väg' på den första primära FAT32-partitionen."
 
 #, c-format
 msgid "To run GameCube games with %s you need to set your 'Main GameCube Path' on the first primary partition of the Hard Drive."
-msgstr ""
+msgstr "För att köra GameCube-spel med %s måste du ställa in din 'Huvud GameCube-väg' på den första primära partitionen av hårddisken."
 
 #, c-format
 msgid "To run GameCube games with %s you need to set your 'Main GameCube Path' to an USB FAT32 partition."
-msgstr ""
+msgstr "För att köra GameCube-spel med %s måste du ställa in din 'Huvud GameCube-väg' till en USB FAT32-partition."
 
 #, c-format
 msgid "To run GameCube games with %s you need to use a 512 bytes/sector Hard Drive."
-msgstr ""
+msgstr "För att köra GameCube-spel med %s måste du använda en hårddisk med 512 byte/sektion."
 
 #, c-format
 msgid "To run GameCube games with %s you need to use a partition with 32k bytes/cluster or less."
-msgstr ""
+msgstr "För att köra GameCube-spel med %s måste du använda en partition med 32k byte/kluster eller mindre."
 
 msgid "To run GameCube games with Devolution you need the loader.bin file in your Devolution Loader Path."
-msgstr ""
+msgstr "För att köra GameCube-spel med Devolution behöver du loader.bin-filen i din Devolution-laddarväg."
 
 msgid "To run GameCube games with Nintendont you need the boot.dol file in your Nintendont Loader Path."
-msgstr ""
+msgstr "För att köra GameCube-spel med Nintendont behöver du boot.dol-filen i din Nintendont-laddarväg."
 
 #, c-format
 msgid "To use HID with %s you need the %s file."
-msgstr ""
-
-msgid "To use neek you need to set your 'EmuNAND Channel Path' on the first primary partition of the Hard Drive."
-msgstr ""
-
-msgid "To use neek you need to set your 'EmuNAND Channel Path' to a FAT32 partition."
-msgstr ""
-
-msgid "To use neek you need to use a 512 bytes/sector Hard Drive."
-msgstr ""
+msgstr "För att använda HID med %s behöver du %s-filen."
 
 #, c-format
-msgid "To use ocarina with %s you need the %s file."
-msgstr ""
+msgid "To use Ocarina with %s you need the %s file."
+msgstr "För att använda Ocarina med %s behöver du %s-filen."
+
+msgid "To use neek you need to set your 'EmuNAND Channel Path' on the first primary partition of the Hard Drive."
+msgstr "För att använda neek måste du ställa in din 'EmuNAND-kanalväg' på den första primära partitionen av hårddisken."
+
+msgid "To use neek you need to set your 'EmuNAND Channel Path' to a FAT32 partition."
+msgstr "För att använda neek måste du ställa in din 'EmuNAND-kanalväg' till en FAT32-partition."
+
+msgid "To use neek you need to use a 512 bytes/sector Hard Drive."
+msgstr "För att använda neek måste du använda en hårddisk med 512 byte/sektion."
+
+msgid "Toggle SD card mode"
+msgstr "Växla SD-kortsläge"
 
 msgid "Tooltip Delay"
-msgstr ""
+msgstr "Fördröjning av verktygstips"
 
 msgid "Tooltips"
 msgstr "Verktygstips"
 
-msgid "Transfer failed"
-msgstr ""
-
 msgid "Triforce Arcade Mode"
-msgstr ""
+msgstr "Triforce-arkadläge"
 
 msgid "Two Lines"
-msgstr ""
+msgstr "Två rader"
 
 msgid "USB"
-msgstr ""
+msgstr "USB"
 
 msgid "USB Device not initialized."
-msgstr ""
+msgstr "USB-enhet inte initierad."
+
+msgid "USB Loader GX couldn't verify Nintendont boot.dol file. Launch this boot.dol anyway?"
+msgstr "USB Loader GX kunde inte verifiera Nintendont boot.dol-fil. Starta denna boot.dol ändå?"
+
+msgid "USB Loader GX couldn't write Nintendont config file. Launch Nintendont anyway?"
+msgstr "USB Loader GX kunde inte skriva Nintendont konfigurationsfil. Starta Nintendont ändå?"
 
 msgid "USB Loader GX is protected"
 msgstr "USB Loader GX är skyddad"
 
+msgid "USB Loader GX needs to be installed to an SD card for this setting to work."
+msgstr "USB Loader GX måste installeras på ett SD-kort för att denna inställning ska fungera."
+
+msgid "USB Loader GX r1218 is required for Nintendont Alpha v0.1. Please update your Nintendont boot.dol version."
+msgstr "USB Loader GX r1218 krävs för Nintendont Alpha v0.1. Vänligen uppdatera din Nintendont boot.dol-version."
+
 msgid "USB Port"
-msgstr ""
+msgstr "USB-port"
 
 msgid "USB Port changing is only supported on Hermes cIOS."
-msgstr ""
+msgstr "USB-portbyte stöds endast på Hermes cIOS."
 
 msgid "USB-HID Controller"
-msgstr ""
-
-msgid "USBloaderGX couldn't verify Nintendont boot.dol file. Launch this boot.dol anyway?"
-msgstr ""
-
-msgid "USBloaderGX couldn't write Nintendont config file. Launch Nintendont anyway?"
-msgstr ""
-
-msgid "USBloaderGX r1218 is required for Nintendont Alpha v0.1. Please update your Nintendont boot.dol version."
-msgstr ""
+msgstr "USB-HID-kontroller"
 
 msgid "Uninstall"
 msgstr "Avinstallera"
@@ -2326,687 +2298,264 @@ msgid "Uninstall Game"
 msgstr "Avinstallera spel"
 
 msgid "Uninstall Menu"
-msgstr "Avinstallerings meny"
+msgstr "Avinstallera meny"
 
 msgid "Uninstall all"
-msgstr ""
+msgstr "Avinstallera allt"
 
 msgid "Unknown"
-msgstr ""
+msgstr "Okänd"
 
 msgid "Unlock USB Loader GX"
-msgstr ""
+msgstr "Lås upp USB Loader GX"
 
 msgid "Unlocked"
 msgstr "Upplåst"
 
-msgid "Unsupported format, try to extract manually TempTheme.zip."
-msgstr ""
+msgid "Unsupported format!"
+msgstr "Formatet stöds inte!"
 
 msgid "Update"
 msgstr "Uppdatera"
 
-msgid "Update Files"
-msgstr "Uppdatera Filer"
+msgid "Update All Language Files"
+msgstr "Uppdatera alla språkfiler"
 
-msgid "Update all Language Files"
-msgstr "Uppdatera alla språk-filer"
+msgid "Update Cheat Files"
+msgstr "Uppdatera fuskfiler"
+
+msgid "Update Cover Files"
+msgstr "Uppdatera omslagsfiler"
 
 msgid "Update Failed"
 msgstr "Uppdatering misslyckades"
 
-msgid "Update Successful"
-msgstr ""
+msgid "Update Language Files"
+msgstr "Uppdatera språkfiler"
+
+msgid "Update Menu"
+msgstr "Uppdatera meny"
+
+msgid "Update Nintendont"
+msgstr "Uppdatera Nintendont"
+
+msgid "Update USB Loader GX"
+msgstr "Uppdatera USB Loader GX"
+
+msgid "Update WiiTDB.xml"
+msgstr "Uppdatera WiiTDB.xml"
 
 msgid "Updating Language Files:"
-msgstr "Uppdatera språk-filer:"
+msgstr "Uppdaterar språkfiler:"
 
 msgid "Uploaded ZIP file installed to homebrew directory."
-msgstr "Uppladdad ZIP fil installerad till homebrew-mappen"
+msgstr "Uppladdad ZIP-fil installerad i homebrew-katalogen."
 
 msgid "Use System Font"
-msgstr ""
+msgstr "Använd systemteckensnitt"
 
 msgid "Use global"
-msgstr ""
+msgstr "Använd global"
 
 msgid "VBI (Default)"
-msgstr ""
+msgstr "VBI (Standard)"
 
 msgid "VIDTV Patch"
-msgstr "VIDTV-Patch"
+msgstr "VIDTV-patch"
 
 msgid "Version:"
-msgstr ""
+msgstr "Version:"
 
 #, c-format
 msgid "Version: %s"
-msgstr ""
+msgstr "Version: %s"
 
 msgid "Video Deflicker"
-msgstr ""
+msgstr "Videodeflicker"
 
 msgid "Video Mode"
-msgstr "Video-läge"
+msgstr "Videoläge"
 
 msgid "Video Scale Value"
-msgstr ""
-
-msgid "Video offset"
-msgstr ""
-
-msgid "Video scale"
-msgstr ""
+msgstr "Video skala värde"
 
 msgid "Video Width"
-msgstr ""
+msgstr "Videobredd"
+
+msgid "Video offset"
+msgstr "Video offset"
+
+msgid "Video scale"
+msgstr "Video skala"
 
 msgid "Virtual Pointer Speed"
-msgstr ""
+msgstr "Virtuell pekarhastighet"
 
 msgid "WDM Files Path"
-msgstr ""
+msgstr "WDM-filer väg"
 
 msgid "WIP Patches Path"
-msgstr "WIP patchssökväg"
+msgstr "WIP-patchar väg"
 
 msgid "Waiting..."
 msgstr "Väntar..."
 
 msgid "Warning"
-msgstr ""
+msgstr "Varning"
 
 msgid "Warning:"
-msgstr ""
+msgstr "Varning:"
 
 msgid "What do you want to do?"
-msgstr ""
-
-msgid "What do you want to update?"
-msgstr "Vad vill du uppdatera?"
+msgstr "Vad vill du göra?"
 
 msgid "What should be deleted for this game title:"
-msgstr ""
+msgstr "Vad ska raderas för denna speltitel:"
 
 msgid "What to extract from NAND?"
-msgstr ""
+msgstr "Vad ska extraheras från NAND?"
 
-msgid "Where should the game be installed to?"
-msgstr ""
+msgid "Where Should the Game Be Installed To?"
+msgstr "Var ska spelet installeras?"
 
 msgid "Where to dump NAND?"
-msgstr ""
+msgstr "Var ska NAND dumpas?"
 
 msgid "Which device do you want to use for Nintendont files?"
-msgstr ""
+msgstr "Vilken enhet vill du använda för Nintendont-filer?"
 
 msgid "Which mode do you want to use?"
-msgstr ""
+msgstr "Vilket läge vill du använda?"
 
 msgid "WiFi Features"
-msgstr "WiFi funktioner"
+msgstr "WiFi-funktioner"
 
 msgid "Widescreen Factor"
-msgstr ""
+msgstr "Bredbildsfaktor"
 
 msgid "Widescreen Fix"
-msgstr "Bredbild 16/9 Fix"
+msgstr "Bredbildsfix"
 
-msgid "Wii Games"
-msgstr ""
+msgid "Wii"
+msgstr "Wii"
 
 msgid "Wii Menu"
 msgstr "Wii-meny"
 
 msgid "Wii Settings"
-msgstr "Wii inställningar"
+msgstr "Wii-inställningar"
 
-msgid "WiiTDB.xml"
-msgstr ""
+msgid "Wii U GamePad Slot"
+msgstr "Wii U GamePad-plats"
+
+msgid "Wii U Widescreen"
+msgstr "Wii U bredbild"
 
 msgid "WiiTDB.xml is up to date."
-msgstr ""
-
-msgid "WiiU Widescreen"
-msgstr ""
+msgstr "WiiTDB.xml är uppdaterad."
 
 msgid "Wiilight"
-msgstr "Wii-ljus"
+msgstr "Wiilight"
 
 msgid "Wiimmfi"
-msgstr ""
+msgstr "Wiimmfi"
 
 msgid "Wiinnertag"
-msgstr ""
+msgstr "Wiinnertag"
 
 msgid "Wiinnertag Path"
-msgstr ""
+msgstr "Wiinnertag väg"
 
 msgid "Wiinnertag requires you to enable automatic network connect on application start. Do you want to enable it now?"
-msgstr ""
+msgstr "Wiinnertag kräver att du aktiverar automatisk nätverksanslutning vid programstart. Vill du aktivera det nu?"
 
 msgid "Wiird Debugger"
-msgstr ""
+msgstr "Wiird Debugger"
 
 #, c-format
 msgid "Write error on file: %s"
-msgstr ""
+msgstr "Skrivfel på fil: %s"
 
 msgid "Writing GXGameCategories.xml"
-msgstr ""
+msgstr "Skriver GXGameCategories.xml"
 
 msgid "Wrong Password"
-msgstr "Fel Lösenord"
+msgstr "Fel lösenord"
 
 msgid "Yes"
 msgstr "Ja"
 
 msgid "You are trying to select a FAT32/NTFS/EXT partition with cIOS 249 Rev < 18. This is not supported. Continue on your own risk."
-msgstr ""
+msgstr "Du försöker välja en FAT32/NTFS/EXT-partition med cIOS 249 Rev < 18. Detta stöds inte. Fortsätt på egen risk."
 
 msgid "You can select or format a partition or use the channel loader mode."
-msgstr ""
+msgstr "Du kan välja eller formatera en partition eller använda kanalstartarläget."
 
 msgid "You cannot delete this category."
-msgstr ""
+msgstr "Du kan inte radera denna kategori."
+
+msgid "You have DIOS-MIOS installed, so this game needs to be on a FAT32 USB storage device. You'll need to install DIOS-MIOS Lite to run this game from an SD card."
+msgstr "Du har DIOS-MIOS installerat, så detta spel måste vara på en FAT32 USB-lagringsenhet. Du måste installera DIOS-MIOS Lite för att köra detta spel från ett SD-kort."
 
 msgid "You need neek2o to load EmuNAND from sub-folders."
-msgstr ""
+msgstr "Du behöver neek2o för att ladda EmuNAND från underkataloger."
 
 msgid "You need to install DIOS MIOS Lite v1.2 or a newer version."
-msgstr ""
+msgstr "Du måste installera DIOS MIOS Lite v1.2 eller en nyare version."
 
 msgid "You need to install an additional GameCube loader or select a different GameCube Mode to launch GameCube games from USB or SD card."
-msgstr ""
+msgstr "Du måste installera en ytterligare GameCube-laddare eller välja ett annat GameCube-läge för att starta GameCube-spel från USB eller SD-kort."
 
 msgid "Your current GameCube partition is not compatible. Please update Nintendont."
-msgstr ""
+msgstr "Din nuvarande GameCube-partition är inte kompatibel. Vänligen uppdatera Nintendont."
 
 msgid "Zoom Duration (Speed)"
-msgstr ""
+msgstr "Zoomvaraktighet (Hastighet)"
 
 msgid "and translators for language files updates"
-msgstr ""
+msgstr "och översättare för uppdateringar av språkfiler"
 
 msgid "does not exist!"
-msgstr "existerar inte!"
+msgstr "finns inte!"
 
 msgid "does not exist!  Loading game without cheats."
-msgstr "existerar inte! Laddar spel utan fusk."
+msgstr "finns inte! Laddar spelet utan fusk."
 
 msgid "files left"
 msgstr "filer kvar"
 
 msgid "for FAT/NTFS support"
-msgstr "för FAT/NTFS stöd"
+msgstr "för FAT/NTFS-stöd"
 
 msgid "for GameTDB and hosting covers / disc images"
-msgstr ""
+msgstr "för GameTDB och värd för omslag / skivbilder"
 
 msgid "for Ocarina"
 msgstr "för Ocarina"
 
 msgid "for diverse patches"
-msgstr "för diverse patcher"
+msgstr "för diverse patchar"
 
 msgid "for his awesome tool LibWiiGui"
-msgstr "för hans underbara verktyg LibWiiGui"
-
-msgid "for hosting the themes"
-msgstr "för hostning av teman"
+msgstr "för hans fantastiska verktyg LibWiiGui"
 
 msgid "for the USB Loader source"
-msgstr "och släppet av källkoden"
+msgstr "för USB Loader-källan"
 
 msgid "for their work on the wiki page"
-msgstr ""
+msgstr "för deras arbete på wikisidan"
 
 msgid "formatted!"
 msgstr "formaterad!"
 
 msgid "free"
-msgstr "ledigt"
+msgstr "fri"
 
 msgid "ms"
-msgstr ""
-
-msgid "not set"
-msgstr "Inget satt"
+msgstr "ms"
 
 msgid "of"
 msgstr "av"
 
 msgid "seconds left"
 msgstr "sekunder kvar"
-
-#~ msgid "Error 002 fix"
-#~ msgstr "002 fel fix"
-
-#~ msgid "Boot/Standard"
-#~ msgstr "Boot/Standard"
-
-#~ msgid "Rename Game on WBFS"
-#~ msgstr "Döp om spel på WBFS"
-
-#~ msgid "for hosting the update files"
-#~ msgstr "för lagring av uppdateringar"
-
-#~ msgid "Insert a Wii Disc!"
-#~ msgstr "Sätt i en Wii-skiva!"
-
-#~ msgid "No cheats were selected"
-#~ msgstr "Inga fusk har valda"
-
-#~ msgid "Not a Wii Disc"
-#~ msgstr "Inte en Wii-skiva"
-
-#~ msgid ">> Deleting tickets..."
-#~ msgstr ">> Raderar biljetter..."
-
-#~ msgid ">> Deleting tickets...ERROR! "
-#~ msgstr ">> Raderar biljetter...FEL! "
-
-#~ msgid ">> Deleting tickets...Ok! "
-#~ msgstr ">> Raderar biljetter...Ok! "
-
-#~ msgid ">> Deleting title ...ERROR! "
-#~ msgstr ">> Raderar titel ...FEL! "
-
-#~ msgid ">> Deleting title ...Ok!"
-#~ msgstr ">> Raderar titel ...Ok!"
-
-#~ msgid ">> Deleting title contents..."
-#~ msgstr ">> Raderar titel innehåll..."
-
-#~ msgid ">> Deleting title contents...ERROR! "
-#~ msgstr ">> Raderar titel innehåll...FEL! "
-
-#~ msgid ">> Deleting title contents...Ok!"
-#~ msgstr ">> Raderar titel innehåll...Ok!"
-
-#~ msgid ">> Deleting title..."
-#~ msgstr ">> Raderar titel..."
-
-#~ msgid ">> Finishing installation..."
-#~ msgstr ">> Gör klart installation..."
-
-#~ msgid ">> Installing content #"
-#~ msgstr ">> Installerar innehåll #"
-
-#~ msgid ">> Installing ticket..."
-#~ msgstr ">> Installerar biljett..."
-
-#~ msgid ">> Installing title..."
-#~ msgstr ">> Installerar titel..."
-
-#~ msgid ">> Reading WAD data..."
-#~ msgstr ">> Läser WAD data..."
-
-#~ msgid ">> Reading WAD data...ERROR! "
-#~ msgstr ">> Läser WAD data...FEL! "
-
-#~ msgid ">> Reading WAD data...Ok!"
-#~ msgstr ">> Läser WAD data...Ok!"
-
-#~ msgid "Done!"
-#~ msgstr "Klar!"
-
-#~ msgid "Error..."
-#~ msgstr "Fel..."
-
-#~ msgid "Finishing installation... Ok!"
-#~ msgstr "Gör klart installation... Ok!"
-
-#~ msgid "Installing content... Ok!"
-#~ msgstr "Installerar innehåll... Ok!"
-
-#~ msgid "Installing ticket... Ok!"
-#~ msgstr "Installerar biljett... Ok!"
-
-#~ msgid "Installing title... Ok!"
-#~ msgstr "Installerar titel... Ok!"
-
-#~ msgid "Installing WAD"
-#~ msgstr "Installerar WAD"
-
-#~ msgid "Reading WAD data... Ok!"
-#~ msgstr "Läser WAD data... Ok!"
-
-#~ msgid "Uninstalling WAD"
-#~ msgstr "Avinstallerar WAD"
-
-#~ msgid "New Disc Detected"
-#~ msgstr "Ny skiva upptäckt"
-
-#~ msgid "USB Device not found"
-#~ msgstr "USB-enhet ej hittad"
-
-#~ msgid "You need to select or format a partition"
-#~ msgstr "Du måste välja eller formatera en partition"
-
-#~ msgid "Language File"
-#~ msgstr "Språk fil"
-
-#~ msgid "Titles from WiiTDB"
-#~ msgstr "Titlar från WiiTDB"
-
-#~ msgid "WiiTDB Files"
-#~ msgstr "WiiTDB"
-
-#~ msgid "WiiTDB Path"
-#~ msgstr "WiiTDB-sökväg"
-
-#~ msgid "for WiiTDB and hosting covers / disc images"
-#~ msgstr "för WiiTDB och lagring av omslag / skivbilder"
-
-#~ msgid "Install partitions"
-#~ msgstr "Installera partitioner"
-
-#~ msgid " Wad Saved as:"
-#~ msgstr "Wad sparad som:"
-
-#~ msgid "Delete ?"
-#~ msgstr "Radera?"
-
-#~ msgid "Keep"
-#~ msgstr "Behåll"
-
-#~ msgid "Author:"
-#~ msgstr "Utgivare:"
-
-#~ msgid "Download Boxart image?"
-#~ msgstr "Ladda ner omslagsbild?"
-
-#~ msgid "Download Discart image?"
-#~ msgstr "Ladda ner skivbild?"
-
-#~ msgid "Downloading file"
-#~ msgstr "Laddar ner fil:"
-
-#~ msgid "Missing files"
-#~ msgstr "Filer som saknas"
-
-#~ msgid "files not found on the server!"
-#~ msgstr "filerna hittades inte på servern!"
-
-#~ msgid "Disc Images"
-#~ msgstr "Skivbilder"
-
-#~ msgid "Only Customs"
-#~ msgstr "Endast anpassade"
-
-#~ msgid "Only Original"
-#~ msgstr "Endast original"
-
-#~ msgid "Do you really want to delete:"
-#~ msgstr "Vill du verkligen radera:"
-
-#~ msgid "Do you want to use the alternate DOL that is known to be correct?"
-#~ msgstr "Vill du använda en alternativ DOL som är känd att fungera?"
-
-#~ msgid "BETA revisions"
-#~ msgstr "BETA version"
-
-#~ msgid "Unlock console to use this option."
-#~ msgstr "Lås upp konsolen för denna inställning."
-
-#~ msgid "Full Shutdown"
-#~ msgstr "Stäng av helt"
-
-#~ msgid "GXtheme.cfg not found in any subfolder."
-#~ msgstr "GXtheme.cfg kunde inte hittas i några undermappar."
-
-#~ msgid "If you don't have WiFi, press 1 to get an URL to get your WiiTDB.zip"
-#~ msgstr "Om du inte har WiFi, tryck 1 för att få en URL till din WiiTDB.zip"
-
-#~ msgid "Paste it into your browser to get your WiiTDB.zip."
-#~ msgstr "Klistra in det i din webbläsare för att hämta din WiiTDB.zip."
-
-#~ msgid "Shutdown to Idle"
-#~ msgstr "Försätt i viloläge"
-
-#~ msgid "Your URL has been saved in %sWiiTDB_URL.txt."
-#~ msgstr "Din URL har sparats som %sWiiTDB_URL.txt."
-
-#~ msgid "Can't create file"
-#~ msgstr "Kunde inte skapa fil"
-
-#~ msgid "Connection lost..."
-#~ msgstr "Uppkoppling förlorad..."
-
-#~ msgid "Download failed."
-#~ msgstr "Nedladdning misslyckades."
-
-#~ msgid "Download request failed."
-#~ msgstr "Nedladdnings begäran misslyckades."
-
-#~ msgid "Downloading Page List:"
-#~ msgstr "Laddar ner lista:"
-
-#~ msgid "Theme Download Path"
-#~ msgstr "Tema-mapp nedladdade"
-
-#~ msgid "Transfer failed."
-#~ msgstr "Flytt misslyckades."
-
-#~ msgid "Unsupported format, try to extract manually."
-#~ msgstr "Format stöds inte, försök extrahera manuelt."
-
-#~ msgid "and translaters for language files updates"
-#~ msgstr "och översättarna."
-
-#~ msgid "Insert an SD-Card to save."
-#~ msgstr "Sätt i ett SD-kort för att spara."
-
-#~ msgid "Insert an SD-Card to use this option."
-#~ msgstr "Sätt i ett SD-kort för att använda denna inställning"
-
-#~ msgid "No SD-Card inserted!"
-#~ msgstr "Inget SD-kort isatt!"
-
-#~ msgid "Waiting for USB Device"
-#~ msgstr "Väntar på USB-enhet"
-
-#~ msgid "Back to Loader"
-#~ msgstr "Tillbaka till loader"
-
-#~ msgid "FAT: Use directories"
-#~ msgstr "FAT: Använd mappar"
-
-#~ msgid "All partitions"
-#~ msgstr "Alla partitioner"
-
-#~ msgid "Game partition"
-#~ msgstr "Spel partition"
-
-#~ msgid "Install 1:1 Copy"
-#~ msgstr "Installera 1:1 Kopia"
-
-#~ msgid "An Error occured"
-#~ msgstr "Ett fel har uppstått"
-
-#~ msgid "Are you sure you want to enable Parent Control?"
-#~ msgstr "Är du säker på att du vill aktivera Föräldrakontroll?"
-
-#~ msgid "AutoPatch"
-#~ msgstr "Autopatch"
-
-#~ msgid "Checking for Updates"
-#~ msgstr "Letar efter uppdateringar"
-
-#~ msgid "Downloading"
-#~ msgstr "Laddar ner"
-
-#~ msgid "Invalid PIN code"
-#~ msgstr "Ogiltig PIN-kod"
-
-#~ msgid "Parental Control disabled"
-#~ msgstr "Föräldrakontroll avaktiverad"
-
-#~ msgid "The WAD file was installed.  But It could not be deleted from the SD card."
-#~ msgstr "Wad filen har blivit installerad. Men kunde inte raderas från SD-kortet."
-
-#~ msgid "The WAD installation failed with error %ld"
-#~ msgstr "Wad installation misslyckades med fel %ld"
-
-#~ msgid "Unable to open the WAD that was just downloaded (%s)."
-#~ msgstr "Kunde inte öppna den nedladdade WAD filen (%s)."
-
-#~ msgid "Unlock Parental Control"
-#~ msgstr "Lås upp föräldrakontroll"
-
-#~ msgid "Update to"
-#~ msgstr "Uppdatera till"
-
-#~ msgid "Updating"
-#~ msgstr "Uppdaterar"
-
-#~ msgid "Updating Language Files..."
-#~ msgstr "Uppdatera språk-filer..."
-
-#~ msgid "Updating WiiTDB.zip"
-#~ msgstr "Uppdaterar WiiTDB.zip"
-
-#~ msgid "You don't have Parental Control enabled. If you wish to use Parental Control, enable it in the Wii Settings."
-#~ msgstr "Du har inte föräldrakontroll aktiverad. Om du vill använda föräldrakontroll, aktivera det i Wii inställningar."
-
-#~ msgid "%s : %s May not boot correctly if your System Menu is not up to date."
-#~ msgstr "%s : %s Kanske inte kan starta korrekt om din system meny inte är den nyaste versionen."
-
-#~ msgid "BCA Codes Path changed"
-#~ msgstr "BCA kodssökväg ändrad"
-
-#~ msgid "Back to Wii Menu"
-#~ msgstr "Tillbaka till Wii-menyn"
-
-#~ msgid "Checking existing artwork"
-#~ msgstr "Kontrollera befintliga konstverk"
-
-#~ msgid "Confirm"
-#~ msgstr "Bekräfta"
-
-#~ msgid "Could not find a WBFS partition."
-#~ msgstr "Kunde inte hitta WBFS partition."
-
-#~ msgid "Could not open WBFS partition"
-#~ msgstr "Kunde inte öppna WBFS partition"
-
-#~ msgid "Could not read the disc."
-#~ msgstr "Kunde inte läsa skiva."
-
-#~ msgid "Could not set USB."
-#~ msgstr "Kunde inte ställa in USB."
-
-#~ msgid "Cover Path Changed"
-#~ msgstr "Omslagsmapp ändrad"
-
-#~ msgid "DOL path changed"
-#~ msgstr "DOL-sökväg ändrad"
-
-#~ msgid "Disc Path Changed"
-#~ msgstr "Skivbildsmapp ändrad"
-
-#~ msgid "Display favorites"
-#~ msgstr "Visa favoriter"
-
-#~ msgid "Do you want to retry for 30 secs?"
-#~ msgstr "Vill du försöka igen i 30 sekunder?"
-
-#~ msgid "Enable Parental Control"
-#~ msgstr "Aktivera Föräldrakontroll"
-
-#~ msgid "Force"
-#~ msgstr "Tvinga"
-
-#~ msgid "GCT Cheatcodes Path changed"
-#~ msgstr "Sökväg till fusk ändrad"
-
-#~ msgid "Homebrew Appspath changed"
-#~ msgstr "Homebrew Apps ändrad"
-
-#~ msgid "Insert an SD-Card to download images."
-#~ msgstr "Sätt i ett SD-kort för att ladda ner bilder."
-
-#~ msgid "Install not possible"
-#~ msgstr "Installation inte möjlig"
-
-#~ msgid "Most likely it has dimensions that are not evenly divisible by 4."
-#~ msgstr "Troligtvis har den mått som inte är jämnt dividerade med 4."
-
-#~ msgid "Network init error"
-#~ msgstr "Fel vid nätverksstart"
-
-#~ msgid "No .dol or .elf files found."
-#~ msgstr "Ingen .dol eller .elf fil hittades."
-
-#~ msgid "No Favorites"
-#~ msgstr "Inga favoriter"
-
-#~ msgid "No USB Device"
-#~ msgstr "Ingen USB-enhet"
-
-#~ msgid "No USB Device found."
-#~ msgstr "Ingen USB-enhet hittad."
-
-#~ msgid "No WBFS or FAT/NTFS partition found"
-#~ msgstr "Ingen WBFS eller FAT/NTFS partition hittad"
-
-#~ msgid "Normal Covers"
-#~ msgstr "Vanliga omslag"
-
-#~ msgid "Not Found"
-#~ msgstr "Hittades inte"
-
-#~ msgid "Not a DOL/ELF file."
-#~ msgstr "Inte en DOL/ELF fil."
-
-#~ msgid "Reset to standard BGM?"
-#~ msgstr "Återställ till standard BGM?"
-
-#~ msgid "Save Failed"
-#~ msgstr "Sparande misslyckat"
-
-#~ msgid "Selected DOL"
-#~ msgstr "Vald DOL"
-
-#~ msgid "Standard"
-#~ msgstr "Standard"
-
-#~ msgid "TXT Cheatcodes Path changed"
-#~ msgstr "TXTCheatcodes sökväg ändrad"
-
-#~ msgid "Theme Download Path changed"
-#~ msgstr "Tema-mapp nedladdade ändrad"
-
-#~ msgid "Theme Path Changed"
-#~ msgstr "Tema-mapp ändrad"
-
-#~ msgid "USB Loader GX will only run with Hermes CIOS rev 4! Please make sure you have revision 4 installed!"
-#~ msgstr "USB Loader GX kommer endast köra med Hermes CIOS ver 4! Vänligen kontrollera att du har ver 4 installerad!"
-
-#~ msgid "Update Path changed."
-#~ msgstr "Sökväg till uppdatering ändrad."
-
-#~ msgid "WIP Patches Path changed"
-#~ msgstr "WIP patchssökväg ändrad"
-
-#~ msgid "WiiTDB Path changed."
-#~ msgstr "WiiTDB-sökväg ändrad."
-
-#~ msgid "You are about to delete "
-#~ msgstr "Då håller på att radera "
-
-#~ msgid "You are choosing to display favorites and you do not have any selected."
-#~ msgstr "Du har valt att visa favoriter men du har inga favoriter valda."
-
-#~ msgid "You are using NTFS filesystem. Due to possible write errors to a NTFS partition, installing a game is not possible."
-#~ msgstr "Du använder NTFS filsystem. Pågrund av möjliga skriv fel till en NTFS partition, så är det inte möjligt att installera spel."
-
-#~ msgid "You have attempted to load a bad image"
-#~ msgstr "Du har försökt ladda en dålig bild"
-
-#~ msgid "does not exist!  You Messed something up, Idiot."
-#~ msgstr "existerar inte! Du har gjort något fel."
-
-#~ msgid "file left"
-#~ msgstr "fil kvar"

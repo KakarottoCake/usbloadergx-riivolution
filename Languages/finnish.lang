@@ -1,541 +1,553 @@
 # USB Loader GX language source file.
-# finnish.lang - r740
+# finnish.lang - r1282
 # don't delete/change this line (é).
 msgid ""
 msgstr ""
 "Project-Id-Version: USB Loader GX\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2019-06-15 16:02+0200\n"
-"PO-Revision-Date: 2009-10-01 01:00+0200\n"
-"Last-Translator: c64rmx\n"
-"Language-Team: \n"
+"POT-Creation-Date: 2025-06-25 09:00+0100\n"
+"PO-Revision-Date: 2025-06-25 09:00+0100\n"
+"Last-Translator: GPT-4o\n"
+"Language-Team: Finnish\n"
 "MIME-Version: 1.0\n"
-"Content-Type: text/plain; charset=utf-8\n"
+"Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"Language: \n"
 
 msgid " could not be downloaded."
-msgstr "Latausta ei voitu suorittaa"
+msgstr " ei voitu ladata."
 
-msgid " has been Saved.  The text has not been verified.  Some of the code may not work right with each other.  If you experience trouble, open the text in a real text editor for more information."
-msgstr ""
+msgid " has been saved, but you might need to edit some cheats from a computer."
+msgstr " on tallennettu, mutta saatat joutua muokkaamaan joitakin huijauksia tietokoneella."
 
 msgid " is not on the server."
-msgstr "Tiedostoa ei löydy serveriltä"
-
-#, c-format
-msgid "%i files not found on the server!"
-msgstr ""
-
-#, c-format
-msgid "%i missing files"
-msgstr ""
+msgstr " ei ole palvelimella."
 
 #, c-format
 msgid "%i WAD file(s) not processed!"
-msgstr ""
+msgstr "%i WAD-tiedostoa ei käsitelty!"
 
 #, c-format
 msgid "%i WAD found."
-msgstr ""
+msgstr "%i WAD löydetty."
+
+#, c-format
+msgid "%i files not found on the server!"
+msgstr "%i tiedostoa ei löydy palvelimelta!"
 
 #, c-format
 msgid "%s only accepts GameCube backups in ISO format."
-msgstr ""
+msgstr "%s hyväksyy vain GameCube-varmuuskopiot ISO-muodossa."
 
 #, c-format
-msgid "%s requires AHB access! Please launch USBLoaderGX from HBC or from an updated channel or forwarder."
-msgstr ""
+msgid "%s requires AHB access! Please launch USB Loader GX from HBC or from an updated channel or forwarder."
+msgstr "%s vaatii AHB-käyttöoikeuden! Käynnistä USB Loader GX HBC:stä tai päivitetystä kanavasta tai ohjaimesta."
 
 msgid "--==       Devolution"
-msgstr ""
+msgstr "--==       Devolution"
 
 msgid "--==       Nintendont"
-msgstr ""
+msgstr "--==       Nintendont"
 
-msgid "--==   DIOS MIOS (Lite) "
-msgstr ""
+msgid "--==   DIOS MIOS (Lite)"
+msgstr "--==   DIOS MIOS (Lite)"
 
 msgid "--==  DM(L) + Nintendont"
-msgstr ""
+msgstr "--==  DM(L) + Nintendont"
 
 msgid "/\\/\\"
-msgstr ""
+msgstr "/\\/\\"
 
 msgid "0 (Everyone)"
-msgstr "0 (Kaikille)"
+msgstr "0 (Alle)"
+
+msgid "1"
+msgstr "1"
 
 msgid "1 (Child 7+)"
-msgstr "1 (Lapset 7+)"
+msgstr "1 (Barn 7+)"
 
 msgid "1 hour"
-msgstr " 1 tunti"
+msgstr "1 time"
 
 msgid "10 min"
-msgstr ""
+msgstr "10 min"
+
+msgid "2"
+msgstr "2"
 
 msgid "2 (Teen 12+)"
-msgstr "2 (Teinit 12+)"
+msgstr "2 (Teini 12+)"
 
 msgid "20 min"
-msgstr ""
+msgstr "20 min"
 
 msgid "2D Cover Path"
-msgstr "2D Kansien polku"
+msgstr "2D Kansipolku"
+
+msgid "3"
+msgstr "3"
 
 msgid "3 (Mature 16+)"
-msgstr "3 (Teinit 16+)"
+msgstr "3 (Aikuiset 16+)"
 
 msgid "3 min"
-msgstr ""
+msgstr "3 min"
 
 msgid "30 min"
-msgstr ""
+msgstr "30 min"
 
 msgid "3D Cover Path"
-msgstr "3D Kansien polku"
+msgstr "3D Kansipolku"
 
 msgid "3D Covers"
 msgstr "3D Kannet"
 
+msgid "4"
+msgstr "4"
+
 msgid "4 (Adults Only 18+)"
-msgstr "4 (K18)"
+msgstr "4 (Vain aikuisille 18+)"
 
 msgid "480p Pixel Fix Patch"
-msgstr ""
+msgstr "480p Pikselikorjauspaikka"
 
 msgid "5 min"
-msgstr ""
+msgstr "5 min"
 
 msgid "=== GameCube Settings"
-msgstr ""
+msgstr "=== GameCube Asetukset"
 
 msgid "AUTO"
-msgstr ""
+msgstr "AUTO"
 
 msgid "AXNextFrame"
-msgstr ""
+msgstr "AXNextFrame"
 
 msgid "Add category"
-msgstr ""
+msgstr "Lisää kategoria"
 
 msgid "Adjust Overscan X"
-msgstr ""
+msgstr "Säädä Overscan X"
 
 msgid "Adjust Overscan Y"
-msgstr ""
+msgstr "Säädä Overscan Y"
 
 msgid "After zoom"
-msgstr ""
+msgstr "Zoomauksen jälkeen"
 
 msgid "All"
-msgstr ""
+msgstr "Kaikki"
 
 msgid "All Partitions"
-msgstr ""
-
-msgid "All files extracted."
-msgstr ""
-
-msgid "All images downloaded successfully."
-msgstr ""
-
-msgid "All the features of USB Loader GX are unlocked."
-msgstr "Kaikki asetukset on nyt käytettävissä."
+msgstr "Kaikki osiot"
 
 msgid "All WAD files processed successfully."
-msgstr ""
+msgstr "Kaikki WAD-tiedostot käsiteltiin onnistuneesti."
 
-msgid "Alternate DOL"
-msgstr "Vaihtoehto DOL"
+msgid "All files extracted."
+msgstr "Kaikki tiedostot purettu."
+
+msgid "All images downloaded successfully."
+msgstr "Kaikki kuvat ladattu onnistuneesti."
+
+msgid "All the features of USB Loader GX are unlocked."
+msgstr "Kaikki USB Loader GX:n ominaisuudet ovat avattu."
 
 msgid "AltWFC"
-msgstr ""
+msgstr "AltWFC"
+
+msgid "Alternate DOL"
+msgstr "Vaihtoehtoinen DOL"
 
 msgid "An example file was created here:"
-msgstr ""
+msgstr "Esimerkkitiedosto luotiin tänne:"
 
 msgid "Animation Start"
-msgstr ""
+msgstr "Animaation aloitus"
 
 msgid "App Language"
-msgstr "Ohjelman kieli"
+msgstr "Sovelluksen kieli"
 
 msgid "Apply"
-msgstr ""
+msgstr "Käytä"
 
 msgid "Apr"
-msgstr "huhti"
+msgstr "Huhti"
+
+msgid "Are You Sure You Want to Install on SD?"
+msgstr "Oletko varma, että haluat asentaa SD-kortille?"
 
 msgid "Are you really sure you want to delete all selected games from the SD card?"
-msgstr ""
+msgstr "Oletko todella varma, että haluat poistaa kaikki valitut pelit SD-kortilta?"
 
 msgid "Are you sure you want to delete this category?"
-msgstr ""
+msgstr "Oletko varma, että haluat poistaa tämän kategorian?"
 
-msgid "Are you sure you want to import game categories from GameTDB?"
-msgstr ""
-
-msgid "Are you sure you want to install on SD?"
-msgstr ""
+msgid "Are you sure you want to import game categories from WiiTDB?"
+msgstr "Oletko varma, että haluat tuoda peliluokat WiiTDB:stä?"
 
 msgid "Are you sure you want to lock USB Loader GX?"
-msgstr ""
+msgstr "Oletko varma, että haluat lukita USB Loader GX:n?"
 
-msgid "Are you sure you want to remount SD?"
-msgstr ""
+msgid "Are you sure you want to redownload everything?"
+msgstr "Oletko varma, että haluat ladata kaiken uudelleen?"
 
 msgid "Are you sure you want to reset?"
-msgstr ""
+msgstr "Oletko varma, että haluat nollata?"
 
 msgid "Are you sure?"
 msgstr "Oletko varma?"
 
+msgid "Ask"
+msgstr "Kysy"
+
 msgid "Aspect Ratio"
-msgstr ""
+msgstr "Kuvasuhde"
 
 msgid "Attention!"
-msgstr ""
+msgstr "Huomio!"
 
 msgid "Attention: All savegames will be deleted."
-msgstr ""
+msgstr "Huomio: Kaikki tallennukset poistetaan."
 
 msgid "Aug"
-msgstr "elo"
+msgstr "Elo"
 
 msgid "Author(s):"
-msgstr ""
+msgstr "Tekijä(t):"
 
 msgid "Auto"
-msgstr ""
+msgstr "Auto"
 
 msgid "Auto Boot"
-msgstr ""
+msgstr "Automaattinen käynnistys"
 
 msgid "AutoInit Network"
-msgstr "Autom. verkon käynnistys"
+msgstr "Automaattinen verkon alustus"
+
+msgid "Autoboot Discs"
+msgstr "Automaattinen levyjen käynnistys"
+
+msgid "Autoboot Discs Delay"
+msgstr "Automaattinen levyjen käynnistysviive"
+
+msgid "BBA Emulation"
+msgstr "BBA Emulointi"
+
+msgid "BBA Net Profile"
+msgstr "BBA Verkkoprofiili"
 
 msgid "BCA Codes Path"
-msgstr ""
+msgstr "BCA Koodien Polku"
 
 msgid "Back"
 msgstr "Takaisin"
 
 msgid "Back to HBC or Wii Menu"
-msgstr "Takaisin HBC:hen tai Wii Menuun"
+msgstr "Takaisin HBC:hen tai Wii-valikkoon"
 
 msgid "Background Music"
 msgstr "Taustamusiikki"
 
 msgid "Banner Animation"
-msgstr ""
-
-msgid "Banner Animation Settings"
-msgstr ""
+msgstr "Bannerin Animaatio"
 
 msgid "Banner On Channels"
-msgstr ""
+msgstr "Banneri Kanavilla"
+
+msgid "Banner Settings"
+msgstr "Bannerin Asetukset"
 
 msgid "Banner grid layout is only available with AHBPROT! Please consider installing new HBC version."
-msgstr ""
+msgstr "Bannerin ruudukkoasettelu on saatavilla vain AHBPROT:lla! Harkitse uuden HBC-version asentamista."
 
 msgid "Banner window is only available with AHBPROT! Please consider installing new HBC version."
-msgstr ""
+msgstr "Banneri-ikkuna on saatavilla vain AHBPROT:lla! Harkitse uuden HBC-version asentamista."
 
 msgid "Big thanks to:"
-msgstr "Isot kiitokset:"
+msgstr "Suuret kiitokset:"
+
+msgid "Block Banner Settings"
+msgstr "Estä Bannerin Asetukset"
 
 msgid "Block Categories Menu"
-msgstr ""
+msgstr "Estä Kategoriavalikko"
 
 msgid "Block Categories Modify"
-msgstr ""
+msgstr "Estä Kategorioiden Muokkaus"
 
 msgid "Block Cover Downloads"
-msgstr ""
+msgstr "Estä Kansien Lataukset"
 
 msgid "Block Custom Paths"
-msgstr ""
+msgstr "Estä Mukautetut Polut"
 
-msgid "Block Feature Settings"
-msgstr ""
+msgid "Block GUI Settings"
+msgstr "Estä GUI Asetukset"
 
 msgid "Block Game Install"
-msgstr ""
+msgstr "Estä Pelin Asennus"
 
 msgid "Block Game Settings"
-msgstr ""
+msgstr "Estä Pelin Asetukset"
 
-msgid "Block GameID Change"
-msgstr ""
+msgid "Block Game Sources Button"
+msgstr "Estä Pelin Lähteet -painike"
+
+msgid "Block Game Type Button"
+msgstr "Estä Pelityyppi-painike"
 
 msgid "Block Global Settings"
-msgstr ""
-
-msgid "Block Gui Settings"
-msgstr ""
+msgstr "Estä Globaalit Asetukset"
 
 msgid "Block HBC Menu"
-msgstr ""
+msgstr "Estä HBC-valikko"
+
+msgid "Block HBC Title Launcher"
+msgstr "Estä HBC Otsikon Käynnistin"
 
 msgid "Block Hard Drive Settings"
-msgstr ""
+msgstr "Estä Kiintolevyn Asetukset"
 
 msgid "Block IOS Reload"
-msgstr "Blokkaa IOS:in uudelleenlataus"
+msgstr "Estä IOS:n Lataus"
 
 msgid "Block Loader Layout Button"
-msgstr ""
-
-msgid "Block Loader Mode Button"
-msgstr ""
+msgstr "Estä Latausasettelun Painike"
 
 msgid "Block Loader Settings"
-msgstr ""
+msgstr "Estä Latausasetukset"
+
+msgid "Block Miscellaneous Settings"
+msgstr "Estä Sekalaiset Asetukset"
 
 msgid "Block Parental Settings"
-msgstr ""
+msgstr "Estä Vanhempien Asetukset"
 
 msgid "Block Priiloader Override"
-msgstr ""
+msgstr "Estä Priiloaderin Ohitus"
 
 msgid "Block Reset Settings"
-msgstr ""
+msgstr "Estä Nollausasetukset"
 
-msgid "Block SD Reload Button"
-msgstr ""
+msgid "Block SD Card Mode Button"
+msgstr "Estä SD-korttitilan Painike"
 
 msgid "Block Sound Settings"
-msgstr ""
-
-msgid "Block Theme Downloader"
-msgstr ""
+msgstr "Estä Ääniasetukset"
 
 msgid "Block Theme Menu"
-msgstr ""
+msgstr "Estä Teemavalikko"
 
-msgid "Block Title Launcher"
-msgstr ""
-
-msgid "Block Updates"
-msgstr ""
+msgid "Block Update Menu"
+msgstr "Estä Päivitysvalikko"
 
 msgid "Boot Content"
-msgstr ""
+msgstr "Käynnistä Sisältö"
 
 msgid "Boot Neek System Menu"
-msgstr ""
+msgstr "Käynnistä Neek-järjestelmävalikko"
 
 msgid "Boot?"
-msgstr "Boottaa?"
+msgstr "Käynnistetäänkö?"
 
 msgid "Both"
 msgstr "Molemmat"
 
 msgid "Both Ports"
-msgstr ""
+msgstr "Molemmat Portit"
 
 msgid "CC Rumble"
-msgstr ""
+msgstr "CC Tärinä"
 
 msgid "Cache BNR Files"
-msgstr ""
+msgstr "Välimuisti BNR-tiedostoille"
 
 msgid "Cache BNR Files Path"
-msgstr ""
+msgstr "BNR-tiedostojen Välimuistipolku"
 
 msgid "Cache Path"
-msgstr ""
+msgstr "Välimuistipolku"
 
 msgid "Cache Titles"
-msgstr ""
+msgstr "Välimuistitit"
 
 msgid "Can't be formatted"
-msgstr "Ei voida formatoida"
+msgstr "Ei voi alustaa"
 
 msgid "Can't create directory"
-msgstr "Ei voi luoda kansiota"
+msgstr "Ei voi luoda hakemistoa"
 
 #, c-format
 msgid "Can't create file: %s"
-msgstr ""
-
-#, c-format
-msgid "Can't create path: %s"
-msgstr ""
+msgstr "Ei voi luoda tiedostoa: %s"
 
 msgid "Can't delete:"
-msgstr "Ei voida poistaa:"
+msgstr "Ei voi poistaa:"
 
 msgid "Can't mount or unknown disc format."
-msgstr ""
+msgstr "Ei voi liittää tai tuntematon levyn muoto."
 
 #, c-format
 msgid "Can't open file for write: %s"
-msgstr ""
+msgstr "Ei voi avata tiedostoa kirjoittamista varten: %s"
 
 #, c-format
 msgid "Can't open file: %s"
-msgstr ""
+msgstr "Ei voi avata tiedostoa: %s"
 
 #, c-format
 msgid "Can't read file: %s"
-msgstr ""
+msgstr "Ei voi lukea tiedostoa: %s"
+
+msgid "Can't write to destination."
+msgstr "Ei voi kirjoittaa kohteeseen."
 
 msgid "Cancel"
 msgstr "Peruuta"
 
-msgid "Can't write to destination."
-msgstr ""
-
 msgid "Categories"
-msgstr ""
+msgstr "Kategoriat"
 
 msgid "Categories:"
-msgstr ""
+msgstr "Kategoriat:"
 
 msgid "Change Play Path"
-msgstr ""
+msgstr "Vaihda Toistopolku"
 
 msgid "Channel Launcher"
-msgstr ""
+msgstr "Kanavan Käynnistin"
 
 msgid "Channel Path"
-msgstr ""
+msgstr "Kanavapolku"
 
 msgid "Channels"
-msgstr ""
+msgstr "Kanavat"
 
-msgid "Cheatfile is blank"
-msgstr "Kooditiedosto tyhjä"
+msgid "Cheat file is blank"
+msgstr "Huijaustiedosto on tyhjä"
 
 msgid "Clear"
-msgstr ""
+msgstr "Tyhjennä"
 
 msgid "Click to download covers"
-msgstr "Klikkaa ladataksesi kansia"
+msgstr "Napsauta ladataksesi kannet"
 
 msgid "Click to view information"
-msgstr ""
+msgstr "Napsauta nähdäksesi tiedot"
 
 msgid "Clock"
 msgstr "Kello"
 
 msgid "Clock Scale Factor"
-msgstr ""
+msgstr "Kellon Mittakaavakerroin"
 
 msgid "Close"
 msgstr "Sulje"
 
 msgid "Code Download"
-msgstr "Koodin lataus"
+msgstr "Koodin Lataus"
 
 #, c-format
 msgid "Coded by: %s"
-msgstr "Koodaus: %s"
+msgstr "Koodannut: %s"
 
 msgid "Coding:"
-msgstr "Koodaus"
-
-msgid "Connection to server timed out."
-msgstr ""
+msgstr "Koodaus:"
 
 msgid "Console"
 msgstr "Konsoli"
 
 msgid "Console Default"
-msgstr "Konsolin oletus"
+msgstr "Konsolin Oletus"
 
 msgid "Console Locked"
-msgstr "Konsoli lukittu"
+msgstr "Konsoli Lukittu"
 
 msgid "Console must be unlocked for this option."
-msgstr ""
+msgstr "Konsoli on avattava tätä vaihtoehtoa varten."
 
 msgid "Console must be unlocked to be able to use this."
-msgstr ""
+msgstr "Konsoli on avattava, jotta tätä voi käyttää."
 
 msgid "Console should be unlocked to modify it."
-msgstr "Avaa konsolin lukitus muokataksesi asetuksia."
+msgstr "Konsoli on avattava sen muokkaamiseksi."
 
 msgid "Continue"
-msgstr ""
+msgstr "Jatka"
 
-msgid "Continue to install game?"
-msgstr "Jatka pelin asennusta?"
+msgid "Continue To Install Game?"
+msgstr "Jatketaanko pelin asennusta?"
 
 msgid "Continue?"
-msgstr ""
+msgstr "Jatketaanko?"
 
-msgid "Controllevel"
-msgstr "Hallinta-aste"
+msgid "Control Level"
+msgstr "Ohjaustaso"
 
 msgid "Copy"
-msgstr ""
+msgstr "Kopioi"
 
 msgid "Copying Canceled"
-msgstr ""
+msgstr "Kopiointi Peruutettu"
 
 msgid "Copying GC game..."
-msgstr ""
+msgstr "Kopioidaan GC-peliä..."
 
 msgid "Copying files..."
-msgstr ""
+msgstr "Kopioidaan tiedostoja..."
 
 msgid "Correct Password"
-msgstr "Oikea salasana"
+msgstr "Oikea Salasana"
 
-msgid "Could not connect to the server."
-msgstr ""
+msgid "Could Not Open Disc"
+msgstr "Ei Voitu Avata Levyä"
 
 msgid "Could not create GCT file"
-msgstr "GCT tiedostoa ei voitu luoda"
+msgstr "Ei voitu luoda GCT-tiedostoa"
 
 #, c-format
 msgid "Could not create path: %s"
-msgstr ""
+msgstr "Ei voitu luoda polkua: %s"
 
 msgid "Could not extract files for:"
-msgstr ""
+msgstr "Ei voitu purkaa tiedostoja:"
 
 msgid "Could not find info for this game in the wiitdb.xml."
-msgstr ""
+msgstr "Ei voitu löytää tietoja tästä pelistä wiitdb.xml-tiedostossa."
 
 msgid "Could not get free device space for game."
-msgstr ""
+msgstr "Ei voitu saada vapaata laitetilaa pelille."
 
 msgid "Could not initialize DIP module!"
-msgstr "DIP Moduulia ei voitu alustaa!"
+msgstr "Ei voitu alustaa DIP-moduulia!"
 
-msgid "Could not initialize network!"
-msgstr "Verkkoon ei voitu yhdistää!"
+msgid "Could not initialize network. Timed out!"
+msgstr "Ei voitu alustaa verkkoa. Aikakatkaisu!"
 
-msgid "Could not initialize network, time out!"
-msgstr ""
-
-msgid "Could not open Disc"
-msgstr "Levyä ei voitu avata"
+msgid "Could not open disc"
+msgstr "Ei voitu avata levyä"
 
 msgid "Could not open the WiiTDB.xml file."
-msgstr ""
+msgstr "Ei voitu avata WiiTDB.xml-tiedostoa."
 
 msgid "Could not open wiitdb.xml."
-msgstr ""
+msgstr "Ei voitu avata wiitdb.xml-tiedostoa."
 
 msgid "Could not save."
-msgstr ""
+msgstr "Ei voitu tallentaa."
 
 msgid "Could not write file."
-msgstr ""
+msgstr "Ei voitu kirjoittaa tiedostoa."
 
 msgid "Could not write to:"
-msgstr ""
+msgstr "Ei voitu kirjoittaa kohteeseen:"
 
 msgid "Cover Action"
-msgstr ""
+msgstr "Kannen Toiminto"
 
 msgid "Cover Download"
-msgstr "Kansien lataus"
+msgstr "Kannen Lataus"
 
 msgid "Create"
 msgstr "Luo"
@@ -544,52 +556,52 @@ msgid "Credits"
 msgstr "Tekijät"
 
 msgid "Crop Overscan"
-msgstr ""
+msgstr "Rajaa Overscan"
 
 msgid "Current neek files are not neek2o. Game autoboot disabled."
-msgstr ""
-
-msgid "Custom Address"
-msgstr ""
-
-msgid "Custom Banners"
-msgstr ""
-
-msgid "Custom Game IOS"
-msgstr ""
-
-msgid "Custom Games IOS"
-msgstr ""
-
-msgid "Custom Paths"
-msgstr "Omat polut"
+msgstr "Nykyiset neek-tiedostot eivät ole neek2o. Pelin automaattinen käynnistys on poistettu käytöstä."
 
 msgid "Custom"
-msgstr ""
+msgstr "Mukautettu"
+
+msgid "Custom Address"
+msgstr "Mukautettu Osoite"
+
+msgid "Custom Banners"
+msgstr "Mukautetut Bannerit"
+
+msgid "Custom Game IOS"
+msgstr "Mukautettu Pelin IOS"
+
+msgid "Custom Games IOS"
+msgstr "Mukautetut Pelit IOS"
+
+msgid "Custom Paths"
+msgstr "Mukautetut Polut"
 
 msgid "Customs"
-msgstr ""
+msgstr "Mukautukset"
 
 msgid "Customs/Original"
-msgstr "Omat/Alkuperäiset"
+msgstr "Mukautukset/Alkuperäiset"
 
 msgid "D Buttons"
-msgstr ""
+msgstr "D-painikkeet"
 
 msgid "DOL Path"
-msgstr "DOL:in polku"
+msgstr "DOL Polku"
 
 msgid "Debug"
-msgstr ""
+msgstr "Vianmääritys"
 
 msgid "Debug Wait"
-msgstr ""
+msgstr "Vianmääritys Odota"
 
 msgid "Debugger Paused Start"
-msgstr ""
+msgstr "Vianmäärityksen Pysäytetty Käynnistys"
 
 msgid "Dec"
-msgstr "joulu"
+msgstr "Joulu"
 
 msgid "Default"
 msgstr "Oletus"
@@ -598,97 +610,109 @@ msgid "Default Settings"
 msgstr "Oletusasetukset"
 
 msgid "Deflicker Filter"
-msgstr ""
+msgstr "Deflicker-suodatin"
 
 msgid "Delete"
-msgstr "Tuhoa"
+msgstr "Poista"
 
 msgid "Delete Cached Banner"
-msgstr ""
+msgstr "Poista Välimuistissa Olevat Bannerit"
 
 msgid "Delete Cheat GCT"
-msgstr "Tuhoa Koodi GCT"
+msgstr "Poista Huijaus GCT"
 
 msgid "Delete Cheat TXT"
-msgstr "Tuhoa Koodi TXT"
+msgstr "Poista Huijaus TXT"
 
 msgid "Delete Cover Artwork"
-msgstr "Tuhoa kannet"
+msgstr "Poista Kannen Taideteos"
 
 msgid "Delete Disc Artwork"
-msgstr "Tuhoa levykuvat"
+msgstr "Poista Levyn Taideteos"
+
+msgid "Delete EmuNAND Saves"
+msgstr "Poista EmuNAND Tallennukset"
 
 msgid "Delete category"
-msgstr ""
+msgstr "Poista kategoria"
 
 msgid "Deleting directories..."
-msgstr ""
+msgstr "Poistetaan hakemistoja..."
 
 msgid "Deleting files..."
-msgstr ""
+msgstr "Poistetaan tiedostoja..."
 
 msgid "Design:"
-msgstr "Suunnittelu"
+msgstr "Suunnittelu:"
 
 msgid "Details"
-msgstr ""
+msgstr "Yksityiskohdat"
 
 msgid "Developed by"
-msgstr "Kehitys"
+msgstr "Kehittänyt"
 
 msgid "Developer:"
-msgstr ""
+msgstr "Kehittäjä:"
 
 msgid "Devolution"
-msgstr ""
+msgstr "Devolution"
 
 msgid "Devolution Loader Path"
-msgstr ""
+msgstr "Devolution Latauspolku"
 
 msgid "Devolution's loader.bin file can't be loaded."
-msgstr ""
+msgstr "Devolutionin loader.bin-tiedostoa ei voida ladata."
 
 msgid "Directory does not exist!"
-msgstr ""
+msgstr "Hakemistoa ei ole olemassa!"
+
+msgid "Disable SD Card Mode?"
+msgstr "Poistetaanko SD-korttitila käytöstä?"
+
+msgid "Disable Wiimote Motor"
+msgstr "Poista Wiimote-moottori käytöstä"
+
+msgid "Disable Wiimote Speaker"
+msgstr "Poista Wiimote-kaiutin käytöstä"
 
 msgid "Disc"
-msgstr ""
+msgstr "Levy"
 
 msgid "Disc 1"
-msgstr ""
+msgstr "Levy 1"
 
 msgid "Disc 2"
-msgstr ""
+msgstr "Levy 2"
 
 msgid "Disc Artwork"
-msgstr ""
+msgstr "Levyn Taideteos"
 
 msgid "Disc Artwork Download"
-msgstr "Levykuvien lataus"
+msgstr "Levyn Taideteoksen Lataus"
 
 msgid "Disc Artwork Path"
-msgstr "Levykuvien polku"
+msgstr "Levyn Taideteoksen Polku"
 
 msgid "Disc Default"
-msgstr "Pelin oletus"
+msgstr "Levyn Oletus"
 
 msgid "Disc Insert Detected"
-msgstr ""
+msgstr "Levyn Asetus Tunnistettu"
 
 msgid "Disc Read Delay"
-msgstr ""
+msgstr "Levyn Lukuviive"
 
 msgid "Disc read error."
-msgstr ""
+msgstr "Levyn lukuvirhe."
 
 msgid "Disc-Select Prompt"
-msgstr ""
+msgstr "Levyn Valinta Kehote"
 
 msgid "Disc2 needs to be installed in uncompressed format to work with DM(L) v2.6+, are you sure you want to install in compressed format?"
-msgstr ""
+msgstr "Levy 2 täytyy asentaa pakkaamattomassa muodossa toimiakseen DM(L) v2.6+ kanssa, oletko varma, että haluat asentaa pakatussa muodossa?"
 
 msgid "DiskFlip"
-msgstr "Levynvaihto"
+msgstr "Levyn Kääntö"
 
 msgid "Display"
 msgstr "Näyttö"
@@ -697,657 +721,647 @@ msgid "Display as a carousel"
 msgstr "Näytä karusellina"
 
 msgid "Display as a channel grid"
-msgstr ""
+msgstr "Näytä kanavaruudukkona"
 
 msgid "Display as a grid"
-msgstr "Näytä taulukkona"
+msgstr "Näytä ruudukkona"
 
 msgid "Display as a list"
 msgstr "Näytä listana"
 
 msgid "Display favorites only"
-msgstr ""
+msgstr "Näytä vain suosikit"
 
-msgid "Do you want to apply it now?"
-msgstr ""
+msgid "Displaying EmuNAND games"
+msgstr "Näytetään EmuNAND-pelejä"
+
+msgid "Displaying GameCube games"
+msgstr "Näytetään GameCube-pelejä"
+
+msgid "Displaying NAND games"
+msgstr "Näytetään NAND-pelejä"
+
+msgid "Displaying Wii games"
+msgstr "Näytetään Wii-pelejä"
+
+msgid "Displaying a custom selection"
+msgstr "Näytetään mukautettu valinta"
+
+msgid "Displaying as a carousel"
+msgstr "Näytetään karusellina"
+
+msgid "Displaying as a channel grid"
+msgstr "Näytetään kanavaruudukkona"
+
+msgid "Displaying as a grid"
+msgstr "Näytetään ruudukkona"
+
+msgid "Displaying as a list"
+msgstr "Näytetään listana"
+
+msgid "Do You Want To Change Language?"
+msgstr "Haluatko vaihtaa kieltä?"
 
 msgid "Do you want to apply this theme?"
-msgstr ""
-
-msgid "Do you want to change language?"
-msgstr "Haluatko vaihtaa kielen?"
+msgstr "Haluatko ottaa tämän teeman käyttöön?"
 
 msgid "Do you want to continue with next game?"
-msgstr ""
+msgstr "Haluatko jatkaa seuraavaan peliin?"
 
 msgid "Do you want to copy now?"
-msgstr ""
+msgstr "Haluatko kopioida nyt?"
 
 msgid "Do you want to copy the game to SD or delete a game on SD?"
-msgstr ""
+msgstr "Haluatko kopioida pelin SD-kortille vai poistaa pelin SD-kortilta?"
 
 msgid "Do you want to delete a game on SD?"
-msgstr ""
+msgstr "Haluatko poistaa pelin SD-kortilta?"
 
 msgid "Do you want to discard changes?"
-msgstr ""
-
-msgid "Do you want to download this theme?"
-msgstr ""
+msgstr "Haluatko hylätä muutokset?"
 
 msgid "Do you want to extract all the save games?"
-msgstr ""
+msgstr "Haluatko purkaa kaikki tallennukset?"
 
 msgid "Do you want to extract the save game?"
-msgstr ""
+msgstr "Haluatko purkaa tallennuksen?"
 
 msgid "Do you want to format:"
-msgstr "Haluatko formatoida:"
+msgstr "Haluatko alustaa:"
 
 msgid "Do you want to install selected games?"
-msgstr ""
+msgstr "Haluatko asentaa valitut pelit?"
 
 msgid "Do you want to load the default theme?"
-msgstr ""
+msgstr "Haluatko ladata oletusteeman?"
 
 msgid "Do you want to move the file(s)? Any existing ones will be deleted!"
-msgstr ""
+msgstr "Haluatko siirtää tiedoston/tiedostot? Kaikki olemassa olevat poistetaan!"
 
 msgid "Do you want to re-init network?"
-msgstr ""
+msgstr "Haluatko alustaa verkon uudelleen?"
 
 msgid "Do you want to start the game now?"
-msgstr ""
+msgstr "Haluatko aloittaa pelin nyt?"
 
-msgid "Do you want to sync free space info sector on all FAT32 partitions?"
-msgstr ""
+msgid "Do you want to use cheats?"
+msgstr "Haluatko käyttää huijauksia?"
 
 msgid "Do you wish to update/download all language files?"
 msgstr "Haluatko päivittää/ladata kaikki kielitiedostot?"
 
 msgid "Dol Video Patch"
-msgstr ""
+msgstr "Dol Video Paikka"
 
 msgid "Download"
-msgstr ""
+msgstr "Lataa"
+
+#, c-format
+msgid "Download %i missing files?"
+msgstr "Ladataanko %i puuttuvaa tiedostoa?"
 
 msgid "Download Now"
-msgstr "Lataa nyt"
+msgstr "Lataa Nyt"
 
 msgid "Download finished"
-msgstr "Lataus valmistunut"
+msgstr "Lataus valmis"
 
 msgid "Downloading 3D Covers"
-msgstr ""
+msgstr "Ladataan 3D Kansia"
 
 msgid "Downloading Custom Banners"
-msgstr ""
-
-msgid "Downloading Flat Covers"
-msgstr ""
-
-msgid "Downloading Full HQ Covers"
-msgstr ""
-
-msgid "Downloading Full LQ Covers"
-msgstr ""
+msgstr "Ladataan Mukautettuja Bannereita"
 
 msgid "Downloading Custom Disc Artwork"
-msgstr ""
+msgstr "Ladataan Mukautettuja Levyn Taideteoksia"
 
-msgid "Downloading file..."
-msgstr ""
+msgid "Downloading Flat Covers"
+msgstr "Ladataan Tasaisia Kansia"
 
-msgid "Downloading image:"
-msgstr ""
+msgid "Downloading Full HQ Covers"
+msgstr "Ladataan Täysiä HQ Kansia"
+
+msgid "Downloading Full LQ Covers"
+msgstr "Ladataan Täysiä LQ Kansia"
 
 msgid "Downloading Original Disc Artwork"
-msgstr ""
+msgstr "Ladataan Alkuperäisiä Levyn Taideteoksia"
 
-msgid "Downloading pagelist:"
-msgstr ""
+msgid "Downloading file..."
+msgstr "Ladataan tiedostoa..."
 
 msgid "Dump NAND to EmuNAND"
-msgstr ""
+msgstr "Dumppaa NAND EmuNAND:iin"
 
 msgid "During zoom"
-msgstr ""
+msgstr "Zoomauksen aikana"
 
 msgid "Dutch"
 msgstr "Hollanti"
 
-msgid "ERROR"
-msgstr "VIRHE"
-
-msgid "ERROR:"
-msgstr "VIRHE:"
-
-msgid "ERROR: Can't set up theme."
-msgstr ""
-
-msgid "EmuNAND WAD Manager"
-msgstr ""
+msgid "EmuNAND"
+msgstr "EmuNAND"
 
 msgid "EmuNAND Channel Mode"
-msgstr ""
+msgstr "EmuNAND Kanavatila"
 
 msgid "EmuNAND Channel Path"
-msgstr ""
-
-msgid "EmuNAND Channels"
-msgstr ""
+msgstr "EmuNAND Kanavapolku"
 
 msgid "EmuNAND Save Mode"
-msgstr ""
+msgstr "EmuNAND Tallennustila"
 
 msgid "EmuNAND Save Path"
-msgstr ""
+msgstr "EmuNAND Tallennuspolku"
+
+msgid "EmuNAND WAD Manager"
+msgstr "EmuNAND WAD Hallinta"
 
 msgid "Emulated NAND"
-msgstr ""
+msgstr "Emuloitu NAND"
+
+msgid "Enable SD Card Mode?"
+msgstr "Ota SD-korttitila käyttöön?"
 
 msgid "English"
 msgstr "Englanti"
 
 msgid "Enter Path"
-msgstr ""
+msgstr "Syötä Polku"
 
-msgid "Error"
-msgstr "Virhe"
-
-msgid "Error !"
-msgstr "Virhe !"
+msgid "Error Reading Disc"
+msgstr "Virhe Levyn Lukemisessa"
 
 #, c-format
 msgid "Error creating path: %s"
-msgstr ""
+msgstr "Virhe polun luomisessa: %s"
 
 msgid "Error opening downloaded file"
-msgstr ""
-
-msgid "Error reading Disc"
-msgstr "Virhe luettaessa levyä"
+msgstr "Virhe ladatun tiedoston avaamisessa"
 
 msgid "Error reading disc"
-msgstr ""
+msgstr "Virhe levyn lukemisessa"
 
-#, c-format
-msgid "Error when downloading file: %i"
-msgstr ""
-
-msgid "Error while downloding file"
-msgstr ""
+msgid "Error while downloading file"
+msgstr "Virhe tiedoston lataamisessa"
 
 msgid "Error while opening the zip."
-msgstr ""
+msgstr "Virhe zip-tiedoston avaamisessa."
 
-msgid "Error while transfering data."
-msgstr "Virhe siirrettäessä dataa."
+msgid "Error while transferring data."
+msgstr "Virhe tiedonsiirrossa."
 
 msgid "Error while updating USB Loader GX."
-msgstr ""
+msgstr "Virhe USB Loader GX:n päivittämisessä."
 
 msgid "Error writing the data."
-msgstr ""
+msgstr "Virhe tietojen kirjoittamisessa."
 
 msgid "Error:"
 msgstr "Virhe:"
 
 msgid "Error: Not enough space on SD."
-msgstr ""
+msgstr "Virhe: Ei tarpeeksi tilaa SD-kortilla."
 
-msgid "Errors occured."
-msgstr ""
+msgid "Errors occurred."
+msgstr "Virheitä tapahtui."
 
 msgid "Everything"
-msgstr ""
+msgstr "Kaikki"
 
 msgid "Exit"
-msgstr ""
+msgstr "Poistu"
 
 msgid "Exit to where?"
-msgstr ""
+msgstr "Poistu minne?"
 
 msgid "Export All Saves to EmuNAND"
-msgstr ""
+msgstr "Vie Kaikki Tallennukset EmuNAND:iin"
 
 msgid "Export Miis to EmuNAND"
-msgstr ""
+msgstr "Vie Miit EmuNAND:iin"
 
 msgid "Export SYSCONF to EmuNAND"
-msgstr ""
+msgstr "Vie SYSCONF EmuNAND:iin"
 
 msgid "Extract Miis to the EmuNAND?"
-msgstr ""
+msgstr "Puretaanko Miit EmuNAND:iin?"
 
 msgid "Extract SYSCONF to the EmuNAND?"
-msgstr ""
+msgstr "Puretaanko SYSCONF EmuNAND:iin?"
 
 msgid "Extract Save to EmuNAND"
-msgstr ""
-
-msgid "Extracting file:"
-msgstr ""
-
-msgid "Extracting files..."
-msgstr ""
-
-msgid "Extracting files:"
-msgstr ""
+msgstr "Pura Tallennus EmuNAND:iin"
 
 msgid "Extracting NAND files:"
-msgstr ""
+msgstr "Puretaan NAND-tiedostoja:"
+
+msgid "Extracting file:"
+msgstr "Puretaan tiedostoa:"
+
+msgid "Extracting files..."
+msgstr "Puretaan tiedostoja..."
+
+msgid "Extracting files:"
+msgstr "Puretaan tiedostoja:"
 
 msgid "F-Zero AX"
-msgstr ""
+msgstr "F-Zero AX"
 
 msgid "Failed"
-msgstr ""
+msgstr "Epäonnistui"
 
 msgid "Failed copying file"
-msgstr ""
+msgstr "Tiedoston kopiointi epäonnistui"
 
-msgid "Failed formating"
-msgstr "Formatointi ei onnistunut"
+msgid "Failed formatting"
+msgstr "Alustus epäonnistui"
 
 msgid "Failed to extract all files. Savegame might not exist."
-msgstr ""
-
-msgid "Failed to extract."
-msgstr ""
+msgstr "Kaikkien tiedostojen purkaminen epäonnistui. Tallennus saattaa olla olematon."
 
 msgid "Failed to initialize the USB storage device."
-msgstr ""
+msgstr "USB-tallennuslaitteen alustaminen epäonnistui."
 
 msgid "Failed to open partition"
-msgstr "Osion avaus epäonnistui"
-
-msgid "Failed to read ticket."
-msgstr ""
-
-msgid "Failed to read tmd file."
-msgstr ""
+msgstr "Osion avaaminen epäonnistui"
 
 msgid "Failed to read WAD header."
-msgstr ""
+msgstr "WAD-otsikon lukeminen epäonnistui."
+
+msgid "Failed to read ticket."
+msgstr "Lipun lukeminen epäonnistui."
+
+msgid "Failed to read tmd file."
+msgstr "TMD-tiedoston lukeminen epäonnistui."
 
 msgid "Failed updating"
-msgstr ""
+msgstr "Päivitys epäonnistui"
 
 msgid "Favorite Level"
-msgstr ""
-
-msgid "Features"
-msgstr ""
-
-msgid "Features Settings"
-msgstr ""
+msgstr "Suosikkitaso"
 
 msgid "Feb"
-msgstr "helmi"
+msgstr "Helmi"
 
 msgid "File"
-msgstr ""
+msgstr "Tiedosto"
 
 msgid "File not found."
-msgstr "Tiedostoa ei löytynyt"
+msgstr "Tiedostoa ei löydy."
 
 msgid "File read/write error."
-msgstr ""
+msgstr "Tiedoston luku/kirjoitusvirhe."
 
 msgid "Files extracted successfully."
-msgstr ""
-
-#, c-format
-msgid "Filesize is %i Byte."
-msgstr ""
-
-msgid "Filesize is 0 Byte."
-msgstr ""
+msgstr "Tiedostot purettu onnistuneesti."
 
 msgid "Flat Covers"
-msgstr ""
+msgstr "Tasaiset Kannet"
 
 msgid "Flip-X"
 msgstr "Käännä-X"
 
 msgid "Folder"
-msgstr ""
+msgstr "Kansio"
 
 msgid "Font Scale Factor"
-msgstr ""
+msgstr "Fontin Mittakaavakerroin"
 
 msgid "Force 16:9"
-msgstr ""
+msgstr "Pakota 16:9"
 
 msgid "Force 4:3"
-msgstr ""
+msgstr "Pakota 4:3"
 
 msgid "Force NTSC"
-msgstr ""
+msgstr "Pakota NTSC"
 
 msgid "Force NTSC480p"
-msgstr ""
+msgstr "Pakota NTSC480p"
 
 msgid "Force PAL480p"
-msgstr ""
+msgstr "Pakota PAL480p"
 
 msgid "Force PAL50"
-msgstr ""
+msgstr "Pakota PAL50"
 
 msgid "Force PAL60"
-msgstr ""
+msgstr "Pakota PAL60"
 
 msgid "Force Widescreen"
-msgstr ""
+msgstr "Pakota Laajakuva"
 
 msgid "Format"
-msgstr "Formatoi"
+msgstr "Alusta"
 
 msgid "Formatting, please wait..."
-msgstr "Formatoi, odota..."
+msgstr "Alustetaan, odota..."
 
 msgid "Found missing images"
-msgstr ""
+msgstr "Löydetty puuttuvia kuvia"
 
 msgid "Frame"
-msgstr ""
+msgstr "Kehys"
 
 msgid "Frame Projection Height"
-msgstr ""
+msgstr "Kehyksen Projektio Korkeus"
 
 msgid "Frame Projection Width"
-msgstr ""
+msgstr "Kehyksen Projektio Leveys"
 
 msgid "Frame Projection X-Offset"
-msgstr ""
+msgstr "Kehyksen Projektio X-Siirtymä"
 
 msgid "Frame Projection Y-Offset"
-msgstr ""
+msgstr "Kehyksen Projektio Y-Siirtymä"
 
 msgid "Framebuffer"
-msgstr ""
+msgstr "Kehyspuskuri"
 
 msgid "Frames"
-msgstr ""
+msgstr "Kehykset"
 
 msgid "Free Space"
-msgstr "Vapaata tilaa"
+msgstr "Vapaa Tila"
 
 msgid "French"
 msgstr "Ranska"
 
 msgid "Full"
-msgstr ""
+msgstr "Täysi"
 
 msgid "Full Cover Path"
-msgstr ""
+msgstr "Täysi Kansipolku"
 
 msgid "Full Covers"
-msgstr ""
-
-msgid "Full Menu"
-msgstr ""
+msgstr "Täydet Kannet"
 
 msgid "Full Covers Download"
-msgstr ""
+msgstr "Täydet Kansien Lataus"
+
+msgid "Full Menu"
+msgstr "Täysi Valikko"
 
 msgid "Full shutdown"
-msgstr ""
+msgstr "Täysi Sammutus"
+
+msgid "Fullscreen"
+msgstr "Koko näyttö"
 
 msgid "GAMEID_Gamename"
-msgstr ""
+msgstr "PELITUNNUS_Pelinimi"
 
 msgid "GC Banner Scale"
-msgstr ""
-
-msgid "GC Games"
-msgstr ""
+msgstr "GC Bannerin Skaala"
 
 msgid "GC Install 32K Aligned"
-msgstr ""
+msgstr "GC Asennus 32K Kohdistettu"
 
 msgid "GC Install Compressed"
-msgstr ""
+msgstr "GC Asennus Pakattu"
 
-msgid "GCT Cheatcodes Path"
-msgstr "GCT Koodien polku"
+msgid "GCT Cheat Codes Path"
+msgstr "GCT Huijauskoodien Polku"
 
 msgid "GCT File created"
-msgstr "Gct tiedosto luotu"
+msgstr "GCT Tiedosto luotu"
 
 msgid "GUI Settings"
-msgstr "GUI asetukset"
+msgstr "GUI Asetukset"
 
 msgid "GXDraw"
-msgstr ""
+msgstr "GXDraw"
 
 msgid "GXFlush"
-msgstr ""
-
-msgid "GameCube Games Delete"
-msgstr ""
-
-msgid "GameCube Install Menu"
-msgstr ""
+msgstr "GXFlush"
 
 msgid "Game ID"
-msgstr "Peli ID"
+msgstr "Pelitunnus"
 
 msgid "Game IOS"
-msgstr ""
+msgstr "Pelin IOS"
 
-msgid "Game Language"
-msgstr "Kieli"
-
-msgid "Game Load"
-msgstr "Pelin lataus"
-
-msgid "Game Lock"
-msgstr ""
-
-msgid "Game Only"
-msgstr ""
-
-msgid "Game Region"
-msgstr "Alue"
-
-msgid "Game Size"
-msgstr "Pelin koko"
-
-msgid "Game Sound Mode"
-msgstr ""
-
-msgid "Game Sound Volume"
-msgstr ""
-
-msgid "Game Split Size"
-msgstr ""
-
-msgid "Game Window Mode"
-msgstr ""
-
-msgid "Game is already installed:"
+msgid "Game Is Already Installed:"
 msgstr "Peli on jo asennettu:"
 
-msgid "Games IOS"
-msgstr ""
+msgid "Game Language"
+msgstr "Pelin Kieli"
+
+msgid "Game Load"
+msgstr "Pelin Lataus"
+
+msgid "Game Lock"
+msgstr "Pelin Lukitus"
+
+msgid "Game Only"
+msgstr "Vain Peli"
+
+msgid "Game Region"
+msgstr "Pelin Alue"
+
+msgid "Game Size"
+msgstr "Pelin Koko"
+
+msgid "Game Sound Mode"
+msgstr "Pelin Äänitila"
+
+msgid "Game Sound Volume"
+msgstr "Pelin Äänenvoimakkuus"
+
+msgid "Game Split Size"
+msgstr "Pelin Jakokoko"
+
+msgid "Game Window Mode"
+msgstr "Pelin Ikkunatila"
 
 msgid "Game/Install Partition"
-msgstr ""
+msgstr "Peli/Asennusosio"
 
 msgid "GameCube"
-msgstr ""
+msgstr "GameCube"
 
 msgid "GameCube Controller"
-msgstr ""
+msgstr "GameCube Ohjain"
+
+msgid "GameCube Games Delete"
+msgstr "Poista GameCube Pelit"
+
+msgid "GameCube Install Menu"
+msgstr "GameCube Asennusvalikko"
 
 msgid "GameCube Mode"
-msgstr ""
+msgstr "GameCube Tila"
 
 msgid "GameCube Source"
-msgstr ""
-
-msgid "Gamename [GAMEID]"
-msgstr ""
+msgstr "GameCube Lähde"
 
 msgid "GameTDB"
-msgstr ""
+msgstr "GameTDB"
+
+msgid "Gamename [GAMEID]"
+msgstr "Pelinimi [PELITUNNUS]"
 
 msgid "Games"
-msgstr "Pelejä"
+msgstr "Pelit"
+
+msgid "Games IOS"
+msgstr "Pelit IOS"
 
 msgid "Generating GXGameCategories.xml"
-msgstr ""
+msgstr "Luodaan GXGameCategories.xml"
 
 msgid "Genre:"
-msgstr ""
+msgstr "Genre:"
 
 msgid "German"
 msgstr "Saksa"
 
 msgid "Getting file list..."
-msgstr ""
+msgstr "Haetaan tiedostolistaa..."
 
 msgid "Getting game folder size..."
-msgstr ""
+msgstr "Haetaan pelin kansion kokoa..."
 
 msgid "Global Settings"
-msgstr ""
+msgstr "Globaalit Asetukset"
 
 msgid "Grid Scroll Speed"
-msgstr ""
+msgstr "Ruudukon Vierityksen Nopeus"
 
 msgid "HOME Menu"
-msgstr ""
+msgstr "HOME Valikko"
 
 msgid "Hard Drive Settings"
-msgstr ""
+msgstr "Kiintolevyn Asetukset"
 
 msgid "High Quality"
-msgstr ""
+msgstr "Korkea Laatu"
 
 msgid "High/Low"
-msgstr ""
+msgstr "Korkea/Matala"
 
 msgid "Homebrew Apps Path"
-msgstr "Homebrew Apps polku"
+msgstr "Homebrew Sovellusten Polku"
 
 msgid "Homebrew Channel"
-msgstr ""
+msgstr "Homebrew Kanava"
 
 msgid "Homebrew Launcher"
-msgstr ""
+msgstr "Homebrew Käynnistin"
 
 msgid "Hooktype"
-msgstr ""
+msgstr "Hooktyyppi"
 
 msgid "Hour"
 msgstr "Tunti"
 
 msgid "How to Shutdown?"
-msgstr "Miten sammutetaan?"
+msgstr "Kuinka Sammuttaa?"
 
 msgid "Import Categories"
-msgstr ""
+msgstr "Tuo Kategoriat"
 
 msgid "Import operation successfully completed."
-msgstr ""
+msgstr "Tuontioperaatio suoritettu onnistuneesti."
 
 msgid "Importing categories"
-msgstr ""
+msgstr "Tuodaan kategorioita"
 
 #, c-format
 msgid "Incoming file %0.2fKB"
-msgstr ""
+msgstr "Saapuva tiedosto %0.2fKB"
 
 #, c-format
 msgid "Incoming file %0.2fMB"
-msgstr ""
+msgstr "Saapuva tiedosto %0.2fMB"
 
 msgid "Individual"
-msgstr ""
+msgstr "Yksittäinen"
 
 msgid "Information"
-msgstr ""
+msgstr "Tiedot"
 
 msgid "Initializing Network"
-msgstr "Yhdistää verkkoon"
+msgstr "Alustetaan Verkkoa"
 
-msgid "Insert Disk"
-msgstr "Aseta levy Wiihin"
+msgid "Insert Disc"
+msgstr "Aseta Levy"
 
-msgid "Insert a Wii or a GameCube Disc!"
-msgstr ""
+msgid "Insert a Wii or a GameCube disc!"
+msgstr "Aseta Wii- tai GameCube-levy!"
 
 msgid "Install"
 msgstr "Asenna"
 
 msgid "Install Canceled"
-msgstr ""
+msgstr "Asennus Peruutettu"
 
 msgid "Install Directories"
-msgstr ""
+msgstr "Asenna Hakemistot"
 
 msgid "Install Error!"
 msgstr "Asennusvirhe!"
 
+msgid "Install Finished"
+msgstr "Asennus Valmis"
+
 msgid "Install Partitions"
-msgstr ""
+msgstr "Asenna Osiot"
+
+msgid "Install a Game?"
+msgstr "Asennetaanko Peli?"
 
 msgid "Install a game"
 msgstr "Asenna peli"
 
 msgid "Install error - Cleaning incomplete data."
-msgstr ""
+msgstr "Asennusvirhe - Siivotaan epätäydellisiä tietoja."
 
-msgid "Install finished"
-msgstr ""
+msgid "Installing Game:"
+msgstr "Asennetaan Peliä:"
 
 msgid "Installing GameCube Game..."
-msgstr ""
+msgstr "Asennetaan GameCube Peliä..."
 
 msgid "Installing content"
-msgstr ""
-
-msgid "Installing game:"
-msgstr "Asentaa peliä:"
+msgstr "Asennetaan sisältöä"
 
 msgid "Installing title..."
-msgstr ""
+msgstr "Asennetaan otsikkoa..."
 
 msgid "Invalid IOS number entered. Number must be -1 for inherit or 200 - 255."
-msgstr ""
+msgstr "Virheellinen IOS-numero syötetty. Numeron on oltava -1 periytyäkseen tai 200 - 255."
 
 msgid "Invalid WAD file."
-msgstr ""
+msgstr "Virheellinen WAD-tiedosto."
 
 msgid "It seems that you have some information that will be helpful to us. Please pass this information along to the DEV team."
-msgstr "Näyttää että sinulla on tietoa joka on hyödyllistä meille. Ole ystävällinen ja välitä se kehitystiimille."
+msgstr "Näyttää siltä, että sinulla on tietoja, jotka voivat olla hyödyllisiä meille. Välitä nämä tiedot DEV-tiimille."
 
 msgid "Italian"
 msgstr "Italia"
 
 msgid "Jan"
-msgstr "tammi"
+msgstr "Tammi"
 
 msgid "Japanese"
 msgstr "Japani"
 
 msgid "Japanese Patch"
-msgstr ""
+msgstr "Japanilainen Korjaus"
 
 msgid "Joypad"
-msgstr ""
+msgstr "Ohjain"
 
 msgid "July"
-msgstr "heinä"
+msgstr "Heinä"
 
 msgid "June"
-msgstr "kesä"
+msgstr "Kesä"
 
 msgid "KPAD Read"
-msgstr ""
+msgstr "KPAD Luku"
 
 msgid "Keyboard"
 msgstr "Näppäimistö"
@@ -1356,401 +1370,374 @@ msgid "Korean"
 msgstr "Korea"
 
 msgid "LED Activity"
-msgstr ""
+msgstr "LED Aktiivisuus"
 
-msgid "Language Files"
-msgstr ""
+msgid "Language Change:"
+msgstr "Kielen vaihto:"
 
-msgid "Language change:"
-msgstr "Kielen vaihto"
+msgid "Language Path Changed."
+msgstr "Kielipolku muutettu."
 
-msgid "Languagefiles Path"
-msgstr ""
-
-msgid "Languagepath changed."
-msgstr "Kielen polku vaihdettu"
+msgid "Languages Path"
+msgstr "Kielien Polku"
 
 msgid "Launching Wii games with emulated NAND only works on d2x cIOS! Change game IOS to a d2x cIOS first."
-msgstr ""
+msgstr "Wii-pelien käynnistäminen emuloidulla NAND:illa toimii vain d2x cIOS:lla! Vaihda pelin IOS ensin d2x cIOS:ksi."
 
 msgid "Launching emulated NAND channels only works on d2x cIOS! Change game IOS to a d2x cIOS first."
-msgstr ""
+msgstr "Emuloitujen NAND-kanavien käynnistäminen toimii vain d2x cIOS:lla! Vaihda pelin IOS ensin d2x cIOS:ksi."
 
 msgid "Left"
 msgstr "Vasen"
 
 msgid "Like SysMenu"
-msgstr "Kuin wii-menu"
+msgstr "Kuten SysMenu"
 
 msgid "List on game launch"
-msgstr ""
+msgstr "Lista pelin käynnistyksessä"
 
 msgid "Load"
 msgstr "Lataa"
 
-msgid "Load from SD/USB"
-msgstr "Lataa SD:ltä/USB:ltä"
-
 #, c-format
 msgid "Load file from: %s ?"
-msgstr "Lataa tiedosto: %s ?"
+msgstr "Ladataanko tiedosto: %s ?"
+
+msgid "Load from SD/USB"
+msgstr "Lataa SD/USB:stä"
 
 msgid "Load this DOL as alternate DOL?"
-msgstr "Lataa tämä vaihtoehtoisesti tämä dol?"
+msgstr "Ladataanko tämä DOL vaihtoehtoisena DOL:ina?"
 
 msgid "Loader Settings"
-msgstr ""
+msgstr "Latausasetukset"
 
 msgid "Loaders IOS"
-msgstr ""
+msgstr "Lataajien IOS"
 
-msgid "Loading standard language."
-msgstr "Ladataan standardia kieltä"
+msgid "Loading Standard Language."
+msgstr "Ladataan oletuskieltä."
 
 msgid "Loading standard music."
-msgstr "Ladataan standardia musiikkia"
+msgstr "Ladataan oletusmusiikkia."
 
 msgid "Lock Console"
-msgstr "Lukitse konsoli"
+msgstr "Lukitse Konsoli"
 
 msgid "Lock USB Loader GX"
-msgstr ""
+msgstr "Lukitse USB Loader GX"
 
 msgid "Locked"
 msgstr "Lukittu"
 
 msgid "Log to file"
-msgstr ""
+msgstr "Kirjaa tiedostoon"
 
 msgid "Loop Directory"
-msgstr ""
+msgstr "Silmukka Hakemisto"
 
 msgid "Loop Music"
-msgstr ""
+msgstr "Silmukka Musiikki"
 
 msgid "Loop Sound"
-msgstr ""
+msgstr "Silmukka Ääni"
 
 msgid "Low Quality"
-msgstr ""
+msgstr "Matala Laatu"
 
 msgid "Low/High"
-msgstr ""
+msgstr "Matala/Korkea"
 
 msgid "MIOS (Default & Customs)"
-msgstr ""
+msgstr "MIOS (Oletus & Mukautetut)"
 
 msgid "Main DOL"
-msgstr ""
+msgstr "Pää DOL"
 
 msgid "Main GameCube Games Path"
-msgstr ""
+msgstr "Pää GameCube Pelien Polku"
 
 msgid "Main GameCube Path"
-msgstr ""
+msgstr "Pää GameCube Polku"
 
 msgid "Main Path"
-msgstr ""
+msgstr "Pää Polku"
 
 msgid "Manual (40~120)"
-msgstr ""
+msgstr "Manuaalinen (40~120)"
 
 msgid "Mar"
-msgstr "maalis"
+msgstr "Maalis"
 
 msgid "Mark New Games"
-msgstr ""
+msgstr "Merkitse Uudet Pelit"
 
 msgid "May"
-msgstr "touko"
+msgstr "Touko"
 
 msgid "Memory Card Blocks Size"
-msgstr ""
+msgstr "Muistikortin Lohkojen Koko"
 
 msgid "Memory Card Emulation"
-msgstr ""
+msgstr "Muistikortin Emulointi"
 
 msgid "Memory Card with 2043 blocs has issues with Nintendont. Use at your own risk."
-msgstr ""
+msgstr "Muistikortilla, jossa on 2043 lohkoa, on ongelmia Nintendontin kanssa. Käytä omalla vastuullasi."
 
 msgid "Messageboard Update"
-msgstr ""
+msgstr "Viestitaulun Päivitys"
+
+msgid "Miscellaneous Settings"
+msgstr "Sekalaiset Asetukset"
 
 msgid "Motion+ Video"
-msgstr ""
+msgstr "Motion+ Video"
 
 msgid "Mount DVD drive"
-msgstr ""
-
-msgid "Mount USB at launch"
-msgstr ""
+msgstr "Liitä DVD-asema"
 
 msgid "Move File"
-msgstr ""
+msgstr "Siirrä Tiedosto"
 
 msgid "Multiple Partitions"
-msgstr ""
+msgstr "Useita Osioita"
 
 msgid "Music Loop Mode"
-msgstr ""
+msgstr "Musiikin Silmukkamoodi"
 
 msgid "Music Volume"
-msgstr "Voimakkuus"
+msgstr "Musiikin Äänenvoimakkuus"
 
-msgid "NMM Mode"
-msgstr ""
+msgid "NAND"
+msgstr "NAND"
 
-msgid "NAND Chan. Emulation"
-msgstr ""
-
-msgid "NAND Channels"
-msgstr ""
-
-msgid "NAND Emu Channel Path"
-msgstr ""
-
-msgid "NAND Emu Path"
-msgstr ""
-
-msgid "NAND Emulation"
-msgstr ""
-
-msgid "NAND emulation is only available on D2X cIOS!"
-msgstr ""
+msgid "NAND emulation is only available on d2x cIOS!"
+msgstr "NAND-emulointi on saatavilla vain d2x cIOS:lla!"
 
 msgid "NAND emulation only works on FAT/FAT32 partitions!"
-msgstr ""
+msgstr "NAND-emulointi toimii vain FAT/FAT32-osioilla!"
 
-msgid "NAND Saves Emulation"
-msgstr ""
+msgid "NMM Mode"
+msgstr "NMM Tila"
 
 msgid "Native Controller"
-msgstr ""
+msgstr "Alkuperäinen Ohjain"
 
 msgid "Neek"
-msgstr ""
+msgstr "Neek"
 
 msgid "Neek NAND path selection failed."
-msgstr ""
+msgstr "Neek NAND -polun valinta epäonnistui."
 
 msgid "Neek kernel file not found."
-msgstr ""
+msgstr "Neek-ytimen tiedostoa ei löydy."
 
 msgid "Neek kernel loading failed."
-msgstr ""
+msgstr "Neek-ytimen lataus epäonnistui."
 
 msgid "Neek2o does not support 'EmuNAND Channel Path' on SD! Please setup Uneek2o instead."
-msgstr ""
+msgstr "Neek2o ei tue 'EmuNAND Kanavapolkua' SD:llä! Aseta sen sijaan Uneek2o."
 
 msgid "Neither"
-msgstr "Ei kumpikaan"
+msgstr "Kumpikaan"
 
-msgid "Network is not initiated."
-msgstr ""
+msgid "Network is not initalized."
+msgstr "Verkkoa ei ole alustettu."
+
+msgid "Network is not initialized."
+msgstr "Verkkoa ei ole alustettu."
 
 msgid "Next"
 msgstr "Seuraava"
 
 msgid "Nintendont"
-msgstr ""
+msgstr "Nintendont"
 
 msgid "Nintendont Loader Path"
-msgstr ""
+msgstr "Nintendont Latauspolku"
 
 msgid "No"
 msgstr "Ei"
 
-msgid "No Cheatfile found"
-msgstr "Kooditiedostoa ei löydy"
+msgid "No Cheat file found"
+msgstr "Huijaustiedostoa ei löydy"
 
 msgid "No DOL file found on disc."
-msgstr "Levyltä ei löydy dol tiedostoa"
+msgstr "DOL-tiedostoa ei löydy levyltä."
+
+msgid "No Disc Inserted"
+msgstr "Levyä ei ole asetettu"
 
 msgid "No Disc+"
-msgstr ""
+msgstr "Ei Levyä+"
 
 msgid "No Splitting"
-msgstr ""
-
-msgid "No URL or Path specified."
-msgstr ""
-
-msgid "No WBFS or FAT/NTFS/EXT partition found"
-msgstr ""
-
-msgid "No Wiinnertag.xml found in the config path. Do you want an example file created?"
-msgstr ""
-
-msgid "No change"
-msgstr ""
-
-msgid "No cheats were selected! Should the GCT file be deleted?"
-msgstr ""
-
-msgid "No data could be read."
-msgstr "Tietoa ei voitu lukea"
-
-msgid "No disc inserted."
-msgstr ""
-
-msgid "No favorites selected."
-msgstr ""
-
-msgid "No files missing!"
-msgstr "Ei tiedostoja kadoksissa!"
-
-msgid "No games found on the disc"
-msgstr ""
-
-msgid "No language files to update on your devices! Do you want to download new language files?"
-msgstr ""
-
-msgid "No new updates."
-msgstr "Ei uusia päivityksiä"
-
-msgid "No themes found on the site."
-msgstr ""
-
-msgid "No themes found."
-msgstr ""
+msgstr "Ei Jakamista"
 
 msgid "No WAD file found in this folder."
-msgstr ""
+msgstr "WAD-tiedostoa ei löydy tästä kansiosta."
+
+msgid "No WBFS or FAT/NTFS/EXT partition found"
+msgstr "WBFS- tai FAT/NTFS/EXT-osiota ei löydy"
+
+msgid "No Wiinnertag.xml found in the config path. Do you want an example file created?"
+msgstr "Wiinnertag.xml-tiedostoa ei löydy määrityspolusta. Haluatko luoda esimerkkitiedoston?"
+
+msgid "No change"
+msgstr "Ei muutosta"
+
+msgid "No cheats were selected! Should the GCT file be deleted?"
+msgstr "Huijauksia ei valittu! Poistetaanko GCT-tiedosto?"
+
+msgid "No data could be read."
+msgstr "Tietoja ei voitu lukea."
+
+msgid "No favorites selected."
+msgstr "Suosikkeja ei valittu."
+
+msgid "No files missing!"
+msgstr "Tiedostoja ei puutu!"
+
+msgid "No games found on the disc"
+msgstr "Pelejä ei löydy levyltä"
+
+msgid "No language files to update on your devices! Do you want to download new language files?"
+msgstr "Laitteissasi ei ole päivitettäviä kielitiedostoja! Haluatko ladata uusia kielitiedostoja?"
+
+msgid "No new updates."
+msgstr "Ei uusia päivityksiä."
+
+msgid "No themes found."
+msgstr "Teemoja ei löydy."
 
 msgid "NoSSL only"
-msgstr ""
+msgstr "Vain NoSSL"
 
 msgid "None"
-msgstr ""
+msgstr "Ei mitään"
 
 msgid "Normal"
 msgstr "Normaali"
 
+msgid "Not Enough Free Space!"
+msgstr "Ei tarpeeksi vapaata tilaa!"
+
 msgid "Not Initialized"
-msgstr ""
+msgstr "Ei Alustettu"
 
 msgid "Not a Wii or a GameCube Disc"
-msgstr ""
-
-msgid "Not a valid URL"
-msgstr ""
-
-msgid "Not a valid URL path"
-msgstr ""
-
-msgid "Not a valid domain"
-msgstr ""
+msgstr "Ei Wii- tai GameCube-levy"
 
 msgid "Not enough free memory."
-msgstr "Ei tarpeeksi muistia."
+msgstr "Ei tarpeeksi vapaata muistia."
 
 msgid "Not enough free space on device."
-msgstr ""
-
-msgid "Not enough free space!"
-msgstr "Ei tarpeeksi tilaa!"
+msgstr "Ei tarpeeksi vapaata tilaa laitteessa."
 
 msgid "Not enough memory for FST."
-msgstr ""
+msgstr "Ei tarpeeksi muistia FST:lle."
 
 msgid "Not enough memory."
-msgstr ""
+msgstr "Ei tarpeeksi muistia."
 
 msgid "Not required"
-msgstr ""
+msgstr "Ei vaadita"
 
-msgid "Unsupported format!"
-msgstr "Ei tuettu formaatti!"
+msgid "Not set"
+msgstr "Ei asetettu"
 
 msgid "Nothing selected to delete."
-msgstr ""
+msgstr "Ei valittuja poistettavia."
 
 msgid "Nothing selected to install."
-msgstr ""
+msgstr "Ei valittuja asennettavia."
 
 msgid "Nov"
-msgstr "marras"
+msgstr "Marras"
 
 msgid "OFF"
-msgstr "Pois"
+msgstr "POIS"
 
 msgid "OFF (Extended)"
-msgstr ""
+msgstr "POIS (Laajennettu)"
 
 msgid "OFF (Safe)"
-msgstr ""
+msgstr "POIS (Turvallinen)"
 
 msgid "OK"
-msgstr ""
+msgstr "OK"
 
 msgid "ON"
-msgstr "Päälle"
-
-msgid "ON (Low)"
-msgstr ""
-
-msgid "ON (Medium)"
-msgstr ""
-
-msgid "ON (Multi)"
-msgstr ""
+msgstr "PÄÄLLÄ"
 
 msgid "ON (High)"
-msgstr ""
+msgstr "PÄÄLLÄ (Korkea)"
+
+msgid "ON (Low)"
+msgstr "PÄÄLLÄ (Matala)"
+
+msgid "ON (Medium)"
+msgstr "PÄÄLLÄ (Keskitaso)"
+
+msgid "ON (Multi)"
+msgstr "PÄÄLLÄ (Multi)"
 
 msgid "OSReport"
-msgstr ""
+msgstr "OSReport"
 
 msgid "OSSleepThread"
-msgstr ""
+msgstr "OSSleepThread"
 
 msgid "Ocarina"
-msgstr ""
+msgstr "Ocarina"
 
 msgid "Ocarina is not supported with neek2o yet. Launch game anyway?"
-msgstr ""
+msgstr "Ocarina ei ole vielä tuettu neek2o:lla. Käynnistetäänkö peli silti?"
+
+msgid "Ocarina:"
+msgstr "Ocarina:"
 
 msgid "Oct"
-msgstr "loka"
+msgstr "Loka"
 
 msgid "Official Site:"
-msgstr "Virallinen sivusto:"
+msgstr "Virallinen Sivusto:"
 
 msgid "Offset"
-msgstr ""
+msgstr "Siirtymä"
 
 msgid "Ok"
-msgstr ""
+msgstr "Ok"
 
 msgid "One Line A"
-msgstr ""
+msgstr "Yksi Rivi A"
 
 msgid "One Line B"
-msgstr ""
+msgstr "Yksi Rivi B"
 
 msgid "Only Game Partition"
-msgstr ""
+msgstr "Vain Peliosio"
 
-msgid "Only for Install"
-msgstr "Ainoastaan asennusta varten"
+msgid "Only for install"
+msgstr "Vain asennukseen"
 
 msgid "Original"
-msgstr ""
+msgstr "Alkuperäinen"
 
 msgid "Original/Customs"
-msgstr "Alkuperäinen/Omatekoinen"
+msgstr "Alkuperäinen/Mukautetut"
 
 msgid "PAD Hook"
-msgstr ""
+msgstr "PAD Hook"
 
 msgid "PAL50 Patch"
-msgstr ""
+msgstr "PAL50 Korjaus"
 
 msgid "Parental Control"
-msgstr "Valvonta"
+msgstr "Vanhempien Valvonta"
 
 msgid "Partial"
-msgstr ""
+msgstr "Osittainen"
 
 msgid "Partition"
 msgstr "Osio"
@@ -1759,49 +1746,49 @@ msgid "Password"
 msgstr "Salasana"
 
 msgid "Password Changed"
-msgstr "Salasana muutettu"
+msgstr "Salasana Vaihdettu"
 
 msgid "Password has been changed"
-msgstr "Salasana on muutettu"
+msgstr "Salasana on vaihdettu"
 
 msgid "Patch Country Strings"
-msgstr "Patchaa maa merkkijonot"
+msgstr "Korjaa Maan Merkkijonot"
 
 msgid "Path Changed"
-msgstr ""
+msgstr "Polku Muutettu"
 
 msgid "Permission denied."
-msgstr ""
+msgstr "Lupa evätty."
 
 msgid "Pick from a list"
 msgstr "Valitse listasta"
 
 msgid "Pixels"
-msgstr ""
+msgstr "Pikselit"
 
 msgid "Play Count"
-msgstr "Pelauksen määrä"
+msgstr "Toistokerrat"
 
 msgid "Play Next"
-msgstr ""
+msgstr "Toista Seuraava"
 
 msgid "Play Once"
-msgstr ""
+msgstr "Toista Kerran"
 
 msgid "Play Previous"
-msgstr ""
+msgstr "Toista Edellinen"
 
 msgid "Playing Music:"
-msgstr ""
+msgstr "Toistetaan Musiikkia:"
 
 msgid "Please enter a valid address e.g. wiimmfi.de"
-msgstr ""
+msgstr "Syötä kelvollinen osoite esim. wiimmfi.de"
 
 msgid "Please wait"
-msgstr ""
+msgstr "Odota"
 
 msgid "Please wait..."
-msgstr ""
+msgstr "Odota..."
 
 msgid "Power off the Wii"
 msgstr "Sammuta Wii"
@@ -1809,1090 +1796,766 @@ msgstr "Sammuta Wii"
 msgid "Prev"
 msgstr "Edellinen"
 
+msgid "Priiloader"
+msgstr "Priiloader"
+
 msgid "Private Server"
-msgstr ""
+msgstr "Yksityinen Palvelin"
 
 msgid "Process finished."
-msgstr ""
+msgstr "Prosessi valmis."
 
 msgid "Progressive Patch"
-msgstr ""
+msgstr "Progressiivinen Korjaus"
 
 msgid "Prompts Buttons"
-msgstr "Napit"
+msgstr "Kehote Painikkeet"
 
 msgid "Published by"
-msgstr "Julkaisu:"
+msgstr "Julkaissut"
 
 msgid "Quick Boot"
-msgstr ""
-
-msgid "Random Directory Music"
-msgstr ""
+msgstr "Nopea Käynnistys"
 
 msgid "Real NAND"
-msgstr ""
+msgstr "Todellinen NAND"
 
 msgid "Receiving file from:"
-msgstr "Ladataan tiedostoa:"
+msgstr "Vastaanotetaan tiedostoa:"
 
 msgid "Region Free"
-msgstr ""
+msgstr "Alue Vapaa"
 
 msgid "Region Patch"
-msgstr ""
+msgstr "Alue Korjaus"
+
+msgid "Regional"
+msgstr "Alueellinen"
 
 msgid "Released"
 msgstr "Julkaistu"
 
-msgid "Reload SD"
-msgstr "Uudelleenlataa SD"
-
 msgid "Reloading game list now, please wait..."
-msgstr ""
+msgstr "Ladataan pelilistaa uudelleen, odota..."
 
 msgid "Remember Last Game"
-msgstr ""
+msgstr "Muista Viimeinen Peli"
 
 msgid "Remember Unlock"
-msgstr ""
+msgstr "Muista Avata"
 
 msgid "Remove Read Speed Limit"
-msgstr ""
+msgstr "Poista Lukunopeuden Rajoitus"
 
 msgid "Remove update"
-msgstr ""
+msgstr "Poista päivitys"
 
 msgid "Rename Game Title"
-msgstr "Uudelleennimeä peli"
+msgstr "Nimeä Peli Uudelleen"
 
 msgid "Rename category"
-msgstr ""
+msgstr "Nimeä kategoria uudelleen"
+
+msgid "Resample to 48 kHz"
+msgstr "Näytteenotto 48 kHz:iin"
 
 msgid "Reset"
-msgstr ""
+msgstr "Nollaa"
 
 msgid "Reset All Game Settings"
-msgstr ""
+msgstr "Nollaa Kaikki Peliasetukset"
 
 msgid "Reset BG Music"
-msgstr ""
+msgstr "Nollaa Taustamusiikki"
 
 msgid "Reset Cached Titles"
-msgstr ""
+msgstr "Nollaa Välimuistitit"
 
 msgid "Reset Play Count"
-msgstr "Resetoi pelauksen määrä"
+msgstr "Nollaa Toistokerrat"
+
+msgid "Reset Wiimote Pairings"
+msgstr "Nollaa Wiimote-paritukset"
 
 msgid "Reset to default BGM?"
-msgstr ""
+msgstr "Nollataanko oletus BGM?"
 
 msgid "Restarting..."
-msgstr "Boottaa..."
+msgstr "Käynnistetään uudelleen..."
 
 msgid "Return"
 msgstr "Palaa"
 
 msgid "Return To"
-msgstr ""
+msgstr "Palaa Kohteeseen"
 
 msgid "Return to Wii Menu"
-msgstr "Palaa Wii menuun"
+msgstr "Palaa Wii-valikkoon"
 
 msgid "Right"
 msgstr "Oikea"
 
 msgid "Rotating Disc"
-msgstr ""
+msgstr "Pyörivä Levy"
 
 msgid "Round"
-msgstr ""
+msgstr "Pyöreä"
 
 msgid "Rumble"
-msgstr "Värinä"
+msgstr "Tärinä"
 
 msgid "SChinese"
-msgstr "SKiina"
+msgstr "Yksinkertaistettu Kiina"
 
 msgid "SD"
-msgstr ""
-
-msgid "SD Card could not be accessed."
-msgstr ""
+msgstr "SD"
 
 msgid "SD Card Mode"
-msgstr ""
+msgstr "SD Kortti Tila"
+
+msgid "SD Card could not be accessed."
+msgstr "SD Korttia ei voitu käyttää."
 
 msgid "SD GameCube Games Path"
-msgstr ""
+msgstr "SD GameCube Pelien Polku"
 
 msgid "SD GameCube Path"
-msgstr ""
+msgstr "SD GameCube Polku"
 
 msgid "SD Path"
-msgstr ""
+msgstr "SD Polku"
 
 msgid "SFX Volume"
-msgstr "Ääniefektien voimakkuus"
+msgstr "SFX Äänenvoimakkuus"
 
 msgid "Save"
 msgstr "Tallenna"
 
 msgid "Save Failed. No device inserted?"
-msgstr ""
-
-msgid "Save Game List to"
-msgstr ""
+msgstr "Tallennus epäonnistui. Ei laitetta asetettu?"
 
 msgid "Save List"
-msgstr ""
+msgstr "Tallenna Lista"
 
 msgid "Save Path"
-msgstr ""
+msgstr "Tallenna Polku"
+
+msgid "Save game list to"
+msgstr "Tallenna pelilista kohteeseen"
 
 msgid "Saved"
-msgstr ""
+msgstr "Tallennettu"
 
 msgid "Savegame might not exist for this game."
-msgstr ""
+msgstr "Tallennus saattaa olla olematon tälle pelille."
+
+msgid "Screen Mode"
+msgstr "Näyttötila"
 
 msgid "Screensaver"
 msgstr "Näytönsäästäjä"
 
 msgid "Screenshot"
-msgstr ""
+msgstr "Näyttökuva"
 
 msgid "Select"
-msgstr ""
+msgstr "Valitse"
 
 msgid "Select DOL Offset"
-msgstr ""
+msgstr "Valitse DOL Siirtymä"
+
+msgid "Select Game Sources"
+msgstr "Valitse Pelin Lähteet"
 
 msgid "Select a DOL"
 msgstr "Valitse DOL"
 
 msgid "Select a DOL from game"
-msgstr ""
+msgstr "Valitse DOL pelistä"
 
 msgid "Select game categories"
-msgstr ""
+msgstr "Valitse pelin kategoriat"
 
-msgid "Select loader mode"
-msgstr ""
+msgid "Select game sources"
+msgstr "Valitse pelin lähteet"
 
 msgid "Select the EmuNAND path to use."
-msgstr ""
-
-msgid "Select titles sources."
-msgstr ""
+msgstr "Valitse käytettävä EmuNAND-polku."
 
 msgid "Sept"
-msgstr "syys"
+msgstr "Syys"
 
-msgid "Set Search-Filter"
-msgstr ""
+msgid "Set search filter"
+msgstr "Aseta hakusuodatin"
 
 msgid "Settings"
 msgstr "Asetukset"
 
 msgid "Settings File"
-msgstr ""
+msgstr "Asetustiedosto"
 
 msgid "Show Categories"
-msgstr ""
+msgstr "Näytä Kategoriat"
 
-msgid "Show Favorite on banner"
-msgstr ""
+msgid "Show Favorite on Banner"
+msgstr "Näytä Suosikki Bannerissa"
 
 msgid "Show Free Space"
-msgstr ""
+msgstr "Näytä Vapaa Tila"
 
 msgid "Show Game Count"
-msgstr ""
+msgstr "Näytä Pelien Määrä"
 
 msgid "Show Play Count"
-msgstr ""
+msgstr "Näytä Toistokerrat"
 
 msgid "Show SD"
-msgstr ""
+msgstr "Näytä SD"
+
+msgid "Shuffle Directory Music"
+msgstr "Sekoita Hakemiston Musiikki"
 
 msgid "Shutdown System"
-msgstr "Sammuta järjestelmä"
+msgstr "Sammuta Järjestelmä"
 
 msgid "Shutdown Wii"
-msgstr ""
+msgstr "Sammuta Wii"
+
+msgid "Shutdown?"
+msgstr "Sammutetaanko?"
+
+msgid "Silent HOME Menu"
+msgstr "Hiljainen HOME Valikko"
 
 msgid "Skip Errors"
-msgstr ""
+msgstr "Ohita Virheet"
 
 msgid "Skip IPL"
-msgstr ""
-
-msgid "BBA Emulation"
-msgstr ""
-
-msgid "BBA Net Profile"
-msgstr ""
+msgstr "Ohita IPL"
 
 msgid "Sneek Video Patch"
-msgstr ""
+msgstr "Sneek Video Korjaus"
 
-msgid "Sorry, the theme downloader menu is not working anymore because http://wii.spiffy360.com now requires user registration."
-msgstr ""
+msgid "Sorting alphabetically"
+msgstr "Lajitellaan aakkosjärjestyksessä"
 
-msgid "Sort alphabetically"
-msgstr "Järjestä aakkosittain"
+msgid "Sorting by most played"
+msgstr "Lajitellaan eniten pelattujen mukaan"
 
-msgid "Sort by number of players"
-msgstr ""
+msgid "Sorting by number of players"
+msgstr "Lajitellaan pelaajien määrän mukaan"
 
-msgid "Sort by rank"
-msgstr ""
-
-msgid "Sort order by most played"
-msgstr "Aseta 'pelattu eniten' järjestykseen"
-
-msgid "Sound"
-msgstr "Ääni"
+msgid "Sorting by rank"
+msgstr "Lajitellaan arvosanan mukaan"
 
 msgid "Sound Settings"
-msgstr ""
+msgstr "Ääniasetukset"
 
 msgid "Sound+BGM"
-msgstr ""
+msgstr "Ääni+BGM"
 
 msgid "Sound+Quiet"
-msgstr ""
+msgstr "Ääni+Hiljainen"
 
 msgid "Spanish"
 msgstr "Espanja"
 
 msgid "Special thanks to:"
-msgstr "Erityiskiitokset"
+msgstr "Erityiskiitokset:"
 
 msgid "Split each 2GB"
-msgstr ""
+msgstr "Jaa joka 2GB"
 
 msgid "Split each 4GB"
-msgstr ""
+msgstr "Jaa joka 4GB"
 
 msgid "Standby"
-msgstr ""
+msgstr "Valmiustila"
 
 msgid "Start"
-msgstr ""
+msgstr "Aloita"
 
 msgid "Success"
 msgstr "Onnistui"
 
 msgid "Success."
-msgstr ""
+msgstr "Onnistui."
 
 msgid "Success:"
 msgstr "Onnistui:"
 
+msgid "Successfully Installed:"
+msgstr "Asennettu Onnistuneesti:"
+
 msgid "Successfully Saved"
-msgstr "Tallennettu onnistuneesti"
+msgstr "Tallennettu Onnistuneesti"
 
 msgid "Successfully Updated"
-msgstr "Päivitetty onnistuneesti"
+msgstr "Päivitetty Onnistuneesti"
 
 msgid "Successfully copied"
-msgstr ""
+msgstr "Kopioitu Onnistuneesti"
 
 msgid "Successfully deleted:"
-msgstr "Poistettu onnistuneesti:"
-
-msgid "Successfully extracted theme."
-msgstr ""
-
-msgid "Successfully installed:"
-msgstr "Asennettu onnistuneesti:"
-
-msgid "Successfully updated."
-msgstr ""
-
-msgid "Switching to channel list mode."
-msgstr ""
-
-msgid "Sync FAT32 FS Info"
-msgstr ""
-
-msgid "Synchronizing..."
-msgstr ""
+msgstr "Poistettu Onnistuneesti:"
 
 msgid "System Default"
-msgstr "Wiin oletus"
+msgstr "Järjestelmän Oletus"
 
 msgid "System Proxy Settings"
-msgstr ""
+msgstr "Järjestelmän Välityspalvelinasetukset"
 
 msgid "TChinese"
-msgstr "TKiina"
+msgstr "Perinteinen Kiina"
 
-msgid "TXT Cheatcodes Path"
-msgstr "TXT koodien polku"
-
-msgid "The .them file was not found in the zip."
-msgstr ""
+msgid "TXT Cheat Codes Path"
+msgstr "TXT Huijauskoodien Polku"
 
 msgid "The Force Widescreen setting requires DIOS MIOS v2.1 or more. This setting will be ignored."
-msgstr ""
+msgstr "Pakota Laajakuva -asetus vaatii DIOS MIOS v2.1 tai uudemman. Tämä asetus ohitetaan."
 
 msgid "The Miis will be extracted to your EmuNAND path and EmuNAND channel path. Attention: All existing files will be overwritten."
-msgstr ""
+msgstr "Miit puretaan EmuNAND-polkuusi ja EmuNAND-kanavapolkuusi. Huomio: Kaikki olemassa olevat tiedostot ylikirjoitetaan."
 
 msgid "The No Disc+ setting requires DIOS MIOS 2.2 update2. This setting will be ignored."
-msgstr ""
+msgstr "Ei Levyä+ -asetus vaatii DIOS MIOS 2.2 päivityksen2. Tämä asetus ohitetaan."
 
 msgid "The SYSCONF file will be extracted to your EmuNAND path and EmuNAND channel path. Attention: All existing files will be overwritten."
-msgstr ""
-
-msgid "The application might crash if there is currently a read/write access to the SD card!"
-msgstr ""
-
-msgid "The entered directory does not exist. Would you like to create it?"
-msgstr ""
-
-msgid "The files will be extracted to your EmuNAND save and channel path. Attention: All existing files will be overwritten."
-msgstr ""
-
-msgid "The game is on SD Card."
-msgstr ""
-
-msgid "The game is on USB."
-msgstr ""
-
-msgid "The save game will be extracted to your EmuNAND path."
-msgstr ""
-
-msgid "The save games will be extracted to your EmuNAND save and channel path. Attention: All existing files will be overwritten."
-msgstr ""
+msgstr "SYSCONF-tiedosto puretaan EmuNAND-polkuusi ja EmuNAND-kanavapolkuusi. Huomio: Kaikki olemassa olevat tiedostot ylikirjoitetaan."
 
 msgid "The WAD file was installed"
-msgstr ""
+msgstr "WAD-tiedosto asennettiin"
 
 #, c-format
 msgid "The WAD installation failed with error %i"
-msgstr ""
+msgstr "WAD-asennus epäonnistui virheellä %i"
 
-msgid "Theme Downloader"
-msgstr ""
+msgid "The entered directory does not exist. Would you like to create it?"
+msgstr "Syötettyä hakemistoa ei ole olemassa. Haluatko luoda sen?"
+
+msgid "The files will be extracted to your EmuNAND save and channel path. Attention: All existing files will be overwritten."
+msgstr "Tiedostot puretaan EmuNAND-tallennus- ja kanavapolkuusi. Huomio: Kaikki olemassa olevat tiedostot ylikirjoitetaan."
+
+msgid "The game is on SD Card."
+msgstr "Peli on SD-kortilla."
+
+msgid "The game is on USB."
+msgstr "Peli on USB:llä."
+
+msgid "The save game will be extracted to your EmuNAND path."
+msgstr "Tallennus puretaan EmuNAND-polkuusi."
+
+msgid "The save games will be extracted to your EmuNAND save and channel path. Attention: All existing files will be overwritten."
+msgstr "Tallennukset puretaan EmuNAND-tallennus- ja kanavapolkuusi. Huomio: Kaikki olemassa olevat tiedostot ylikirjoitetaan."
 
 msgid "Theme Menu"
-msgstr ""
+msgstr "Teemavalikko"
 
 msgid "Theme Path"
-msgstr "Teeman sijainti"
+msgstr "Teemapolku"
 
 msgid "Theme Title:"
-msgstr ""
+msgstr "Teeman Otsikko:"
 
-msgid "Themes by www.spiffy360.com"
-msgstr ""
+msgid "This IOS is the BootMii IOS. If you are sure it is not BootMii and you have something else installed there then ignore this warning."
+msgstr "Tämä IOS on BootMii IOS. Jos olet varma, että se ei ole BootMii ja sinulla on jotain muuta asennettuna sinne, ohita tämä varoitus."
 
-msgid "This IOS is the BootMii IOS. If you are sure it is not BootMii and you have something else installed there than ignore this warning."
-msgstr ""
+msgid "This IOS is the BootMii ios. If you are sure it is not BootMii and you have something else installed there then ignore this warning."
+msgstr "Tämä IOS on BootMii ios. Jos olet varma, että se ei ole BootMii ja sinulla on jotain muuta asennettuna sinne, ohita tämä varoitus."
 
-msgid "This IOS was not found on the titles list. If you are sure you have it installed than ignore this warning."
-msgstr ""
+msgid "This IOS was not found on the titles list. If you are sure you have it installed then ignore this warning."
+msgstr "Tätä IOS:ää ei löytynyt otsikkolistasta. Jos olet varma, että se on asennettu, ohita tämä varoitus."
 
 msgid "This Nintendont version does not support games on USB."
-msgstr ""
+msgstr "Tämä Nintendont-versio ei tue pelejä USB:llä."
 
 msgid "This Nintendont version is not correctly supported. Auto boot disabled."
-msgstr ""
+msgstr "Tätä Nintendont-versiota ei tueta oikein. Automaattinen käynnistys on poistettu käytöstä."
 
 msgid "This game has multiple discs. Please select the disc to launch."
-msgstr ""
+msgstr "Tässä pelissä on useita levyjä. Valitse käynnistettävä levy."
 
 msgid "This path must be on SD!"
-msgstr ""
+msgstr "Tämän polun on oltava SD:llä!"
 
 msgid "This setting doesn't work in SD card mode."
-msgstr ""
+msgstr "Tämä asetus ei toimi SD-korttitilassa."
 
 msgid "Time left:"
 msgstr "Aikaa jäljellä:"
 
 msgid "Timer Fix"
-msgstr ""
+msgstr "Ajastimen Korjaus"
 
 msgid "Title Launcher"
-msgstr "Nimilaukaisin"
-
-msgid "Titles Path"
-msgstr ""
+msgstr "Otsikon Käynnistin"
 
 msgid "Titles From"
-msgstr ""
+msgstr "Otsikot Kohteesta"
 
-msgid "To run GameCube games from Disc you need to set the GameCube mode to MIOS in the game settings."
-msgstr ""
+msgid "Titles Path"
+msgstr "Otsikoiden Polku"
+
+msgid "To run GameCube games from disc you need to set the GameCube mode to MIOS in the game settings."
+msgstr "Käyttääksesi GameCube-pelejä levyltä sinun on asetettava GameCube-tila MIOS:ksi peliasetuksissa."
 
 #, c-format
 msgid "To run GameCube games with %s you need to place them on an USB FAT32 partition."
-msgstr ""
+msgstr "Käyttääksesi GameCube-pelejä %s:n kanssa sinun on sijoitettava ne USB FAT32 -osioon."
 
 #, c-format
 msgid "To run GameCube games with %s you need to set your 'Main GameCube Path' on the first primary FAT32 partition."
-msgstr ""
+msgstr "Käyttääksesi GameCube-pelejä %s:n kanssa sinun on asetettava 'Pää GameCube Polku' ensimmäiseen ensisijaiseen FAT32-osioon."
 
 #, c-format
 msgid "To run GameCube games with %s you need to set your 'Main GameCube Path' on the first primary partition of the Hard Drive."
-msgstr ""
+msgstr "Käyttääksesi GameCube-pelejä %s:n kanssa sinun on asetettava 'Pää GameCube Polku' kiintolevyn ensimmäiseen ensisijaiseen osioon."
 
 #, c-format
 msgid "To run GameCube games with %s you need to set your 'Main GameCube Path' to an USB FAT32 partition."
-msgstr ""
+msgstr "Käyttääksesi GameCube-pelejä %s:n kanssa sinun on asetettava 'Pää GameCube Polku' USB FAT32 -osioon."
 
 #, c-format
 msgid "To run GameCube games with %s you need to use a 512 bytes/sector Hard Drive."
-msgstr ""
+msgstr "Käyttääksesi GameCube-pelejä %s:n kanssa sinun on käytettävä 512 tavua/sektori kiintolevyä."
 
 #, c-format
 msgid "To run GameCube games with %s you need to use a partition with 32k bytes/cluster or less."
-msgstr ""
+msgstr "Käyttääksesi GameCube-pelejä %s:n kanssa sinun on käytettävä osiota, jossa on 32k tavua/klusteri tai vähemmän."
 
 msgid "To run GameCube games with Devolution you need the loader.bin file in your Devolution Loader Path."
-msgstr ""
+msgstr "Käyttääksesi GameCube-pelejä Devolutionin kanssa tarvitset loader.bin-tiedoston Devolution Latauspolussa."
 
 msgid "To run GameCube games with Nintendont you need the boot.dol file in your Nintendont Loader Path."
-msgstr ""
+msgstr "Käyttääksesi GameCube-pelejä Nintendontin kanssa tarvitset boot.dol-tiedoston Nintendont Latauspolussa."
 
 #, c-format
 msgid "To use HID with %s you need the %s file."
-msgstr ""
-
-msgid "To use neek you need to set your 'EmuNAND Channel Path' on the first primary partition of the Hard Drive."
-msgstr ""
-
-msgid "To use neek you need to set your 'EmuNAND Channel Path' to a FAT32 partition."
-msgstr ""
-
-msgid "To use neek you need to use a 512 bytes/sector Hard Drive."
-msgstr ""
+msgstr "Käyttääksesi HID:ä %s:n kanssa tarvitset %s-tiedoston."
 
 #, c-format
-msgid "To use ocarina with %s you need the %s file."
-msgstr ""
+msgid "To use Ocarina with %s you need the %s file."
+msgstr "Käyttääksesi Ocarina %s:n kanssa tarvitset %s-tiedoston."
+
+msgid "To use neek you need to set your 'EmuNAND Channel Path' on the first primary partition of the Hard Drive."
+msgstr "Käyttääksesi neek:ä sinun on asetettava 'EmuNAND Kanavapolku' kiintolevyn ensimmäiseen ensisijaiseen osioon."
+
+msgid "To use neek you need to set your 'EmuNAND Channel Path' to a FAT32 partition."
+msgstr "Käyttääksesi neek:ä sinun on asetettava 'EmuNAND Kanavapolku' FAT32-osioon."
+
+msgid "To use neek you need to use a 512 bytes/sector Hard Drive."
+msgstr "Käyttääksesi neek:ä sinun on käytettävä 512 tavua/sektori kiintolevyä."
+
+msgid "Toggle SD card mode"
+msgstr "Vaihda SD-korttitila"
 
 msgid "Tooltip Delay"
-msgstr ""
+msgstr "Vihjetekstin Viive"
 
 msgid "Tooltips"
-msgstr "Vinkit"
-
-msgid "Transfer failed"
-msgstr ""
+msgstr "Vihjetekstit"
 
 msgid "Triforce Arcade Mode"
-msgstr ""
+msgstr "Triforce Arcade Tila"
 
 msgid "Two Lines"
-msgstr ""
+msgstr "Kaksi Riviä"
 
 msgid "USB"
-msgstr ""
+msgstr "USB"
 
 msgid "USB Device not initialized."
-msgstr ""
+msgstr "USB-laite ei ole alustettu."
+
+msgid "USB Loader GX couldn't verify Nintendont boot.dol file. Launch this boot.dol anyway?"
+msgstr "USB Loader GX ei voinut vahvistaa Nintendont boot.dol-tiedostoa. Käynnistetäänkö tämä boot.dol silti?"
+
+msgid "USB Loader GX couldn't write Nintendont config file. Launch Nintendont anyway?"
+msgstr "USB Loader GX ei voinut kirjoittaa Nintendont-asetustiedostoa. Käynnistetäänkö Nintendont silti?"
 
 msgid "USB Loader GX is protected"
-msgstr "USB Loader GX on suojattu."
+msgstr "USB Loader GX on suojattu"
+
+msgid "USB Loader GX needs to be installed to an SD card for this setting to work."
+msgstr "USB Loader GX on asennettava SD-kortille, jotta tämä asetus toimii."
+
+msgid "USB Loader GX r1218 is required for Nintendont Alpha v0.1. Please update your Nintendont boot.dol version."
+msgstr "USB Loader GX r1218 vaaditaan Nintendont Alpha v0.1:lle. Päivitä Nintendont boot.dol-versiosi."
 
 msgid "USB Port"
-msgstr ""
+msgstr "USB Portti"
 
 msgid "USB Port changing is only supported on Hermes cIOS."
-msgstr ""
+msgstr "USB Portin vaihtaminen on tuettu vain Hermes cIOS:lla."
 
 msgid "USB-HID Controller"
-msgstr ""
-
-msgid "USBloaderGX couldn't verify Nintendont boot.dol file. Launch this boot.dol anyway?"
-msgstr ""
-
-msgid "USBloaderGX couldn't write Nintendont config file. Launch Nintendont anyway?"
-msgstr ""
-
-msgid "USBloaderGX r1218 is required for Nintendont Alpha v0.1. Please update your Nintendont boot.dol version."
-msgstr ""
+msgstr "USB-HID Ohjain"
 
 msgid "Uninstall"
-msgstr "Poista"
+msgstr "Poista Asennus"
 
 msgid "Uninstall Game"
-msgstr "Poista peli"
+msgstr "Poista Peli"
 
 msgid "Uninstall Menu"
-msgstr "Poistomenu"
+msgstr "Poista Valikko"
 
 msgid "Uninstall all"
-msgstr ""
+msgstr "Poista Kaikki"
 
 msgid "Unknown"
-msgstr ""
+msgstr "Tuntematon"
 
 msgid "Unlock USB Loader GX"
-msgstr ""
+msgstr "Avaa USB Loader GX"
 
 msgid "Unlocked"
 msgstr "Avattu"
 
-msgid "Unsupported format, try to extract manually TempTheme.zip."
-msgstr ""
+msgid "Unsupported format!"
+msgstr "Ei tuettu muoto!"
 
 msgid "Update"
 msgstr "Päivitä"
 
-msgid "Update Files"
-msgstr "Päivitä tiedostot"
+msgid "Update All Language Files"
+msgstr "Päivitä Kaikki Kielitiedostot"
 
-msgid "Update all Language Files"
-msgstr "Päivitä kaikki kielitiedostot"
+msgid "Update Cheat Files"
+msgstr "Päivitä Huijaustiedostot"
+
+msgid "Update Cover Files"
+msgstr "Päivitä Kansitiedostot"
 
 msgid "Update Failed"
-msgstr "Päivitys epäonnistui"
+msgstr "Päivitys Epäonnistui"
 
-msgid "Update Successful"
-msgstr ""
+msgid "Update Language Files"
+msgstr "Päivitä Kielitiedostot"
+
+msgid "Update Menu"
+msgstr "Päivitä Valikko"
+
+msgid "Update Nintendont"
+msgstr "Päivitä Nintendont"
+
+msgid "Update USB Loader GX"
+msgstr "Päivitä USB Loader GX"
+
+msgid "Update WiiTDB.xml"
+msgstr "Päivitä WiiTDB.xml"
 
 msgid "Updating Language Files:"
-msgstr "Päivittää kielitiedostoja:"
+msgstr "Päivitetään Kielitiedostoja:"
 
 msgid "Uploaded ZIP file installed to homebrew directory."
-msgstr ""
+msgstr "Ladattu ZIP-tiedosto asennettu homebrew-hakemistoon."
 
 msgid "Use System Font"
-msgstr ""
+msgstr "Käytä Järjestelmän Fonttia"
 
 msgid "Use global"
-msgstr ""
+msgstr "Käytä globaalia"
 
 msgid "VBI (Default)"
-msgstr ""
+msgstr "VBI (Oletus)"
 
 msgid "VIDTV Patch"
-msgstr "VIDTV korjaus"
+msgstr "VIDTV Korjaus"
 
 msgid "Version:"
-msgstr ""
+msgstr "Versio:"
 
 #, c-format
 msgid "Version: %s"
 msgstr "Versio: %s"
 
 msgid "Video Deflicker"
-msgstr ""
+msgstr "Video Deflicker"
 
 msgid "Video Mode"
 msgstr "Videotila"
 
 msgid "Video Scale Value"
-msgstr ""
-
-msgid "Video offset"
-msgstr ""
-
-msgid "Video scale"
-msgstr ""
+msgstr "Videon Skaalausarvo"
 
 msgid "Video Width"
-msgstr ""
+msgstr "Videon Leveys"
+
+msgid "Video offset"
+msgstr "Videon siirtymä"
+
+msgid "Video scale"
+msgstr "Videon skaala"
 
 msgid "Virtual Pointer Speed"
-msgstr ""
+msgstr "Virtuaalisen Osoittimen Nopeus"
 
 msgid "WDM Files Path"
-msgstr ""
+msgstr "WDM Tiedostojen Polku"
 
 msgid "WIP Patches Path"
-msgstr ""
+msgstr "WIP Korjausten Polku"
 
 msgid "Waiting..."
-msgstr "Odottaa..."
+msgstr "Odotetaan..."
 
 msgid "Warning"
-msgstr ""
+msgstr "Varoitus"
 
 msgid "Warning:"
-msgstr ""
+msgstr "Varoitus:"
 
 msgid "What do you want to do?"
-msgstr ""
-
-msgid "What do you want to update?"
-msgstr "Mitä haluat päivittää?"
+msgstr "Mitä haluat tehdä?"
 
 msgid "What should be deleted for this game title:"
-msgstr ""
+msgstr "Mitä pitäisi poistaa tästä pelin otsikosta:"
 
 msgid "What to extract from NAND?"
-msgstr ""
+msgstr "Mitä purkaa NAND:sta?"
 
-msgid "Where should the game be installed to?"
-msgstr ""
+msgid "Where Should the Game Be Installed To?"
+msgstr "Minne Peli Pitäisi Asentaa?"
 
 msgid "Where to dump NAND?"
-msgstr ""
+msgstr "Minne dumpata NAND?"
 
 msgid "Which device do you want to use for Nintendont files?"
-msgstr ""
+msgstr "Mitä laitetta haluat käyttää Nintendont-tiedostoille?"
 
 msgid "Which mode do you want to use?"
-msgstr ""
+msgstr "Mitä tilaa haluat käyttää?"
 
 msgid "WiFi Features"
-msgstr "WiFi ominaisuudet"
+msgstr "WiFi Ominaisuudet"
 
 msgid "Widescreen Factor"
-msgstr ""
+msgstr "Laajakuvan Kerroin"
 
 msgid "Widescreen Fix"
-msgstr "Laajakuva korjaus"
+msgstr "Laajakuvan Korjaus"
 
-msgid "Wii Games"
-msgstr ""
+msgid "Wii"
+msgstr "Wii"
 
 msgid "Wii Menu"
-msgstr "Wii Menu"
+msgstr "Wii Valikko"
 
 msgid "Wii Settings"
-msgstr "Wii asetukset"
+msgstr "Wii Asetukset"
 
-msgid "WiiTDB.xml"
-msgstr ""
+msgid "Wii U GamePad Slot"
+msgstr "Wii U GamePad Paikka"
+
+msgid "Wii U Widescreen"
+msgstr "Wii U Laajakuva"
 
 msgid "WiiTDB.xml is up to date."
-msgstr ""
-
-msgid "WiiU Widescreen"
-msgstr ""
+msgstr "WiiTDB.xml on ajan tasalla."
 
 msgid "Wiilight"
-msgstr ""
+msgstr "Wiilight"
 
 msgid "Wiimmfi"
-msgstr ""
+msgstr "Wiimmfi"
 
 msgid "Wiinnertag"
-msgstr ""
+msgstr "Wiinnertag"
 
 msgid "Wiinnertag Path"
-msgstr ""
+msgstr "Wiinnertag Polku"
 
 msgid "Wiinnertag requires you to enable automatic network connect on application start. Do you want to enable it now?"
-msgstr ""
+msgstr "Wiinnertag vaatii automaattisen verkkoyhteyden kytkemisen sovelluksen käynnistyessä. Haluatko ottaa sen käyttöön nyt?"
 
 msgid "Wiird Debugger"
-msgstr ""
+msgstr "Wiird Vianmääritys"
 
 #, c-format
 msgid "Write error on file: %s"
-msgstr ""
+msgstr "Kirjoitusvirhe tiedostossa: %s"
 
 msgid "Writing GXGameCategories.xml"
-msgstr ""
+msgstr "Kirjoitetaan GXGameCategories.xml"
 
 msgid "Wrong Password"
-msgstr "Väärä salasana"
+msgstr "Väärä Salasana"
 
 msgid "Yes"
 msgstr "Kyllä"
 
 msgid "You are trying to select a FAT32/NTFS/EXT partition with cIOS 249 Rev < 18. This is not supported. Continue on your own risk."
-msgstr ""
+msgstr "Yrität valita FAT32/NTFS/EXT-osion cIOS 249 Rev < 18:lla. Tätä ei tueta. Jatka omalla vastuullasi."
 
 msgid "You can select or format a partition or use the channel loader mode."
-msgstr ""
+msgstr "Voit valita tai alustaa osion tai käyttää kanavan lataustilaa."
 
 msgid "You cannot delete this category."
-msgstr ""
+msgstr "Et voi poistaa tätä kategoriaa."
+
+msgid "You have DIOS-MIOS installed, so this game needs to be on a FAT32 USB storage device. You'll need to install DIOS-MIOS Lite to run this game from an SD card."
+msgstr "Sinulla on DIOS-MIOS asennettuna, joten tämän pelin täytyy olla FAT32 USB-tallennuslaitteella. Sinun täytyy asentaa DIOS-MIOS Lite, jotta voit pelata tätä peliä SD-kortilta."
 
 msgid "You need neek2o to load EmuNAND from sub-folders."
-msgstr ""
+msgstr "Tarvitset neek2o:n ladataksesi EmuNAND:n alikansioista."
 
 msgid "You need to install DIOS MIOS Lite v1.2 or a newer version."
-msgstr ""
+msgstr "Sinun täytyy asentaa DIOS MIOS Lite v1.2 tai uudempi versio."
 
 msgid "You need to install an additional GameCube loader or select a different GameCube Mode to launch GameCube games from USB or SD card."
-msgstr ""
+msgstr "Sinun täytyy asentaa lisä GameCube-lataaja tai valita eri GameCube-tila käynnistääksesi GameCube-pelejä USB:ltä tai SD-kortilta."
 
 msgid "Your current GameCube partition is not compatible. Please update Nintendont."
-msgstr ""
+msgstr "Nykyinen GameCube-osiosi ei ole yhteensopiva. Päivitä Nintendont."
 
 msgid "Zoom Duration (Speed)"
-msgstr ""
+msgstr "Zoomauksen Kesto (Nopeus)"
 
 msgid "and translators for language files updates"
-msgstr ""
+msgstr "ja kääntäjät kielitiedostojen päivityksistä"
 
 msgid "does not exist!"
-msgstr "Ei löydy!"
+msgstr "ei ole olemassa!"
 
 msgid "does not exist!  Loading game without cheats."
-msgstr "Ei löydy! Ladataan peli ilman koodeja."
+msgstr "ei ole olemassa! Ladataan peli ilman huijauksia."
 
 msgid "files left"
-msgstr "Tiedostoja jäljellä"
+msgstr "tiedostoa jäljellä"
 
 msgid "for FAT/NTFS support"
-msgstr ""
+msgstr "FAT/NTFS-tuen vuoksi"
 
 msgid "for GameTDB and hosting covers / disc images"
-msgstr ""
+msgstr "GameTDB:lle ja kansien / levyn kuvien isännöinnille"
 
 msgid "for Ocarina"
-msgstr ""
+msgstr "vuoksi Ocarina"
 
 msgid "for diverse patches"
-msgstr "Erinäisistä patcheista"
+msgstr "erilaisille korjauksille"
 
 msgid "for his awesome tool LibWiiGui"
-msgstr "Hänen hienosta ohjelmasta LibWiiGui"
-
-msgid "for hosting the themes"
-msgstr ""
+msgstr "hänen mahtavalle työkalulleen LibWiiGui"
 
 msgid "for the USB Loader source"
-msgstr "lähdekoodin julkaisemisesta"
+msgstr "USB Loader -lähteelle"
 
 msgid "for their work on the wiki page"
-msgstr ""
+msgstr "heidän työstään wiki-sivulla"
 
 msgid "formatted!"
-msgstr "formatoitu!"
+msgstr "alustettu!"
 
 msgid "free"
-msgstr "vapaana"
+msgstr "vapaa"
 
 msgid "ms"
-msgstr ""
-
-msgid "not set"
-msgstr "ei asetettu"
+msgstr "ms"
 
 msgid "of"
-msgstr "josta"
+msgstr "of"
 
 msgid "seconds left"
 msgstr "sekuntia jäljellä"
-
-#~ msgid "Error 002 fix"
-#~ msgstr "Virhe 002 fix"
-
-#~ msgid "Boot/Standard"
-#~ msgstr "Käynnistys/Standardi"
-
-#~ msgid "Rename Game on WBFS"
-#~ msgstr "Uudelleennimeä peli"
-
-#~ msgid "for hosting the update files"
-#~ msgstr "Tiedostojen hostauksesta"
-
-#~ msgid "Insert a Wii Disc!"
-#~ msgstr "Aseta Wii-levy!"
-
-#~ msgid "Not a Wii Disc"
-#~ msgstr "Ei Wii-levy"
-
-#~ msgid ">> Deleting tickets..."
-#~ msgstr ">> Tuhotaan lipukkeita..."
-
-#~ msgid ">> Deleting tickets...ERROR! "
-#~ msgstr ">> Tuhotaan lipukkeita...VIRHE!"
-
-#~ msgid ">> Deleting tickets...Ok! "
-#~ msgstr ">> Tuhotaan lipukkeita...Ok!"
-
-#~ msgid ">> Deleting title ...ERROR! "
-#~ msgstr ">> Tuhotaan nimikettä...VIRHE!"
-
-#~ msgid ">> Deleting title ...Ok!"
-#~ msgstr ">> Tuhotaan nimikettä...Ok!"
-
-#~ msgid ">> Deleting title contents..."
-#~ msgstr ">> Tuhotaan nimikkeen sisältöä..."
-
-#~ msgid ">> Deleting title contents...ERROR! "
-#~ msgstr ">> Tuhotaan nimikkeen sisältöä...VIRHE!"
-
-#~ msgid ">> Deleting title contents...Ok!"
-#~ msgstr "Tuhotaan nimikkeen sisältöä...Ok!"
-
-#~ msgid ">> Deleting title..."
-#~ msgstr ">> Tuhotaan nimikettä..."
-
-#~ msgid ">> Finishing installation..."
-#~ msgstr ">> Viimeistellään asennusta..."
-
-#~ msgid ">> Installing content #"
-#~ msgstr ">> Asennetaan sisältöä #"
-
-#~ msgid ">> Installing ticket..."
-#~ msgstr ">> Asennetaan lipuketta..."
-
-#~ msgid ">> Installing title..."
-#~ msgstr ">> Asennetaan nimikettä..."
-
-#~ msgid ">> Reading WAD data..."
-#~ msgstr ">> Luetaan WAD:ia..."
-
-#~ msgid ">> Reading WAD data...ERROR! "
-#~ msgstr ">> Luetaan WAD:ia...VIRHE!"
-
-#~ msgid ">> Reading WAD data...Ok!"
-#~ msgstr ">> Luetaan WAD:ia...Ok!"
-
-#~ msgid "Done!"
-#~ msgstr "Valmis!"
-
-#~ msgid "Error..."
-#~ msgstr "Virhe..."
-
-#~ msgid "Finishing installation... Ok!"
-#~ msgstr "Viimeistelee asennusta... Ok!"
-
-#~ msgid "Installing content... Ok!"
-#~ msgstr "Asennetaan sisältöä... Ok!"
-
-#~ msgid "Installing WAD"
-#~ msgstr "Asennetaan WADia"
-
-#~ msgid "Reading WAD data... Ok!"
-#~ msgstr "Luetaan WAD:ia... Ok!"
-
-#~ msgid "Uninstalling WAD"
-#~ msgstr "Poistetaan WAD:ia"
-
-#~ msgid "USB Device not found"
-#~ msgstr "USB-laitetta ei löytynyt"
-
-#~ msgid "Language File"
-#~ msgstr "KieliTiedosto"
-
-#~ msgid "Titles from WiiTDB"
-#~ msgstr "Nimet WiiTDB:stä"
-
-#~ msgid "WiiTDB Files"
-#~ msgstr "WiiTDB tiedostot"
-
-#~ msgid "WiiTDB Path"
-#~ msgstr "WiiTDB polku"
-
-#~ msgid "for WiiTDB and hosting covers / disc images"
-#~ msgstr "WiiTDB:stä ja kansien hostauksesta"
-
-#~ msgid " Wad Saved as:"
-#~ msgstr "Wad Tallennettu nimellä:"
-
-#~ msgid "Delete ?"
-#~ msgstr "Tuhoa ?"
-
-#~ msgid "Keep"
-#~ msgstr "Pidä"
-
-#~ msgid "Download Boxart image?"
-#~ msgstr "Lataa kansikuva?"
-
-#~ msgid "Download Discart image?"
-#~ msgstr "Lataa levykuva?"
-
-#~ msgid "Downloading file"
-#~ msgstr "Lataa tiedostoa:"
-
-#~ msgid "Missing files"
-#~ msgstr "tiedostoja puuttuu"
-
-#~ msgid "files not found on the server!"
-#~ msgstr "tiedostoja ei löytynyt serveriltä!"
-
-#~ msgid "Disc Images"
-#~ msgstr "Levykuvat"
-
-#~ msgid "Only Customs"
-#~ msgstr "Vain omatekoiset"
-
-#~ msgid "Only Original"
-#~ msgstr "Vain alkuperäinen"
-
-#~ msgid "Do you really want to delete:"
-#~ msgstr "Haluatko varmasti formatoida:"
-
-#~ msgid "Do you want to use the alternate DOL that is known to be correct?"
-#~ msgstr "Haluatko käyttää vaihtoehtoista DOL tiedostoa jonka tiedetään toimivan?"
-
-#~ msgid "Unlock console to use this option."
-#~ msgstr "Avaa konsoli käyttääksesi tätä vaihtoehtoa"
-
-#~ msgid "Full Shutdown"
-#~ msgstr "Täysi sammutus"
-
-#~ msgid "If you don't have WiFi, press 1 to get an URL to get your WiiTDB.zip"
-#~ msgstr "Jos sinulla ei ole WiFi:ä, paina 1 saadaksesi URL josta voi ladata WiiTDB.zip"
-
-#~ msgid "Paste it into your browser to get your WiiTDB.zip."
-#~ msgstr "Liitä se nettiselaimeesi saadaksesi WiiTDB.zip"
-
-#~ msgid "Shutdown to Idle"
-#~ msgstr "Valmiustila"
-
-#~ msgid "Your URL has been saved in %sWiiTDB_URL.txt."
-#~ msgstr "URL:si on tallennettu %WiiTDB_URL.txt."
-
-#~ msgid "Insert an SD-Card to save."
-#~ msgstr "Aseta SD-kortti tallentaaksesi asetuksia."
-
-#~ msgid "Insert an SD-Card to use this option."
-#~ msgstr "Aseta SD-kortti käyttääksesi tätä vaihtoehtoa"
-
-#~ msgid "No SD-Card inserted!"
-#~ msgstr "SD-korttia ei ole asetettu wiihin!"
-
-#~ msgid "Waiting for USB Device"
-#~ msgstr "Odottaa USB-laitetta..."
-
-#~ msgid "Back to Loader"
-#~ msgstr "HBC"
-
-#~ msgid "An Error occured"
-#~ msgstr "Tapahtui virhe"
-
-#~ msgid "Checking for Updates"
-#~ msgstr "Tarkastetaan päivityksiä"
-
-#~ msgid "Downloading"
-#~ msgstr "Lataa"
-
-#~ msgid "The WAD file was installed.  But It could not be deleted from the SD card."
-#~ msgstr "Wad tiedostoa ei asennettu mutta sitä ei voitu tuhota SD-kortilta"
-
-#~ msgid "The WAD installation failed with error %ld"
-#~ msgstr "Wad asennus epäonnistui: %ld"
-
-#~ msgid "Unable to open the WAD that was just downloaded (%s)."
-#~ msgstr "Wadia (%s) jonka juuri latasit ei voitu avata."
-
-#~ msgid "Update to"
-#~ msgstr "Päivitä:"
-
-#~ msgid "Updating"
-#~ msgstr "Päivittää"
-
-#~ msgid "Updating Language Files..."
-#~ msgstr "Päivittää kielitiedostoja..."
-
-#~ msgid "Updating WiiTDB.zip"
-#~ msgstr "Päivittää WiiTDB.zip"
-
-#~ msgid "Back to Wii Menu"
-#~ msgstr "Takaisin Wii Menuun"
-
-#~ msgid "Checking existing artwork"
-#~ msgstr "Tutkitaan olemassa olevia kansia"
-
-#~ msgid "Confirm"
-#~ msgstr "Varmista"
-
-#~ msgid "Could not find a WBFS partition."
-#~ msgstr "WBFS osiota ei löytynyt."
-
-#~ msgid "Could not open WBFS partition"
-#~ msgstr "WBFS osiota ei voitu avata"
-
-#~ msgid "Could not read the disc."
-#~ msgstr "Levyä ei voitu lukea"
-
-#~ msgid "Could not set USB."
-#~ msgstr "USB:tä ei voitu asettaa"
-
-#~ msgid "Cover Path Changed"
-#~ msgstr "Kansien polku muutettu"
-
-#~ msgid "DOL path changed"
-#~ msgstr "DOL:in polku muutettu"
-
-#~ msgid "Disc Path Changed"
-#~ msgstr "Levykuvien polku muutettu"
-
-#~ msgid "Display favorites"
-#~ msgstr "Näytä suosikit"
-
-#~ msgid "Do you want to retry for 30 secs?"
-#~ msgstr "Haluatko odottaa 30 sekuntia?"
-
-#~ msgid "Force"
-#~ msgstr "Pakota"
-
-#~ msgid "GCT Cheatcodes Path changed"
-#~ msgstr "GCT Koodien polku muutettu"
-
-#~ msgid "Homebrew Appspath changed"
-#~ msgstr "Homebrew Apps polku vaihdettu"
-
-#~ msgid "Insert an SD-Card to download images."
-#~ msgstr "Aseta SD-kortti ladataksesi kansia."
-
-#~ msgid "Most likely it has dimensions that are not evenly divisible by 4."
-#~ msgstr "Todennäköisesti sisältää ulottuvuuksia jotka eivät ole jaollisia neljällä"
-
-#~ msgid "Network init error"
-#~ msgstr "Verkon alustusvirhe"
-
-#~ msgid "No .dol or .elf files found."
-#~ msgstr ".dol tai .elf tiedostoja ei löydy"
-
-#~ msgid "No Favorites"
-#~ msgstr "Ei suosikkeja"
-
-#~ msgid "No USB Device"
-#~ msgstr "Ei USB-laitetta"
-
-#~ msgid "No USB Device found."
-#~ msgstr "USB-laitetta ei löytynyt."
-
-#~ msgid "Normal Covers"
-#~ msgstr "Normaalit kannet"
-
-#~ msgid "Not Found"
-#~ msgstr "Ei löytynyt"
-
-#~ msgid "Not a DOL/ELF file."
-#~ msgstr "Tiedosto ei ole DOL/ELF."
-
-#~ msgid "Save Failed"
-#~ msgstr "Tallennus ei onnistunut"
-
-#~ msgid "Selected DOL"
-#~ msgstr "Valittu DOL"
-
-#~ msgid "Standard"
-#~ msgstr "Standardi"
-
-#~ msgid "TXT Cheatcodes Path changed"
-#~ msgstr "TXT koodien polku muutettu"
-
-#~ msgid "Theme Path Changed"
-#~ msgstr "Teeman sijainti muutettu"
-
-#~ msgid "Update Path changed."
-#~ msgstr "Päivityspolku muutettu"
-
-#~ msgid "WiiTDB Path changed."
-#~ msgstr "WiiTDB polku muutettu"
-
-#~ msgid "You are about to delete "
-#~ msgstr "Olet tuhoamassa "
-
-#~ msgid "You are choosing to display favorites and you do not have any selected."
-#~ msgstr "Olet valinnut näyttääksesi suosikit mutta sinulla ei ole valittuna yhtään."
-
-#~ msgid "You have attempted to load a bad image"
-#~ msgstr "Yritit ladata huonoa levykuvaa"
-
-#~ msgid "does not exist!  You Messed something up, Idiot."
-#~ msgstr "Ei löydy! Kusit jotain, Typerys!"
-
-#~ msgid "file left"
-#~ msgstr "Tiedosto jäljellä"
