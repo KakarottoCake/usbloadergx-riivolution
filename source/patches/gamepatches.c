@@ -112,6 +112,7 @@ void gamepatches(u8 videoSelected, u8 videoPatchDol, u8 aspectForce, u8 language
     patch_nsmb((u8 *)0x80000000);
     patch_pop((u8 *)0x80000000);
     patch_kirby((u8 *)0x80000000);
+    patch_re4((u8 *)0x80000000);
 
     for (i = 0; i < dolCount; ++i)
     {
@@ -964,6 +965,16 @@ void domainpatcher(void *addr, u32 len, const char *domain)
             cur += len;
         }
     } while (++cur < end);
+}
+
+void patch_re4(u8 *gameid)
+{
+    if (memcmp(gameid, "RB4E08", 6) == 0)
+        *(u32 *)0x8016B260 = 0x38600001;
+    else if (memcmp(gameid, "RB4P08", 6) == 0)
+        *(u32 *)0x8016B094 = 0x38600001;
+    else if (memcmp(gameid, "RB4X08", 6) == 0)
+        *(u32 *)0x8016B0C8 = 0x38600001;
 }
 
 bool patch_nsmb(u8 *gameid)
