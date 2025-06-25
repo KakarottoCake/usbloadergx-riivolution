@@ -92,7 +92,7 @@ extern bool fatMount (const char* name, const DISC_INTERFACE* interface, sec_t s
 Unmount the partition specified by name.
 If there are open files, it will attempt to synchronise them to disc.
 */
-extern void fatUnmount (const char* name);
+extern bool fatUnmount (const char* name);
 
 /*
 Get Volume Label
