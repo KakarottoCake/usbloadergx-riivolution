@@ -62,7 +62,7 @@ bool exclude_game(u8 *gameid, bool checkEmuNAND)
 
         return false;
     }
-	// Prince of Persia, Driver, Tintin & We Dare
+    // Prince of Persia, Driver, Tintin & We Dare
     if (memcmp(gameid, "RPW", 3) == 0 || memcmp(gameid, "SPX", 3) == 0 ||
         memcmp(gameid, "SDV", 3) == 0 || memcmp(gameid, "STN", 3) == 0 ||
         memcmp(gameid, "SLVP41", 6) == 0)
@@ -140,31 +140,34 @@ void gamepatches(u8 videoSelected, u8 videoPatchDol, u8 aspectForce, u8 language
 
         anti_002_fix(dst, len);
 
-        if (videoWidth == WIDTH_FRAMEBUFFER)
-            patch_width(dst, len);
+        if (!exclude_game((u8 *)0x80000000, false))
+        {
+            if (videoWidth == WIDTH_FRAMEBUFFER)
+                patch_width(dst, len);
 
-        if (deflicker == DEFLICKER_ON_LOW)
-        {
-            patch_vfilters(dst, len, vfilter_low);
-            patch_vfilters_rogue(dst, len, vfilter_low);
-        }
-        else if (deflicker == DEFLICKER_ON_MEDIUM)
-        {
-            patch_vfilters(dst, len, vfilter_medium);
-            patch_vfilters_rogue(dst, len, vfilter_medium);
-        }
-        else if (deflicker == DEFLICKER_ON_HIGH)
-        {
-            patch_vfilters(dst, len, vfilter_high);
-            patch_vfilters_rogue(dst, len, vfilter_high);
-        }
-        else if (deflicker != DEFLICKER_AUTO)
-        {
-            patch_vfilters(dst, len, vfilter_off);
-            patch_vfilters_rogue(dst, len, vfilter_off);
-            // This might break fade and brightness effects
-            if (deflicker == DEFLICKER_OFF_EXTENDED)
-                deflicker_patch(dst, len);
+            if (deflicker == DEFLICKER_ON_LOW)
+            {
+                patch_vfilters(dst, len, vfilter_low);
+                patch_vfilters_rogue(dst, len, vfilter_low);
+            }
+            else if (deflicker == DEFLICKER_ON_MEDIUM)
+            {
+                patch_vfilters(dst, len, vfilter_medium);
+                patch_vfilters_rogue(dst, len, vfilter_medium);
+            }
+            else if (deflicker == DEFLICKER_ON_HIGH)
+            {
+                patch_vfilters(dst, len, vfilter_high);
+                patch_vfilters_rogue(dst, len, vfilter_high);
+            }
+            else if (deflicker != DEFLICKER_AUTO)
+            {
+                patch_vfilters(dst, len, vfilter_off);
+                patch_vfilters_rogue(dst, len, vfilter_off);
+                // This might break fade and brightness effects
+                if (deflicker == DEFLICKER_OFF_EXTENDED)
+                    deflicker_patch(dst, len);
+            }
         }
 
         if (returnTo)
@@ -221,6 +224,35 @@ void anti_002_fix(u8 *addr, u32 len)
     }
 }
 
+u8 *find_safe_space(u8 *addr, u32 len)
+{
+    u8 SearchPatternA[] = {0x80, 0x1E, 0x00, 0x00, 0x3C, 0x60, 0x80, 0x00, 0x83}; // Most games
+    u8 SearchPatternB[] = {0x80, 0x1F, 0x00, 0x00, 0x3C, 0x60, 0x80, 0x00, 0x83}; // Mortal Kombat
+    u8 *addr_start = addr;
+    u8 *addr_end = addr + len - sizeof(SearchPatternA);
+    while (addr_start <= addr_end)
+    {
+        if (memcmp(addr_start, SearchPatternA, sizeof(SearchPatternA)) == 0)
+        {
+            if (*(u32*)(addr_start + 36) == 0x38000001)
+            {
+                gprintf("Found safe space (A)\n");
+                return addr_start + 36;
+            }
+        }
+        else if (memcmp(addr_start, SearchPatternB, sizeof(SearchPatternB)) == 0)
+        {
+            if (*(u32*)(addr_start + 36) == 0x38000001)
+            {
+                gprintf("Found safe space (B)\n");
+                return addr_start + 36;
+            }
+        }
+        addr_start += 4;
+    }
+    return NULL;
+}
+
 void patch_width(u8 *addr, u32 len)
 {
     u8 SearchPattern[32] = {
@@ -230,6 +262,13 @@ void patch_width(u8 *addr, u32 len)
         0x40, 0x82, 0x00, 0x08, 0x54, 0xA5, 0x0C, 0x3C};
     u8 *addr_start = addr;
     u8 *addr_end = addr + len - sizeof(SearchPattern);
+    u8 *patch = find_safe_space(addr, len);
+
+    if (patch)
+        patch += 12; // Puts us at the first crclr
+    else
+        return;
+
     while (addr_start <= addr_end)
     {
         if (memcmp(addr_start, SearchPattern, sizeof(SearchPattern)) == 0)
@@ -246,21 +285,17 @@ void patch_width(u8 *addr, u32 len)
 
                     // Center the image
                     void *offset = addr_start - 0x70;
-
-                    u32 old_heap_ptr = *(u32 *)0x80003110;
-                    *(u32 *)0x80003110 = old_heap_ptr - 0x40;
-                    u32 heap_space = old_heap_ptr - 0x40;
-
+    
                     u32 org_address = (addr_start[-0x70] << 24) | (addr_start[-0x6F] << 16);
-                    *(u32 *)(heap_space + 0x00) = org_address | 4;
-                    *(u32 *)(heap_space + 0x04) = 0x200002D0 | (reg_b << 21) | (reg_a << 16);
-                    *(u32 *)(heap_space + 0x08) = 0x38000002 | (reg_a << 21);
-                    *(u32 *)(heap_space + 0x0C) = 0x7C000396 | (reg_a << 21) | (reg_b << 16) | (reg_a << 11);
+                    *(u32 *)(patch + 0x00) = org_address | 4;
+                    *(u32 *)(patch + 0x04) = 0x200002D0 | (reg_b << 21) | (reg_a << 16);
+                    *(u32 *)(patch + 0x08) = 0x38000002 | (reg_a << 21);
+                    *(u32 *)(patch + 0x0C) = 0x7C000396 | (reg_a << 21) | (reg_b << 16) | (reg_a << 11);
 
-                    *(u32 *)offset = 0x48000000 + ((heap_space - (u32)offset) & 0x3ffffff);
-                    *(u32 *)(heap_space + 0x10) = 0x48000000 + ((((u32)offset + 0x04) - (heap_space + 0x10)) & 0x3ffffff);
-
-                    gprintf("Patched resolution. Branched from 0x%x to 0x%x\n", offset, heap_space);
+                    *(u32 *)offset = 0x48000000 + (((u32)patch - (u32)offset) & 0x3ffffff);
+                    *(u32 *)(patch + 0x10) = 0x48000000 + ((((u32)offset + 0x04) - ((u32)patch + 16)) & 0x3ffffff);
+                    gprintf("Patched resolution. Branched from 0x%x to 0x%x\n", offset, patch);
+                    //hexdump((void *)patch - 32, 92);
                     return;
                 }
             }
@@ -292,6 +327,33 @@ void deflicker_patch(u8 *addr, u32 len)
         addr_start += 4;
     }
 }
+
+
+/** Patch GXSetDither to disable dithering **/
+/*
+// Not offered because it causes banding and posterization
+void dithering_patch(u8 *addr, u32 len)
+{
+    u32 SearchPattern[10] = {
+        0x3C80CC01, 0x38A00061,
+        0x38000000, 0x80C70220,
+        0x5066177A, 0x98A48000,
+        0x90C48000, 0x90C70220,
+        0xB0070002, 0x4E800020};
+    u8 *addr_start = addr;
+    u8 *addr_end = addr + len - sizeof(SearchPattern);
+    while (addr_start <= addr_end)
+    {
+        if (memcmp(addr_start, SearchPattern, sizeof(SearchPattern)) == 0)
+        {
+            *((u32 *)addr_start - 1) = 0x48000028;
+            gprintf("Patched GXSetDither @ %p\n", addr_start);
+            return;
+        }
+        addr_start += 4;
+    }
+}
+*/
 
 /**
     480p Pixel Fix Patch by leseratte
@@ -355,7 +417,7 @@ void PatchFix480p()
                 if (memcmp(a + 8 * 4, &prefix, 2) == 0)
                 {
                     offset = a + 4;
-                    hexdump(a, 30);
+                    //hexdump(a, 30);
                     patch_ptr = &patches_MKW;
                     break;
                 }
@@ -369,7 +431,7 @@ void PatchFix480p()
                 if (memcmp(a + 8 * 4, &prefix, 2) == 0)
                 {
                     offset = a + 16;
-                    hexdump(a, 30);
+                    //hexdump(a, 30);
                     patch_ptr = &patches_NSMB;
                     break;
                 }
@@ -385,19 +447,18 @@ void PatchFix480p()
         return;
     }
 
-    // If we are here, we found the offset. Lets grab some space
-    // from the heap for our patch
-    u32 old_heap_ptr = *(u32 *)0x80003110;
-    *((u32 *)0x80003110) = (old_heap_ptr - 0x20);
-    u32 heap_space = old_heap_ptr - 0x20;
+    u8 *patch = find_safe_space(addr, len);
+    if (patch)
+        patch += 32; // Puts us at "This TV format"
+    else
+        return;
 
-    gprintf("Found offset for 480p patch - create branch from 0x%x to heap (0x%x)\n", offset, heap_space);
-    hexdump(offset, 30);
+    memcpy((void *)patch, patch_ptr, 8);
 
-    memcpy((void *)heap_space, patch_ptr, 8);
-
-    *((u32 *)offset) = 0x48000000 + (((u32)(heap_space) - ((u32)(offset))) & 0x3ffffff);
-    *((u32 *)((u32)heap_space + 8)) = 0x48000000 + (((u32)((u32)offset + 4) - ((u32)(heap_space + 8))) & 0x3ffffff);
+    *(u32 *)offset = 0x48000000 + (((u32)patch - (u32)offset) & 0x3ffffff);
+    *(u32 *)(patch + 8) = 0x48000000 + ((((u32)offset + 4) - ((u32)patch + 8)) & 0x3ffffff);
+    gprintf("Applied 480p patch. Branched from 0x%x to 0x%x\n", offset, patch);
+    //hexdump((void *)patch - 32, 92);
     return;
 }
 
