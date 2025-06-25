@@ -27,6 +27,7 @@
 #include "usbloader/disc.h"
 #include "usbloader/GameList.h"
 #include "usbloader/MountGamePartition.h"
+#include "usbloader/wdvd.h"
 #include "mload/mload_modules.h"
 #include "audio.h"
 #include "gecko.h"
@@ -165,6 +166,8 @@ int MainMenu(int menu)
 {
 	currentMenu = menu;
 
+	InitNetworkThread();
+
 	InitGUIThreads();
 
 	InitProgressThread();
@@ -194,7 +197,7 @@ int MainMenu(int menu)
 
 	MountGamePartition();
 
-	InitNetworkThread(); // Starting this a little later fixes a random crash
+	WDVD_StopMotor();
 
 	if (Settings.autonetwork)
 		ResumeNetworkThread();
