@@ -2,6 +2,7 @@
 #include <ogc/system.h>
 
 #include "mload/mload.h"
+#include "memory/memory.h"
 #include "banner/BannerAsync.h"
 #include "Controls/DeviceHandler.hpp"
 #include "FileOperations/fileops.h"
@@ -310,5 +311,15 @@ void ScreenShot()
  */
 bool isWiiU()
 {
-	return (((*(vu32*)(0xCD8005A0) >> 16 ) == 0xCAFE) || isWiiVC);
+	return ((*(vu16*)0xCD8005A0 == 0xCAFE) || isWiiVC);
+}
+
+void ResetRegion()
+{
+	u32 region = *HW_VI1CFG;
+	if (CONF_GetRegion() == CONF_REGION_JP)
+		*HW_VI1CFG = region | (1 << 17);
+	else
+		*HW_VI1CFG = region & ~(1 << 17);
+	DCFlushRange((void *)HW_VI1CFG, 4);
 }

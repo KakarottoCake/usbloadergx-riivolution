@@ -17,5 +17,6 @@ void Sys_LoadHBC(void);
 bool RebootApp(void);
 void ScreenShot(void);
 bool isWiiU(void);
+void ResetRegion(void);
 
 #endif

@@ -166,6 +166,14 @@ void gamepatches(u8 videoSelected, u8 videoPatchDol, u8 aspectForce, u8 language
         ICInvalidateRange(dst, len);
     }
 
+    // Set by the system menu on Japanese consoles
+    if (((char *)0x80000003)[0] == 'J')
+    {
+        u32 region = *HW_VI1CFG;
+        *HW_VI1CFG = region | (1 << 17);
+        DCFlushRange((void *)HW_VI1CFG, 4);
+    }
+
     // ERROR 002 fix (thanks to WiiPower for sharing this)
     *(u32 *)0x80003140 = *(u32 *)0x80003188;
 

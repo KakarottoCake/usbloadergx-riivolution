@@ -308,6 +308,9 @@ int StartUpProcess::Execute(bool quickGameBoot, bool isBadBoot)
 	// Disable AHBPROT
 	IosPatch_AHBPROT(false);
 
+	// Reset the region
+	ResetRegion();
+
 	// Store dx2 cIOS info
 	IosLoader::GetD2XInfo();
 

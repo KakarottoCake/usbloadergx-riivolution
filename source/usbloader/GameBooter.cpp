@@ -973,7 +973,10 @@ int GameBooter::BootDIOSMIOS(struct discHdr *gameHdr)
 	/* NTSC-J Patch */ // Thanks to Fix94
 	u8 *diskid = (u8 *)Disc_ID;
 	if (dmlJPNPatchChoice && diskid[3] == 'J')
-		*HW_PPCSPEED = 0x0002A9E0;
+	{
+		*HW_VI1CFG = 0x0002A9E0;
+		DCFlushRange((void*)HW_VI1CFG, 4);
+	}
 
 	gprintf("\nLoading BC for GameCube\n");
 	WII_Initialize();

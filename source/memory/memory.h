@@ -30,7 +30,7 @@ extern "C"
 #define  OS_Init		((vu32*) 0x8000315C)
 #define	 Online_Check	((vu32*) 0x80003180)
 #define	 GameID_Address	((vu32*) 0x80003184)
-#define	 HW_PPCSPEED	((vu32*) 0xCD800018)
+#define	 HW_VI1CFG		((vu32*) 0xCD800018)
 
 #define allocate_memory(size) memalign(32, (size+31)&(~31))
 
