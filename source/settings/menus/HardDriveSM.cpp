@@ -39,6 +39,7 @@
 #include "FileOperations/fileops.h"
 #include "gecko.h"
 #include "sys.h"
+#include "usbloader/wdvd.h"
 
 static const char * OnOffText[] =
 {
@@ -75,25 +76,23 @@ static inline bool IsValidPartition(int fs_type, int cios)
 HardDriveSM::HardDriveSM()
 	: SettingsMenu(tr("Hard Drive Settings"), &GuiOptions, MENU_NONE)
 {
+
+	OldSettingsPartition = Settings.partition;
+	OldSettingsMultiplePartitions = Settings.MultiplePartitions;
+	OldSettingsSDMode = Settings.SDMode;
+	NewSettingsUSBPort = Settings.USBPort;
+
 	int Idx = 0;
 	Options->SetName(Idx++, "%s", tr( "Game/Install Partition" ));
 	Options->SetName(Idx++, "%s", tr( "Multiple Partitions" ));
 	if (strncmp(Settings.ConfigPath, "sd", 2) == 0)
 		Options->SetName(Idx++, "%s", tr( "SD Card Mode" ));
 	Options->SetName(Idx++, "%s", tr( "USB Port" ));
-	Options->SetName(Idx++, "%s", tr( "Mount USB at launch" ));
 	Options->SetName(Idx++, "%s", tr( "Install Directories" ));
 	Options->SetName(Idx++, "%s", tr( "Game Split Size" ));
 	Options->SetName(Idx++, "%s", tr( "Install Partitions" ));
 	Options->SetName(Idx++, "%s", tr( "GC Install Compressed" ));
 	Options->SetName(Idx++, "%s", tr( "GC Install 32K Aligned" ));
-	Options->SetName(Idx++, "%s", tr( "Sync FAT32 FS Info" ));
-
-	OldSettingsPartition = Settings.partition;
-	OldSettingsMultiplePartitions = Settings.MultiplePartitions;
-	OldSettingsSDMode = Settings.SDMode;
-	NewSettingsUSBPort = Settings.USBPort;
-	oldSettingsUSBAutoMount = Settings.USBAutoMount;
 
 	SetOptionValues();
 }
@@ -105,7 +104,6 @@ HardDriveSM::~HardDriveSM()
 	if (Settings.partition != OldSettingsPartition ||
 		Settings.MultiplePartitions != OldSettingsMultiplePartitions ||
 		Settings.USBPort != NewSettingsUSBPort ||
-		Settings.USBAutoMount != oldSettingsUSBAutoMount ||
 		Settings.SDMode != OldSettingsSDMode)
 	{
 		if(!Settings.SDMode)
@@ -125,7 +123,7 @@ HardDriveSM::~HardDriveSM()
 				NewSettingsUSBPort = -1;
 			}
 
-			WBFS_Init(Settings.SDMode ? WBFS_DEVICE_SDHC : WBFS_DEVICE_USB);
+			WBFS_Init(WBFS_DEVICE_USB);
 			if(Settings.MultiplePartitions)
 				WBFS_OpenAll();
 			else
@@ -136,14 +134,13 @@ HardDriveSM::~HardDriveSM()
 			gameList.LoadUnfiltered();
 		}
 		
-		if(oldSettingsUSBAutoMount != Settings.USBAutoMount || NewSettingsUSBPort == -1 || OldSettingsSDMode != Settings.SDMode)
+		if(NewSettingsUSBPort == -1)
 		{
-			// Edit meta.xml arguments
 			editMetaArguments();
-			gprintf("Updated meta.xml\n");
 		}
 		if(OldSettingsSDMode != Settings.SDMode)
 		{
+			Settings.partition = 0;
 			Settings.NandEmuMode = EMUNAND_OFF;
 			RemoveDirectory(Settings.GameHeaderCachePath);
 			RebootApp();
@@ -158,13 +155,15 @@ void HardDriveSM::SetOptionValues()
 	//! Settings: Game/Install Partition
 	PartitionHandle *handle;
 	int checkPart = 0;
-	if (!Settings.SDMode)
+	if (!OldSettingsSDMode)
 	{
 		handle = DeviceHandler::Instance()->GetUSBHandleFromPartition(Settings.partition);
 		checkPart = DeviceHandler::PartitionToPortPartition(Settings.partition);
 	}
 	else
+	{
 		handle = DeviceHandler::Instance()->GetSDHandle();
+	}
 
 	//! Get the partition name and it's size in GB's
 	if (handle)
@@ -185,9 +184,6 @@ void HardDriveSM::SetOptionValues()
 	else
 		Options->SetValue(Idx++, "%i", NewSettingsUSBPort);
 
-	//! Settings: Auto Mount USB at launch
-	Options->SetValue(Idx++, "%s", tr( OnOffText[Settings.USBAutoMount] ));
-
 	//! Settings: Install directories
 	Options->SetValue(Idx++, "%s", tr( InstallToText[Settings.InstallToDir] ));
 
@@ -207,9 +203,6 @@ void HardDriveSM::SetOptionValues()
 
 	//! Settings: GC Install 32K Aligned
 	Options->SetValue(Idx++, "%s", tr( OnOffText[Settings.GCInstallAligned] ));
-
-	//! Settings: Sync FAT32 FS Info
-	Options->SetValue(Idx++, " ");
 }
 
 int HardDriveSM::GetMenuInternal()
@@ -224,17 +217,12 @@ int HardDriveSM::GetMenuInternal()
 	//! Settings: Game/Install Partition
 	if (ret == ++Idx)
 	{
-		PartitionHandle *handle; 
-		if (Settings.SDMode)
+		// Init the USB device if mounted after launch
+		if (!OldSettingsSDMode)
 		{
-			handle = DeviceHandler::Instance()->GetSDHandle();
-		}
-		else
-		{
-			// Init the USB device if mounted after launch
-			handle = DeviceHandler::Instance()->GetUSBHandleFromPartition(Settings.partition);
-			if (handle == NULL)
-				DeviceHandler::Instance()->MountAllUSB(true);
+			PartitionHandle *handle = DeviceHandler::Instance()->GetUSBHandleFromPartition(Settings.partition);
+			if (!handle)
+				RebootApp();
 		}
 
 		// Select the next valid partition, even if that's the same one
@@ -243,7 +231,7 @@ int HardDriveSM::GetMenuInternal()
 		int retries = 20;
 		do
 		{
-			if (Settings.SDMode)
+			if (OldSettingsSDMode)
 			{
 				Settings.partition = 0;
 				fs_type = DeviceHandler::GetFilesystemType(SD);
@@ -277,19 +265,13 @@ int HardDriveSM::GetMenuInternal()
 	{
 		if(!IosLoader::IsHermesIOS() && !IosLoader::IsD2X())
 		{
-			WindowPrompt(tr("ERROR:"), tr("USB Port changing is only supported on Hermes cIOS."), tr("OK"));
+			WindowPrompt(tr("Error:"), tr("USB Port changing is only supported on Hermes cIOS."), tr("OK"));
 			NewSettingsUSBPort = 0;
 			Settings.USBPort = 0;
 		}
 
 		else if (++NewSettingsUSBPort >= 3) // 2 = both ports
 			NewSettingsUSBPort = 0;
-	}
-
-	//! Settings: Auto mount USB at launch
-	else if (ret == ++Idx)
-	{
-		if (++Settings.USBAutoMount >= MAX_ON_OFF) Settings.USBAutoMount = 0;
 	}
 
 	//! Settings: Install directories
@@ -303,7 +285,7 @@ int HardDriveSM::GetMenuInternal()
 	{
 		if (++Settings.GameSplit >= GAMESPLIT_MAX)
 		{
-			if (DeviceHandler::GetFilesystemType(Settings.SDMode ? SD : USB1+Settings.partition) == PART_FS_FAT)
+			if (DeviceHandler::GetFilesystemType(OldSettingsSDMode ? SD : USB1+Settings.partition) == PART_FS_FAT)
 				Settings.GameSplit = GAMESPLIT_2GB;
 			else
 				Settings.GameSplit = GAMESPLIT_NONE;
@@ -338,38 +320,6 @@ int HardDriveSM::GetMenuInternal()
 	else if (ret == ++Idx)
 	{
 		if (++Settings.GCInstallAligned >= MAX_ON_OFF) Settings.GCInstallAligned = 0;
-	}
-
-	//! Settings: Sync FAT32 FS Info
-	else if (ret == ++Idx )
-	{
-		int choice = WindowPrompt(0, tr("Do you want to sync free space info sector on all FAT32 partitions?"), tr("Yes"), tr("Cancel"));
-		if (choice)
-		{
-			StartProgress(tr("Synchronizing..."), tr("Please wait..."), 0, false, false);
-			int partCount = Settings.SDMode ? 1 : DeviceHandler::GetUSBPartitionCount();
-			for (int i = 0; i < partCount; ++i)
-			{
-				ShowProgress(i, partCount);
-				if (DeviceHandler::GetFilesystemType(Settings.SDMode ? SD : USB1+i) == PART_FS_FAT)
-				{
-					PartitionHandle *handle;
-					if (Settings.SDMode)
-						handle = DeviceHandler::Instance()->GetSDHandle();
-					else
-						handle = DeviceHandler::Instance()->GetUSBHandleFromPartition(i);
-					if (!handle)
-						continue;
-					struct statvfs stats;
-					char drive[20];
-					snprintf(drive, sizeof(drive), "%s:/", handle->MountName(i));
-					memset(&stats, 0, sizeof(stats));
-					memcpy(&stats.f_flag, "SCAN", 4);
-					statvfs(drive, &stats);
-				}
-			}
-			ProgressStop();
-		}
 	}
 
 	SetOptionValues();

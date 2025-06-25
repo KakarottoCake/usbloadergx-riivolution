@@ -139,12 +139,6 @@ int StartUpProcess::ParseArguments(int argc, char *argv[])
 			Settings.USBPort = LIMIT(atoi(ptr + strlen("-usbport=")), 0, 2);
 		}
 
-		ptr = strcasestr(argv[i], "-mountusb=");
-		if (ptr)
-		{
-			Settings.USBAutoMount = LIMIT(atoi(ptr + strlen("-mountusb=")), 0, 1);
-		}
-
 		if (strncmp(Settings.ConfigPath, "sd", 2) == 0)
 		{
 			ptr = strcasestr(argv[i], "-sdmode=");
@@ -326,7 +320,7 @@ int StartUpProcess::Execute(bool quickGameBoot)
 
 	// Do not mount USB if not needed. USB is not available with WiiU WiiVC injected channel
 	bool USBSuccess = false;
-	if (Settings.USBAutoMount == ON && !isWiiVC && !Settings.SDMode)
+	if (!isWiiVC && !Settings.SDMode)
 	{
 		SetTextf("Initializing USB devices\n");
 		if (USBSpinUp())
@@ -349,7 +343,6 @@ int StartUpProcess::Execute(bool quickGameBoot)
 	gprintf("Quick game boot: %s\n", quickGameBoot ? "yes" : "no");
 	if (quickGameBoot)
 	{
-		Settings.USBAutoMount = ON;
 		Settings.LoaderMode = MODE_ALL;
 		Settings.AutobootDiscs = OFF;
 		Settings.skipSaving = true;
@@ -364,8 +357,7 @@ int StartUpProcess::Execute(bool quickGameBoot)
 
 		// Unmount devices
 		DeviceHandler::DestroyInstance();
-		if (Settings.USBAutoMount == ON)
-			USBStorage2_Deinit();
+		USBStorage2_Deinit();
 
 		// Now load the cIOS that was set in the settings menu
 		if (IosLoader::LoadAppCios(Settings.LoaderIOS) > -1)
@@ -380,7 +372,7 @@ int StartUpProcess::Execute(bool quickGameBoot)
 		SetupPads();
 
 		DeviceHandler::Instance()->MountSD();
-		if (Settings.USBAutoMount == ON && !Settings.SDMode && USBSuccess)
+		if (!Settings.SDMode && USBSuccess)
 		{
 			if (USBSpinUp())
 				DeviceHandler::Instance()->MountAllUSB(false);
@@ -394,22 +386,16 @@ int StartUpProcess::Execute(bool quickGameBoot)
 	{
 		Settings.USBPort = 0;
 	}
-	else if (Settings.USBPort == 1 && USBStorage2_GetPort() != Settings.USBPort && !Settings.SDMode)
+	else if (Settings.USBPort == 1 && (USBStorage2_GetPort() != Settings.USBPort) && !Settings.SDMode && !isWiiVC)
 	{
-		if (Settings.USBAutoMount == ON && !isWiiVC)
-		{
-			SetTextf("Changing USB port to %i\n", Settings.USBPort);
-			DeviceHandler::Instance()->UnMountAllUSB();
-			DeviceHandler::Instance()->MountAllUSB();
-		}
+		SetTextf("Changing USB port to %i\n", Settings.USBPort);
+		DeviceHandler::Instance()->UnMountAllUSB();
+		DeviceHandler::Instance()->MountAllUSB();
 	}
-	else if (Settings.USBPort == 2 && !Settings.SDMode)
+	else if (Settings.USBPort == 2 && !Settings.SDMode && !isWiiVC)
 	{
-		if (Settings.USBAutoMount == ON && !isWiiVC)
-		{
-			SetTextf("Mounting USB port to 1\n");
-			DeviceHandler::Instance()->MountUSBPort1();
-		}
+		SetTextf("Mounting USB port to 1\n");
+		DeviceHandler::Instance()->MountUSBPort1();
 	}
 
 	// Enable isfs permission if using Hermes v4 without AHB, or WiiU WiiVC (IOS255 fw.img)

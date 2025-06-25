@@ -38,7 +38,6 @@ class HardDriveSM : public SettingsMenu
 		int OldSettingsPartition;
 		int OldSettingsMultiplePartitions;
 		int OldSettingsSDMode;
-		int oldSettingsUSBAutoMount;
 		int NewSettingsUSBPort;
 
 		OptionList GuiOptions;
