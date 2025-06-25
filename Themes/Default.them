@@ -8,25 +8,26 @@ msgid ""
 msgstr ""
 "Project-Id-Version: USB Loader GX\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2012-05-19 12:24+0200\n"
-"PO-Revision-Date: 2009-10-01 01:00+0200\n"
+"POT-Creation-Date: 2025-06-25 09:00+0100\n"
+"PO-Revision-Date: 2025-06-25 09:00+0100\n"
 "MIME-Version: 1.0\n"
-"Content-Type: text/plain; charset=utf-8\n"
+"Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "Theme-Title: Example\n"
 "Image-Folder: Example\n"
 "Last-Themer: Example\n"
 "Theme-Team: Example\n"
 "Theme-Version: Example\n"
+"Theme-Layout: 2\n"
 
 msgid "0 - game bannergrid layout pos x"
 msgstr ""
 
 msgid "-50 - game bannergrid layout pos y"
-msgstr ""
+msgstr "-74"
 
 msgid "r=237 g=237 b=237 a=255 - banner icon frame color"
-msgstr ""
+msgstr "r=228 g=228 b=228 a=255"
 
 msgid "r=52 g=190 b=237 a=255 - banner icon highlite color"
 msgstr ""
@@ -89,7 +90,7 @@ msgid "0 - game grid layout pos x"
 msgstr ""
 
 msgid "20 - game grid layout pos y"
-msgstr ""
+msgstr "-18"
 
 msgid "9 - game list browser page size"
 msgstr ""
@@ -101,7 +102,7 @@ msgid "top - game browser scrollbar align ver"
 msgstr ""
 
 msgid "0 - game browser scrollbar pos x"
-msgstr ""
+msgstr "-2"
 
 msgid "5 - game browser scrollbar pos y"
 msgstr ""
@@ -124,6 +125,15 @@ msgstr ""
 msgid "r=0 g=0 b=0 a=255 - numpad key text color"
 msgstr ""
 
+msgid "200 - settings option text max width"
+msgstr ""
+
+msgid "100 - settings option value max width"
+msgstr ""
+
+msgid "240 - settings option value pos x"
+msgstr ""
+
 msgid "right - options browser scrollbar align hor"
 msgstr ""
 
@@ -143,7 +153,7 @@ msgid "r=0 g=0 b=0 a=255 - prompt windows button text color"
 msgstr ""
 
 msgid "r=55 g=190 b=237 a=255 - hdd info color"
-msgstr ""
+msgstr "r=133 g=133 b=133 a=255"
 
 msgid "center - hdd info align hor"
 msgstr ""
@@ -155,10 +165,10 @@ msgid "0 - hdd info pos x"
 msgstr ""
 
 msgid "400 - hdd info pos y"
-msgstr ""
+msgstr "413"
 
 msgid "r=55 g=190 b=237 a=255 - game count color"
-msgstr ""
+msgstr "r=133 g=133 b=133 a=255"
 
 msgid "center - game count align hor"
 msgstr ""
@@ -170,7 +180,7 @@ msgid "0 - game count pos x"
 msgstr ""
 
 msgid "420 - game count pos y"
-msgstr ""
+msgstr "436"
 
 msgid "16 - install btn pos x"
 msgstr ""
@@ -179,27 +189,36 @@ msgid "355 - install btn pos y"
 msgstr ""
 
 msgid "371 - settings btn pos y"
-msgstr ""
+msgstr "360"
 
 msgid "64 - settings btn pos x"
-msgstr ""
+msgstr "56"
 
 msgid "371 - home menu btn pos y"
-msgstr ""
+msgstr "360"
 
 msgid "489 - home menu btn pos x"
-msgstr ""
+msgstr "492"
 
 msgid "355 - power off btn pos y"
-msgstr ""
+msgstr "403"
 
 msgid "576 - power off btn pos x"
-msgstr ""
+msgstr "156"
 
 msgid "160 - sd card btn pos x"
-msgstr ""
+msgstr "20"
 
 msgid "395 - sd card btn pos y"
+msgstr "369"
+
+msgid "403 - viewtype btn pos y"
+msgstr ""
+
+msgid "432 - viewtype btn pos x"
+msgstr ""
+
+msgid "432 - viewtype btn pos x widescreen"
 msgstr ""
 
 msgid "405 - HBC btn pos y"
@@ -209,19 +228,13 @@ msgid "410 - HBC btn pos x"
 msgstr ""
 
 msgid "26 - cover/download btn pos x"
-msgstr ""
+msgstr "20"
 
 msgid "58 - cover/download btn pos y"
-msgstr ""
-
-msgid "305 - gameID btn pos y"
-msgstr ""
-
-msgid "68 - gameID btn pos x"
-msgstr ""
+msgstr "48"
 
 msgid "r=138 g=138 b=138 a=240 - clock color"
-msgstr ""
+msgstr "r=153 g=153 b=153 a=240"
 
 msgid "1.0 - Overrided clock scale factor. 1.0=allow user setting"
 msgstr ""
@@ -236,52 +249,52 @@ msgid "275 - clock pos x"
 msgstr ""
 
 msgid "335 - clock pos y"
-msgstr ""
+msgstr "314"
 
 msgid "168 - list layout favorite btn pos x"
-msgstr ""
+msgstr "258"
 
 msgid "214 - list layout favorite btn pos x widescreen"
-msgstr ""
+msgstr "268"
 
 msgid "13 - list layout favorite btn pos y"
-msgstr ""
+msgstr "367"
 
 msgid "208 - list layout search btn pos x"
-msgstr ""
+msgstr "178"
 
 msgid "246 - list layout search btn pos x widescreen"
-msgstr ""
+msgstr "203"
 
 msgid "13 - list layout search btn pos y"
-msgstr ""
+msgstr "367"
 
 msgid "248 - list layout abc/sort btn pos x"
-msgstr ""
+msgstr "223"
 
 msgid "278 - list layout abc/sort btn pos x widescreen"
-msgstr ""
+msgstr "240"
 
 msgid "13 - list layout abc/sort btn pos y"
-msgstr ""
+msgstr "367"
 
 msgid "288 - list layout loadermode btn pos x"
-msgstr ""
+msgstr "586"
 
 msgid "310 - list layout loadermode btn pos x widescreen"
-msgstr ""
+msgstr "586"
 
 msgid "13 - list layout loadermode btn pos y"
-msgstr ""
+msgstr "369"
 
 msgid "328 - list layout category btn pos x"
-msgstr ""
+msgstr "291"
 
 msgid "342 - list layout category btn pos x widescreen"
-msgstr ""
+msgstr "295"
 
 msgid "13 - list layout category btn pos y"
-msgstr ""
+msgstr "367"
 
 msgid "368 - list layout list btn pos x"
 msgstr ""
@@ -320,22 +333,22 @@ msgid "13 - list layout bannergrid btn pos y"
 msgstr ""
 
 msgid "502 - list layout lock btn pos x widescreen"
-msgstr ""
+msgstr "322"
 
 msgid "528 - list layout lock btn pos x"
-msgstr ""
+msgstr "325"
 
 msgid "13 - list layout lock btn pos y"
-msgstr ""
+msgstr "367"
 
 msgid "534 - list layout dvd btn pos x widescreen"
-msgstr ""
+msgstr "402"
 
 msgid "568 - list layout dvd btn pos x"
-msgstr ""
+msgstr "427"
 
 msgid "13 - list layout dvd btn pos y"
-msgstr ""
+msgstr "367"
 
 msgid "280 - game list layout height"
 msgstr ""
@@ -344,55 +357,76 @@ msgid "396 - game list layout width"
 msgstr ""
 
 msgid "200 - game list layout pos x"
-msgstr ""
+msgstr "218"
 
 msgid "49 - game list layout pos y"
+msgstr "29"
+
+msgid "349 - list layout hbc btn pos x widescreen"
+msgstr ""
+
+msgid "359 - list layout hbc btn pos x"
+msgstr ""
+
+msgid "367 - list layout hbc btn pos y"
+msgstr ""
+
+msgid "376 - list layout install btn pos x widescreen"
+msgstr ""
+
+msgid "393 - list layout install btn pos x"
+msgstr ""
+
+msgid "367 - list layout install btn pos y"
+msgstr ""
+
+msgid "202 - game list layout pos x widescreen"
 msgstr ""
 
 msgid "100 - grid layout favorite btn pos x"
-msgstr ""
+msgstr "258"
 
 msgid "144 - grid layout favorite btn pos x widescreen"
-msgstr ""
+msgstr "268"
 
 msgid "13 - grid layout favorite btn pos y"
-msgstr ""
+msgstr "367"
 
 msgid "140 - grid layout search btn pos x"
-msgstr ""
+msgstr "178"
 
 msgid "176 - grid layout search btn pos x widescreen"
-msgstr ""
+msgstr "203"
 
 msgid "13 - grid layout search btn pos y"
-msgstr ""
+msgstr "367"
 
 msgid "180 - grid layout abc/sort btn pos x"
-msgstr ""
+msgstr "223"
 
 msgid "208 - grid layout abc/sort btn pos x widescreen"
-msgstr ""
+msgstr "240"
 
 msgid "13 - grid layout abc/sort btn pos y"
-msgstr ""
+msgstr "367"
 
 msgid "220 - grid layout loadermode btn pos x"
-msgstr ""
+msgstr "586"
 
 msgid "240 - grid layout loadermode btn pos x widescreen"
-msgstr ""
+msgstr "586"
 
 msgid "13 - grid layout loadermode btn pos y"
-msgstr ""
+msgstr "369"
 
 msgid "260 - grid layout category btn pos x"
-msgstr ""
+msgstr "291"
 
 msgid "272 - grid layout category btn pos x widescreen"
-msgstr ""
+msgstr "295"
 
 msgid "13 - grid layout category btn pos y"
-msgstr ""
+msgstr "367"
 
 msgid "300 - grid layout list btn pos x"
 msgstr ""
@@ -431,21 +465,39 @@ msgid "13 - grid layout bannergrid btn pos y"
 msgstr ""
 
 msgid "432 - grid layout lock btn pos x widescreen"
-msgstr ""
+msgstr "322"
 
 msgid "460 - grid layout lock btn pos x"
-msgstr ""
+msgstr "325"
 
 msgid "13 - grid layout lock btn pos y"
-msgstr ""
+msgstr "367"
 
 msgid "464 - grid layout dvd btn pos x widescreen"
-msgstr ""
+msgstr "402"
 
 msgid "500 - grid layout dvd btn pos x"
-msgstr ""
+msgstr "427"
 
 msgid "13 - grid layout dvd btn pos y"
+msgstr "367"
+
+msgid "349 - grid layout hbc btn pos x widescreen"
+msgstr ""
+
+msgid "359 - grid layout hbc btn pos x"
+msgstr ""
+
+msgid "367 - grid layout hbc btn pos y"
+msgstr ""
+
+msgid "376 - grid layout install btn pos x widescreen"
+msgstr ""
+
+msgid "393 - grid layout install btn pos x"
+msgstr ""
+
+msgid "367 - grid layout install btn pos y"
 msgstr ""
 
 msgid "400 - game grid layout height"
@@ -455,49 +507,49 @@ msgid "640 - game grid layout width"
 msgstr ""
 
 msgid "100 - carousel layout favorite btn pos x"
-msgstr ""
+msgstr "258"
 
 msgid "144 - carousel layout favorite btn pos x widescreen"
-msgstr ""
+msgstr "268"
 
 msgid "13 - carousel layout favorite btn pos y"
-msgstr ""
+msgstr "367"
 
 msgid "140 - carousel layout search btn pos x"
-msgstr ""
+msgstr "178"
 
 msgid "176 - carousel layout search btn pos x widescreen"
-msgstr ""
+msgstr "203"
 
 msgid "13 - carousel layout search btn pos y"
-msgstr ""
+msgstr "367"
 
 msgid "180 - carousel layout abc/sort btn pos x"
-msgstr ""
+msgstr "223"
 
 msgid "208 - carousel layout abc/sort btn pos x widescreen"
-msgstr ""
+msgstr "240"
 
 msgid "13 - carousel layout abc/sort btn pos y"
-msgstr ""
+msgstr "367"
 
 msgid "220 - carousel layout loadermode btn pos x"
-msgstr ""
+msgstr "586"
 
 msgid "240 - carousel layout loadermode btn pos x widescreen"
-msgstr ""
+msgstr "586"
 
 msgid "13 - carousel layout loadermode btn pos y"
-msgstr ""
+msgstr "369"
 
 msgid "260 - carousel layout category btn pos x"
-msgstr ""
+msgstr "291"
 
 msgid "272 - carousel layout category btn pos x widescreen"
-msgstr ""
+msgstr "295"
 
 msgid "13 - carousel layout category btn pos y"
-msgstr ""
+msgstr "367"
 
 msgid "300 - carousel layout list btn pos x"
 msgstr ""
@@ -536,21 +588,39 @@ msgid "13 - carousel layout bannergrid btn pos y"
 msgstr ""
 
 msgid "432 - carousel layout lock btn pos x widescreen"
-msgstr ""
+msgstr "322"
 
 msgid "460 - carousel layout lock btn pos x"
-msgstr ""
+msgstr "325"
 
 msgid "13 - carousel layout lock btn pos y"
-msgstr ""
+msgstr "367"
 
 msgid "464 - carousel layout dvd btn pos x widescreen"
-msgstr ""
+msgstr "402"
 
 msgid "500 - carousel layout dvd btn pos x"
-msgstr ""
+msgstr "427"
 
 msgid "13 - carousel layout dvd btn pos y"
+msgstr "367"
+
+msgid "349 - carousel layout hbc btn pos x widescreen"
+msgstr ""
+
+msgid "359 - carousel layout hbc btn pos x"
+msgstr ""
+
+msgid "367 - carousel layout hbc btn pos y"
+msgstr ""
+
+msgid "376 - carousel layout install btn pos x widescreen"
+msgstr ""
+
+msgid "393 - carousel layout install btn pos x"
+msgstr ""
+
+msgid "367 - carousel layout install btn pos y"
 msgstr ""
 
 msgid "400 - game carousel layout height"
@@ -560,55 +630,55 @@ msgid "640 - game carousel layout width"
 msgstr ""
 
 msgid "-20 - game carousel layout pos y"
-msgstr ""
+msgstr "-44"
 
 msgid "0 - game carousel layout pos x"
 msgstr ""
 
 msgid "100 - bannergrid layout favorite btn pos x"
-msgstr ""
+msgstr "258"
 
 msgid "144 - bannergrid layout favorite btn pos x widescreen"
-msgstr ""
+msgstr "268"
 
 msgid "13 - bannergrid layout favorite btn pos y"
-msgstr ""
+msgstr "367"
 
 msgid "140 - bannergrid layout search btn pos x"
-msgstr ""
+msgstr "178"
 
 msgid "176 - bannergrid layout search btn pos x widescreen"
-msgstr ""
+msgstr "203"
 
 msgid "13 - bannergrid layout search btn pos y"
-msgstr ""
+msgstr "367"
 
 msgid "180 - bannergrid layout abc/sort btn pos x"
-msgstr ""
+msgstr "223"
 
 msgid "208 - bannergrid layout abc/sort btn pos x widescreen"
-msgstr ""
+msgstr "240"
 
 msgid "13 - bannergrid layout abc/sort btn pos y"
-msgstr ""
+msgstr "367"
 
 msgid "220 - bannergrid layout loadermode btn pos x"
-msgstr ""
+msgstr "586"
 
 msgid "240 - bannergrid layout loadermode btn pos x widescreen"
-msgstr ""
+msgstr "586"
 
 msgid "13 - bannergrid layout loadermode btn pos y"
-msgstr ""
+msgstr "369"
 
 msgid "260 - bannergrid layout category btn pos x"
-msgstr ""
+msgstr "291"
 
 msgid "272 - bannergrid layout category btn pos x widescreen"
-msgstr ""
+msgstr "295"
 
 msgid "13 - bannergrid layout category btn pos y"
-msgstr ""
+msgstr "367"
 
 msgid "300 - bannergrid layout list btn pos x"
 msgstr ""
@@ -647,21 +717,39 @@ msgid "13 - bannergrid layout bannergrid btn pos y"
 msgstr ""
 
 msgid "432 - bannergrid layout lock btn pos x widescreen"
-msgstr ""
+msgstr "322"
 
 msgid "460 - bannergrid layout lock btn pos x"
-msgstr ""
+msgstr "325"
 
 msgid "13 - bannergrid layout lock btn pos y"
-msgstr ""
+msgstr "367"
 
 msgid "464 - bannergrid layout dvd btn pos x widescreen"
-msgstr ""
+msgstr "402"
 
 msgid "500 - bannergrid layout dvd btn pos x"
-msgstr ""
+msgstr "427"
 
 msgid "13 - bannergrid layout dvd btn pos y"
+msgstr "367"
+
+msgid "349 - bannergrid layout hbc btn pos x widescreen"
+msgstr ""
+
+msgid "359 - bannergrid layout hbc btn pos x"
+msgstr ""
+
+msgid "367 - bannergrid layout hbc btn pos y"
+msgstr ""
+
+msgid "376 - bannergrid layout install btn pos x widescreen"
+msgstr ""
+
+msgid "393 - bannergrid layout install btn pos x"
+msgstr ""
+
+msgid "367 - bannergrid layout install btn pos y"
 msgstr ""
 
 msgid "1 - show hdd info: 1 for on and 0 for off"
@@ -685,14 +773,26 @@ msgstr ""
 msgid "r=55 g=190 b=237 a=255 - game id text color"
 msgstr ""
 
+msgid "52 - gameID btn pos x widescreen"
+msgstr ""
+
+msgid "68 - gameID btn pos x"
+msgstr "38"
+
+msgid "305 - gameID btn pos y"
+msgstr "289"
+
 msgid "r=55 g=190 b=237 a=255 - region info text color"
 msgstr ""
 
-msgid "30 - region info text pos y"
+msgid "52 - region info text pos x widescreen"
 msgstr ""
 
 msgid "68 - region info text pos x"
-msgstr ""
+msgstr "38"
+
+msgid "30 - region info text pos y"
+msgstr "28"
 
 msgid "r=0 g=0 b=0 a=255 - banner window playcount text color"
 msgstr ""
@@ -701,6 +801,9 @@ msgid "0 - banner window play count pos x"
 msgstr ""
 
 msgid "215 - banner window play count pos y"
+msgstr ""
+
+msgid "r=0 g=0 b=0 a=255 - game window size text color"
 msgstr ""
 
 msgid "r=0 g=0 b=0 a=255 - category prompt title text color"
@@ -881,9 +984,6 @@ msgid "r=0 g=0 b=0 a=255 - prompt windows text color"
 msgstr ""
 
 msgid "r=0 g=0 b=0 a=255 - game window name text color"
-msgstr ""
-
-msgid "r=0 g=0 b=0 a=255 - game window size text color"
 msgstr ""
 
 msgid "r=0 g=0 b=0 a=255 - game window playcount text color"
