@@ -1,4 +1,5 @@
  /****************************************************************************
+ * Copyright (C) 2025 by blackb0x
  * Copyright (C) 2013 by Cyan
  * Copyright (C) 2010 by Dimok
  *
@@ -198,7 +199,8 @@ void PartitionHandle::UnMount(int pos)
 u32 PartitionHandle::GetPartitionClusterSize(u32 lba_start)
 {
 	char *buffer = (char *) malloc(MAX_BYTES_PER_SECTOR);
-	if(!buffer) return 0;
+	if(!buffer)
+		return 0;
 	
 	if (!interface->readSectors(lba_start, 1, buffer))
 	{
@@ -237,7 +239,8 @@ bool PartitionHandle::IsExisting(u64 lba)
 int PartitionHandle::FindPartitions()
 {
 	MASTER_BOOT_RECORD *mbr = (MASTER_BOOT_RECORD *) malloc(MAX_BYTES_PER_SECTOR);
-	if(!mbr) return -1;
+	if(!mbr)
+		return -1;
 
 	// Read the first sector on the device
 	if (!interface->readSectors(0, 1, mbr))
@@ -270,7 +273,10 @@ int PartitionHandle::FindPartitions()
 		{
 			int ret = CheckGPT(i);
 			if(ret == 0) // if it's a GPT we don't need to go on looking through the mbr anymore
+			{
+				free(mbr);
 				return ret;
+			}
 		}
 
 		if(partition->type == PARTITION_TYPE_DOS33_EXTENDED || partition->type == PARTITION_TYPE_WIN95_EXTENDED)
@@ -288,6 +294,26 @@ int PartitionHandle::FindPartitions()
 	}
 
 	free(mbr);
+
+	// Attempt to add a FAT32 partition if nothing was found (missing MBR)
+	if (PartitionList.empty())
+	{
+		char *buffer = (char *) malloc(MAX_BYTES_PER_SECTOR);
+		if (!buffer)
+			return -1;
+		if (interface->readSectors(0, 1, buffer))
+		{
+			if (*((u16 *) (buffer + 0x1FE)) == 0x55AA || *((u16 *) (buffer + 0x1FE)) == 0x55AB)
+			{
+				if (memcmp(buffer + 0x36, "FAT", 3) == 0 || memcmp(buffer + 0x52, "FAT", 3) == 0)
+				{
+					sec_t FAT_startSector = FindFirstValidPartition(interface);
+					AddPartition("FAT32", FAT_startSector, 0xdeadbeaf, true, 0x0c, 0, MBR);
+				}
+			}
+		}
+		free(buffer);
+	}
 
 	return 0;
 }
@@ -335,7 +361,8 @@ static const u8 TYPE_LINUX_MS_BASIC_DATA[16] = { 0xA2,0xA0,0xD0,0xEB,0xE5,0xB9,0
 int PartitionHandle::CheckGPT(u8 PartNum)
 {
 	GPT_HEADER *gpt_header = (GPT_HEADER *) malloc(MAX_BYTES_PER_SECTOR);
-	if(!gpt_header) return -1;
+	if(!gpt_header)
+		return -1;
 
 	// Read and validate the extended boot record
 	if (!interface->readSectors(1, 1, gpt_header))
@@ -391,6 +418,8 @@ int PartitionHandle::CheckGPT(u8 PartNum)
 void PartitionHandle::AddPartition(const char * name, u64 lba_start, u64 sec_count, bool bootable, u8 part_type, u8 part_num, u8 part_TableType)
 {
 	char *buffer = (char *) malloc(MAX_BYTES_PER_SECTOR);
+	if (!buffer)
+		return;
 
 	if (!interface->readSectors(lba_start, 1, buffer))
 	{
@@ -424,16 +453,16 @@ void PartitionHandle::AddPartition(const char * name, u64 lba_start, u64 sec_cou
 		}
 	}
 
-	PartitionFS PartitionEntrie;
-	PartitionEntrie.FSName = name;
-	PartitionEntrie.LBA_Start = lba_start;
-	PartitionEntrie.SecCount = sec_count;
-	PartitionEntrie.Bootable = bootable;
-	PartitionEntrie.PartitionType = part_type;
-	PartitionEntrie.PartitionNum = part_num;
-	PartitionEntrie.PartitionTableType = part_TableType;
+	PartitionFS PartitionEntry;
+	PartitionEntry.FSName = name;
+	PartitionEntry.LBA_Start = lba_start;
+	PartitionEntry.SecCount = sec_count;
+	PartitionEntry.Bootable = bootable;
+	PartitionEntry.PartitionType = part_type;
+	PartitionEntry.PartitionNum = part_num;
+	PartitionEntry.PartitionTableType = part_TableType;
 
-	PartitionList.push_back(PartitionEntrie);
+	PartitionList.push_back(PartitionEntry);
 
 	free(buffer);
 }

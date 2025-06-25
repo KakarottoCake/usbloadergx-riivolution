@@ -148,7 +148,7 @@ class PartitionHandle
 		bool IsActive(int pos) { if(valid(pos)) return PartitionList[pos].Bootable; else return false; };
 		//! Get the partition type
 		int GetPartitionType(int pos) { if(valid(pos)) return PartitionList[pos].PartitionType; else return -1; };
-		//! Get the entrie number in MBR of this partition
+		//! Get the entry number in MBR of this partition
 		int GetPartitionNum(int pos) { if(valid(pos)) return PartitionList[pos].PartitionNum; else return -1; };
 		//! Get the Partition Table type of this partition
 		int GetPartitionTableType(int pos) { if(valid(pos)) return PartitionList[pos].PartitionTableType; else return -1; };
