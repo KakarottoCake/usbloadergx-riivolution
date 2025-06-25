@@ -57,6 +57,8 @@ UninstallSM::UninstallSM(struct discHdr * header)
 	Options->SetName(Idx++, "%s", tr( "Delete Cached Banner" ));
 	Options->SetName(Idx++, "%s", tr( "Delete Cheat TXT" ));
 	Options->SetName(Idx++, "%s", tr( "Delete Cheat GCT" ));
+	if (DiscHeader->type == TYPE_GAME_EMUNANDCHAN || DiscHeader->type == TYPE_GAME_WII_IMG)
+		Options->SetName(Idx++, "%s", tr( "Delete EmuNAND Saves" ));
 
 	SetOptionValues();
 }
@@ -90,6 +92,10 @@ void UninstallSM::SetOptionValues()
 
 	//! Settings: Delete Cheat GCT
 	Options->SetValue(Idx++, " ");
+
+	//! Settings: Delete EmuNAND Saves
+	if (DiscHeader->type == TYPE_GAME_EMUNANDCHAN || DiscHeader->type == TYPE_GAME_WII_IMG)
+		Options->SetValue(Idx++, " ");
 }
 
 int UninstallSM::GetMenuInternal()
@@ -269,6 +275,30 @@ int UninstallSM::GetMenuInternal()
 		int choice = WindowPrompt(tr( "Delete" ), filepath, tr( "Yes" ), tr( "No" ));
 		if (choice == 1)
 			if (CheckFile(filepath)) remove(filepath);
+	}
+
+	//! Settings: Delete EmuNAND Saves
+	else if ((DiscHeader->type == TYPE_GAME_EMUNANDCHAN || DiscHeader->type == TYPE_GAME_WII_IMG) && ret == ++Idx)
+	{
+		int choice = WindowPrompt(tr( "Delete" ), tr("Are you sure?"), tr( "Yes" ), tr( "No" ));
+		if (choice != 1)
+			return MENU_NONE;
+
+		GameCFG *game_cfg = GameSettings.GetGameCFG(DiscHeader->id);
+		const char *NandEmuPath = game_cfg->NandEmuPath.size() == 0 ? Settings.NandEmuPath : game_cfg->NandEmuPath.c_str();
+		char filepath[512];
+
+		if(DiscHeader->tid != 0)
+		{
+			NandEmuPath = game_cfg->NandEmuPath.size() == 0 ? Settings.NandEmuChanPath : game_cfg->NandEmuPath.c_str();
+			snprintf(filepath, sizeof(filepath), "%s/title/%08x/%08x/data", NandEmuPath, (unsigned int) (DiscHeader->tid >> 32), (unsigned int) DiscHeader->tid);
+			RemoveDirectory(filepath);
+		}
+		else
+		{ //TYPE_GAME_WII_DISC
+			snprintf(filepath, sizeof(filepath), "%s/title/00010000/%02x%02x%02x%02x/data", NandEmuPath, DiscHeader->id[0], DiscHeader->id[1], DiscHeader->id[2], DiscHeader->id[3]);
+			RemoveDirectory(filepath);
+		}
 	}
 
 	SetOptionValues();
