@@ -1,6 +1,6 @@
 /***************************************************************************
- * Copyright (C) 2009
- * by Dimok
+ * Copyright (C) 2025 by blackb0x
+ * Copyright (C) 2009 by Dimok
  *
  * This software is provided 'as-is', without any express or implied
  * warranty. In no event will the authors be held liable for any
@@ -31,33 +31,39 @@
 #include <ogcsys.h>
 #include <string>
 
+#include "update.h"
 #include "gecko.h"
 #include "ZipFile.h"
 #include "https.h"
 #include "networkops.h"
+#include "ImageDownloader.h"
 #include "settings/CSettings.h"
 #include "settings/GameTitles.h"
 #include "language/gettext.h"
 #include "language/UpdateLanguage.h"
+#include "utils/StringTools.h"
 #include "utils/ShowError.h"
 #include "prompts/PromptWindows.h"
 #include "prompts/ProgressWindow.h"
 #include "FileOperations/fileops.h"
 #include "xml/GameTDB.hpp"
-#include "sys.h"
+#include "usbloader/GameList.h"
 #include "version.h"
 
 /****************************************************************************
  * Checking if an Update is available
  ***************************************************************************/
-int DownloadFileToPath(const char *url, const char *dest)
+int DownloadFileToPath(const char *url, const char *dest, const bool showprogress)
 {
-	const char *filename = strrchr(url, '/') + 1;
-	ProgressCancelEnable(true);
-	StartProgress(tr("Downloading file..."), 0, filename, true, true);
+	if (showprogress)
+	{
+		const char *filename = strrchr(url, '/') + 1;
+		ProgressCancelEnable(true);
+		StartProgress(tr("Downloading file..."), 0, filename, true, true);
+	}
 
 	struct download file = {};
-	file.show_progress = true;
+	file.show_progress = showprogress;
 	downloadfile(url, &file);
 	if (file.size > 0)
 	{
@@ -65,15 +71,21 @@ int DownloadFileToPath(const char *url, const char *dest)
 		if (!savefile)
 		{
 			MEM2_free(file.data);
-			ShowError(tr("Can't write to destination."));
+			if (showprogress)
+				ShowError(tr("Can't write to destination."));
+			ProgressStop();
+			ProgressCancelEnable(false);
 			return -7;
 		}
 		fwrite(file.data, 1, file.size, savefile);
 		fclose(savefile);
 		MEM2_free(file.data);
 	}
-	ProgressStop();
-	ProgressCancelEnable(false);
+	if (showprogress)
+	{
+		ProgressStop();
+		ProgressCancelEnable(false);
+	}
 	return file.size;
 }
 
@@ -95,7 +107,7 @@ static bool CheckNewGameTDBVersion(const char *url)
 	GameTDB XML_DB;
 
 	if (!XML_DB.OpenFile(Filepath.c_str()))
-		return true; //! If no file exists we need the file
+		return true; // If no file exists we need the file
 
 	u64 ExistingVersion = XML_DB.GetGameTDBVersion();
 	XML_DB.CloseFile();
@@ -105,8 +117,19 @@ static bool CheckNewGameTDBVersion(const char *url)
 	return (ExistingVersion != file.gametdbcheck);
 }
 
+bool initNetwork()
+{
+	if (NetworkInitPrompt())
+		return true;
+	gprintf("No network\n");
+	return false;
+}
+
 int UpdateGameTDB()
 {
+	// Create the directory if it doesn't exist
+	CreateSubfolder(Settings.titlestxt_path);
+
 	if (CheckNewGameTDBVersion(Settings.URL_GameTDB) == false)
 	{
 		gprintf("Not updating GameTDB: Version is the same\n");
@@ -129,52 +152,36 @@ int UpdateGameTDB()
 
 	bool result = zFile.ExtractAll(Settings.titlestxt_path);
 
-	//! The zip file is not needed anymore so we can remove it
 	remove(ZipPath.c_str());
 
-	//! Reload all titles and reload cached titles because the file changed now.
+	// Reload all titles and reload cached titles because the file changed now.
 	GameTitles.Reset();
 	GameTitles.LoadTitlesFromGameTDB(Settings.titlestxt_path);
 	return (result ? filesize : -1);
 }
 
-static void UpdateIconPng()
+int UpdateCheats()
 {
-	char iconpath[200];
-	struct download file = {};
-	downloadfile("https://raw.githubusercontent.com/wiidev/usbloadergx/updates/icon.png", &file);
-	if (file.size > 0)
-	{
-		snprintf(iconpath, sizeof(iconpath), "%sicon.png", Settings.ConfigPath);
-		FILE *pfile = fopen(iconpath, "wb");
-		if (pfile)
-		{
-			fwrite(file.data, 1, file.size, pfile);
-			fclose(pfile);
-		}
-		MEM2_free(file.data);
-	}
+	std::string url("https://raw.githubusercontent.com/wiidev/cheats/master/data/txt.zip");
+	std::string ZipPath(Settings.ConfigPath);
+	if (ZipPath.back() != '/')
+		ZipPath += '/';
+	ZipPath += "txt.zip";
+
+	int filesize = DownloadFileToPath(url.c_str(), ZipPath.c_str());
+
+	if (filesize <= 0)
+		return -1;
+
+	ZipFile zFile(ZipPath.c_str());
+
+	bool result = zFile.ExtractAll(Settings.TxtCheatcodespath);
+
+	remove(ZipPath.c_str());
+	return (result ? filesize : -1);
 }
 
-static void UpdateMetaXml()
-{
-	char xmlpath[200];
-	struct download file = {};
-	downloadfile("https://raw.githubusercontent.com/wiidev/usbloadergx/updates/meta.xml", &file);
-	if (file.size > 0)
-	{
-		snprintf(xmlpath, sizeof(xmlpath), "%smeta.xml", Settings.ConfigPath);
-		FILE *pfile = fopen(xmlpath, "wb");
-		if (pfile)
-		{
-			fwrite(file.data, 1, file.size, pfile);
-			fclose(pfile);
-		}
-		MEM2_free(file.data);
-	}
-}
-
-static int ApplicationDownload(void)
+int ApplicationDownload()
 {
 	std::string DownloadURL;
 	int newrev = 0;
@@ -194,7 +201,7 @@ static int ApplicationDownload(void)
 
 	if (file.size > 0)
 	{
-		// first line of the text file is the revisionc
+		// First line of the text file is the revisionc
 		newrev = atoi((char *)file.data);
 		// 2nd line of the text file is the url
 		char *ptr = strchr((char *)file.data, '\n');
@@ -230,7 +237,7 @@ static int ApplicationDownload(void)
 	if (ret < 1024 * 1024)
 	{
 		remove(tmppath);
-		WindowPrompt(tr("Failed updating"), tr("Error while downloding file"), tr("OK"));
+		WindowPrompt(tr("Failed updating"), tr("Error while downloading file"), tr("OK"));
 		update_error = true;
 	}
 	else
@@ -268,57 +275,56 @@ static int ApplicationDownload(void)
 		return -1;
 	}
 
-	UpdateIconPng();
-	UpdateMetaXml();
-	UpdateGameTDB();
-	//DownloadAllLanguageFiles();
+	snprintf(tmppath, sizeof(tmppath), "%s/icon.png", Settings.ConfigPath);
+	DownloadFileToPath("https://raw.githubusercontent.com/wiidev/usbloadergx/updates/icon.png", tmppath, false);
 
-	WindowPrompt(tr("Successfully Updated"), tr("Restarting..."), 0, 0, 0, 0, 150);
-	RebootApp();
-
-	return 0;
-}
-
-int UpdateApp()
-{
-	if (!IsNetworkInit() && !NetworkInitPrompt())
-	{
-		WindowPrompt(tr("Error:"), tr("Could not initialize network!"), tr("OK"));
-		return -1;
-	}
-
-	int choice = WindowPrompt(tr("What do you want to update?"), 0, "USB Loader GX", tr("WiiTDB.xml"), tr("Language Files"), tr("Cancel"));
-	if (choice == 0)
-		return 0;
-
-	if (choice == 1)
-	{
-		return ApplicationDownload();
-	}
-	else if (choice == 2)
-	{
-		int gameTDB = UpdateGameTDB();
-		if (gameTDB == -2)
-		{
-			WindowPrompt(tr("WiiTDB.xml is up to date."), 0, tr("OK"));
-			return 1;
-		}
-		else if (gameTDB == -1)
-		{
-			WindowPrompt(tr("Update Failed"), 0, tr("OK"));
-			return 1;
-		}
-		else
-		{
-			WindowPrompt(tr("Successfully Updated"), 0, tr("OK"));
-			return 1;
-		}
-	}
-	else if (choice == 3)
-	{
-		if (UpdateLanguageFiles() > 0)
-			WindowPrompt(tr("Successfully Updated"), 0, tr("OK"));
-	}
+	snprintf(tmppath, sizeof(tmppath), "%s/meta.xml", Settings.ConfigPath);
+	DownloadFileToPath("https://raw.githubusercontent.com/wiidev/usbloadergx/updates/meta.xml", tmppath, false);
 
 	return 1;
+}
+
+int UpdateNintendont()
+{
+	char NINUpdatePath[120];
+	snprintf(NINUpdatePath, sizeof(NINUpdatePath), "%sboot.dol", Settings.NINLoaderPath);
+	char NINUpdatePathBak[120];
+	snprintf(NINUpdatePathBak, sizeof(NINUpdatePathBak), "%sboot.bak", Settings.NINLoaderPath);
+
+	// Create the directory if it doesn't exist
+	CreateSubfolder(Settings.NINLoaderPath);
+	// Rename existing boot.dol file to boot.bak
+	if (CheckFile(NINUpdatePath))
+		RenameFile(NINUpdatePath, NINUpdatePathBak);
+
+	if (DownloadFileToPath("https://raw.githubusercontent.com/FIX94/Nintendont/master/loader/loader.dol", NINUpdatePath) > 0)
+	{
+		// Remove existing loader.dol file if found as it has priority over boot.dol, and boot.bak
+		snprintf(NINUpdatePath, sizeof(NINUpdatePath), "%s/loader.dol", Settings.NINLoaderPath);
+		RemoveFile(NINUpdatePath);
+		RemoveFile(NINUpdatePathBak);
+		// Download icon.png if it doesn't exist
+		snprintf(NINUpdatePath, sizeof(NINUpdatePath), "%s/icon.png", Settings.NINLoaderPath);
+		if (!CheckFile(NINUpdatePath))
+			DownloadFileToPath("https://raw.githubusercontent.com/FIX94/Nintendont/master/nintendont/icon.png", NINUpdatePath, false);
+		// Download meta.xml if it doesn't exist (Nintendont will edit meta.xml when it's launched)
+		snprintf(NINUpdatePath, sizeof(NINUpdatePath), "%s/meta.xml", Settings.NINLoaderPath);
+		if (!CheckFile(NINUpdatePath))
+			DownloadFileToPath("https://raw.githubusercontent.com/FIX94/Nintendont/master/nintendont/meta.xml", NINUpdatePath, false);
+
+		return 1;
+	}
+	else
+	{
+		// Restore backup file if found
+		RemoveFile(NINUpdatePath);
+		if (CheckFile(NINUpdatePathBak))
+			RenameFile(NINUpdatePathBak, NINUpdatePath);
+	}
+	return -1;
+}
+
+void UpdateCovers()
+{
+	ImageDownloader::DownloadImages(true);
 }

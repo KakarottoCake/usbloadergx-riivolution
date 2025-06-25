@@ -87,7 +87,7 @@ void CSettings::SetDefault()
 	strlcpy(URL_Discs, "https://art.gametdb.com/wii/disc/", sizeof(URL_Discs));
 	strlcpy(URL_DiscsCustom, "https://art.gametdb.com/wii/disccustom/", sizeof(URL_DiscsCustom));
 	strlcpy(URL_GameTDB, "https://www.gametdb.com/wiitdb.zip", sizeof(URL_GameTDB));
-	strlcpy(URL_Cheats, "https://codes.rc24.xyz/txt.php?txt={gameid}", sizeof(URL_Cheats));
+	strlcpy(URL_Cheats, "https://raw.githubusercontent.com/wiidev/cheats/master/data/{gameid}.txt", sizeof(URL_Cheats));
 	ProxyUsername[0] = 0;
 	ProxyPassword[0] = 0;
 	ProxyAddress[0] = 0;

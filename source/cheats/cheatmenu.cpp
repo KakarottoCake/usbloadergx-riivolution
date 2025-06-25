@@ -71,13 +71,8 @@ int CheatMenu(const char * gameID)
 		case 0:
 			download = WindowPrompt(tr( "Error:" ), tr( "No Cheat file found" ), tr( "Download Now" ), tr( "Cancel" ));
 			if (download == 1)
-			{
-				download = CodeDownload(gameID);
-				if (download < 0 || gctCheats.openTxtfile(txtfilename) != 1)
-					break;
-			}
-			else
-				break;
+				CodeDownload(gameID);
+			break;
 		case 1:
 			int cntcheats = gctCheats.getCnt();
 			OptionList cheatslst;

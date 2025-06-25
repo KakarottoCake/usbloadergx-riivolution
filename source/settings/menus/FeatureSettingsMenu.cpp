@@ -1,6 +1,6 @@
 /****************************************************************************
- * Copyright (C) 2011
- * by Dimok
+ * Copyright (C) 2025 by Dimok
+ * Copyright (C) 2011 by Dimok
  *
  * This software is provided 'as-is', without any express or implied
  * warranty. In no event will the authors be held liable for any
@@ -71,7 +71,7 @@ static const char * TitleTypeText[] =
 };
 
 FeatureSettingsMenu::FeatureSettingsMenu()
-	: SettingsMenu(tr("Features Settings"), &GuiOptions, MENU_NONE)
+	: SettingsMenu(tr("Miscellaneous Settings"), &GuiOptions, MENU_NONE)
 {
 	SetOptionNames();
 	SetOptionValues();
@@ -116,7 +116,6 @@ void FeatureSettingsMenu::SetOptionNames()
 	Options->SetName(Idx++, "%s", tr( "Export SYSCONF to EmuNAND" ));
 	Options->SetName(Idx++, "%s", tr( "Dump NAND to EmuNAND" ));
 	Options->SetName(Idx++, "%s", tr( "EmuNAND WAD Manager" ));
-	Options->SetName(Idx++, "%s", tr( "Update Nintendont" ));
 	Options->SetName(Idx++, "%s", tr( "Boot Neek System Menu" ));
 	Options->SetName(Idx++, "%s", tr( "Reset All Game Settings" ));
 	if (Settings.CacheTitles)
@@ -169,11 +168,15 @@ void FeatureSettingsMenu::SetOptionValues()
 	//! Settings: EmuNAND WAD Manager
 	Options->SetValue(Idx++, " ");
 
-	//! Settings: Update Nintendont
+	//! Settings: Boot Neek System Menu
 	Options->SetValue(Idx++, " ");
 
-	//! Settings: Neek boot
+	//! Settings: Reset All Game Settings
 	Options->SetValue(Idx++, " ");
+
+	//! Settings: Reset Cached Titles
+	if (Settings.CacheTitles)
+		Options->SetValue(Idx++, " ");
 
 }
 
@@ -639,49 +642,6 @@ int FeatureSettingsMenu::GetMenuInternal()
 		this->Append(optionBrowser);
 	}
 
-	//! Settings: Update Nintendont
-	else if (ret == ++Idx)
-	{
-		char NINUpdatePath[120];
-		snprintf(NINUpdatePath, sizeof(NINUpdatePath), "%sboot.dol", Settings.NINLoaderPath);
-		char NINUpdatePathBak[120];
-		snprintf(NINUpdatePathBak, sizeof(NINUpdatePathBak), "%sboot.bak", Settings.NINLoaderPath);
-
-		int choice = WindowPrompt(tr( "Do you want to update this file?" ), NINUpdatePath, tr( "Yes" ), tr( "Cancel" ));
-		if (choice == 1)
-		{
-			if (!IsNetworkInit() && !NetworkInitPrompt())
-			{
-				WindowPrompt(tr("Error:"), tr("Could not initialize network!"), tr("OK"));
-			}
-			else
-			{
-				// Create the directory if it doesn't exist
-				CreateSubfolder(Settings.NINLoaderPath);
-				// Rename existing boot.dol file to boot.bak
-				if (CheckFile(NINUpdatePath))
-					RenameFile(NINUpdatePath, NINUpdatePathBak);
-				
-				if (DownloadFileToPath("https://raw.githubusercontent.com/FIX94/Nintendont/master/loader/loader.dol", NINUpdatePath) > 0)
-				{
-					// Remove existing loader.dol file if found as it has priority over boot.dol, and boot.bak
-					snprintf(NINUpdatePath, sizeof(NINUpdatePath), "%s/loader.dol", Settings.NINLoaderPath);
-					RemoveFile(NINUpdatePath);
-					RemoveFile(NINUpdatePathBak);
-					WindowPrompt(tr("Successfully Updated"), 0, tr("OK"));
-				}
-				else
-				{
-					// Restore backup file if found
-					RemoveFile(NINUpdatePath);
-					if (CheckFile(NINUpdatePathBak))
-						RenameFile(NINUpdatePathBak, NINUpdatePath);
-					WindowPrompt(tr("Update Failed"), 0, tr("OK"));
-				}
-			}
-		}
-	}
-
 	// Neek: Boot neek system menu with current EmuNAND channel path
 	else if (ret == ++Idx)
 	{
@@ -711,7 +671,7 @@ int FeatureSettingsMenu::GetMenuInternal()
 	//! Reset All Game Settings
 	else if(ret == ++Idx)
 	{
-		int choice = WindowPrompt(tr( "Are you sure you want to reset?" ), 0, tr( "Yes" ), tr( "Cancel" ));
+		int choice = WindowPrompt(tr( "Reset All Game Settings" ), tr( "Are you sure you want to reset?" ), tr( "Yes" ), tr( "Cancel" ));
 		if (choice == 1)
 			GameSettings.RemoveAll();
 	}
@@ -719,7 +679,7 @@ int FeatureSettingsMenu::GetMenuInternal()
 	//! Reset Cached Titles
 	else if(Settings.CacheTitles && ret == ++Idx)
 	{
-		int choice = WindowPrompt(tr( "Are you sure you want to reset?" ), 0, tr( "Yes" ), tr( "Cancel" ));
+		int choice = WindowPrompt(tr( "Reset Cached Titles" ), tr( "Are you sure you want to reset?" ), tr( "Yes" ), tr( "Cancel" ));
 		if (choice == 1)
 		{
 			gameList.clear();

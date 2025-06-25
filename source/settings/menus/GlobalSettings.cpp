@@ -34,6 +34,7 @@
 #include "FeatureSettingsMenu.hpp"
 #include "HardDriveSM.hpp"
 #include "BannerSettingsMenu.hpp"
+#include "UpdateSM.hpp"
 #include "SoundOperations/MusicPlayer.h"
 
 GlobalSettings::GlobalSettings()
@@ -74,13 +75,13 @@ void GlobalSettings::SetupMainButtons()
 	SetMainButton(pos++, tr( "GUI Settings" ), MainButtonImgData, MainButtonImgOverData);
 	SetMainButton(pos++, tr( "Loader Settings" ), MainButtonImgData, MainButtonImgOverData);
 	SetMainButton(pos++, tr( "Hard Drive Settings" ), MainButtonImgData, MainButtonImgOverData);
-	SetMainButton(pos++, tr( "Features" ), MainButtonImgData, MainButtonImgOverData);
+	SetMainButton(pos++, tr( "Miscellaneous Settings" ), MainButtonImgData, MainButtonImgOverData);
 	SetMainButton(pos++, tr( "Banner Settings" ), MainButtonImgData, MainButtonImgOverData);
 	SetMainButton(pos++, tr( "Sound Settings" ), MainButtonImgData, MainButtonImgOverData);
 	SetMainButton(pos++, tr( "Parental Control" ), MainButtonImgData, MainButtonImgOverData);
 	SetMainButton(pos++, tr( "Custom Paths" ), MainButtonImgData, MainButtonImgOverData);
 	SetMainButton(pos++, tr( "Theme Menu" ), MainButtonImgData, MainButtonImgOverData);
-	SetMainButton(pos++, tr( "Update" ), MainButtonImgData, MainButtonImgOverData);
+	SetMainButton(pos++, tr( "Update Menu" ), MainButtonImgData, MainButtonImgOverData);
 	SetMainButton(pos++, tr( "Default Settings" ), MainButtonImgData, MainButtonImgOverData);
 	SetMainButton(pos++, tr( "Credits" ), creditsImgData, creditsImgOverData);
 }
@@ -134,7 +135,7 @@ void GlobalSettings::CreateSettingsMenu(int menuNr)
 		CurrentMenu = new HardDriveSM();
 		Append(CurrentMenu);
 	}
-	//! Feature
+	//! Miscellaneous Settings
 	else if(menuNr == Idx++)
 	{
 		if(!Settings.godmode && (Settings.ParentalBlocks & BLOCK_FEATURE_SETTINGS))
@@ -215,7 +216,7 @@ void GlobalSettings::CreateSettingsMenu(int menuNr)
 
 		returnMenu = MENU_THEMEMENU;
 	}
-	//! Update
+	//! Update Menu
 	else if(menuNr == Idx++)
 	{
 		if(!Settings.godmode && (Settings.ParentalBlocks & BLOCK_UPDATES))
@@ -225,13 +226,9 @@ void GlobalSettings::CreateSettingsMenu(int menuNr)
 		}
 
 		HideMenu();
-		Remove(backBtn);
 		ResumeGui();
-		int ret = UpdateApp();
-		if (ret < 0)
-			WindowPrompt(tr( "Update Failed" ), 0, tr( "OK" ));
-		Append(backBtn);
-		ShowMenu();
+		CurrentMenu = new UpdateSM();
+		Append(CurrentMenu);
 	}
 	//! Default Settings
 	else if(menuNr == Idx++)

@@ -1528,7 +1528,7 @@ int CodeDownload(const char *id)
 			url.replace(url.find("{gameid}"), 8, id);
 			downloadfile(url.c_str(), &file);
 		}
-		if (file.size <= 0)
+		if (file.size <= 0 || strstr(file.data, "cloudflare") != NULL)
 		{
 			gprintf("Trying backup...\n");
 			snprintf(codeurl, sizeof(codeurl), "https://web.archive.org/web/202009if_/geckocodes.org/txt.php?txt=%s", id);

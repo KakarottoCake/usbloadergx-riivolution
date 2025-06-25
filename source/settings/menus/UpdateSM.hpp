@@ -1,6 +1,5 @@
-/***************************************************************************
- * Copyright (C) 2025 by blackb0x
- * Copyright (C) 2009 by Dimok
+/****************************************************************************
+ * Copyright (C) 2025 blackb0x
  *
  * This software is provided 'as-is', without any express or implied
  * warranty. In no event will the authors be held liable for any
@@ -20,21 +19,22 @@
  *
  * 3. This notice may not be removed or altered from any source
  * distribution.
- *
- * update.h
- *
- * Update operations
- * for Wii-Xplorer 2009
  ***************************************************************************/
-#ifndef _UPDATEOPS_H_
-#define _UPDATEOPS_H_
+#ifndef UPDATE_MENU_HPP_
+#define UPDATE_MENU_HPP_
 
-bool initNetwork();
-int UpdateGameTDB();
-int UpdateCheats();
-int ApplicationDownload();
-int UpdateNintendont();
-void UpdateCovers();
-int DownloadFileToPath(const char *url, const char *dest, const bool showprogress = true);
+#include "SettingsMenu.hpp"
+
+class UpdateSM : public SettingsMenu
+{
+	public:
+		UpdateSM();
+	protected:
+		void SetOptionNames();
+		int GetMenuInternal();
+
+		OptionList GuiOptions;
+};
+
 
 #endif
