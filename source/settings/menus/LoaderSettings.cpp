@@ -37,6 +37,7 @@
 #include "utils/tools.h"
 #include "menu.h"
 #include "GameCube/GCGames.h"
+#include "sys.h"
 
 static const char * OnOffText[] =
 {
@@ -56,6 +57,12 @@ static const char * AspectText[] =
 	trNOOP( "Force 4:3" ),
 	trNOOP( "Force 16:9" ),
 	trNOOP( "System Default" )
+};
+
+static const char * ScreenModeText[] =
+{
+	trNOOP( "System Default" ),
+	trNOOP( "Fullscreen" )
 };
 
 static const char * VideoModeText[] =
@@ -274,6 +281,10 @@ void LoaderSettings::SetOptionNames()
 	Options->SetName(Idx++, "%s", tr( "Deflicker Filter" ));
 	Options->SetName(Idx++, "%s", tr( "Video Width" ));
 	Options->SetName(Idx++, "%s", tr( "Aspect Ratio" ));
+	if (isWiiU() && Settings.widescreen)
+	{
+		Options->SetName(Idx++, "%s", tr( "Screen Mode" ));
+	}
 	Options->SetName(Idx++, "%s", tr( "Game Language" ));
 	Options->SetName(Idx++, "%s", tr( "Patch Country Strings" ));
 	Options->SetName(Idx++, "%s", tr( "Ocarina" ));
@@ -320,7 +331,7 @@ void LoaderSettings::SetOptionNames()
 	Options->SetName(Idx++, "%s", tr( "Settings File" ));
 	Options->SetName(Idx++, "%s", tr( "Video Deflicker" ));
 	Options->SetName(Idx++, "%s", tr( "PAL50 Patch" ));
-	Options->SetName(Idx++, "%s", tr( "WiiU Widescreen" ));
+	Options->SetName(Idx++, "%s", tr( "Wii U Widescreen" ));
 	Options->SetName(Idx++, "%s", tr( "Video scale" ));
 	if (Settings.NINVideoScale != 0)
 	{
@@ -381,6 +392,10 @@ void LoaderSettings::SetOptionValues()
 
 	//! Settings: Aspect Ratio
 	Options->SetValue(Idx++, "%s", tr( AspectText[Settings.GameAspectRatio] ));
+
+	//! Settings: Screen Mode
+	if (isWiiU() && Settings.widescreen)
+		Options->SetValue(Idx++, "%s", tr( ScreenModeText[Settings.ScreenMode] ));
 
 	//! Settings: Game Language
 	Options->SetValue(Idx++, "%s", tr( LanguageText[Settings.language] ));
@@ -521,7 +536,7 @@ void LoaderSettings::SetOptionValues()
 	//! Settings: NIN PAL50 Patch
 	Options->SetValue(Idx++, "%s", tr(OnOffText[Settings.NINPal50Patch]));
 
-	//! Settings: WiiU Widescreen
+	//! Settings: Wii U Widescreen
 	Options->SetValue(Idx++, "%s", tr(OnOffText[Settings.NINWiiUWide]));
 
 	//! Settings: NIN VideoScale
@@ -668,6 +683,12 @@ int LoaderSettings::GetMenuInternal()
 	else if (ret == ++Idx )
 	{
 		if (++Settings.GameAspectRatio >= ASPECT_MAX) Settings.GameAspectRatio = 0;
+	}
+
+	//! Settings: Screen Mode
+	else if (isWiiU() && Settings.widescreen && ret == ++Idx)
+	{
+		if (++Settings.ScreenMode >= SCREEN_MAX) Settings.ScreenMode = 0;
 	}
 
 	//! Settings: Game Language
@@ -981,7 +1002,7 @@ int LoaderSettings::GetMenuInternal()
 		if (++Settings.NINPal50Patch >= MAX_ON_OFF) Settings.NINPal50Patch = 0;
 	}
 
-	//! Settings: WiiU Widescreen
+	//! Settings: Wii U Widescreen
 	else if (ret == ++Idx)
 	{
 		if (++Settings.NINWiiUWide >= MAX_ON_OFF) Settings.NINWiiUWide = 0;

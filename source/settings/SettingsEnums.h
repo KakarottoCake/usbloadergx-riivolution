@@ -427,4 +427,11 @@ enum
 	GAME_IOS_MAX
 };
 
+enum
+{
+	SCREEN_DEFAULT,
+	SCREEN_FULL,
+	SCREEN_MAX
+};
+
 #endif

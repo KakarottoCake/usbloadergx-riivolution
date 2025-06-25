@@ -190,6 +190,7 @@ bool CGameSettings::Save()
 		fprintf(f, "deflicker:%d; ", GameList[i].deflicker);
 		fprintf(f, "videowidth:%d; ", GameList[i].videoWidth);
 		fprintf(f, "aspectratio:%d; ", GameList[i].aspectratio);
+		fprintf(f, "ScreenMode:%d; ", GameList[i].ScreenMode);
 		fprintf(f, "language:%d; ", GameList[i].language);
 		fprintf(f, "ocarina:%d; ", GameList[i].ocarina);
 		fprintf(f, "vipatch:%d; ", GameList[i].vipatch);
@@ -287,6 +288,11 @@ bool CGameSettings::SetSetting(GameCFG & game, const char *name, const char *val
 	else if(strcmp(name, "aspectratio") == 0)
 	{
 		game.aspectratio = atoi(value);
+		return true;
+	}
+	else if(strcmp(name, "ScreenMode") == 0)
+	{
+		game.ScreenMode = atoi(value);
 		return true;
 	}
 	else if(strcmp(name, "language") == 0)
@@ -697,6 +703,7 @@ void CGameSettings::SetDefault(GameCFG &game)
 	game.deflicker = INHERIT;
 	game.videoWidth = INHERIT;
 	game.aspectratio = INHERIT;
+	game.ScreenMode = INHERIT;
 	game.language = INHERIT;
 	game.ocarina = INHERIT;
 	game.vipatch = INHERIT;

@@ -19,6 +19,7 @@
 #include "memory/mem2.h"
 #include "utils/U8Archive.h"
 #include "wad/nandtitle.h"
+#include "sys.h"
 
 SystemMenuResources *SystemMenuResources::instance = NULL;
 
@@ -29,7 +30,10 @@ SystemMenuResources::SystemMenuResources() : isInited(false),
 											 wbf2Buffer(NULL),
 											 chanTtlAsh(NULL),
 											 chanSelAsh(NULL),
-											 systemFont(NULL)
+											 systemFont(NULL),
+											 discdb(NULL),
+											 vcadb(NULL),
+											 wwdb(NULL)
 {
 }
 
@@ -115,6 +119,64 @@ bool SystemMenuResources::Init()
 					memcpy(tmp, chanSelAsh, chanSelAshSize);
 					free(chanSelAsh);
 					chanSelAsh = tmp;
+				}
+			}
+
+			// vWii only
+			if (isWiiU())
+			{
+				discdb = mainArc.GetFileAllocated("/titlelist/discdb.bin", &discdbSize);
+				if (!discdb)
+				{
+					gprintf("Error while loading discdb.bin\n");
+					free(resourceArc);
+					break;
+				}
+				else if (!isMEM2Buffer(discdb))
+				{
+					u8 *tmp = (u8 *)MEM2_alloc(discdbSize);
+					if (tmp)
+					{
+						memcpy(tmp, discdb, discdbSize);
+						free(discdb);
+						discdb = tmp;
+					}
+				}
+
+				vcadb = mainArc.GetFileAllocated("/titlelist/vcadb.bin", &vcadbSize);
+				if (!vcadb)
+				{
+					gprintf("Error while loading vcadb.bin\n");
+					free(resourceArc);
+					break;
+				}
+				else if (!isMEM2Buffer(vcadb))
+				{
+					u8 *tmp = (u8 *)MEM2_alloc(vcadbSize);
+					if (tmp)
+					{
+						memcpy(tmp, vcadb, vcadbSize);
+						free(vcadb);
+						vcadb = tmp;
+					}
+				}
+
+				wwdb = mainArc.GetFileAllocated("/titlelist/wwdb.bin", &wwdbSize);
+				if (!wwdb)
+				{
+					gprintf("Error while loading wwdb.bin\n");
+					free(resourceArc);
+					break;
+				}
+				else if (!isMEM2Buffer(wwdb))
+				{
+					u8 *tmp = (u8 *)MEM2_alloc(wwdbSize);
+					if (tmp)
+					{
+						memcpy(tmp, wwdb, wwdbSize);
+						free(wwdb);
+						wwdb = tmp;
+					}
 				}
 			}
 
@@ -271,6 +333,12 @@ void SystemMenuResources::FreeEverything()
 		free(wbf2Buffer);
 	if (systemFont)
 		free(systemFont);
+	if (discdb)
+		free(discdb);
+	if (vcadb)
+		free(vcadb);
+	if (wwdb)
+		free(wwdb);
 
 	delete wbf1;
 	delete wbf2;
@@ -282,4 +350,7 @@ void SystemMenuResources::FreeEverything()
 	wbf2Buffer = NULL;
 	wbf1 = NULL;
 	wbf2 = NULL;
+	discdb = NULL;
+	vcadb = NULL;
+	wwdb = NULL;
 }

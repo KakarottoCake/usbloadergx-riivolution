@@ -61,6 +61,8 @@
 #include "lstub.h"
 #include "xml/GameTDB.hpp"
 #include "wad/nandtitle.h"
+#include "settings/GameTitles.h"
+#include "SystemMenu/SystemMenuResources.h"
 
 /* GCC 11 false positives */
 #if __GNUC__ > 10
@@ -81,6 +83,15 @@ extern "C"
 	u32 __SYS_SyncSram(void);
 	extern void __exception_closeall();
 }
+
+typedef struct
+{
+	u32 magic;
+	u32 version;
+	u32 count;
+	u32 reserved;
+	u32 entries[];
+} aspectDB;
 
 int GameBooter::BootGCMode(struct discHdr *gameHdr)
 {
@@ -300,6 +311,7 @@ int GameBooter::BootGame(struct discHdr *gameHdr)
 	u8 reloadblock = game_cfg->iosreloadblock == INHERIT ? Settings.BlockIOSReload : game_cfg->iosreloadblock;
 	u8 Hooktype = game_cfg->Hooktype == INHERIT ? Settings.Hooktype : game_cfg->Hooktype;
 	u8 WiirdDebugger = game_cfg->WiirdDebugger == INHERIT ? Settings.WiirdDebugger : game_cfg->WiirdDebugger;
+	u8 ScreenMode = game_cfg->ScreenMode == INHERIT ? Settings.ScreenMode : game_cfg->ScreenMode;
 	u16 videoWidth = game_cfg->videoWidth == INHERIT ? Settings.videoWidth : game_cfg->videoWidth;
 	u64 returnToChoice = strlen(Settings.returnTo) > 0 ? (game_cfg->returnTo ? NandTitles.FindU32(Settings.returnTo) : 0) : 0;
 	u8 NandEmuMode = OFF;
@@ -315,6 +327,76 @@ int GameBooter::BootGame(struct discHdr *gameHdr)
 	// boot neek for Wii games and EmuNAND channels only
 	if (NandEmuMode == EMUNAND_NEEK && (gameHeader.type == TYPE_GAME_WII_IMG || gameHeader.type == TYPE_GAME_EMUNANDCHAN))
 		return BootNeek(&gameHeader);
+
+	// Display games correctly on Wii U - https://wiibrew.org/wiki/43DB
+	if (isWiiU())
+	{
+		ExitGUIThreads();
+		if (aspectChoice == ASPECT_SYSTEM_DEFAULT && Settings.widescreen && ScreenMode == SCREEN_DEFAULT)
+		{
+			aspectDB *ardb = NULL;
+			char sys[2];
+
+			snprintf(sys, sizeof(sys), "%c", gameHeader.id[0]);
+
+			// Filter by type due to some custom games/channels using bad IDs
+			if (gameHeader.type <= TYPE_GAME_WII_DISC)
+			{
+				// Wii games
+				if (strstr("DRS", sys) != NULL)
+					ardb = (aspectDB *)SystemMenuResources::Instance()->Get43DBDisc();
+			}
+			else if (gameHeader.type >= TYPE_GAME_NANDCHAN)
+			{
+				// C64, NES, SNES, SMD/GEN, SMS, N64, TG16 & TGCD are always 4:3
+				if (strstr("CFJLMNPQ", sys) != NULL)
+				{
+					// Exclude Super Street Fighter II
+					if (memcmp(gameHeader.id, "MC3", 3) != 0)
+						write32(0xd8006a0, 0x30000002), mask32(0xd8006a8, 0, 2);
+				}
+				// Wii channels and WiiWare
+				else if (gameHeader.id[0] == 'H' || gameHeader.id[0] == 'W')
+				{
+					// Exclude Everybody Votes and Mii Contest channels
+					if (memcmp(gameHeader.id, "HAP", 3) != 0 && memcmp(gameHeader.id, "HAJ", 3) != 0)
+						ardb = (aspectDB *)SystemMenuResources::Instance()->Get43DBWiiWare();
+				}
+				// E5 and E6 are arcade games. EA, EB & EC are Neo Geo games
+				else if (gameHeader.id[0] == 'E')
+				{
+					if (gameHeader.id[1] == '5' || gameHeader.id[1] == '6')
+						ardb = (aspectDB *)SystemMenuResources::Instance()->Get43DBVC();
+					else if (gameHeader.id[1] == 'A' || gameHeader.id[1] == 'B' || gameHeader.id[1] == 'C')
+						write32(0xd8006a0, 0x30000002), mask32(0xd8006a8, 0, 2);
+				}
+				// XA are MSX games. The others are WiiWare demos
+				else if (gameHeader.id[0] == 'X')
+				{
+					if (gameHeader.id[1] == 'A')
+						write32(0xd8006a0, 0x30000002), mask32(0xd8006a8, 0, 2);
+					else
+						ardb = (aspectDB *)SystemMenuResources::Instance()->Get43DBWiiWare();
+				}
+			}
+			// Check the database and enable 4:3 if there's a match
+			if (ardb && ardb->magic == 0x34334442 && ardb->count)
+			{
+				for (u32 i = 0; i < ardb->count; i++)
+				{
+					if (memcmp(&ardb->entries[i], gameHeader.id, 3) == 0)
+					{
+						write32(0xd8006a0, 0x30000002), mask32(0xd8006a8, 0, 2);
+						break;
+					}
+				}
+			}
+		}
+		else if (aspectChoice == ASPECT_FORCE_4_3 && Settings.widescreen && ScreenMode == SCREEN_DEFAULT)
+			write32(0xd8006a0, 0x30000002), mask32(0xd8006a8, 0, 2);
+		else if (aspectChoice == ASPECT_FORCE_16_9)
+			write32(0xd8006a0, 0x30000004), mask32(0xd8006a8, 0, 2);
+	}
 
 	if (languageChoice == CONSOLE_DEFAULT)
 	{

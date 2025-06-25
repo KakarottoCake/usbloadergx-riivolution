@@ -44,6 +44,10 @@ public:
 	const u8 *GetSystemFont() const { return systemFont; }
 	u32 GetSystemFontSize() const { return systemFontSize; }
 
+	const u8 *Get43DBDisc() const { return discdb; }
+	const u8 *Get43DBVC() const { return vcadb; }
+	const u8 *Get43DBWiiWare() const { return wwdb; }
+
 protected:
 	SystemMenuResources();
 	~SystemMenuResources();
@@ -72,6 +76,14 @@ protected:
 	//! system font
 	u8 *systemFont;
 	u32 systemFontSize;
+
+	//! 43DB
+	u8 *discdb;
+	u32 discdbSize;
+	u8 *vcadb;
+	u32 vcadbSize;
+	u8 *wwdb;
+	u32 wwdbSize;
 
 	// free data
 	void FreeEverything();

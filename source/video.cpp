@@ -115,10 +115,13 @@ void InitVideo()
 {
 	VIDEO_Init();
 	
-	// If WiiU - Force 16:9 aspect ratio based on WiiU settings
-	if(isWiiU() && Settings.widescreen)
+	// Reset the aspect ratio for Wii U
+	if(isWiiU())
 	{
-		write32(0xd8006a0, 0x30000004), mask32(0xd8006a8, 0, 2);		
+		if (Settings.widescreen)
+			write32(0xd8006a0, 0x30000004), mask32(0xd8006a8, 0, 2);
+		else
+			write32(0xd8006a0, 0x10000002), mask32(0xd8006a8, 0, 2);
 	}
 	
 	vmode = VIDEO_GetPreferredMode(NULL); // get default video mode
@@ -126,13 +129,9 @@ void InitVideo()
 	vmode->viWidth = Settings.widescreen ? 708 : 694;
 
 	if (Settings.PAL50)
-	{
 		vmode->viXOrigin = (VI_MAX_WIDTH_PAL - vmode->viWidth) / 2;
-	}
 	else
-	{
 		vmode->viXOrigin = (VI_MAX_WIDTH_NTSC - vmode->viWidth) / 2;
-	}
 
 	VIDEO_Configure(vmode);
 

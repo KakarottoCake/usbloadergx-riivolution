@@ -183,6 +183,7 @@ void CSettings::SetDefault()
 	LoaderMode = MODE_WIIGAMES | MODE_GCGAMES | MODE_NANDCHANNELS;
 	SearchMode = SEARCH_BEGINNING;
 	GameAspectRatio = ASPECT_SYSTEM_DEFAULT;
+	ScreenMode = SCREEN_DEFAULT;
 	PointerSpeed = 0.18f;
 	UseChanLauncher = OFF;
 	AdjustOverscanX = 0;
@@ -461,6 +462,7 @@ bool CSettings::Save()
 	fprintf(file, "LoaderMode = %d\n", LoaderMode);
 	fprintf(file, "SearchMode = %d\n", SearchMode);
 	fprintf(file, "GameAspectRatio = %d\n", GameAspectRatio);
+	fprintf(file, "ScreenMode = %d\n", ScreenMode);
 	fprintf(file, "PointerSpeed = %g\n", PointerSpeed);
 	fprintf(file, "UseChanLauncher = %d\n", UseChanLauncher);
 	fprintf(file, "AdjustOverscanX = %d\n", AdjustOverscanX);
@@ -930,6 +932,10 @@ bool CSettings::SetSetting(char *name, char *value)
 	else if(strcmp(name, "GameAspectRatio") == 0)
 	{
 		GameAspectRatio = atoi(value);
+	}
+	else if(strcmp(name, "ScreenMode") == 0)
+	{
+		ScreenMode = atoi(value);
 	}
 	else if(strcmp(name, "UseChanLauncher") == 0)
 	{

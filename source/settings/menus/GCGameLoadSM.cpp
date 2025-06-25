@@ -203,7 +203,7 @@ void GCGameLoadSM::SetOptionNames()
 		Options->SetName(Idx++, "%s", tr( "Video Deflicker" ));
 		Options->SetName(Idx++, "%s", tr( "PAL50 Patch" ));
 		Options->SetName(Idx++, "%s", tr( "Force Widescreen" ));
-		Options->SetName(Idx++, "%s", tr( "WiiU Widescreen" ));
+		Options->SetName(Idx++, "%s", tr( "Wii U Widescreen" ));
 		Options->SetName(Idx++, "%s", tr( "Video scale" ));
 		if(GameConfig.NINVideoScale > 0)
 			Options->SetName(Idx++, "%s", tr( "Video Scale Value" ));
@@ -386,7 +386,7 @@ void GCGameLoadSM::SetOptionValues()
 		else
 			Options->SetValue(Idx++, "%s", tr(OnOffText[GameConfig.DMLWidescreen]));
 
-		//! Settings: WiiU Widescreen
+		//! Settings: Wii U Widescreen
 		if(GameConfig.NINWiiUWide == INHERIT)
 			Options->SetValue(Idx++, tr("Use global"));
 		else
@@ -771,7 +771,7 @@ int GCGameLoadSM::GetMenuInternal()
 		if (++GameConfig.DMLWidescreen >= MAX_ON_OFF) GameConfig.DMLWidescreen = INHERIT;
 	}
 
-	//! Settings: WiiU Widescreen
+	//! Settings: Wii U Widescreen
 	else if (currentGCmode == GC_MODE_NINTENDONT && ret == ++Idx)
 	{
 		if (++GameConfig.NINWiiUWide >= MAX_ON_OFF) GameConfig.NINWiiUWide = INHERIT;

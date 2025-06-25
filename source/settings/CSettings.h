@@ -190,6 +190,7 @@ class CSettings
 		short LoaderMode;
 		short SearchMode;
 		short GameAspectRatio;
+		short ScreenMode;
 		short UseChanLauncher;
 		int AdjustOverscanX;
 		int AdjustOverscanY;
