@@ -25,6 +25,7 @@ void domainpatcher(void *addr, u32 len, const char *domain);
 bool patch_nsmb(u8 *gameid);
 bool patch_pop(u8 *gameid);
 void patch_re4(u8 *gameid);
+void patch_sdcard(u8 *gameid);
 void patch_error_codes(u8 *gameid);
 void VideoModePatcher(u8 *dst, int len, u8 videoSelected, u8 VideoPatchDol);
 void sneek_video_patch(void *addr, u32 len);

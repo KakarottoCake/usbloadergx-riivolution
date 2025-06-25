@@ -1074,6 +1074,41 @@ bool patch_pop(u8 *gameid)
     return CodeList != NULL;
 }
 
+void patch_sdcard(u8 *gameid)
+{
+    // I might patch this at the cIOS level at some point, but this works for now
+
+    // Excite Truck
+    if (memcmp(gameid, "REXE01", 6) == 0)
+        *(u32 *)0x800b9e48 = 0x4800014c;
+    else if (memcmp(gameid, "REXP01", 6) == 0)
+        *(u32 *)0x800ba358 = 0x4800014c;
+    else if (memcmp(gameid, "REXJ01", 6) == 0)
+        *(u32 *)0x800ba404 = 0x4800014c;
+
+    // Kirby's Return to Dream Land
+    else if (memcmp(gameid, "SUKE01", 6) == 0)
+    {
+        *(u32 *)0x8022da10 = 0x60000000;
+        *(u32 *)0x8022da48 = 0x60000000;
+    }
+    else if (memcmp(gameid, "SUKP01", 6) == 0)
+    {
+        *(u32 *)0x8022e800 = 0x60000000;
+        *(u32 *)0x8022e838 = 0x60000000;
+    }
+    else if (memcmp(gameid, "SUKJ01", 6) == 0)
+    {
+        *(u32 *)0x8022c66c = 0x60000000;
+        *(u32 *)0x8022c6a4 = 0x60000000;
+    }
+    else if (memcmp(gameid, "SUKK01", 6) == 0)
+    {
+        *(u32 *)0x8022dfc4 = 0x60000000;
+        *(u32 *)0x8022dffc = 0x60000000;
+    }
+}
+
 void patch_error_codes(u8 *gameid)
 {
     // Thanks to Seeky for the MKWii gecko codes

@@ -700,6 +700,9 @@ int GameBooter::BootGame(struct discHdr *gameHdr, const s8 useOcarina)
 	//! Do all the game patches
 	gprintf("Applying game patches...\n");
 
+	if (Settings.SDMode)
+		patch_sdcard(gameHeader.id);
+
 	//! Now this code block is responsible for the private server patch
 	//! and the gecko code handler loading
 
