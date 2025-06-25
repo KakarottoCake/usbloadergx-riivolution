@@ -117,7 +117,6 @@ void FeatureSettingsMenu::SetOptionNames()
 	Options->SetName(Idx++, "%s", tr( "Dump NAND to EmuNAND" ));
 	Options->SetName(Idx++, "%s", tr( "EmuNAND WAD Manager" ));
 	Options->SetName(Idx++, "%s", tr( "Update Nintendont" ));
-	Options->SetName(Idx++, "%s", tr( "WiiU Widescreen" ));
 	Options->SetName(Idx++, "%s", tr( "Boot Neek System Menu" ));
 	Options->SetName(Idx++, "%s", tr( "Reset All Game Settings" ));
 	if (Settings.CacheTitles)
@@ -171,9 +170,6 @@ void FeatureSettingsMenu::SetOptionValues()
 	Options->SetValue(Idx++, " ");
 
 	//! Settings: Update Nintendont
-	Options->SetValue(Idx++, " ");
-
-	//! Settings: WiiU Widescreen
 	Options->SetValue(Idx++, " ");
 
 	//! Settings: Neek boot
@@ -683,24 +679,6 @@ int FeatureSettingsMenu::GetMenuInternal()
 						RenameFile(NINUpdatePathBak, NINUpdatePath);
 					WindowPrompt(tr("Update Failed"), 0, tr("OK"));
 				}
-			}
-		}
-	}
-
-	// WiiU Aspect switcher (Thanks Tueidj)
-	else if (ret == ++Idx)
-	{
-		if(isWiiU()) // vWii only
-		{
-			if( read32(0xd8006a0) == 0x30000004)
-			{
-				write32(0xd8006a0, 0x30000002), mask32(0xd8006a8, 0, 2); // Set 4:3
-				Settings.widescreen = OFF;
-			}
-			else
-			{
-				write32(0xd8006a0, 0x30000004), mask32(0xd8006a8, 0, 2); // Set 16:9
-				Settings.widescreen = ON;
 			}
 		}
 	}

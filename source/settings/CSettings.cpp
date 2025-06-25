@@ -1,6 +1,6 @@
 /****************************************************************************
- * Copyright (C) 2010
- * by Dimok
+ * Copyright (C) 2019-2025 blackb0x
+ * Copyright (C) 2010 Dimok
  *
  * This software is provided 'as-is', without any express or implied
  * warranty. In no event will the authors be held liable for any
@@ -135,7 +135,7 @@ void CSettings::SetDefault()
 	xflip = XFLIP_SYSMENU;
 	quickboot = OFF;
 	wiilight = WIILIGHT_ON;
-	autonetwork = OFF;
+	autonetwork = ON;
 	patchcountrystrings = OFF;
 	TitlesType = TITLETYPE_FROMWIITDB;
 	CacheCheck = ON;
@@ -169,7 +169,7 @@ void CSettings::SetDefault()
 	RememberLastGame = ON;
 	sneekVideoPatch = OFF;
 	NandEmuMode = OFF;
-	NandEmuChanMode = 2;
+	NandEmuChanMode = EMUNAND_FULL;
 	UseSystemFont = ON;
 	AutobootDiscs = OFF;
 	AutobootDiscsDelay = 3;
@@ -308,7 +308,11 @@ bool CSettings::ValidVersion(FILE * file)
 
 bool CSettings::Reset()
 {
+	int backupPartition = Settings.partition;
 	this->SetDefault();
+	// Restore the partition setting though
+	if (SDMode)
+		partition = backupPartition;
 
 	if (this->Save()) return true;
 
@@ -1541,13 +1545,14 @@ bool CSettings::FindConfig()
 	if (ptr)
 	{
 		*ptr = 0;
-		snprintf(BootDevice, sizeof(BootDevice), "%s:", device.c_str());
+		// Check if the config file is in the same location as the executable
 		snprintf(CheckPath, sizeof(CheckPath), "%sGXGlobal.cfg", ConfigPath);
 
 		FILE *fp = fopen(CheckPath, "ab+");
 		if (fp)
 		{
 			fclose(fp);
+			snprintf(BootDevice, sizeof(BootDevice), "%s:", device.c_str());
 			return true;
 		}
 	}
@@ -1556,16 +1561,16 @@ bool CSettings::FindConfig()
 	char CheckDevice[73];
 	for (int i = SD; i < MAXDEVICES; ++i)
 	{
+		// Check if the config file is in the usbloader_gx folder
 		snprintf(CheckDevice, sizeof(CheckDevice), "%s:", DeviceName[i]);
-		// Check for the config file in the apps directory
-		strlcpy(BootDevice, CheckDevice, sizeof(BootDevice));
-		snprintf(ConfigPath, sizeof(ConfigPath), "%s/apps/usbloader_gx/", BootDevice);
-		snprintf(CheckPath, sizeof(CheckPath), "%sGXGlobal.cfg", ConfigPath);
+		snprintf(CheckPath, sizeof(CheckPath), "%s/apps/usbloader_gx/GXGlobal.cfg", CheckDevice);
 
 		FILE *fp = fopen(CheckPath, "ab+");
 		if (fp)
 		{
 			fclose(fp);
+			strlcpy(BootDevice, CheckDevice, sizeof(BootDevice));
+			snprintf(ConfigPath, sizeof(ConfigPath), "%s/apps/usbloader_gx/", BootDevice);
 			return true;
 		}
 	}

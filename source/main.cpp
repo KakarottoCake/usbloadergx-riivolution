@@ -44,7 +44,7 @@ int main(int argc, char *argv[])
 	InitGecko();
 	// redirect stdout and stderr to gecko
 	USBGeckoOutput();
-	NandTitles.Get();
+
 	setlocale(LC_ALL, "en_US.UTF-8");
 
 	if(StartUpProcess::Run(argc, argv) < 0)

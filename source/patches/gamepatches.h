@@ -7,6 +7,7 @@ extern "C" {
 
 #include <gccore.h>
 
+bool exclude_game(u8 *gameid, bool checkEmuNAND);
 void RegisterDOL(u8 *dst, int len);
 void ClearDOLList();
 void gamepatches(u8 videoSelected, u8 videoPatchDol, u8 aspectForce, u8 languageChoice, u8 patchcountrystring,

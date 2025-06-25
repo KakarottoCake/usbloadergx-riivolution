@@ -1,4 +1,5 @@
 /****************************************************************************
+ * Copyright (C) 2019-2025 blackb0x
  * Copyright (C) 2012-2015 Cyan
  * Copyright (C) 2011 Dimok
  *
@@ -79,26 +80,6 @@ extern "C"
 	u32 __SYS_UnlockSram(u32 write);
 	u32 __SYS_SyncSram(void);
 	extern void __exception_closeall();
-}
-
-// Check if a game or channel is incompatible with some patches
-bool GameBooter::exclude_game(u8 *gameid, bool skipChannels)
-{
-    if (memcmp(gameid, "RPW", 3) == 0 || memcmp(gameid, "SPX", 3) == 0 ||
-        memcmp(gameid, "R3D", 3) == 0 || memcmp(gameid, "SDV", 3) == 0 ||
-        memcmp(gameid, "STN", 3) == 0 || memcmp(gameid, "S7S", 3) == 0 ||
-        memcmp(gameid, "SDUP41", 6) == 0 || memcmp(gameid, "SDUE41", 6) == 0 ||
-        memcmp(gameid, "SDUX41", 6) == 0 || memcmp(gameid, "SD2", 3) == 0 ||
-        memcmp(gameid, "SXD", 3) == 0 || memcmp(gameid, "REX", 3) == 0)
-    {
-        return true;
-    }
-    if (!skipChannels && (memcmp(gameid, "HAAA", 4) == 0 || memcmp(gameid, "HAYK", 4) == 0 ||
-        memcmp(gameid, "HAYC", 4) == 0))
-    {
-        return true;
-    }
-    return false;
 }
 
 int GameBooter::BootGCMode(struct discHdr *gameHdr)
@@ -192,7 +173,7 @@ void GameBooter::SetupNandEmu(u8 NandEmuMode, const char *NandEmuPath, struct di
 		//! Create save game path and title.tmd for not existing saves
 		CreateSavePath(&gameHeader, NandEmuPath);
 
-		gprintf("Enabling %s NAND emulation on: %s\n", NandEmuMode == 2 ? "Full" : "Partial", NandEmuPath);
+		gprintf("Enabling %s NAND emulation on: %s\n", NandEmuMode == 2 ? "full" : "partial", NandEmuPath);
 		Set_FullMode(NandEmuMode == 2);
 		Set_Path(strchr(NandEmuPath, '/'));
 
@@ -425,13 +406,15 @@ int GameBooter::BootGame(struct discHdr *gameHdr)
 				// Check if we don't have a cIOS with base IOS 53
 				if (!IosLoader::GetD2XIOS(requestedIOS))
 				{
-					if (isWiiU())
-						requestedIOS = 58;
-					else
-						// Saves will go to NAND in SD card mode if using base 38
-						requestedIOS = IosLoader::GetD2XIOS(58) ? 58 : 38;
+					// Saves will go to NAND if the path is to the SD card while using base 38
+					requestedIOS = IosLoader::GetD2XIOS(58) ? 58 : 38;
 					gprintf("Applied SpongeBob workaround\n");
 				}
+			}
+			// Workaround for Wii System Transfer (vWii)
+			else if (memcmp(gameHeader.id, "HCT", 3) == 0)
+			{
+				requestedIOS = 56;
 			}
 			// The d2x cIOS can only save to SD cards with bases 56-60
 			else if ((strncmp(NandEmuPath, "sd", 2) == 0 && NandEmuMode > EMUNAND_OFF) || Settings.SDMode)
@@ -451,7 +434,7 @@ int GameBooter::BootGame(struct discHdr *gameHdr)
 			// Check if there's any cIOS options remaining
 			if (d2x_list.size())
 			{
-				// Check for a D2X cIOS with the requested base IOS
+				// Check for a d2x cIOS with the requested base IOS
 				int slot = IosLoader::GetD2XIOS(requestedIOS);
 				if (slot)
 					iosChoice = slot;
@@ -597,7 +580,6 @@ int GameBooter::BootGame(struct discHdr *gameHdr)
 
 	//! Now we can free up the memory used by the game/channel lists
 	gameList.clear();
-	Channels::DestroyInstance();
 
 	//! Load main.dol or alternative dol into memory, start the game apploader and get game entrypoint
 	if (gameHeader.tid == 0)
@@ -612,10 +594,10 @@ int GameBooter::BootGame(struct discHdr *gameHdr)
 		//! shutdown now and avoid later crashes with free if memory gets overwritten by channel
 		ShutDownDevices(DeviceHandler::PartitionToUSBPort(std::max(atoi(NandEmuPath + 3) - 1, 0)));
 		gprintf("Channel Boot\n");
-		/* Setup video mode */
-		Disc_SelectVMode(videoChoice, false, NULL, NULL);
 		// Load dol
 		AppEntrypoint = Channels::LoadChannel(gameHeader.tid);
+		/* Setup video mode */
+		Disc_SelectVMode(videoChoice, false, NULL, NULL);
 	}
 
 	//! No entrypoint found...back to HBC/SystemMenu
@@ -660,7 +642,7 @@ int GameBooter::BootGame(struct discHdr *gameHdr)
 	//! This needs to be done after the call to gamepatches(), after loading any code handler.
 	//! Can (and should) be done before Wiimmfi patching, can't be done in gamepatches() itself.
 	//! Exclude Prince of Persia: The Forgotten Sands and a few games that use MetaFortress
-	if (patchFix480pChoice && !exclude_game(gameHeader.id))
+	if (patchFix480pChoice && !exclude_game(gameHeader.id, false))
 		PatchFix480p();
 
 	//! If we're NOT on Wiimmfi, patch the known RCE vulnerability in MKWii.

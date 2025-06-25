@@ -51,6 +51,27 @@ static appDOL *dolList = NULL;
 static int dolCount = 0;
 extern GXRModeObj *rmode;
 
+bool exclude_game(u8 *gameid, bool checkEmuNAND)
+{
+    // Used for games that won't work with EmuNAND saves
+    if (checkEmuNAND)
+    {
+        // Excite Truck
+        if (memcmp(gameid, "REX", 3) == 0)
+            return true;
+
+        return false;
+    }
+	// Prince of Persia, Driver, Tintin & We Dare
+    if (memcmp(gameid, "RPW", 3) == 0 || memcmp(gameid, "SPX", 3) == 0 ||
+        memcmp(gameid, "SDV", 3) == 0 || memcmp(gameid, "STN", 3) == 0 ||
+        memcmp(gameid, "SLVP41", 6) == 0)
+    {
+        return true;
+    }
+    return false;
+}
+
 void RegisterDOL(u8 *dst, int len)
 {
     if (!dolList)

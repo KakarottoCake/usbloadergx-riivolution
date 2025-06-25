@@ -49,7 +49,7 @@ u8 shutdown = 0;
 u8 reset = 0;
 
 /* 
- * True if running from a WiiU Wii Virtual console channel. 
+ * True if running from a Wii U Wii Virtual console channel. 
  * Checked when initializing gamepad in input.c
  * Thanks to Fix94
  */
@@ -133,6 +133,7 @@ void ExitApp(void)
 	AppCleanUp();
 	WBFS_CloseAll();
 	DeviceHandler::DestroyInstance();
+	USBStorage2_Deinit();
 	USB_Deinitialize();
 	if(Settings.PlaylogUpdate)
 		Playlog_Delete(); // Don't show USB Loader GX in the Wii message board
@@ -228,7 +229,6 @@ void Sys_LoadHBC(void)
 
 	WII_Initialize();
 
-	// Try launching all known HBC titles in reversed released order
 	// Can't use HBC Stub address here as it's overwritten with forwarder's TitleID for "return to" feature.
 	WII_LaunchTitle(HBC_OHBC);
 	WII_LaunchTitle(HBC_LULZ);
@@ -312,6 +312,24 @@ void ScreenShot()
 bool isWiiU()
 {
 	return ((*(vu16*)0xCD8005A0 == 0xCAFE) || isWiiVC);
+}
+
+bool IsWiiVCActive()
+{
+	if (*(vu16 *)0xCD8005A0 == 0xCAFE)
+	{
+		// Thanks to FIX94
+		DCInvalidateRange((void *)0x938B2964, 4);
+		if (*(vu32 *)0x938B2964 == 0x138BB004) // r569
+			return true;
+
+		DCInvalidateRange((void *)0x938B2564, 4);
+		if (*(vu32 *)0x938B2564 == 0x138BB004) // r570
+			return true;
+		else if (*(vu32 *)0x938B2564 == 0x138BA004) // r590
+			return true;
+	}
+	return false;
 }
 
 void ResetRegion()

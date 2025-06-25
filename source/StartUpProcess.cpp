@@ -144,7 +144,7 @@ int StartUpProcess::ParseArguments(int argc, char *argv[])
 				Settings.SDMode = LIMIT(atoi(ptr + strlen("-sdmode=")), 0, 1);
 		}
 
-		if (strlen(argv[i]) == 6 && strchr(argv[i], '=') == 0 && strchr(argv[i], '-') == 0)
+		if ((strlen(argv[i]) == 6 || strlen(argv[i]) == 4) && strchr(argv[i], '=') == 0 && strchr(argv[i], '-') == 0)
 			quickBoot = i;
 	}
 
@@ -235,7 +235,7 @@ bool StartUpProcess::USBSpinUp()
 			break;
 		}
 
-		messageTxt->SetTextf("Waiting for HDD: %i sec left\n", 20 - (int)countDown.elapsed());
+		messageTxt->SetTextf("Waiting for USB devices: %i sec left\n", 20 - (int)countDown.elapsed());
 		Draw();
 		usleep(50000);
 	} while (countDown.elapsed() < 20.f);
@@ -256,7 +256,7 @@ int StartUpProcess::Run(int argc, char *argv[])
 		// HBC doesn't specify the USB port
 		if (strncmp(argv[0], "usb", 3) == 0)
 		{
-			snprintf(Settings.BootDevice, sizeof(Settings.BootDevice), "usb1");
+			snprintf(Settings.BootDevice, sizeof(Settings.BootDevice), "usb1:");
 			snprintf(Settings.ConfigPath, sizeof(Settings.ConfigPath), "usb1:%s/", argv[0] + 4);
 		}
 		else if (strncmp(argv[0], "sd", 2) == 0)
@@ -305,18 +305,33 @@ int StartUpProcess::Execute(bool quickGameBoot, bool isBadBoot)
 	}
 
 	Settings.EntryIOS = IOS_GetVersion();
+	isWiiVC = IsWiiVCActive();
+
 	// Disable AHBPROT
 	IosPatch_AHBPROT(false);
 
+	// Patch permissions for vWii
+	IosPatch_RUNTIME(!isWiiVC, false, false, isWiiVC, false);
+
 	// Reset the region
 	ResetRegion();
+
+	// Get NAND titles
+	NandTitles.Get();
 
 	// Store dx2 cIOS info
 	IosLoader::GetD2XInfo();
 
 	gprintf("Current IOS: %d - have AHB access: %s\n", Settings.EntryIOS, AHBPROT_DISABLED ? "yes" : "no");
+
+	// Reload to a cIOS if running as a Wii U vWii VC inject
+	if (isWiiVC)
+	{
+		Settings.SDMode = ON;
+		LoadIOS(Settings.LoaderIOS, false);
+	}
 	// Reload to a cIOS if we're using both USB ports
-	if (Settings.USBPort == 2 && !Settings.SDMode)
+	else if (Settings.USBPort == 2 && !Settings.SDMode)
 		LoadIOS(Settings.LoaderIOS, false);
 
 	// Reload to a cIOS if required (old forwarder?) or requested
@@ -326,7 +341,7 @@ int StartUpProcess::Execute(bool quickGameBoot, bool isBadBoot)
 	// Setup the pads
 	SetupPads();
 
-	// Do not mount USB if not needed. USB is not available with WiiU WiiVC injected channel
+	// Do not mount USB if not needed. USB is not available with Wii U WiiVC injected channel
 	bool USBSuccess = false;
 	if (!isWiiVC && !Settings.SDMode)
 	{

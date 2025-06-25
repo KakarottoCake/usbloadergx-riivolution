@@ -623,7 +623,11 @@ iosinfo_t *IosLoader::GetIOSInfo(s32 ios)
 	NandTitle::LoadFileFromNand(filepath, (u8**)&buffer, &filesize);
 
 	if (!buffer || filesize == 0)
+	{
+		if (buffer)
+			free(buffer);
 		return NULL;
+	}
 
 	if (buffer->magicword != 0x1ee7c105 || buffer->magicversion != 1)
 	{

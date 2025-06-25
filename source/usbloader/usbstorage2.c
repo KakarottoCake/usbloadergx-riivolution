@@ -114,6 +114,11 @@ void USBStorage2_Deinit()
 		IOS_Close(fd);  // not sure to close the fd is needed
 		fd = -1;
 	}
+	if (mem2_ptr)
+	{
+		MEM2_free(mem2_ptr);
+		mem2_ptr = NULL;
+	}
 }
 
 s32 USBStorage2_SetPort(u32 port)

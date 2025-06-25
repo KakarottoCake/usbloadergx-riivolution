@@ -21,8 +21,6 @@
 #include "video.h"
 #include "input.h"
 
-extern bool isWiiVC; // in sys.cpp
-
 Mtx44 WiiPointer::projection;
 
 WiiPointer::WiiPointer(const char *pntrImg)
