@@ -41,9 +41,6 @@ public:
 	const u8 *GetChanTtlAsh() const { return chanTtlAsh; }
 	u32 GetChanTtlAshSize() const { return chanTtlAshSize; }
 
-	const u8 *GetGCBannAsh() const { return GCBannAsh; }
-	u32 GetGCBannAshSize() const { return GCBannAshSize; }
-
 	const u8 *GetSystemFont() const { return systemFont; }
 	u32 GetSystemFontSize() const { return systemFontSize; }
 
@@ -71,10 +68,6 @@ protected:
 	//! chanSel.ash contains the channel grid layouts
 	u8 *chanSelAsh;
 	u32 chanSelAshSize;
-
-	//! GCBann.ash contains the gamecube channel banner
-	u8 *GCBannAsh;
-	u32 GCBannAshSize;
 
 	//! system font
 	u8 *systemFont;
