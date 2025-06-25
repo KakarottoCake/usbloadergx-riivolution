@@ -31,6 +31,7 @@
 #include "PartitionHandle.h"
 #include "usbloader/usbstorage2.h"
 #include "settings/CSettings.h"
+#include "usbloader/usbstorage_libogc.h"
 
 /**
  * libogc device names.
@@ -91,7 +92,7 @@ class DeviceHandler
 		PartitionHandle * GetUSB0Handle() const { return usb0; }
 		PartitionHandle * GetUSB1Handle() const { return usb1; }
 		PartitionHandle * GetUSBHandleFromPartition(int part) const;
-		static const DISC_INTERFACE *GetUSB0Interface() { return (IOS_GetVersion() >= 200) ? &__io_usbstorage2_port0 : &__io_usbstorage; }
+		static const DISC_INTERFACE *GetUSB0Interface() { return (IOS_GetVersion() >= 200) ? &__io_usbstorage2_port0 : &__io_usbstorage_ogc; }
 		static const DISC_INTERFACE *GetUSB1Interface() { return (IOS_GetVersion() >= 200) ? &__io_usbstorage2_port1 : NULL; }
 		static const DISC_INTERFACE *GetSDInterface() { return &__io_wiisd; }
 		static int GetFilesystemType(int dev);
