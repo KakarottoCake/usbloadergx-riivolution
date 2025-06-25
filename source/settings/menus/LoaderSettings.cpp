@@ -46,6 +46,13 @@ static const char * OnOffText[] =
 	trNOOP( "Auto" )
 };
 
+static const char * OnOffAskText[] =
+{
+	trNOOP( "OFF" ),
+	trNOOP( "ON" ),
+	trNOOP( "Ask" )
+};
+
 static const char * GamesIOSText[] =
 {
 	trNOOP( "Auto" ),
@@ -404,7 +411,7 @@ void LoaderSettings::SetOptionValues()
 	Options->SetValue(Idx++, "%s", tr( OnOffText[Settings.patchcountrystrings] ));
 
 	//! Settings: Ocarina
-	Options->SetValue(Idx++, "%s", tr( OnOffText[Settings.ocarina] ));
+	Options->SetValue(Idx++, "%s", tr( OnOffAskText[Settings.ocarina] ));
 
 	//! Settings: Private Server
 	Options->SetValue(Idx++, "%s", tr( PrivServText[Settings.PrivateServer] ));
@@ -706,7 +713,7 @@ int LoaderSettings::GetMenuInternal()
 	//! Settings: Ocarina
 	else if (ret == ++Idx)
 	{
-		if (++Settings.ocarina >= MAX_ON_OFF) Settings.ocarina = 0;
+		if (++Settings.ocarina >= OCARINA_MAX) Settings.ocarina = 0;
 	}
 
 	//! Settings: Private Server

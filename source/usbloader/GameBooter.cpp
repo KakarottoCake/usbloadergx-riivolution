@@ -72,6 +72,7 @@
 
 // appentrypoint has to be global because of asm
 u32 AppEntrypoint = 0;
+s8 ocarinaAnswer = -1;
 
 extern bool isWiiVC; // in sys.cpp
 extern u32 hdd_sector_size[2];
@@ -270,11 +271,12 @@ void GameBooter::ShutDownDevices(int gameUSBPort)
 		USB_Deinitialize();
 }
 
-int GameBooter::BootGame(struct discHdr *gameHdr)
+int GameBooter::BootGame(struct discHdr *gameHdr, const s8 useOcarina)
 {
 	if (!gameHdr)
 		return -1;
 
+	ocarinaAnswer = useOcarina;
 	struct discHdr gameHeader;
 	memcpy(&gameHeader, gameHdr, sizeof(struct discHdr));
 
@@ -298,6 +300,8 @@ int GameBooter::BootGame(struct discHdr *gameHdr)
 	u8 aspectChoice = game_cfg->aspectratio == INHERIT ? Settings.GameAspectRatio : game_cfg->aspectratio;
 	u8 languageChoice = game_cfg->language == INHERIT ? Settings.language : game_cfg->language;
 	u8 ocarinaChoice = game_cfg->ocarina == INHERIT ? Settings.ocarina : game_cfg->ocarina;
+	if (ocarinaAnswer >= OCARINA_OFF)
+		ocarinaChoice = ocarinaAnswer;
 	u8 PrivServChoice = game_cfg->PrivateServer == INHERIT ? Settings.PrivateServer : game_cfg->PrivateServer;
 	const char *customAddress = game_cfg->CustomAddress.size() == 0 ? Settings.CustomAddress : game_cfg->CustomAddress.c_str();
 	u8 viChoice = game_cfg->vipatch == INHERIT ? Settings.videopatch : game_cfg->vipatch;
@@ -588,7 +592,11 @@ int GameBooter::BootGame(struct discHdr *gameHdr)
 
 	//! Load Ocarina codes
 	if (ocarinaChoice)
-		ocarina_load_code(Settings.Cheatcodespath, gameHeader.id);
+	{
+		//! Force hooktype if not selected but Ocarina is enabled
+		if (ocarina_load_code(Settings.Cheatcodespath, gameHeader.id) > 0 && Hooktype == OFF)
+			Hooktype = 1;
+	}
 
 	//! Disable private server for games that still have official servers.
 	if (memcmp(gameHeader.id, "SC7", 3) == 0 || memcmp(gameHeader.id, "RJA", 3) == 0 ||
@@ -596,10 +604,6 @@ int GameBooter::BootGame(struct discHdr *gameHdr)
 	{
 		PrivServChoice = PRIVSERV_OFF; // Private server patching causes error 20100
 	}
-
-	//! Force hooktype if not selected but Ocarina is enabled
-	if (ocarinaChoice && Hooktype == OFF)
-		Hooktype = 1;
 
 	//! Load gameconfig.txt even if ocarina disabled
 	if (Hooktype)
@@ -763,6 +767,8 @@ int GameBooter::BootDIOSMIOS(struct discHdr *gameHdr)
 	GameCFG *game_cfg = GameSettings.GetGameCFG(gameHdr->id);
 	s8 languageChoice = game_cfg->language == INHERIT ? Settings.language - 1 : game_cfg->language;
 	u8 ocarinaChoice = game_cfg->ocarina == INHERIT ? Settings.ocarina : game_cfg->ocarina;
+	if (ocarinaAnswer >= OCARINA_OFF)
+		ocarinaChoice = ocarinaAnswer;
 	u8 multiDiscChoice = Settings.MultiDiscPrompt;
 	u8 dmlVideoChoice = game_cfg->DMLVideo == INHERIT ? Settings.DMLVideo : game_cfg->DMLVideo;
 	u8 dmlProgressivePatch = game_cfg->DMLProgPatch == INHERIT ? Settings.DMLProgPatch : game_cfg->DMLProgPatch;
@@ -1306,6 +1312,8 @@ int GameBooter::BootNintendont(struct discHdr *gameHdr)
 	GameCFG *game_cfg = GameSettings.GetGameCFG(gameHdr->id);
 	s8 languageChoice = game_cfg->language == INHERIT ? Settings.language - 1 : game_cfg->language;
 	u8 ocarinaChoice = game_cfg->ocarina == INHERIT ? Settings.ocarina : game_cfg->ocarina;
+	if (ocarinaAnswer >= OCARINA_OFF)
+		ocarinaChoice = ocarinaAnswer;
 	u8 multiDiscChoice = Settings.MultiDiscPrompt;
 	u8 ninVideoChoice = game_cfg->DMLVideo == INHERIT ? Settings.DMLVideo : game_cfg->DMLVideo;
 	u8 ninProgressivePatch = game_cfg->DMLProgPatch == INHERIT ? Settings.DMLProgPatch : game_cfg->DMLProgPatch;
@@ -1975,6 +1983,8 @@ int GameBooter::BootNeek(struct discHdr *gameHdr)
 
 	GameCFG *game_cfg = GameSettings.GetGameCFG(gameHdr->id);
 	u8 ocarinaChoice = game_cfg->ocarina == INHERIT ? Settings.ocarina : game_cfg->ocarina;
+	if (ocarinaAnswer >= OCARINA_OFF)
+		ocarinaChoice = ocarinaAnswer;
 	u64 returnToChoice = game_cfg->returnTo;
 	const char *NandEmuPath = game_cfg->NandEmuPath.size() == 0 ? Settings.NandEmuChanPath : game_cfg->NandEmuPath.c_str();
 	bool autoboot = true;

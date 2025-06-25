@@ -37,6 +37,13 @@ static const char * OnOffText[] =
 	trNOOP( "Auto" )
 };
 
+static const char * OnOffAskText[] =
+{
+	trNOOP( "OFF" ),
+	trNOOP( "ON" ),
+	trNOOP( "Ask" )
+};
+
 static const char * LanguageText[] =
 {
 	trNOOP( "English" ),
@@ -299,7 +306,7 @@ void GCGameLoadSM::SetOptionValues()
 		if(GameConfig.ocarina == INHERIT)
 			Options->SetValue(Idx++, tr("Use global"));
 		else
-			Options->SetValue(Idx++, "%s", tr(OnOffText[GameConfig.ocarina]));
+			Options->SetValue(Idx++, "%s", tr(OnOffAskText[GameConfig.ocarina]));
 
 		//! Settings: DML + NIN NMM Mode
 		if(GameConfig.DMLNMM == INHERIT)
@@ -413,7 +420,7 @@ void GCGameLoadSM::SetOptionValues()
 		if(GameConfig.ocarina == INHERIT)
 			Options->SetValue(Idx++, tr("Use global"));
 		else
-			Options->SetValue(Idx++, "%s", tr(OnOffText[GameConfig.ocarina]));
+			Options->SetValue(Idx++, "%s", tr(OnOffAskText[GameConfig.ocarina]));
 
 		//! Settings: Remove Read Speed Limiter
 		if(GameConfig.NINRemlimit == INHERIT)
@@ -687,7 +694,7 @@ int GCGameLoadSM::GetMenuInternal()
 	//! Settings: Ocarina
 	else if (currentGCmode == GC_MODE_MIOS && IosLoader::GetMIOSInfo() > DEFAULT_MIOS && ret == ++Idx)
 	{
-		if (++GameConfig.ocarina >= MAX_ON_OFF) GameConfig.ocarina = INHERIT;
+		if (++GameConfig.ocarina >= OCARINA_MAX) GameConfig.ocarina = INHERIT;
 	}
 
 	//! Settings: DML NMM Mode
@@ -812,7 +819,7 @@ int GCGameLoadSM::GetMenuInternal()
 	//! Settings: Ocarina
 	else if (currentGCmode == GC_MODE_NINTENDONT && ret == ++Idx)
 	{
-		if (++GameConfig.ocarina >= MAX_ON_OFF) GameConfig.ocarina = INHERIT;
+		if (++GameConfig.ocarina >= OCARINA_MAX) GameConfig.ocarina = INHERIT;
 	}
 
 	//! Settings: Remove Read Speed Limiter

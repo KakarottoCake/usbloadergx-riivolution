@@ -110,7 +110,7 @@ void CSettings::SetDefault()
 	deflicker = DEFLICKER_AUTO;
 	videoWidth = WIDTH_AUTO;
 	language = CONSOLE_DEFAULT;
-	ocarina = OFF;
+	ocarina = OCARINA_OFF;
 	hddinfo = CLOCK_HR12;
 	sinfo = GAMEINFO_REGION;
 	rumble = ON;

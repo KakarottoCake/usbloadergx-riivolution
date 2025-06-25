@@ -764,6 +764,7 @@ void GameWindow::BootGame(struct discHdr *header)
 	s32 gameIOS = game_cfg->ios == INHERIT ? Settings.cios : game_cfg->ios;
 	u8 autoIOS = game_cfg->autoios == INHERIT ? Settings.AutoIOS : game_cfg->autoios;
 	u8 gameNandEmuMode = game_cfg->NandEmuMode == INHERIT ? Settings.NandEmuMode : game_cfg->NandEmuMode;
+	u8 ocarinaChoice = game_cfg->ocarina == INHERIT ? Settings.ocarina : game_cfg->ocarina;
 	if (header->type == TYPE_GAME_EMUNANDCHAN)
 		gameNandEmuMode = game_cfg->NandEmuMode == INHERIT ? Settings.NandEmuChanMode : game_cfg->NandEmuMode;
 
@@ -789,7 +790,7 @@ void GameWindow::BootGame(struct discHdr *header)
 			defaultDolPrompt((char *) header->id);
 	}
 
-	if (game_cfg->ocarina == ON || (game_cfg->ocarina == INHERIT && Settings.ocarina == ON))
+	if (ocarinaChoice)
 	{
 		char filepath[256];
 		int n = snprintf(filepath, sizeof(filepath), "%s%s.gct", Settings.Cheatcodespath, IDfull);
@@ -798,6 +799,14 @@ void GameWindow::BootGame(struct discHdr *header)
 			snprintf(filepath + n, sizeof(filepath) - n, " %s", tr( "does not exist!  Loading game without cheats." ));
 			if (!WindowPrompt(tr( "Error:" ), filepath, tr( "Continue" ), tr( "Cancel")))
 				return;
+		}
+		else if (ocarinaChoice == OCARINA_ASK)
+		{
+			int choice = WindowPrompt(tr( "Ocarina:" ), tr( "Do you want to use cheats?" ), tr( "Yes" ), tr( "No" ));
+			if (choice == 1)
+				ocarinaChoice = OCARINA_ON;
+			else
+				ocarinaChoice = OCARINA_OFF;
 		}
 	}
 
@@ -834,10 +843,10 @@ void GameWindow::BootGame(struct discHdr *header)
 	GameStatistics.SetPlayCount(header->id, GameStatistics.GetPlayCount(header->id)+1);
 	GameStatistics.Save();
 
-	//Just calling that shuts down everything and starts game
-	int ret = GameBooter::BootGame(header);
+	// Just calling that shuts down everything and starts game
+	int ret = GameBooter::BootGame(header, ocarinaChoice);
 	
-	//If the launch is canceled, reduce playCount
+	// If the launch is canceled, reduce playCount
 	if(ret == -1)
 	{
 		GameStatistics.SetPlayCount(header->id, GameStatistics.GetPlayCount(header->id)-1);

@@ -43,6 +43,13 @@ static const char * OnOffText[] =
 	trNOOP( "Auto" )
 };
 
+static const char * OnOffAskText[] =
+{
+	trNOOP( "OFF" ),
+	trNOOP( "ON" ),
+	trNOOP( "Ask" )
+};
+
 static const char * GamesIOSText[] =
 {
 	trNOOP( "Auto" ),
@@ -354,7 +361,7 @@ void GameLoadSM::SetOptionValues()
 	if (GameConfig.ocarina == INHERIT)
 		Options->SetValue(Idx++, tr("Use global"));
 	else
-		Options->SetValue(Idx++, "%s", tr(OnOffText[GameConfig.ocarina]));
+		Options->SetValue(Idx++, "%s", tr(OnOffAskText[GameConfig.ocarina]));
 
 	//! Settings: Private Server
 	if (GameConfig.PrivateServer == INHERIT)
@@ -572,7 +579,7 @@ int GameLoadSM::GetMenuInternal()
 	//! Settings: Ocarina
 	else if (ret == ++Idx)
 	{
-		if (++GameConfig.ocarina >= MAX_ON_OFF) GameConfig.ocarina = INHERIT;
+		if (++GameConfig.ocarina >= OCARINA_MAX) GameConfig.ocarina = INHERIT;
 	}
 
 	//! Settings: Private Server
