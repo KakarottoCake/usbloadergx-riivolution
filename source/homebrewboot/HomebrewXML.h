@@ -15,10 +15,10 @@ class HomebrewXML
 		HomebrewXML(const char* filename) { LoadHomebrewXMLData(filename); };
 
 		int LoadHomebrewXMLData(const char* filename);
-		int SaveHomebrewXMLData(const char* filename);
+		//int SaveHomebrewXMLData(const char* filename);
 
 		const char * GetName() const;
-		void SetName(char * newName);
+		void SetName(const char * newName);
 		const char * GetCoder() const;
 		const char * GetVersion() const;
 		void SetVersion(const char * newVer);

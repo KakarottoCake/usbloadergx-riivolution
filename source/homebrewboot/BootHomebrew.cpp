@@ -16,18 +16,17 @@
 #include "gecko.h"
 #include "app_booter_bin.h"
 
-/* GCC 11 false positives */
-#if __GNUC__ > 10
-#pragma GCC diagnostic ignored "-Warray-bounds"
-#pragma GCC diagnostic ignored "-Wstringop-overflow"
-#endif
+#define EXECUTE_ADDR ((u8 *)0x92000000)
+#define BOOTER_ADDR ((u8 *)0x93000000)
+#define ARGS_ADDR ((u8 *)0x93200000)
 
-#define EXECUTE_ADDR	((u8 *) 0x92000000)
-#define BOOTER_ADDR		((u8 *) 0x93000000)
-#define ARGS_ADDR		((u8 *) 0x93200000)
+typedef void (*entrypoint)(void);
+extern "C"
+{
+	void __exception_closeall();
+}
 
-typedef void (*entrypoint) (void);
-extern "C" { void __exception_closeall(); }
+extern bool isWiiVC; // in sys.cpp
 
 static u8 *homebrewbuffer = EXECUTE_ADDR;
 static u32 homebrewsize = 0;
@@ -61,14 +60,20 @@ void FreeHomebrewBuffer()
 	Arguments.clear();
 }
 
-static inline bool IsDollZ (const u8 *buf)
+static inline bool IsDollZ(const u8 *buf)
 {
 	return (buf[0x100] == 0x3C);
 }
 
-static int SetupARGV(struct __argv * args)
+static inline bool IsSpecialELF(const u8 *buf)
 {
-	if (!args) return -1;
+	return (*(u32 *)buf == 0x7F454C46 && buf[0x24] == 0);
+}
+
+static int SetupARGV(struct __argv *args)
+{
+	if (!args)
+		return -1;
 
 	bzero(args, sizeof(struct __argv));
 	args->argvMagic = ARGV_MAGIC;
@@ -85,12 +90,12 @@ static int SetupARGV(struct __argv * args)
 
 	args->length = stringlength;
 	//! Put the argument into mem2 too, to avoid overwriting it
-	args->commandLine = (char *) ARGS_ADDR + sizeof(struct __argv);
+	args->commandLine = (char *)ARGS_ADDR + sizeof(struct __argv);
 
 	/** Append Arguments **/
 	for (u32 i = 0; i < Arguments.size(); i++)
 	{
-		memcpy(&args->commandLine[position], Arguments[i].c_str(), Arguments[i].size() +1);
+		memcpy(&args->commandLine[position], Arguments[i].c_str(), Arguments[i].size() + 1);
 		position += Arguments[i].size() + 1;
 		argc++;
 	}
@@ -108,54 +113,56 @@ static int SetupARGV(struct __argv * args)
 
 static int RunAppbooter()
 {
-	if (homebrewsize == 0) return -1;
+	if (homebrewsize == 0)
+		return -1;
 
 	ExitApp();
 
 	// Reload IOS 58 if available, else reload Entry IOS
-	s32 ret = IosLoader::ReloadIosSafe(58);
-	if(ret < 0 && Settings.EntryIOS != IOS_GetVersion())
-		IosLoader::ReloadIosKeepingRights(Settings.EntryIOS);
-	gprintf("Reloaded to IOS%d\n", IOS_GetVersion());
-
-	struct __argv args;
-	SetupARGV(&args);
-
-	u32 cpu_isr;
+	if (IOS_GetVersion() != 58)
+	{
+		s32 ret = IosLoader::ReloadIosSafe(58);
+		if (ret < 0 && Settings.EntryIOS != IOS_GetVersion())
+			IosLoader::ReloadIosKeepingRights(Settings.EntryIOS);
+		gprintf("Reloaded to IOS%d\n", IOS_GetVersion());
+	}
 
 	DCFlushRange(homebrewbuffer, homebrewsize);
+	ICInvalidateRange(homebrewbuffer, homebrewsize);
 
 	memcpy(BOOTER_ADDR, app_booter_bin, app_booter_bin_size);
 	DCFlushRange(BOOTER_ADDR, app_booter_bin_size);
 	ICInvalidateRange(BOOTER_ADDR, app_booter_bin_size);
 
-	entrypoint entry = (entrypoint) BOOTER_ADDR;
+	entrypoint entry = (entrypoint)BOOTER_ADDR;
 
-	if (!IsDollZ(homebrewbuffer))
+	if (!IsDollZ(homebrewbuffer) && !IsSpecialELF(homebrewbuffer))
+	{
+		struct __argv args;
+		SetupARGV(&args);
 		memcpy(ARGS_ADDR, &args, sizeof(struct __argv));
-	else
-		memset(ARGS_ADDR, 0, sizeof(struct __argv));
-
-	DCFlushRange(ARGS_ADDR, sizeof(struct __argv) + args.length);
+		DCFlushRange(ARGS_ADDR, sizeof(struct __argv) + args.length);
+	}
 
 	loadStub();
 	Set_Stub(returnTo(false));
 
-	gprintf("Exiting USBLoaderGX...\n\n");
+	gprintf("Exiting USB Loader GX...\n\n");
 
 	SYS_ResetSystem(SYS_SHUTDOWN, 0, 0);
-	_CPU_ISR_Disable( cpu_isr );
+	u32 level = IRQ_Disable();
 	__exception_closeall();
 	entry();
-	_CPU_ISR_Restore( cpu_isr );
+	IRQ_Restore(level);
 
 	return 0;
 }
 
-int BootHomebrew(const char * filepath)
+int BootHomebrew(const char *filepath)
 {
 	FILE *file = fopen(filepath, "rb");
-	if (!file) return -1;
+	if (!file)
+		return -1;
 
 	fseek(file, 0, SEEK_END);
 	u32 filesize = ftell(file);

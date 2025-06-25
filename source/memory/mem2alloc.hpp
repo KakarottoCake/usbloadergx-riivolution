@@ -16,7 +16,7 @@ public:
 	void init(void *addr, void *end);
 	void cleanup(void);
 	void clear(void);
-	static unsigned int usableSize(void *p);
+	unsigned int usableSize(void *p);
 	void forceEndAddress(void *newAddr) { m_endAddress = (SBlock *)newAddr; }
 	void *getEndAddress(void) const { return m_endAddress; }
 	void info(void *&address, unsigned int &size) const { address = m_baseAddress; size = (const char *)m_endAddress - (const char *)m_baseAddress; }

@@ -28,7 +28,6 @@
 #include "network/https.h"
 #include "utils/StringTools.h"
 #include "xml/pugixml.hpp"
-#include "gecko.h"
 
 Wiinnertag::Wiinnertag(const std::string &filepath)
 {

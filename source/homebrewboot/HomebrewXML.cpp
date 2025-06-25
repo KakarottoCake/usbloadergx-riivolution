@@ -12,8 +12,6 @@
 
 #include "HomebrewXML.h"
 
-#define ENTRIE_SIZE 8192
-
 /* qparam filename Filepath of the XML file */
 int HomebrewXML::LoadHomebrewXMLData(const char *filename)
 {
@@ -59,6 +57,7 @@ int HomebrewXML::LoadHomebrewXMLData(const char *filename)
 	return 1;
 }
 
+/*
 int HomebrewXML::SaveHomebrewXMLData(const char *filename)
 {
 	const int max_line_size = 4096;
@@ -110,6 +109,7 @@ int HomebrewXML::SaveHomebrewXMLData(const char *filename)
 	delete[] line;
 	return 1;
 }
+*/
 
 /* Set argument */
 void HomebrewXML::SetArgument(const char *argument)
@@ -146,7 +146,7 @@ const char *HomebrewXML::GetName() const
 }
 
 /* Set Name */
-void HomebrewXML::SetName(char *newName)
+void HomebrewXML::SetName(const char *newName)
 {
 	Name = newName;
 }

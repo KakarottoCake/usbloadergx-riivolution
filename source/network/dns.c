@@ -1,4 +1,13 @@
+#include <ogc/mutex.h>
 #include "dns.h"
+
+static mutex_t dns_mutex = LWP_MUTEX_NULL;
+
+static void init_dns_mutex(void)
+{
+	if (dns_mutex == LWP_MUTEX_NULL)
+		LWP_MutexInit(&dns_mutex, false);
+}
 
 /**
  * Resolves a domainname to an ip address
@@ -10,18 +19,18 @@
  */
 u32 getipbyname(char *domain)
 {
-	//Care should be taken when using net_gethostbyname,
-	//it returns a static buffer which makes it not threadsafe
-	//TODO: implement some locking mechanism to make below code atomic
+	if (!domain)
+		return 0;
+
+	init_dns_mutex();
+	LWP_MutexLock(dns_mutex);
 	struct hostent *host = net_gethostbyname(domain);
+	LWP_MutexUnlock(dns_mutex);
 
 	if (host == NULL)
-	{
 		return 0;
-	}
 
-	u32 *ip = (u32*) host->h_addr_list[0];
-	return *ip;
+	return *(u32*)host->h_addr_list[0];
 }
 
 //Defines how many DNS entries should be cached by getipbynamecached()
@@ -46,6 +55,12 @@ static int dnsentrycount = 0;
  */
 u32 getipbynamecached(char *domain)
 {
+	if (!domain)
+		return 0;
+
+	init_dns_mutex();
+	LWP_MutexLock(dns_mutex);
+
 	//Search if this domainname is already cached
 	struct dnsentry *node = firstdnsentry;
 	struct dnsentry *previousnode = NULL;
@@ -55,23 +70,30 @@ u32 getipbynamecached(char *domain)
 		if (strcmp(node->domain, domain) == 0)
 		{
 			//DNS node found in the cache, move it to the front of the list
-			if (previousnode != NULL) previousnode->nextnode = node->nextnode;
+			if (previousnode != NULL)
+				previousnode->nextnode = node->nextnode;
 
-			if (node != firstdnsentry) node->nextnode = firstdnsentry;
-			firstdnsentry = node;
-
+			if (node != firstdnsentry)
+			{
+				node->nextnode = firstdnsentry;
+				firstdnsentry = node;
+			}
+			LWP_MutexUnlock(dns_mutex);
 			return node->ip;
 		}
 		//Go to the next element in the list
 		previousnode = node;
 		node = node->nextnode;
 	}
+	LWP_MutexUnlock(dns_mutex);
 	u32 ip = getipbyname(domain);
+	LWP_MutexLock(dns_mutex);
 
 	//No cache of this domain could be found, create a cache node and add it to the front of the cache
 	struct dnsentry *newnode = malloc(sizeof(struct dnsentry));
 	if (newnode == NULL)
 	{
+		LWP_MutexUnlock(dns_mutex);
 		return ip;
 	}
 
@@ -80,6 +102,7 @@ u32 getipbynamecached(char *domain)
 	if (newnode->domain == NULL)
 	{
 		free(newnode);
+		LWP_MutexUnlock(dns_mutex);
 		return ip;
 	}
 	strcpy(newnode->domain, domain);
@@ -120,5 +143,6 @@ u32 getipbynamecached(char *domain)
 		dnsentrycount--;
 	}
 
+	LWP_MutexUnlock(dns_mutex);
 	return newnode->ip;
 }

@@ -59,7 +59,7 @@ void *MEM2_realloc(void *p, unsigned int s)
 
 unsigned int MEM2_usableSize(void *p)
 {
-	return CMEM2Alloc::usableSize(p);
+	return g_mem2gp.usableSize(p);
 }
 
 unsigned int MEM2_freesize()
@@ -207,7 +207,7 @@ void *__wrap_realloc(void *p, size_t size)
 size_t __wrap_malloc_usable_size(void *p)
 {
 	if (((u32)p & 0x10000000) != 0)
-		return CMEM2Alloc::usableSize(p);
+		return g_mem2gp.usableSize(p);
 	return __real_malloc_usable_size(p);
 }
 

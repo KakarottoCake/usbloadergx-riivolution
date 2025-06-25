@@ -1,12 +1,16 @@
 /****************************************************************************
- * Network Operations
+ * Thread-Safe Network Operations
  * for USB Loader GX
  *
  * HTTP operations
- * Written by dhewg/bushing modified by dimok
+ * Based on dhewg/bushing, modified by dimok, made thread-safe by blackb0x
  ****************************************************************************/
 
 #include <ogcsys.h>
+#include <string.h>
+#include <stdio.h>
+#include <ogc/lwp.h>
+#include <ogc/mutex.h>
 
 #include "networkops.h"
 #include "https.h"
@@ -16,39 +20,48 @@
 
 #define PORT 4299
 
-/*** Incomming filesize ***/
+/*** Incoming filesize ***/
 u32 infilesize = 0;
 u32 uncfilesize = 0;
 
-s32 connection;
-static s32 socket;
+s32 connection = -1;
+static s32 socket = -1;
 static bool networkinitialized = false;
 static bool checkincomming = false;
 static bool waitforanswer = false;
-static char IP[16];
-char incommingIP[50];
-char wiiloadVersion[2];
+static char IP[16] = {0};
+static char incommingIP[50] = {0};
+char wiiloadVersion[2] = {0};
 
 static lwp_t networkthread = LWP_THREAD_NULL;
 static bool networkHalt = true;
+
+// Mutex for all shared variables
+static mutex_t net_mutex = LWP_MUTEX_NULL;
+
+// Helper macros for locking
+#define NET_LOCK() LWP_MutexLock(net_mutex)
+#define NET_UNLOCK() LWP_MutexUnlock(net_mutex)
 
 /****************************************************************************
  * Initialize_Network
  ***************************************************************************/
 void Initialize_Network(int retries)
 {
-
+	NET_LOCK();
 	if (networkinitialized)
+	{
+		NET_UNLOCK();
 		return;
+	}
+	NET_UNLOCK();
 
-	s32 result;
+	s32 result = if_config(IP, NULL, NULL, true, retries);
 
-	result = if_config(IP, NULL, NULL, true, retries);
-
+	NET_LOCK();
 	if (result < 0)
 	{
 		networkinitialized = false;
-		return;
 	}
 	else
 	{
@@ -56,8 +69,8 @@ void Initialize_Network(int retries)
 		wolfSSL_Init();
 		networkinitialized = true;
 		gprintf("Initialized network\n");
-		return;
 	}
+	NET_UNLOCK();
 }
 
 /****************************************************************************
@@ -65,10 +78,12 @@ void Initialize_Network(int retries)
  ***************************************************************************/
 void DeinitNetwork(void)
 {
+	NET_LOCK();
 	wolfSSL_Cleanup();
 	net_wc24cleanup();
 	net_deinit();
 	networkinitialized = false;
+	NET_UNLOCK();
 }
 
 /****************************************************************************
@@ -76,7 +91,10 @@ void DeinitNetwork(void)
  ***************************************************************************/
 bool IsNetworkInit(void)
 {
-	return networkinitialized;
+	NET_LOCK();
+	bool ret = networkinitialized;
+	NET_UNLOCK();
+	return ret;
 }
 
 /****************************************************************************
@@ -84,7 +102,11 @@ bool IsNetworkInit(void)
  ***************************************************************************/
 char *GetNetworkIP(void)
 {
-	return IP;
+	NET_LOCK();
+	static char ip_copy[16];
+	strncpy(ip_copy, IP, sizeof(ip_copy));
+	NET_UNLOCK();
+	return ip_copy;
 }
 
 /****************************************************************************
@@ -92,7 +114,11 @@ char *GetNetworkIP(void)
  ***************************************************************************/
 char *GetIncommingIP(void)
 {
-	return incommingIP;
+	NET_LOCK();
+	static char ip_copy[50];
+	strncpy(ip_copy, incommingIP, sizeof(ip_copy));
+	NET_UNLOCK();
+	return ip_copy;
 }
 
 /****************************************************************************
@@ -100,28 +126,22 @@ char *GetIncommingIP(void)
  ***************************************************************************/
 s32 network_read(s32 connect, u8 *buf, u32 len)
 {
-	if (connect == NET_DEFAULT_SOCK)
-		connect = connection;
+	NET_LOCK();
+	s32 conn = (connect == NET_DEFAULT_SOCK) ? connection : connect;
+	NET_UNLOCK();
 
 	u32 read = 0;
 	s32 ret = -1;
 
-	/* Data to be read */
 	while (read < len)
 	{
-		/* Read network data */
-		ret = net_read(connect, buf + read, len - read);
+		ret = net_read(conn, buf + read, len - read);
 		if (ret < 0)
 			return ret;
-
-		/* Read finished */
 		if (!ret)
 			break;
-
-		/* Increment read variable */
 		read += ret;
 	}
-
 	return read;
 }
 
@@ -130,14 +150,19 @@ s32 network_read(s32 connect, u8 *buf, u32 len)
  ***************************************************************************/
 void CloseConnection()
 {
-
-	net_close(connection);
-
-	if (waitforanswer)
+	NET_LOCK();
+	if (connection >= 0)
+	{
+		net_close(connection);
+		connection = -1;
+	}
+	if (waitforanswer && socket >= 0)
 	{
 		net_close(socket);
+		socket = -1;
 		waitforanswer = false;
 	}
+	NET_UNLOCK();
 }
 
 /****************************************************************************
@@ -145,65 +170,77 @@ void CloseConnection()
  ***************************************************************************/
 int NetworkWait()
 {
+	NET_LOCK();
 	if (!checkincomming)
+	{
+		NET_UNLOCK();
 		return -3;
+	}
+	NET_UNLOCK();
 
 	struct sockaddr_in sin;
 	struct sockaddr_in client_address;
 	socklen_t addrlen = sizeof(client_address);
 
-	//Open socket
-	socket = net_socket(AF_INET, SOCK_STREAM, IPPROTO_IP);
-
-	if (socket == INVALID_SOCKET)
-	{
-		return socket;
-	}
+	s32 local_socket = net_socket(AF_INET, SOCK_STREAM, IPPROTO_IP);
+	if (local_socket == INVALID_SOCKET)
+		return local_socket;
 
 	sin.sin_family = AF_INET;
 	sin.sin_port = htons(PORT);
 	sin.sin_addr.s_addr = htonl(INADDR_ANY);
 
-	if (net_bind(socket, (struct sockaddr *)&sin, sizeof(sin)) < 0)
+	int flags = net_fcntl(local_socket, F_GETFL, 0);
+	net_fcntl(local_socket, F_SETFL, flags | 4);
+
+
+	if (net_bind(local_socket, (struct sockaddr *)&sin, sizeof(sin)) < 0)
 	{
-		net_close(socket);
+		net_close(local_socket);
 		return -1;
 	}
 
-	if (net_listen(socket, 3) < 0)
+	if (net_listen(local_socket, 3) < 0)
 	{
-		net_close(socket);
+		net_close(local_socket);
 		return -1;
 	}
 
-	connection = net_accept(socket, (struct sockaddr *)&client_address, &addrlen);
+	s32 local_connection = net_accept(local_socket, (struct sockaddr *)&client_address, &addrlen);
 
-	sprintf(incommingIP, "%s", inet_ntoa(client_address.sin_addr));
+	NET_LOCK();
+	socket = local_socket;
+	connection = local_connection;
+	snprintf(incommingIP, sizeof(incommingIP), "%s", inet_ntoa(client_address.sin_addr));
+	NET_UNLOCK();
 
-	if (connection < 0)
+	if (local_connection < 0)
 	{
-		net_close(connection);
-		net_close(socket);
+		net_close(local_socket);
+		NET_LOCK();
+		socket = -1;
+		NET_UNLOCK();
 		return -4;
 	}
 	else
 	{
-
 		unsigned char haxx[9];
-		//skip haxx
-		net_read(connection, &haxx, 8);
+		net_read(local_connection, &haxx, 8);
+		NET_LOCK();
 		wiiloadVersion[0] = haxx[4];
 		wiiloadVersion[1] = haxx[5];
+		NET_UNLOCK();
 
-		net_read(connection, &infilesize, 4);
+		net_read(local_connection, &infilesize, 4);
 
 		if (haxx[4] > 0 || haxx[5] > 4)
-		{
-			net_read(connection, &uncfilesize, 4); // Compressed protocol, read another 4 bytes
-		}
+			net_read(local_connection, &uncfilesize, 4);
+
+		NET_LOCK();
 		waitforanswer = true;
 		checkincomming = false;
 		networkHalt = true;
+		NET_UNLOCK();
 	}
 
 	return 1;
@@ -214,15 +251,21 @@ int NetworkWait()
  ***************************************************************************/
 void HaltNetworkThread()
 {
+	NET_LOCK();
 	networkHalt = true;
 	checkincomming = false;
+	bool need_close = waitforanswer;
+	NET_UNLOCK();
 
-	if (waitforanswer)
+	if (need_close)
 		CloseConnection();
 
 	// wait for thread to finish
+	gprintf("HaltNetworkThread\n");
 	while (!LWP_ThreadIsSuspended(networkthread))
 		usleep(100);
+
+//	LWP_SuspendThread(networkthread);
 }
 
 /****************************************************************************
@@ -230,8 +273,11 @@ void HaltNetworkThread()
  ***************************************************************************/
 void ResumeNetworkThread()
 {
+	NET_LOCK();
 	networkHalt = false;
-	LWP_ResumeThread(networkthread);
+	NET_UNLOCK();
+	if (LWP_ThreadIsSuspended(networkthread))
+		LWP_ResumeThread(networkthread);
 }
 
 /****************************************************************************
@@ -239,11 +285,13 @@ void ResumeNetworkThread()
  ***************************************************************************/
 void ResumeNetworkWait()
 {
+	NET_LOCK();
 	networkHalt = true;
 	checkincomming = true;
 	waitforanswer = true;
 	infilesize = 0;
 	connection = -1;
+	NET_UNLOCK();
 	LWP_ResumeThread(networkthread);
 }
 
@@ -254,15 +302,32 @@ static void *networkinitcallback(void *arg)
 {
 	while (1)
 	{
-		if (!checkincomming && networkHalt)
+		NET_LOCK();
+		bool halt = networkHalt;
+		bool check = checkincomming;
+		NET_UNLOCK();
+
+		if (!check && halt)
 			LWP_SuspendThread(networkthread);
 
-		Initialize_Network();
+		Initialize_Network(5);
 
-		if (networkinitialized)
+		NET_LOCK();
+		bool initialized = networkinitialized;
+		NET_UNLOCK();
+
+		if (initialized)
+		{
+			NET_LOCK();
 			networkHalt = true;
+			NET_UNLOCK();
+		}
 
-		if (checkincomming)
+		NET_LOCK();
+		check = checkincomming;
+		NET_UNLOCK();
+
+		if (check)
 			NetworkWait();
 
 		usleep(100000);
@@ -275,6 +340,8 @@ static void *networkinitcallback(void *arg)
  ***************************************************************************/
 void InitNetworkThread()
 {
+	if (net_mutex == LWP_MUTEX_NULL)
+		LWP_MutexInit(&net_mutex, false);
 	LWP_CreateThread(&networkthread, networkinitcallback, NULL, NULL, 16384, 0);
 }
 
@@ -285,4 +352,9 @@ void ShutdownNetworkThread()
 {
 	LWP_JoinThread(networkthread, NULL);
 	networkthread = LWP_THREAD_NULL;
+	if (net_mutex != LWP_MUTEX_NULL)
+	{
+		LWP_MutexDestroy(net_mutex);
+		net_mutex = LWP_MUTEX_NULL;
+	}
 }
