@@ -291,8 +291,8 @@ int GameBooter::BootGame(struct discHdr *gameHdr)
 	gprintf("Boot Game: %s (%.6s)\n", gameHeader.title, gameHeader.id);
 
 	// Load the HBC from NAND instead of from the homebrew browser
-	if (memcmp(gameHeader.id, "JODI", 4) == 0)
-		Sys_BackToLoader();
+	if (!isWiiVC && memcmp(gameHeader.id, "JODI", 4) == 0)
+		Sys_LoadHBC();
 
 	if (Settings.Wiinnertag)
 		Wiinnertag::TagGame((const char *)gameHeader.id);

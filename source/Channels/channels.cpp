@@ -58,6 +58,8 @@ typedef struct _dolheader
 
 Channels *Channels::instance = NULL;
 
+u64 HBCTID = 0;
+
 void Channels::clear()
 {
     EmuChannels.clear();
@@ -126,8 +128,11 @@ void Channels::InternalGetNandChannelList(u32 type)
         NandTitles.AsciiTID(tid, id);
 
         // Force old and new format to be "JODI" which is known by GameTDB
-        if (tid == 0x000100014c554c5aLL || tid == 0x00010001AF1BF516LL || tid == 0x0001000148415858LL)
+        if (tid == 0x000100014F484243LL || tid == 0x000100014C554C5ALL || tid == 0x00010001AF1BF516LL || tid == 0x0001000148415858LL)
+        {
+            HBCTID = tid; // Used by WiiVC
             strcpy(id, "JODI");
+        }
 
         const char *name = NandTitles.NameOf(tid);
         std::string TitleName;
@@ -586,14 +591,14 @@ bool Channels::ParseTitleDir(char *path, int language)
         u64 tid = ((u64)tidHigh << 32) | ((u64)tidLow);
 
         // Force old and new format to be "JODI" which is known by GameTDB
-        if (tid == 0x000100014c554c5aLL || tid == 0x00010001AF1BF516LL || tid == 0x0001000148415858LL)
+        if (tid == 0x000100014F484243LL || tid == 0x000100014C554C5ALL || tid == 0x00010001AF1BF516LL || tid == 0x0001000148415858LL)
             strcpy(id, "JODI");
 
         std::string TitleName;
-        if(!GetEmuChanTitle(path, language, TitleName))
+        if (!GetEmuChanTitle(path, language, TitleName))
             TitleName = id;
 
-		TitleName.erase(0, TitleName.find_first_not_of(' '));
+        TitleName.erase(0, TitleName.find_first_not_of(' '));
 
         int s = EmuChannels.size();
         EmuChannels.resize(s + 1);

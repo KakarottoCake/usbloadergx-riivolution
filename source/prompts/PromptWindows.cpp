@@ -11,6 +11,7 @@
 #include "usbloader/wbfs.h"
 #include "usbloader/wdvd.h"
 #include "usbloader/usbstorage2.h"
+#include "usbloader/GameBooter.hpp"
 #include "usbloader/GameList.h"
 #include "GameCube/GCGames.h"
 #include "language/gettext.h"
@@ -20,6 +21,7 @@
 #include "GUI/Text.hpp"
 #include "settings/CGameStatistics.h"
 #include "settings/GameTitles.h"
+#include "settings/meta.h"
 #include "utils/tools.h"
 #include "network/networkops.h"
 #include "network/update.h"
@@ -44,6 +46,9 @@
 #include "gecko.h"
 #include "lstub.h"
 #include "SoundOperations/MusicPlayer.h"
+
+extern bool isWiiVC; // in sys.cpp
+extern u64 HBCTID; // in channels.cpp
 
 static const char * DMLVersions[] =
 {
@@ -816,6 +821,10 @@ int WindowExitPrompt()
 	{
 		btn2Txt.SetText(tr( "Exit" ));
 	}
+	else if (Settings.HomeMenu == HOME_MENU_PRIILOADER)
+	{
+		btn2Txt.SetText(tr( "Priiloader" ));
+	}
 	GuiImage btn2Img(&button);
 	if (Settings.wsprompt)
 	{
@@ -973,16 +982,55 @@ int WindowExitPrompt()
 			if (Settings.HomeMenu == HOME_MENU_SYSTEM)
 				Sys_LoadMenu();
 			else if (Settings.HomeMenu == HOME_MENU_DEFAULT)
+			{
+				if (isWiiVC && HBCTID)
+				{
+					struct discHdr header = {};
+					memcpy(header.id, "JODI", 4);
+					memcpy(header.title, "Homebrew Channel", 16);
+					header.tid = HBCTID;
+					GameBooter::BootGame(&header);
+				}
 				Sys_LoadHBC();
+			}
 			else if (Settings.HomeMenu == HOME_MENU_FULL)
 			{
-				ret = WindowPrompt(tr( "Exit to where?" ), 0, tr( "Homebrew Channel" ), tr( "Wii Menu" ), tr( "Reset" ), tr( "Cancel" ));
+				ret = WindowPrompt(tr( "Exit to where?" ), 0, tr( "Homebrew Channel" ), tr( "Wii Menu" ), tr( "Priiloader" ), tr( "Cancel" ));
 				if (ret == 1)
-					Sys_LoadHBC();
+				{
+					if (isWiiVC && HBCTID)
+					{
+						struct discHdr header = {};
+						memcpy(header.id, "JODI", 4);
+						memcpy(header.title, "Homebrew Channel", 16);
+						header.tid = HBCTID;
+						GameBooter::BootGame(&header);
+					}
+					else
+						Sys_LoadHBC();
+				}
 				else if(ret == 2)
 					Sys_LoadMenu();
 				else if(ret == 3)
-					RebootApp();
+				{
+					editMetaArguments();
+					ExitApp();
+					*(vu32 *)0x8132FFFB = 0x4461636F;
+					*(vu32 *)0x817FEFF0 = 0x4461636F;
+					DCFlushRange((void *)0x8132FFFB, 4);
+					DCFlushRange((void *)0x817FEFF0, 4);
+					SYS_ResetSystem(SYS_RETURNTOMENU, 0, 0);
+				}
+			}
+			else if (Settings.HomeMenu == HOME_MENU_PRIILOADER)
+			{
+				editMetaArguments();
+				ExitApp();
+				*(vu32 *)0x8132FFFB = 0x4461636F;
+				*(vu32 *)0x817FEFF0 = 0x4461636F;
+				DCFlushRange((void *)0x8132FFFB, 4);
+				DCFlushRange((void *)0x817FEFF0, 4);
+				SYS_ResetSystem(SYS_RETURNTOMENU, 0, 0);
 			}
 			HaltGui();
 			mainWindow->SetState(STATE_DISABLED);

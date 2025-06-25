@@ -126,9 +126,10 @@ static const char * BannerFavIconText[BANNER_FAVICON_MAX_CHOICE] =
 
 static const char * HomeMenuText[HOME_MENU_MAX_CHOICE] =
 {
-	trNOOP( "System Default" ),
+	trNOOP( "Wii Menu" ),
 	trNOOP( "Full Menu" ),
-	trNOOP( "Default" )
+	trNOOP( "Default" ),
+	trNOOP( "Priiloader" )
 };
 
 GuiSettingsMenu::GuiSettingsMenu()
