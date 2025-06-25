@@ -57,7 +57,7 @@ SettingsMenu::SettingsMenu(const char * title, OptionList * opts, int returnTo)
 		Append(backBtn);
 	}
 
-	optionBrowser = new GuiOptionBrowser(396, 280, Options, "bg_options_settings.png");
+	optionBrowser = new GuiOptionBrowser(396, 280, Options, "bg_options_settings.png", true);
 	optionBrowser->SetAlignment(thAlign("center - settings option browser align hor"), thAlign("top - settings option browser align ver"));
 	optionBrowser->SetPosition(thInt("0 - settings option browser pos x"), thInt("90 - settings option browser pos y"));
 

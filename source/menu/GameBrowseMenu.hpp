@@ -11,10 +11,11 @@ class GameBrowseMenu : public GuiWindow
 		GameBrowseMenu();
 		virtual ~GameBrowseMenu();
 		static int Execute();
-		void ReloadBrowser();
+		void ReloadBrowser(bool firstRun = false);
 		GuiGameBrowser *GetGameBrowser() { return gameBrowser; }
 	private:
 		int MainLoop();
+		bool ReloadWiiGames(bool cached);
 		int OpenClickedGame(struct discHdr *header);
 		int GetSelectedGame() { return (gameBrowser ? gameBrowser->GetSelectedOption() : -1); }
 		void UpdateGameInfoText(struct discHdr *header);
@@ -28,7 +29,7 @@ class GameBrowseMenu : public GuiWindow
 		TCallback<GameBrowseMenu> HDDSizeCallback;
 		u32 DiscDriveCoverOld;
 		int returnMenu;
-		int gameSelectedOld;
+		int OldSelectedGame;
 		int gameClicked;
 		int GridRowsPreSearch;
 		time_t lastrawtime;
@@ -50,6 +51,15 @@ class GameBrowseMenu : public GuiWindow
 		GuiImageData * btnpwroffOver;
 		GuiImageData * btnhome;
 		GuiImageData * btnhomeOver;
+		GuiImageData * btnhomegc;
+		GuiImageData * btnhomegcOver;
+		GuiImageData * btnhomenand;
+		GuiImageData * btnhomenandOver;
+		GuiImageData * btnhomeemunand;
+		GuiImageData * btnhomeemunandOver;
+		GuiImageData * btnhomecustom;
+		GuiImageData * btnhomecustomOver;
+		GuiImageData * btnloadermodeOver;
 		GuiImageData * btnsdcardOver;
 		GuiImageData * btnsdcard;
 		GuiImageData * imgfavIcon;
@@ -92,6 +102,14 @@ class GameBrowseMenu : public GuiWindow
 		GuiImage * settingsBtnImgOver;
 		GuiImage * homeBtnImg;
 		GuiImage * homeBtnImgOver;
+		GuiImage * homeBtnImgGC;
+		GuiImage * homeBtnImgGCOver;
+		GuiImage * homeBtnImgNand;
+		GuiImage * homeBtnImgNandOver;
+		GuiImage * homeBtnImgEmunand;
+		GuiImage * homeBtnImgEmunandOver;
+		GuiImage * homeBtnImgCustom;
+		GuiImage * homeBtnImgCustomOver;
 		GuiImage * poweroffBtnImg;
 		GuiImage * poweroffBtnImgOver;
 		GuiImage * sdcardImg;
@@ -118,6 +136,7 @@ class GameBrowseMenu : public GuiWindow
 		GuiImage * categBtnImg;
 		GuiImage * categBtnImg_g;
 		GuiImage * loaderModeBtnImg;
+		GuiImage * loaderModeBtnImgOver;
 		GuiImage * homebrewImg;
 		GuiImage * homebrewImgOver;
 		GuiImage * gameCoverImg;
@@ -132,6 +151,7 @@ class GameBrowseMenu : public GuiWindow
 		GuiButton * gamecntBtn;
 		GuiButton * installBtn;
 		GuiButton * settingsBtn;
+		GuiButton * homeScreenBtn;
 		GuiButton * homeBtn;
 		GuiButton * poweroffBtn;
 		GuiButton * sdcardBtn;
@@ -143,6 +163,7 @@ class GameBrowseMenu : public GuiWindow
 		GuiButton * gridBtn;
 		GuiButton * carouselBtn;
 		GuiButton * bannerGridBtn;
+		GuiButton * viewTypeBtn;
 		GuiButton * lockBtn;
 		GuiButton * dvdBtn;
 		GuiButton * categBtn;
@@ -163,6 +184,7 @@ class GameBrowseMenu : public GuiWindow
 		GuiTooltip * gridBtnTT;
 		GuiTooltip * carouselBtnTT;
 		GuiTooltip * bannerGridBtnTT;
+		GuiTooltip * viewTypeBtnTT;
 		GuiTooltip * lockBtnTT;
 		GuiTooltip * dvdBtnTT;
 		GuiTooltip * categBtnTT;

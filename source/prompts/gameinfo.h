@@ -12,5 +12,6 @@
 
 int showGameInfo(int selectedGame, struct discHdr *header);
 bool save_gamelist(bool bCSV);
+char *readable_size(float size, char *buf);
 
 #endif

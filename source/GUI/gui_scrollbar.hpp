@@ -53,7 +53,7 @@ class GuiScrollbar : public GuiElement, public sigslot::has_slots<>
 		void SetRowSize(int size);
 		void SetSelectedItem(int pos);
 		void SetSelectedIndex(int pos);
-		void SetEntrieCount(int cnt);
+		void SetEntryCount(int cnt);
 	protected:
 		void setScrollboxPosition(int SelItem, int SelInd);
 		void OnUpButtonHold(GuiButton *sender, int pointer, const POINT &p);
@@ -76,7 +76,7 @@ class GuiScrollbar : public GuiElement, public sigslot::has_slots<>
 		int SelInd;
 		int RowSize;
 		int PageSize;
-		int EntrieCount;
+		int EntryCount;
 		int ButtonPositionX;
 		int pressedChan;
 		bool listchanged;

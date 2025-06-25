@@ -418,7 +418,7 @@ static int InternalShowGameInfo(struct discHdr *header)
 			// None of the cases are totally black
 			boxCov->SetBoxColor((GXColor) { 30, 30, 30, 255 });
 		}
-		else if(GameInfo.CaseColor >= 0)
+		else if(GameInfo.CaseColor)
 		{
 			u8 * Color = (u8 *) &GameInfo.CaseColor;
 			boxCov->SetBoxColor((GXColor) { Color[1], Color[2], Color[3], 255 });
@@ -691,11 +691,17 @@ static int InternalShowGameInfo(struct discHdr *header)
 		int year = GameInfo.PublishDate >> 16;
 		int day = GameInfo.PublishDate & 0xFF;
 		int month = (GameInfo.PublishDate >> 8) & 0xFF;
-		const char *readableMonths[13] = {
-			tr( "Jan" ), tr( "Feb" ), tr( "Mar" ), tr( "Apr" ), tr( "May" ), tr( "June" ),
-			tr( "July" ), tr( "Aug" ), tr( "Sept" ), tr( "Oct" ), tr( "Nov" ), tr( "Dec" )
-		};
-		snprintf(linebuf2, sizeof(linebuf2), "%s: %02i %s %i", tr( "Released" ), day, readableMonths[month - 1], year);
+		if (day != 0 && month != 0)
+		{
+			const char *readableMonths[13] = {
+				tr( "Jan" ), tr( "Feb" ), tr( "Mar" ), tr( "Apr" ), tr( "May" ), tr( "June" ),
+				tr( "July" ), tr( "Aug" ), tr( "Sept" ), tr( "Oct" ), tr( "Nov" ), tr( "Dec" )
+			};
+			snprintf(linebuf2, sizeof(linebuf2), "%s: %02i %s %i", tr( "Released" ), day, readableMonths[month - 1], year);
+		}
+		else
+			snprintf(linebuf2, sizeof(linebuf2), "%s: %i", tr( "Released" ), year);
+
 		releasedTxt = new GuiText(linebuf2, 16, ( GXColor ) {0, 0, 0, 255});
 		if (releasedTxt->GetTextWidth() > 300) newline = 2;
 		releasedTxt->SetAlignment(ALIGN_RIGHT, ALIGN_TOP);
@@ -1107,7 +1113,7 @@ char *readable_size(float size, char *buf)
 		size /= 1024;
 		i++;
 	}
-	sprintf(buf, "%.2f %s", size, suffix[i]);
+	sprintf(buf, "%.2f%s", size, suffix[i]);
 	return buf;
 }
 

@@ -171,10 +171,7 @@ int MountGamePartition(bool ShowGUI)
 		if (Settings.LoaderMode & MODE_WIIGAMES)
 		{
 			if (ShowGUI)
-				ShowError("%s %s", tr( "USB Device not initialized." ), tr("Switching to channel list mode."));
-
-			Settings.LoaderMode &= ~MODE_WIIGAMES;
-			Settings.LoaderMode |= MODE_NANDCHANNELS;
+				ShowError("%s", tr( "USB Device not initialized." ));
 		}
 	}
 	else
@@ -186,7 +183,7 @@ int MountGamePartition(bool ShowGUI)
 		else if (!Settings.FirstTimeRun)
 			ret = WBFS_OpenPart(Settings.partition);
 
-		if (Settings.LoaderMode & MODE_WIIGAMES)
+		if ((Settings.LoaderMode & MODE_WIIGAMES) || (Settings.LayoutVersion >= 2 && Settings.GameDisplayType == DISP_WII))
 		{
 			if (ret < 0)
 				ret = Settings.SDMode ? FindGamePartitionSD() : FindGamePartition();
@@ -206,7 +203,7 @@ int MountGamePartition(bool ShowGUI)
 	if (ret < 0)
 	{
 		if (ShowGUI)
-			WindowPrompt(tr( "Error !" ), tr( "Could not initialize DIP module!" ), tr( "OK" ));
+			WindowPrompt(tr( "Error:" ), tr( "Could not initialize DIP module!" ), tr( "OK" ));
 		Sys_LoadMenu();
 	}
 

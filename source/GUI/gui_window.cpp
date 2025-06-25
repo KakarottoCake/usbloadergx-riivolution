@@ -103,7 +103,7 @@ void GuiWindow::Draw()
 	if ((parentElement && state == STATE_DISABLED && allowDim) || forceDim)
 		Menu_DrawRectangle(0, 0, screenwidth, screenheight, (GXColor) {0, 0, 0, 0x70}, 1);
 }
-void GuiWindow::DrawTooltip()
+void GuiWindow::DrawTooltip(bool autoalign)
 {
 	LOCK( this );
 	if (_elements.size() == 0 || !this->IsVisible()) return;
@@ -112,7 +112,7 @@ void GuiWindow::DrawTooltip()
 	{
 		try
 		{
-			_elements.at(i)->DrawTooltip();
+			_elements.at(i)->DrawTooltip(true);
 		}
 		catch (const std::exception& e)
 		{

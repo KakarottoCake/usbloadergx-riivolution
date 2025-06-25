@@ -26,11 +26,12 @@
  * for WiiXplorer 2010
  ***************************************************************************/
 #include <gccore.h>
-#include <malloc.h>
-#include <string.h>
 #include <unistd.h>
 #include "SoundDecoder.hpp"
-#include "main.h"
+#include "settings/CSettings.h"
+
+static const u32 FixedPointShift = 15;
+static const u32 FixedPointScale = 1 << FixedPointShift;
 
 SoundDecoder::SoundDecoder()
 {
@@ -59,6 +60,9 @@ SoundDecoder::~SoundDecoder()
 	if(file_fd)
 		delete file_fd;
 	file_fd = NULL;
+	if(ResampleBuffer)
+		free(ResampleBuffer);
+	ResampleBuffer = NULL;
 }
 
 void SoundDecoder::Init()
@@ -66,6 +70,7 @@ void SoundDecoder::Init()
 	SoundType = SOUND_RAW;
 	SoundBlocks = 8;
 	SoundBlockSize = 8192;
+	ResampleTo48kHz = Settings.ResampleTo48kHz;
 	CurPos = 0;
 	Loop = false;
 	EndOfFile = false;
@@ -73,6 +78,8 @@ void SoundDecoder::Init()
 	ExitRequested = false;
 	SoundBuffer.SetBufferBlockSize(SoundBlockSize);
 	SoundBuffer.Resize(SoundBlocks);
+	ResampleBuffer = NULL;
+	ResampleRatio = 0;
 }
 
 int SoundDecoder::Rewind()
@@ -90,6 +97,49 @@ int SoundDecoder::Read(u8 * buffer, int buffer_size, int pos)
 	CurPos += ret;
 
 	return ret;
+}
+
+void SoundDecoder::EnableUpsample(void)
+{
+	if(ResampleBuffer)
+	{
+		free(ResampleBuffer);
+		ResampleBuffer = NULL;
+	}
+	if(IsStereo() && Is16Bit() && SampleRate != 32000 && SampleRate < 48000)
+	{
+		ResampleBuffer = (u8*)memalign(32, SoundBlockSize);
+		ResampleRatio =  ( FixedPointScale * SampleRate ) / 48000;
+		SoundBlockSize = ( SoundBlockSize * ResampleRatio ) / FixedPointScale;
+		SoundBlockSize &= ~0x03;
+		// Set new sample rate
+		SampleRate = 48000;
+	}
+}
+
+void SoundDecoder::Upsample(s16 *src, s16 *dst, u32 nr_src_samples, u32 nr_dst_samples)
+{
+	int timer = 0;
+
+	for(u32 i = 0, n = 0; i < nr_dst_samples; i += 2)
+	{
+		if((n+3) < nr_src_samples) {
+			// Simple fixed point linear interpolation
+			dst[i]   = src[n] +   ( ((src[n+2] - src[n]  ) * timer) >> FixedPointShift );
+			dst[i+1] = src[n+1] + ( ((src[n+3] - src[n+1]) * timer) >> FixedPointShift );
+		}
+		else {
+			dst[i]   = src[n];
+			dst[i+1] = src[n+1];
+		}
+
+		timer += ResampleRatio;
+
+		if(timer >= (int)FixedPointScale) {
+			n += 2;
+			timer -= FixedPointScale;
+		}
+	}
 }
 
 void SoundDecoder::Decode()
@@ -113,13 +163,16 @@ void SoundDecoder::Decode()
 	Decoding = true;
 
 	int done  = 0;
-	u8 * write_buf = SoundBuffer.GetBuffer(newWhich);
+	u8 *write_buf = SoundBuffer.GetBuffer(newWhich);
 	if(!write_buf)
 	{
 		ExitRequested = true;
 		Decoding = false;
 		return;
 	}
+
+	if(ResampleTo48kHz && !ResampleBuffer)
+		EnableUpsample();
 
 	while(done < SoundBlockSize)
 	{
@@ -144,6 +197,17 @@ void SoundDecoder::Decode()
 
 	if(done > 0)
 	{
+		// Check if we need to resample
+		if(ResampleBuffer && ResampleRatio)
+		{
+			memcpy(ResampleBuffer, write_buf, done);
+
+			int src_samples = done >> 1;
+			int dest_samples = ( src_samples * FixedPointScale ) / ResampleRatio;
+			dest_samples &= ~0x01;
+			Upsample((s16*)ResampleBuffer, (s16*)write_buf, src_samples, dest_samples);
+			done = dest_samples << 1;
+		}
 		SoundBuffer.SetBufferSize(newWhich, done);
 		SoundBuffer.SetBufferReady(newWhich, true);
 	}
@@ -153,4 +217,3 @@ void SoundDecoder::Decode()
 
 	Decoding = false;
 }
-

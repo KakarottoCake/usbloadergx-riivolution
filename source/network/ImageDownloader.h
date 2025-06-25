@@ -8,9 +8,9 @@
 class ImageDownloader
 {
 	public:
-		static void DownloadImages();
+		static bool DownloadImages(bool silent = false);
 	private:
-		void Start();
+		void Start(bool silent = false);
 		void SetChoices(int c) { choices = c; }
 		void FindMissingImages();
 		void FindMissing(const char *writepath, const char *downloadURL, const char *backupURL, const char *progressTitle, const char *backupProgressTitle, const char *fileExt);

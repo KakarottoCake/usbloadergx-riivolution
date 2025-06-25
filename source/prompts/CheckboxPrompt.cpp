@@ -61,7 +61,7 @@ void CheckboxPrompt::OnCheckBoxClick(GuiButton *sender, int chan, const POINT &p
 	sender->ResetState();
 }
 
-void CheckboxPrompt::AddCheckBox(const char *text)
+void CheckboxPrompt::AddCheckBox(const char *text, bool twoLines)
 {
 	int size = Checkbox.size();
 	if(size > 5)
@@ -96,8 +96,16 @@ void CheckboxPrompt::AddCheckBox(const char *text)
 		}
 		else if(size == 2)
 		{
-			Checkbox[size]->SetAlignment(ALIGN_LEFT, ALIGN_BOTTOM);
-			Checkbox[size]->SetPosition(80, -110);
+			if (!twoLines)
+			{
+				Checkbox[size]->SetAlignment(ALIGN_LEFT, ALIGN_BOTTOM);
+				Checkbox[size]->SetPosition(80, -108);
+			}
+			else
+			{
+				Checkbox[size]->SetAlignment(ALIGN_RIGHT, ALIGN_BOTTOM);
+				Checkbox[size]->SetPosition(-210, -150);
+			}
 		}
 		else if(size == 3)
 		{
@@ -129,8 +137,16 @@ void CheckboxPrompt::AddCheckBox(const char *text)
 		}
 		else if(size == 2)
 		{
-			Checkbox[size]->SetAlignment(ALIGN_LEFT, ALIGN_BOTTOM);
-			Checkbox[size]->SetPosition(40, -110);
+			if (!twoLines)
+			{
+				Checkbox[size]->SetAlignment(ALIGN_LEFT, ALIGN_BOTTOM);
+				Checkbox[size]->SetPosition(40, -108);
+			}
+			else
+			{
+				Checkbox[size]->SetAlignment(ALIGN_RIGHT, ALIGN_BOTTOM);
+				Checkbox[size]->SetPosition(-210, -150);
+			}
 		}
 		else if(size == 3)
 		{
@@ -184,27 +200,27 @@ int CheckboxPrompt::Show(const char *title, const char *msg,
 						 const char *chbx1, const char *chbx2,
 						 const char *chbx3, const char *chbx4,
 						 const char *chbx5, const char *chbx6,
-						 int initChecks)
+						 int initChecks, bool twoLines)
 {
 	CheckboxPrompt * Window = new CheckboxPrompt(title, msg);
 	if(chbx1)
 	{
-		Window->AddCheckBox(chbx1);
+		Window->AddCheckBox(chbx1, twoLines);
 		Window->SetChecked(0, initChecks & CheckedBox1);
 	}
 	if(chbx2)
 	{
-		Window->AddCheckBox(chbx2);
+		Window->AddCheckBox(chbx2, twoLines);
 		Window->SetChecked(1, initChecks & CheckedBox2);
 	}
 	if(chbx3)
 	{
-		Window->AddCheckBox(chbx3);
+		Window->AddCheckBox(chbx3, twoLines);
 		Window->SetChecked(2, initChecks & CheckedBox3);
 	}
 	if(chbx4)
 	{
-		Window->AddCheckBox(chbx4);
+		Window->AddCheckBox(chbx4, twoLines);
 		Window->SetChecked(3, initChecks & CheckedBox4);
 	}
 	if(chbx5)

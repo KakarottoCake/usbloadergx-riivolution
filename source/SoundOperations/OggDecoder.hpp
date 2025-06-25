@@ -34,8 +34,6 @@ class OggDecoder : public SoundDecoder
 		OggDecoder(const char * filepath);
 		OggDecoder(const u8 * snd, int len);
 		virtual ~OggDecoder();
-		int GetFormat();
-		int GetSampleRate();
 		int Rewind();
 		int Read(u8 * buffer, int buffer_size, int pos);
 	protected:

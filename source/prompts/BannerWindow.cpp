@@ -30,6 +30,7 @@
 #include "language/gettext.h"
 #include "menu/menus.h"
 #include "utils/tools.h"
+#include "SoundOperations/MusicPlayer.h"
 
 // Load only once
 BannerFrame BannerWindow::bannerFrame;
@@ -67,6 +68,8 @@ BannerWindow::BannerWindow(GameBrowseMenu *m, struct discHdr *header)
 	AnimationRunning = false;
 
 	int gameIdx;
+
+	oldFavLevel = GameStatistics.GetFavoriteRank(header->id);
 
 	//! get the game index to this header
 	for(gameIdx = 0; gameIdx < gameList.size(); ++gameIdx)
@@ -109,7 +112,7 @@ BannerWindow::BannerWindow(GameBrowseMenu *m, struct discHdr *header)
 	playcntTxt = new GuiText((char*) NULL, 18, thColor("r=0 g=0 b=0 a=255 - banner window playcount text color"));
 	playcntTxt->SetAlignment(ALIGN_CENTER, ALIGN_MIDDLE);
 	playcntTxt->SetPosition(thInt("0 - banner window play count pos x"),
-							thInt("215 - banner window play count pos y") - Settings.AdjustOverscanY / 2);
+							thInt("215 - banner window play count pos y") - Settings.AdjustOverscanY / 1.25);
 
 	settingsBtn = new GuiButton(215, 75);
 	settingsBtn->SetAlignment(ALIGN_CENTER, ALIGN_MIDDLE);
@@ -244,10 +247,13 @@ BannerWindow::BannerWindow(GameBrowseMenu *m, struct discHdr *header)
 		FavoriteBtn[i]->SetAlignment(ALIGN_CENTER, ALIGN_MIDDLE);
 		FavoriteBtn[i]->SetPosition(xPos, yPos);
 		FavoriteBtn[i]->SetImage(FavoriteBtnImg[i]);
-		FavoriteBtn[i]->SetSoundOver(btnSoundOver);
-		FavoriteBtn[i]->SetSoundClick(btnSoundClick2);
 		FavoriteBtn[i]->SetTrigger(trigA);
-		FavoriteBtn[i]->SetEffectGrow();
+		if (Settings.godmode || !(Settings.ParentalBlocks & BLOCK_GAME_SETTINGS))
+		{
+			FavoriteBtn[i]->SetSoundOver(btnSoundOver);
+			FavoriteBtn[i]->SetSoundClick(btnSoundClick2);
+			FavoriteBtn[i]->SetEffectGrow();
+		}
 	}
 
 	btnLeftImg = new GuiImage(imgLeft);
@@ -280,15 +286,16 @@ BannerWindow::BannerWindow(GameBrowseMenu *m, struct discHdr *header)
 	else
 		bannerFrame.SetButtonBText(tr("Start"));
 
+	if (Settings.bannerFavIcon != BANNER_FAVICON_OFF)
+		for (int i = 0; i < FAVORITE_STARS; ++i)
+			Append(FavoriteBtn[i]);
+
 	//check if unlocked
 	if (Settings.godmode || !(Settings.ParentalBlocks & BLOCK_GAME_SETTINGS))
 	{
 		if (strcmp(Settings.db_language, "KO") != 0)
 			bannerFrame.SetButtonAText(tr("Settings"));
 		Append(settingsBtn);
-		if(Settings.bannerFavIcon != BANNER_FAVICON_OFF)
-			for(int i = 0; i < FAVORITE_STARS; ++i)
-				Append(FavoriteBtn[i]);
 	}
 	else
 	{
@@ -361,7 +368,7 @@ BannerWindow::~BannerWindow()
 
 	if(gameSound) gameSound->Stop();
 	delete gameSound;
-	bgMusic->SetVolume(Settings.volume);
+	MusicPlayer::Instance()->SetVolume(Settings.volume);
 
 	delete gameBanner;
 
@@ -441,12 +448,15 @@ void BannerWindow::ChangeGame(bool playsound)
 		}
 		if(gameSound)
 		{
-			bgMusic->SetVolume(0);
+			MusicPlayer::Instance()->SetVolume(0);
 			if (Settings.gamesound == 2)
 				gameSound->SetLoop(1);
 			// If the game is changed within window play sound here directly
 			if(playsound)
+			{
+				reducedVol = true;
 				gameSound->Play();
+			}
 		}
 	}
 
@@ -539,6 +549,7 @@ int BannerWindow::MainLoop()
 		this->SetState(STATE_DISABLED);
 
 		wiilight(0);
+		oldFavLevel = GameStatistics.GetFavoriteRank(dvdheader ? dvdheader : gameList[gameSelected]);
 		int settret = GameSettingsMenu::Execute(browserMenu, dvdheader ? dvdheader : gameList[gameSelected]);
 
 		this->SetState(STATE_DEFAULT);
@@ -607,31 +618,43 @@ int BannerWindow::MainLoop()
 		{
 			if (Settings.gamesound == 1 && !gameSound->IsPlaying())
 			{
-				bgMusic->SetVolume(Settings.volume);
+				MusicPlayer::Instance()->SetVolume(Settings.volume);
 				reducedVol = false;
 			}
 		}
 		else
 		{
-			bgMusic->SetVolume(Settings.volume);
+			MusicPlayer::Instance()->SetVolume(Settings.volume);
 			reducedVol = false;
 		}
 	}
 
-	for(int i = 0; i < FAVORITE_STARS; ++i)
+	struct discHdr *header = gameList[gameSelected];
+	for (int i = 0; i < FAVORITE_STARS; ++i)
 	{
-		if(FavoriteBtn[i]->GetState() == STATE_CLICKED)
+		int currentRank = GameStatistics.GetFavoriteRank(header->id);
+		if (oldFavLevel != currentRank)
 		{
-			// This button can only be clicked when this is not a dvd header
-			struct discHdr * header = gameList[gameSelected];
-			int FavoriteRank = (i+1 == GameStatistics.GetFavoriteRank(header->id)) ? 0 : i+1; // Press the current rank to reset the rank
+			oldFavLevel = currentRank;
+			for (int j = 0; j < FAVORITE_STARS; ++j)
+				FavoriteBtnImg[j]->SetImage(currentRank >= j + 1 ? imgFavorite : imgNotFavorite);
+		}
+		else if (FavoriteBtn[i]->GetState() == STATE_CLICKED)
+		{
+			if (!Settings.godmode && (Settings.ParentalBlocks & BLOCK_GAME_SETTINGS))
+				FavoriteBtn[i]->ResetState();
+			else
+			{
+				// This button can only be clicked when this is not a dvd header
+				int FavoriteRank = (i + 1 == currentRank) ? 0 : i + 1; // Press the current rank to reset the rank
 
-			GameStatistics.SetFavoriteRank(header->id, FavoriteRank);
-			GameStatistics.Save();
-			for(int j = 0; j < FAVORITE_STARS; ++j)
-				FavoriteBtnImg[j]->SetImage(FavoriteRank >= j+1 ? imgFavorite : imgNotFavorite);
+				GameStatistics.SetFavoriteRank(header->id, FavoriteRank);
+				GameStatistics.Save();
+				for (int j = 0; j < FAVORITE_STARS; ++j)
+					FavoriteBtnImg[j]->SetImage(FavoriteRank >= j + 1 ? imgFavorite : imgNotFavorite);
 
-			FavoriteBtn[i]->ResetState();
+				FavoriteBtn[i]->ResetState();
+			}
 		}
 	}
 

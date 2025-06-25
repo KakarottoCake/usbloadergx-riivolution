@@ -27,6 +27,7 @@
 #include "settings/SettingsPrompts.h"
 #include "prompts/PromptWindows.h"
 #include "language/gettext.h"
+#include "SoundOperations/MusicPlayer.h"
 
 static const char * GameSoundText[] =
 {
@@ -39,8 +40,14 @@ static const char * MusicLoopText[] =
 {
 	trNOOP( "Play Once" ),
 	trNOOP( "Loop Music" ),
-	trNOOP( "Random Directory Music" ),
+	trNOOP( "Shuffle Directory Music" ),
 	trNOOP( "Loop Directory" ),
+};
+
+static const char * OnOffText[] =
+{
+	trNOOP( "OFF" ),
+	trNOOP( "ON" )
 };
 
 SoundSettingsMenu::SoundSettingsMenu()
@@ -53,6 +60,7 @@ SoundSettingsMenu::SoundSettingsMenu()
 	Options->SetName(Idx++, "%s", tr( "Game Sound Mode" ));
 	Options->SetName(Idx++, "%s", tr( "Game Sound Volume" ));
 	Options->SetName(Idx++, "%s", tr( "Music Loop Mode" ));
+	Options->SetName(Idx++, "%s", tr( "Resample to 48 kHz" ));
 	Options->SetName(Idx++, "%s", tr( "Reset BG Music" ));
 
 	SetOptionValues();
@@ -93,12 +101,22 @@ void SoundSettingsMenu::SetOptionValues()
 	//! Settings: Music Loop Mode
 	Options->SetValue(Idx++, tr( MusicLoopText[Settings.musicloopmode] ));
 
+	//! Settings: Resample to 48 kHz
+	Options->SetValue(Idx++, tr( OnOffText[Settings.ResampleTo48kHz] ));
+
 	//! Settings: Reset BG Music
 	Options->SetValue(Idx++, " ");
 }
 
 int SoundSettingsMenu::GetMenuInternal()
 {
+	//! Refresh Background Music
+	const char *filename = strrchr(Settings.ogg_path, '/');
+	if (!filename)
+		Options->SetValue(0, tr( "Default" ));
+	else if (strcasecmp(Options->GetValue(0), filename + 1) != 0)
+		Options->SetValue(0, filename + 1);
+
 	int ret = optionBrowser->GetClickedOption();
 
 	if (ret < 0)
@@ -122,7 +140,7 @@ int SoundSettingsMenu::GetMenuInternal()
 	{
 		Settings.volume += 10;
 		if (Settings.volume > 100) Settings.volume = 0;
-		bgMusic->SetVolume(Settings.volume);
+		MusicPlayer::Instance()->SetVolume(Settings.volume);
 	}
 
 	//! Settings: SFX Volume
@@ -133,6 +151,7 @@ int SoundSettingsMenu::GetMenuInternal()
 		btnSoundOver->SetVolume(Settings.sfxvolume);
 		btnSoundClick->SetVolume(Settings.sfxvolume);
 		btnSoundClick2->SetVolume(Settings.sfxvolume);
+		homeout->SetVolume(Settings.sfxvolume);
 	}
 
 	//! Settings: Game Sound Mode
@@ -152,7 +171,13 @@ int SoundSettingsMenu::GetMenuInternal()
 	else if (ret == ++Idx)
 	{
 		if (++Settings.musicloopmode > 3) Settings.musicloopmode = 0;
-		bgMusic->SetLoop(Settings.musicloopmode);
+		MusicPlayer::Instance()->SetLoop(Settings.musicloopmode);
+	}
+
+	//! Settings: Resample to 48 kHz
+	else if (ret == ++Idx)
+	{
+		if (++Settings.ResampleTo48kHz >= MAX_ON_OFF) Settings.ResampleTo48kHz = 0;
 	}
 
 	//! Settings: Reset BG Music
@@ -160,10 +185,7 @@ int SoundSettingsMenu::GetMenuInternal()
 	{
 		int result = WindowPrompt(tr( "Reset to default BGM?" ), 0, tr( "Yes" ), tr( "No" ));
 		if (result)
-		{
-			bgMusic->LoadStandard();
-			bgMusic->Play();
-		}
+			MusicPlayer::Instance()->LoadStandard();
 	}
 
 	SetOptionValues();

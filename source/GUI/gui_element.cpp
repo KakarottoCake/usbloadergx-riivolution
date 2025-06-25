@@ -672,7 +672,7 @@ void GuiElement::Draw()
 /**
  * Draw Tooltips on screen.
  */
-void GuiElement::DrawTooltip()
+void GuiElement::DrawTooltip(bool autoalign)
 {
 }
 

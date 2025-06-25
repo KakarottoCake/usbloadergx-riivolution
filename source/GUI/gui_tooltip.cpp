@@ -67,12 +67,18 @@ void GuiTooltip::SetText(const char * t)
 		text = NULL;
 	}
 	int tile_cnt = 0;
-	if (t && (text = new GuiText(t, 22, ( GXColor )
-	{   0, 0, 0, 255})))
+	if (t)
 	{
-		text->SetParent(this);
-		tile_cnt = (text->GetTextWidth() - 12) / tileImage->GetWidth();
-		if (tile_cnt < 0) tile_cnt = 0;
+		std::string tooltiptxt(t);
+		if (tooltiptxt.length() > 50)
+			tooltiptxt = tooltiptxt.substr(0, 50) + "...";
+		if ((text = new GuiText(tooltiptxt.c_str(), 22, (GXColor){0, 0, 0, 255})))
+		{
+			text->SetParent(this);
+			tile_cnt = (text->GetTextWidth() - 12) / tileImage->GetWidth();
+			if (tile_cnt < 0)
+				tile_cnt = 0;
+		}
 	}
 	tileImage->SetPosition(leftImage->GetWidth(), 0);
 	tileImage->SetTileHorizontal(tile_cnt);

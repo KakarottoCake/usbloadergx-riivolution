@@ -318,7 +318,7 @@ u8 IosLoader::GetDMLVersion(char* releaseDate)
 
 	currentDMLVersion = DML_VERSION_MIOS;
 
-	// Older versions - not working with USBloaderGX
+	// Older versions - not working with USB Loader GX
 	if(strncmp(releaseDate, "t: ", 3) == 0)
 	{
 		currentMIOS = DEFAULT_MIOS;

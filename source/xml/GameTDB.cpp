@@ -484,6 +484,7 @@ bool GameTDB::ParseGameNode(const char *id)
 		return false;
 
 	pugi::xml_parse_result result = xmlDoc.load_string(data);
+	delete[] data;
 	if (!result)
 		return false;
 
@@ -641,6 +642,7 @@ void GameTDB::TranslateGenres(std::vector<std::string> &GenreList)
 
 	pugi::xml_document xmlDoc;
 	pugi::xml_parse_result result = xmlDoc.load_string(data);
+	delete[] data;
 	if (!result)
 		return;
 
@@ -745,6 +747,7 @@ void GameTDB::TranslateDescriptors(std::vector<std::string> &DescList)
 
 	pugi::xml_document xmlDoc;
 	pugi::xml_parse_result result = xmlDoc.load_string(data);
+	delete[] data;
 	if (!result)
 		return;
 
@@ -785,7 +788,6 @@ int GameTDB::GetWifiPlayers(const char *id)
 		return -1;
 
 	return xmlDoc.child("game").child("wi-fi").attribute("players").as_int();
-	;
 }
 
 int GameTDB::GetWifiFeatureList(const char *id, std::vector<std::string> &feat_list)
@@ -842,15 +844,19 @@ int GameTDB::GetAccessoryList(const char *id, std::vector<Accessory> &acc_list)
 	return acc_list.size();
 }
 
-int GameTDB::GetCaseColor(const char *id)
+unsigned long GameTDB::GetCaseColor(const char *id)
 {
 	if (!id)
 		return -1;
 
 	if (!ParseGameNode(id))
 		return -1;
+	
+	std::string color = xmlDoc.child("game").child("case").attribute("color").value();
+	if (color.empty())
+		return -1;
 
-	return xmlDoc.child("game").child("case").attribute("color").as_int();
+	return std::stoul(color, nullptr, 16);
 }
 
 bool GameTDB::GetGameType(const char *id, std::string &GameType)

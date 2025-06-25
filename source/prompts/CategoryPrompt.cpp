@@ -36,7 +36,7 @@ CategoryPrompt::CategoryPrompt(const std::string &title)
 	changed = false;
 
 	trigA.SetSimpleTrigger(-1, WPAD_BUTTON_A | WPAD_CLASSIC_BUTTON_A, PAD_BUTTON_A);
-	trigB.SetSimpleTrigger(-1, WPAD_BUTTON_B | WPAD_CLASSIC_BUTTON_B, PAD_BUTTON_B);
+	trigB.SetButtonOnlyTrigger(-1, WPAD_BUTTON_B | WPAD_CLASSIC_BUTTON_B, PAD_BUTTON_B);
 	trigHome.SetButtonOnlyTrigger(-1, WPAD_BUTTON_HOME | WPAD_CLASSIC_BUTTON_HOME, PAD_BUTTON_START);
 	trigPlus.SetButtonOnlyTrigger(-1, WPAD_BUTTON_PLUS | WPAD_CLASSIC_BUTTON_PLUS, PAD_TRIGGER_R);
 	trigMinus.SetButtonOnlyTrigger(-1, WPAD_BUTTON_MINUS | WPAD_CLASSIC_BUTTON_MINUS, PAD_TRIGGER_L);
@@ -72,6 +72,7 @@ CategoryPrompt::CategoryPrompt(const std::string &title)
 	Append(homeButton);
 
 	addImg = new GuiImage(addImgData);
+	addImg->SetWidescreen(Settings.widescreen);
 	addTxt = new GuiText(tr("Add category"), 24, thColor("r=0 g=0 b=0 a=255 - prompt windows button text color"));
 	addTxt->SetMaxWidth(180, DOTTED);
 	addTxt->SetAlignment(thAlign("left - category prompt add button text align hor"), thAlign("top - category prompt add button text align ver"));
@@ -90,6 +91,7 @@ CategoryPrompt::CategoryPrompt(const std::string &title)
 	Append(addButton);
 
 	deleteImg = new GuiImage(deleteImgData);
+	deleteImg->SetWidescreen(Settings.widescreen);
 	deleteTxt = new GuiText(tr("Delete category"), 24, thColor("r=0 g=0 b=0 a=255 - prompt windows button text color"));
 	deleteTxt->SetMaxWidth(180, DOTTED);
 	deleteTxt->SetAlignment(thAlign("left - category prompt delete button text align hor"), thAlign("top - category prompt delete button text align ver"));
@@ -108,6 +110,7 @@ CategoryPrompt::CategoryPrompt(const std::string &title)
 	Append(deleteButton);
 
 	editImg = new GuiImage(editImgData);
+	editImg->SetWidescreen(Settings.widescreen);
 	editTxt = new GuiText(tr("Rename category"), 24, thColor("r=0 g=0 b=0 a=255 - prompt windows button text color"));
 	editTxt->SetAlignment(thAlign("left - category prompt edit button text align hor"), thAlign("top - category prompt edit button text align ver"));
 	editTxt->SetPosition(thInt("10 - category prompt edit button text pos x")+editImg->GetWidth(), thInt("6 - category prompt edit button text pos y"));
@@ -152,6 +155,7 @@ CategoryPrompt::CategoryPrompt(const std::string &title)
 	backBtn->SetSoundOver(btnSoundOver);
 	backBtn->SetSoundClick(btnSoundClick);
 	backBtn->SetTrigger(&trigA);
+	backBtn->SetTrigger(&trigB);
 	backBtn->SetEffectGrow();
 	Append(backBtn);
 
@@ -258,7 +262,7 @@ int CategoryPrompt::Show()
 
 			if(browser->GetSelected() == 0)
 			{
-				WindowPrompt(tr("Error"), tr("You cannot delete this category."), tr("OK"));
+				WindowPrompt(tr("Error:"), tr("You cannot delete this category."), tr("OK"));
 				mainWindow->SetState(STATE_DISABLED);
 				SetState(STATE_DEFAULT);
 				deleteButton->ResetState();

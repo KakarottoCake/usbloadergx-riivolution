@@ -21,6 +21,7 @@
 #include "patches/patchcode.h"
 #include "settings/menus/GlobalSettings.hpp"
 #include "settings/CGameSettings.h"
+#include "SoundOperations/MusicPlayer.h"
 #include "themes/CTheme.h"
 #include "themes/ThemeMenu.h"
 #include "usbloader/disc.h"
@@ -42,10 +43,10 @@ GuiWindow * mainWindow = NULL;
 WiiPointer * pointer[4] = { NULL, NULL, NULL, NULL };
 GuiImage * bgImg = NULL;
 GuiImageData * background = NULL;
-GuiBGM * bgMusic = NULL;
 GuiSound *btnSoundClick = NULL;
 GuiSound *btnSoundClick2 = NULL;
 GuiSound *btnSoundOver = NULL;
+GuiSound *homeout = NULL;
 
 static int currentMenu = 0;
 
@@ -105,7 +106,7 @@ static void * UpdateGUI(void *arg)
 
 		mainWindow->Draw();
 		if (Settings.tooltips && Theme::ShowTooltips && mainWindow->GetState() != STATE_DISABLED)
-			mainWindow->DrawTooltip();
+			mainWindow->DrawTooltip(true);
 
 		// Pointer modifies wpad data struct for easy implementation of "virtual pointer" with PAD-Sticks
 		// That is why it has to be called right before updating other gui elements with the triggers
@@ -117,8 +118,6 @@ static void * UpdateGUI(void *arg)
 			mainWindow->Update(&userInput[i]);
 
 		Menu_Render();
-
-		if (bgMusic) bgMusic->UpdateState();
 	}
 
 	for (i = 5; i < 255; i += 10)
@@ -173,6 +172,7 @@ int MainMenu(int menu)
 	btnSoundClick = new GuiSound(Resources::GetFile("button_click.ogg"), Resources::GetFileSize("button_click.ogg"), Settings.sfxvolume);
 	btnSoundClick2 = new GuiSound(Resources::GetFile("button_click2.ogg"), Resources::GetFileSize("button_click2.ogg"), Settings.sfxvolume);
 	btnSoundOver = new GuiSound(Resources::GetFile("button_over.ogg"), Resources::GetFileSize("button_over.ogg"), Settings.sfxvolume);
+	homeout = new GuiSound(Resources::GetFile("menuout.ogg"), Resources::GetFileSize("menuout.ogg"), Settings.sfxvolume);
 
 	pointer[0] = new WiiPointer("player1_point.png");
 	pointer[1] = new WiiPointer("player2_point.png");
@@ -188,10 +188,9 @@ int MainMenu(int menu)
 
 	ResumeGui();
 
-	bgMusic = new GuiBGM(Resources::GetFile("bg_music.ogg"), Resources::GetFileSize("bg_music.ogg"), Settings.volume);
-	bgMusic->SetLoop(Settings.musicloopmode); //loop music
-	bgMusic->Load(Settings.ogg_path);
-	bgMusic->Play();
+	MusicPlayer::Instance()->Load(Settings.ogg_path, true);
+	MusicPlayer::Instance()->SetVolume(Settings.volume);
+	MusicPlayer::Instance()->SetLoop(Settings.musicloopmode);
 
 	MountGamePartition();
 
@@ -202,8 +201,6 @@ int MainMenu(int menu)
 
 	while (currentMenu != MENU_EXIT)
 	{
-		bgMusic->SetVolume(Settings.volume);
-
 		switch (currentMenu)
 		{
 			case MENU_SETTINGS:

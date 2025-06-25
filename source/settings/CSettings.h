@@ -24,6 +24,7 @@
 #ifndef _CSETTINGS_H_
 #define _CSETTINGS_H_
 
+#ifdef __cplusplus
 #include <string>
 #include <stdio.h>
 #include <gctypes.h>
@@ -118,9 +119,11 @@ class CSettings
 		short volume;
 		short sfxvolume;
 		short gamesoundvolume;
+		short ResampleTo48kHz;
 		short tooltips;
 		short parentalcontrol;
 		short videoWidth;
+		u8 LayoutVersion;
 		u8 BootIOS;
 		u8 LoaderIOS;
 		u8 cios;
@@ -153,6 +156,7 @@ class CSettings
 		short ShowFreeSpace;
 		short ShowGameCount;
 		short HomeMenu;
+		short SilentHomeMenu;
 		short MultiplePartitions;
 		short USBPort;
 		short BlockIOSReload;
@@ -182,6 +186,7 @@ class CSettings
 		short ShowPlayCount;
 		short bannerFavIcon;
 		short RememberUnlock;
+		short GameDisplayType;
 		short LoaderMode;
 		short SearchMode;
 		short GameAspectRatio;
@@ -261,5 +266,12 @@ class CSettings
 };
 
 extern CSettings Settings;
+
+extern "C" {
+#endif
+u8 GetLayoutVersion(void);
+#ifdef __cplusplus
+}
+#endif
 
 #endif

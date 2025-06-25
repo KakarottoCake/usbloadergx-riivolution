@@ -36,13 +36,13 @@ class GuiSound
 		//!\param sound Pointer to the sound data
 		//!\param filesize Length of sound data
 		GuiSound(const char * filepath);
-		GuiSound(const u8 * sound, s32 filesize, int volume, int voice = -1);
+		GuiSound(const u8 * sound, s32 filesize, int volume, int voice = -1, bool allocated = false);
 		//!Destructor
 		virtual ~GuiSound();
 		//!Load a file and replace the old one
 		virtual bool Load(const char * filepath);
 		//!Load a file and replace the old one
-		bool Load(const u8 * sound, s32 filesize);
+		bool Load(const u8 * sound, s32 filesize, bool allocated = true);
 		//!For quick playback of the internal soundeffects
 		bool LoadSoundEffect(const u8 * snd, s32 len);
 		//!Start sound playback
@@ -72,6 +72,7 @@ class GuiSound
 		int volume; //!< Sound volume (0-100)
 		u8 loop; //!< Loop sound playback
 		u32 SoundEffectLength; //!< Check if it is an app soundeffect for faster playback
+		bool allocated; //!< Is the file allocated or not
 };
 
 #endif

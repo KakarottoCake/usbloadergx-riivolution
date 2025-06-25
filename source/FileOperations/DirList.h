@@ -67,7 +67,7 @@ class DirList
 		bool IsDir(int index) { if(!valid(index)) return 0; return FileInfo[index].isDir; }
 		//! Erase an entry of the list
 		//!\param list index
-		void RemoveEntrie(int index) { if(!valid(index)) return; FileInfo.erase(FileInfo.begin()+index); }
+		void RemoveEntry(int index) { if(!valid(index)) return; FileInfo.erase(FileInfo.begin()+index); }
 		//! Get the filecount of the whole list
 		int GetFilecount() { return FileInfo.size(); }
 		//! Sort list by filepath
@@ -85,8 +85,8 @@ class DirList
 			MainDOL = 0x08
 		};
 	protected:
-		//!Add a list entrie
-		void AddEntrie(const char * folderpath, const char * filename, u64 filesize, bool isDir);
+		//!Add a list entry
+		void AddEntry(const char * folderpath, const char * filename, u64 filesize, bool isDir);
 		//! Clear the list
 		void ClearList();
 		//! Check if valid pos is requested

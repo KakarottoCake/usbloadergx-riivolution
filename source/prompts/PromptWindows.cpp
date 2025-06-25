@@ -43,6 +43,7 @@
 #include "system/IosLoader.h"
 #include "gecko.h"
 #include "lstub.h"
+#include "SoundOperations/MusicPlayer.h"
 
 static const char * DMLVersions[] =
 {
@@ -402,7 +403,7 @@ void WindowCredits()
 	currentTxt->SetFont(creditsFont, creditsFontSize);
 	txt.push_back(currentTxt);
 
-	currentTxt = new GuiText("Cyan / Dimok / blackb0x / nIxx / giantpune / ardi");
+	currentTxt = new GuiText("blackb0x / Cyan / Dimok / nIxx / giantpune / ardi");
 	currentTxt->SetAlignment(ALIGN_LEFT, ALIGN_TOP);
 	currentTxt->SetPosition(160, y);
 	currentTxt->SetFont(creditsFont, creditsFontSize);
@@ -424,7 +425,7 @@ void WindowCredits()
 	currentTxt->SetFont(creditsFont, creditsFontSize);
 	txt.push_back(currentTxt);
 
-	currentTxt = new GuiText("cyrex / NeoRame");
+	currentTxt = new GuiText("nully / cyrex / NeoRame");
 	currentTxt->SetAlignment(ALIGN_LEFT, ALIGN_TOP);
 	currentTxt->SetPosition(160, y);
 	currentTxt->SetFont(creditsFont, creditsFontSize);
@@ -472,15 +473,7 @@ void WindowCredits()
 	currentTxt->SetPosition(160, y);
 	currentTxt->SetFont(creditsFont, creditsFontSize);
 	txt.push_back(currentTxt);
-	y += 20;
-
-	sprintf(text, "Larsenv & Wingysam %s", tr( "for hosting the themes" ));
-	currentTxt = new GuiText(text);
-	currentTxt->SetAlignment(ALIGN_LEFT, ALIGN_TOP);
-	currentTxt->SetPosition(160, y);
-	currentTxt->SetFont(creditsFont, creditsFontSize);
-	txt.push_back(currentTxt);
-	y += 24;
+	y += 44;
 
 	currentTxt = new GuiText(tr( "Special thanks to:" ));
 	currentTxt->SetAlignment(ALIGN_LEFT, ALIGN_TOP);
@@ -700,7 +693,8 @@ int WindowExitPrompt()
 {
 	gprintf("WindowExitPrompt()\n");
 
-	bgMusic->Pause();
+	if (Settings.SilentHomeMenu)
+		MusicPlayer::Instance()->SetVolume(0);
 
 	GuiSound * homein = NULL;
 	homein = new GuiSound(Resources::GetFile("menuin.ogg"), Resources::GetFileSize("menuin.ogg"), Settings.sfxvolume);
@@ -708,12 +702,11 @@ int WindowExitPrompt()
 	homein->SetLoop(0);
 	homein->Play();
 
-	GuiSound * homeout = NULL;
-	homeout = new GuiSound(Resources::GetFile("menuout.ogg"), Resources::GetFileSize("menuout.ogg"), Settings.sfxvolume);
 	homeout->SetVolume(Settings.sfxvolume);
 	homeout->SetLoop(0);
 
 	int choice = -1;
+	u64 time = gettime();
 
 	loadStub();
 	Set_Stub(returnTo(true)); // Reset the stub back to the HBC
@@ -775,7 +768,11 @@ int WindowExitPrompt()
 	GuiTrigger trigB;
 	trigB.SetButtonOnlyTrigger(-1, WPAD_BUTTON_B | WPAD_CLASSIC_BUTTON_B, PAD_BUTTON_B);
 	GuiTrigger trigHome;
-	trigHome.SetButtonOnlyTrigger(-1, WPAD_BUTTON_HOME | WPAD_CLASSIC_BUTTON_HOME, 0);
+	trigHome.SetButtonOnlyTrigger(-1, WPAD_BUTTON_HOME | WPAD_CLASSIC_BUTTON_HOME, PAD_BUTTON_START);
+	GuiTrigger trigL;
+	trigL.SetButtonOnlyTrigger(-1, WPAD_BUTTON_LEFT | WPAD_CLASSIC_BUTTON_LEFT, PAD_BUTTON_LEFT);
+	GuiTrigger trigR;
+	trigR.SetButtonOnlyTrigger(-1, WPAD_BUTTON_RIGHT | WPAD_CLASSIC_BUTTON_RIGHT, PAD_BUTTON_RIGHT);
 
 	GuiText titleTxt(tr( "HOME Menu" ), 36, ( GXColor ) {255, 255, 255, 255});
 	titleTxt.SetAlignment(ALIGN_CENTER, ALIGN_TOP);
@@ -797,6 +794,13 @@ int WindowExitPrompt()
 	closeBtn.SetLabel(&closeTxt);
 	closeBtn.SetRumble(false);
 	closeBtn.SetEffect(EFFECT_SLIDE_TOP | EFFECT_SLIDE_IN, 50);
+
+	GuiButton lMusicBtn(0, 0);
+	lMusicBtn.SetPosition(-100, -100);
+	lMusicBtn.SetTrigger(&trigL);
+	GuiButton rMusicBtn(0, 0);
+	rMusicBtn.SetPosition(-100, -100);
+	rMusicBtn.SetTrigger(&trigR);
 
 	GuiImage btn1Img(&top);
 	GuiImage btn1OverImg(&topOver);
@@ -847,16 +851,13 @@ int WindowExitPrompt()
 
 	GuiImage btn4Img(&bottom);
 	GuiImage btn4OverImg(&bottomOver);
-	GuiButton btn4(&btn4Img, &btn4OverImg, 0, 4, 0, 0, &trigA, btnSoundOver, btnSoundClick2, 0);
+	GuiButton btn4(&btn4Img, &btn4OverImg, 0, 4, 0, 0, &trigA, NULL, NULL, 0);
 	btn4.SetTrigger(&trigB);
 	btn4.SetTrigger(&trigHome);
 	btn4.SetEffect(EFFECT_SLIDE_BOTTOM | EFFECT_SLIDE_IN, 50);
 
 	GuiImage wiimoteImg(&wiimote);
-	if (Settings.wsprompt)
-	{
-		wiimoteImg.SetWidescreen(Settings.widescreen);
-	}
+	wiimoteImg.SetWidescreen(Settings.widescreen);
 	wiimoteImg.SetAlignment(ALIGN_LEFT, ALIGN_BOTTOM);
 	wiimoteImg.SetEffect(EFFECT_SLIDE_BOTTOM | EFFECT_SLIDE_IN, 50);
 	wiimoteImg.SetPosition(50, 210);
@@ -868,6 +869,8 @@ int WindowExitPrompt()
 	promptWindow.Append(&closeBtn);
 	promptWindow.Append(&titleTxt);
 	promptWindow.Append(&wiimoteImg);
+	promptWindow.Append(&lMusicBtn);
+	promptWindow.Append(&rMusicBtn);
 
 	promptWindow.Append(batteryBtn[0]);
 	promptWindow.Append(batteryBtn[1]);
@@ -934,6 +937,32 @@ int WindowExitPrompt()
 			for (int i = 0; i < 4; i++)
 				batteryBtn[i]->SetEffect(EFFECT_SLIDE_BOTTOM | EFFECT_SLIDE_OUT, 50);
 
+		}
+		else if (lMusicBtn.GetState() == STATE_CLICKED)
+		{
+			if (MusicPlayer::Instance()->GetPlayListCount() > 1)
+			{
+				// Reduce thrashing
+				if (ticks_to_millisecs(diff_ticks(time, gettime())) > 1000)
+				{
+					MusicPlayer::Instance()->PlayPrevious();
+					time = gettime();
+				}
+			}
+			lMusicBtn.ResetState();
+		}
+		else if (rMusicBtn.GetState() == STATE_CLICKED)
+		{
+			if (MusicPlayer::Instance()->GetPlayListCount() > 1)
+			{
+				// Reduce thrashing
+				if (ticks_to_millisecs(diff_ticks(time, gettime())) > 1000)
+				{
+					MusicPlayer::Instance()->PlayNext();
+					time = gettime();
+				}
+			}
+			rMusicBtn.ResetState();
 		}
 		else if (btn4.GetState() == STATE_SELECTED)
 		{
@@ -1015,10 +1044,6 @@ int WindowExitPrompt()
 	delete homein;
 	mainWindow->Remove(&promptWindow);
 	mainWindow->SetState(STATE_DEFAULT);
-	while (homeout->IsPlaying() > 0)
-		usleep(100);
-	homeout->Stop();
-	delete homeout;
 
 	for(int i = 0; i < 4; ++i)
 	{
@@ -1029,7 +1054,7 @@ int WindowExitPrompt()
 	}
 
 	ResumeGui();
-	bgMusic->Resume();
+	MusicPlayer::Instance()->SetVolume(Settings.volume);
 
 	return choice;
 }
@@ -1234,7 +1259,7 @@ int FormatingPartition(const char *title, int part_num)
 
 	if (ret < 0)
 	{
-		WindowPrompt(tr( "Error !" ), tr( "Failed formating" ), tr( "Return" ));
+		WindowPrompt(tr( "Error:" ), tr( "Failed formatting" ), tr( "Return" ));
 	}
 	else
 	{
@@ -1247,7 +1272,7 @@ int FormatingPartition(const char *title, int part_num)
 		WindowPrompt(tr( "Success:" ), text, tr( "OK" ));
 		if (ret < 0)
 		{
-			WindowPrompt(tr( "ERROR" ), tr( "Failed to open partition" ), tr( "OK" ));
+			WindowPrompt(tr( "Error:" ), tr( "Failed to open partition" ), tr( "OK" ));
 			Sys_LoadMenu();
 		}
 	}
@@ -1325,28 +1350,25 @@ bool NetworkInitPrompt()
 	mainWindow->Append(&promptWindow);
 	ResumeGui();
 
-	int iTimeout = 100 * 200;   // 20s
-
 	ResumeNetworkThread();
 
+	u64 time = gettime();
 	while (!IsNetworkInit())
 	{
-		usleep(100000);
-
-		if (--iTimeout == 0)
+		if (ticks_to_millisecs(diff_ticks(time, gettime())) > 30000)
 		{
-			msgTxt.SetText(tr( "Could not initialize network, time out!" ));
+			msgTxt.SetText(tr( "Could not initialize network. Timed out!" ));
 			sleep(3);
 			success = false;
 			break;
 		}
-
 		if (btn1.GetState() == STATE_CLICKED)
 		{
 			btn1.ResetState();
 			success = false;
 			break;
 		}
+		usleep(10000);
 	}
 
 	promptWindow.SetEffect(EFFECT_SLIDE_TOP | EFFECT_SLIDE_OUT, 50);
@@ -1367,7 +1389,7 @@ int CodeDownload(const char *id)
 {
 	if (!CreateSubfolder(Settings.TxtCheatcodespath))
 	{
-		WindowPrompt(tr( "Error !" ), tr( "Can't create directory" ), tr( "OK" ));
+		WindowPrompt(tr( "Error:" ), tr( "Can't create directory" ), tr( "OK" ));
 		return -1;
 	}
 
@@ -1421,32 +1443,28 @@ int CodeDownload(const char *id)
 	promptWindow.Append(&btn1);
 
 	promptWindow.SetEffect(EFFECT_SLIDE_TOP | EFFECT_SLIDE_IN, 50);
-
 	HaltGui();
 	mainWindow->SetState(STATE_DISABLED);
 	mainWindow->Append(&promptWindow);
 	ResumeGui();
 
+	ResumeNetworkThread();
+
+	u64 time = gettime();
 	while (!IsNetworkInit())
 	{
-		VIDEO_WaitVSync();
-
-		Initialize_Network();
-
-		if (IsNetworkInit())
+		if (ticks_to_millisecs(diff_ticks(time, gettime())) > 30000)
 		{
-			msgTxt.SetText(GetNetworkIP());
-		}
-		else
-		{
-			msgTxt.SetText(tr( "Could not initialize network!" ));
+			msgTxt.SetText(tr( "Could not initialize network. Timed out!" ));
+			sleep(3);
+			break;
 		}
 		if (btn1.GetState() == STATE_CLICKED)
 		{
 			btn1.ResetState();
-			ret = 0;
 			break;
 		}
+		usleep(10000);
 	}
 
 	if (IsNetworkInit())
@@ -1484,7 +1502,7 @@ int CodeDownload(const char *id)
 			if (!validUrl)
 			{
 				snprintf(codeurl, sizeof(codeurl), "%s.txt%s", id, tr( " is not on the server." ));
-				WindowPrompt(tr( "Error" ), codeurl, tr( "OK" ));
+				WindowPrompt(tr( "Error:" ), codeurl, tr( "OK" ));
 			}
 			else
 			{
@@ -1505,7 +1523,7 @@ int CodeDownload(const char *id)
 						//printf("target=%s  game id=%s\n",target,id);
 						if (strncmp(target, id, 4) == 0 || strncmp(target + 3, id, 4) == 0)
 						{
-							snprintf(txtpath + txtLen, sizeof(txtpath) - txtLen, "%s", tr(" has been Saved.  The text has not been verified.  Some of the code may not work right with each other.  If you experience trouble, open the text in a real text editor for more information." ));
+							snprintf(txtpath + txtLen, sizeof(txtpath) - txtLen, "%s", tr(" has been saved, but you might need to edit some cheats from a computer." ));
 							WindowPrompt(0, txtpath, tr( "OK" ));
 							ret = 0;
 						}
@@ -1513,12 +1531,12 @@ int CodeDownload(const char *id)
 						{
 							RemoveFile(txtpath);
 							snprintf(codeurl, sizeof(codeurl), "%s.txt%s", id, tr( " is not on the server." ));
-							WindowPrompt(tr( "Error" ), codeurl, tr( "OK" ));
+							WindowPrompt(tr( "Error:" ), codeurl, tr( "OK" ));
 						}
 					}
 				}
 				else
-					WindowPrompt(tr("Error"), tr("Could not write file."), tr( "OK" ));
+					WindowPrompt(tr("Error:"), tr("Could not write file."), tr( "OK" ));
 			}
 			MEM2_free(file.data);
 		}
@@ -1527,7 +1545,7 @@ int CodeDownload(const char *id)
 			if (file.size > 0)
 				MEM2_free(file.data);
 			snprintf(codeurl, sizeof(codeurl), "%s.txt%s", id, tr(" could not be downloaded."));
-			WindowPrompt(tr( "Error" ), codeurl, tr( "OK" ));
+			WindowPrompt(tr( "Error:" ), codeurl, tr( "OK" ));
 		}
 	}
 

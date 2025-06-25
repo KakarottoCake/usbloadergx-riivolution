@@ -13,7 +13,7 @@ class Theme
 		//!Set Default
 		static void SetDefault();
 		//!Load
-		static bool Load(const char * path);
+		static bool Load(const char *path);
 		//!Load font data
 		static bool LoadFont(const char *path);
 		//!Load the original Wii System Menu font into memory only. It is not applied.

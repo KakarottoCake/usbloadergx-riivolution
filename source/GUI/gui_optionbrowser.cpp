@@ -23,7 +23,7 @@
 /**
 GuiOptionBrowser * Constructor for the GuiOptionBrowser class.
  */
-GuiOptionBrowser::GuiOptionBrowser(int w, int h, OptionList * l, const char * custombg)
+GuiOptionBrowser::GuiOptionBrowser(int w, int h, OptionList * l, const char * custombg, bool staticValues)
 	: scrollBar(h-10)
 {
 	width = w;
@@ -34,6 +34,10 @@ GuiOptionBrowser::GuiOptionBrowser(int w, int h, OptionList * l, const char * cu
 	oldSelectedItem = -1;
 	coL2 = 50;
 	listOffset = 0;
+	isStatic = staticValues;
+	optionTxtLen = thInt("200 - settings option text max width");
+	optionValLen = thInt("100 - settings option value max width");
+	optionsValPos = thInt("240 - settings option value pos x");
 
 	trigA = new GuiTrigger;
 	trigA->SetSimpleTrigger(-1, WPAD_BUTTON_A | WPAD_CLASSIC_BUTTON_A, PAD_BUTTON_A);
@@ -56,12 +60,14 @@ GuiOptionBrowser::GuiOptionBrowser(int w, int h, OptionList * l, const char * cu
 	optionTxt.resize(PAGESIZE);
 	optionVal.resize(PAGESIZE);
 
+	fullWidth = bgOptionsImg->GetWidth()-scrollBar.GetWidth()-40;
+
 	for (int i = 0; i < PAGESIZE; i++)
 	{
 		optionTxt[i] = new GuiText((wchar_t *) NULL, 20, thColor("r=0 g=0 b=0 a=255 - settings text color"));
 		optionTxt[i]->SetAlignment(ALIGN_LEFT, ALIGN_MIDDLE);
 		optionTxt[i]->SetPosition(24, 0);
-		optionTxt[i]->SetMaxWidth(bgOptionsImg->GetWidth()-scrollBar.GetWidth()-40, DOTTED);
+		optionTxt[i]->SetMaxWidth(optionTxtLen, DOTTED);
 
 		optionBg[i] = new GuiImage(bgOptionsEntry);
 
@@ -195,6 +201,14 @@ void GuiOptionBrowser::UpdateListEntries()
 			optionTxt[i]->SetText(options->GetName(listOffset+i));
 			if (maxNameWidth < optionTxt[i]->GetTextWidth()) maxNameWidth = optionTxt[i]->GetTextWidth();
 			optionVal[i]->SetText(options->GetValue(listOffset+i));
+
+			if (isStatic)
+			{
+				if (strcmp(options->GetValue(listOffset + i), " ") == 0)
+					optionTxt[i]->SetMaxWidth(fullWidth, DOTTED);
+				else
+					optionTxt[i]->SetMaxWidth(optionTxtLen, DOTTED);
+			}
 		}
 		else
 		{
@@ -210,8 +224,16 @@ void GuiOptionBrowser::UpdateListEntries()
 	{
 		if (optionBtn[i]->GetState() != STATE_DISABLED)
 		{
-			optionVal[i]->SetPosition(coL2, 0);
-			optionVal[i]->SetMaxWidth(bgOptionsImg->GetWidth() - (coL2 + scrollBar.GetWidth()+10), DOTTED);
+			if (isStatic)
+			{
+				optionVal[i]->SetPosition(optionsValPos, 0);
+				optionVal[i]->SetMaxWidth(optionValLen, DOTTED);
+			}
+			else
+			{
+				optionVal[i]->SetPosition(coL2, 0);
+				optionVal[i]->SetMaxWidth(bgOptionsImg->GetWidth() - (coL2 + scrollBar.GetWidth()+10), DOTTED);
+			}
 		}
 	}
 
@@ -259,9 +281,33 @@ void GuiOptionBrowser::Update(GuiTrigger * t)
 	if(selectedItem != oldSelectedItem)
 	{
 		if(oldSelectedItem >= 0 && oldSelectedItem < listSize)
-			optionVal[oldSelectedItem]->SetMaxWidth(bgOptionsImg->GetWidth() - (coL2 + scrollBar.GetWidth()+10), DOTTED);
-		if(selectedItem >= 0 && selectedItem < listSize)
-			optionVal[selectedItem]->SetMaxWidth(bgOptionsImg->GetWidth() - (coL2 + scrollBar.GetWidth()+10), SCROLL_HORIZONTAL);
+		{
+			if (isStatic)
+			{
+				if (optionTxt[oldSelectedItem]->GetTextMaxWidth() == fullWidth)
+					optionTxt[oldSelectedItem]->SetMaxWidth(fullWidth, DOTTED);
+				else
+					optionTxt[oldSelectedItem]->SetMaxWidth(optionTxtLen, DOTTED);
+
+				optionVal[oldSelectedItem]->SetMaxWidth(optionValLen, DOTTED);
+			}
+			else
+				optionVal[oldSelectedItem]->SetMaxWidth(bgOptionsImg->GetWidth() - (coL2 + scrollBar.GetWidth() + 10), DOTTED);
+		}
+		if (selectedItem >= 0 && selectedItem < listSize)
+		{
+			if (isStatic)
+			{
+				if (optionTxt[selectedItem]->GetTextMaxWidth() == fullWidth)
+					optionTxt[selectedItem]->SetMaxWidth(fullWidth, SCROLL_HORIZONTAL);
+				else
+					optionTxt[selectedItem]->SetMaxWidth(optionTxtLen - 10, SCROLL_HORIZONTAL);
+				
+				optionVal[selectedItem]->SetMaxWidth(optionValLen, SCROLL_HORIZONTAL);
+			}
+			else
+				optionVal[selectedItem]->SetMaxWidth(bgOptionsImg->GetWidth() - (coL2 + scrollBar.GetWidth() + 10), SCROLL_HORIZONTAL);
+		}
 
 		oldSelectedItem = selectedItem;
 	}
@@ -269,7 +315,7 @@ void GuiOptionBrowser::Update(GuiTrigger * t)
 	scrollBar.SetPageSize(listSize);
 	scrollBar.SetSelectedItem(selectedItem);
 	scrollBar.SetSelectedIndex(listOffset);
-	scrollBar.SetEntrieCount(options->GetLength());
+	scrollBar.SetEntryCount(options->GetLength());
 
 	if (options->IsChanged())
 		UpdateListEntries();

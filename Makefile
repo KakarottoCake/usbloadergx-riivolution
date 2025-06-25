@@ -260,6 +260,7 @@ export PATH		:=	$(PROJECTDIR)/gettext-bin:$(PATH)
 %.them: $(PROJECTDIR)/Themes/$(TARGET).pot
 	@msgmerge -U -N --no-wrap --no-location --backup=none -q $@ $<
 	@touch $@
+	@bash $(PROJECTDIR)/updatetheme.sh $(PROJECTDIR)/source/themes/gettheme.c $(PROJECTDIR)/Themes/Default.them
 
 -include $(DEPENDS)
 

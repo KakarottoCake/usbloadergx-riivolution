@@ -50,6 +50,7 @@ class BannerWindow : public GuiWindow
 		bool reducedVol;
 		int returnVal;
 		int gameSelected;
+		int oldFavLevel;
 		GameBrowseMenu *browserMenu;
 		struct discHdr *dvdheader;
 

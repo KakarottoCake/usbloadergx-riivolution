@@ -51,7 +51,7 @@ typedef struct _GameXMLInfo
 	std::vector<std::string> WifiFeatureList;
 	int Players;
 	std::vector<Accessory> AccessoryList;
-	long CaseColor;
+	unsigned long CaseColor;
 
 } GameXMLInfo;
 
@@ -121,7 +121,7 @@ public:
 	int GetAccessoryList(const char *id, std::vector<Accessory> &acc_list);
 	//! Get the box (case) color for a specific game id
 	//! Returns the color in RGB (first 3 bytes)
-	int GetCaseColor(const char *id);
+	unsigned long GetCaseColor(const char *id);
 	//! Get the complete game info in the GameXMLInfo struct
 	bool GetGameXMLInfo(const char *id, GameXMLInfo *gameInfo);
 	//! Get the type of the game. If blank the game is a Wii game.

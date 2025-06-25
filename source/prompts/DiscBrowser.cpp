@@ -40,7 +40,7 @@ int DiscBrowse(const char * GameID, char * alternatedname, int alternatedname_si
 	if (!disc)
 	{
 		ResumeGui();
-		WindowPrompt(tr( "ERROR:" ), tr( "Could not open Disc" ), tr( "OK" ));
+		WindowPrompt(tr( "Error:" ), tr( "Could not open disc" ), tr( "OK" ));
 		return ret;
 	}
 	gprintf("wd_open_disc\n");
@@ -48,7 +48,7 @@ int DiscBrowse(const char * GameID, char * alternatedname, int alternatedname_si
 	if (!wdisc)
 	{
 		ResumeGui();
-		WindowPrompt(tr( "ERROR:" ), tr( "Could not open Disc" ), tr( "OK" ));
+		WindowPrompt(tr( "Error:" ), tr( "Could not open disc" ), tr( "OK" ));
 		return ret;
 	}
 
@@ -57,7 +57,7 @@ int DiscBrowse(const char * GameID, char * alternatedname, int alternatedname_si
 	if (!fstbuffer)
 	{
 		ResumeGui();
-		WindowPrompt(tr( "ERROR:" ), tr( "Not enough free memory." ), tr( "OK" ));
+		WindowPrompt(tr( "Error:" ), tr( "Not enough free memory." ), tr( "OK" ));
 		return -1;
 	}
 
@@ -91,7 +91,7 @@ int DiscBrowse(const char * GameID, char * alternatedname, int alternatedname_si
 	gprintf("\n%i alt dols found", options.GetLength()+1);
 	if (options.GetLength() <= 0)
 	{
-		WindowPrompt(tr( "ERROR" ), tr( "No DOL file found on disc." ), tr( "OK" ));
+		WindowPrompt(tr( "Error:" ), tr( "No DOL file found on disc." ), tr( "OK" ));
 		return ret;
 	}
 

@@ -60,7 +60,7 @@ static const char * WiilightText[WIILIGHT_MAX] =
 {
 	trNOOP( "OFF" ),
 	trNOOP( "ON" ),
-	trNOOP( "Only for Install" )
+	trNOOP( "Only for install" )
 };
 
 static const char * TitleTypeText[] =
@@ -279,14 +279,14 @@ int FeatureSettingsMenu::GetMenuInternal()
 	//! Settings: Import categories from GameTDB
 	else if (ret == ++Idx)
 	{
-		int choice = WindowPrompt(tr("Import Categories"), tr("Are you sure you want to import game categories from GameTDB?"), tr("Yes"), tr("Cancel"));
-		if(choice)
+		int choice = WindowPrompt(tr("Import Categories"), tr("Are you sure you want to import game categories from WiiTDB?"), tr("Yes"), tr("Cancel"));
+		if(choice == 1)
 		{
 			char xmlpath[300];
 			snprintf(xmlpath, sizeof(xmlpath), "%swiitdb.xml", Settings.titlestxt_path);
 			if(!GameCategories.ImportFromGameTDB(xmlpath))
 			{
-				WindowPrompt(tr("Error"), tr("Could not open the WiiTDB.xml file."), tr("OK"));
+				WindowPrompt(tr("Error:"), tr("Could not open the WiiTDB.xml file."), tr("OK"));
 			}
 			else
 			{
@@ -357,7 +357,7 @@ int FeatureSettingsMenu::GetMenuInternal()
 					snprintf(text, sizeof(text), "%s %s. %s. %s", tr("Could not extract files for:"), GameTitles.GetTitle(gameList[i]), tr("Savegame might not exist for this game."), tr("Continue?"));
 
 					ProgressStop();
-					int ret = WindowPrompt(tr("Error"), text, tr("Yes"), tr("No"), tr("Skip Errors"));
+					int ret = WindowPrompt(tr("Error:"), text, tr("Yes"), tr("No"), tr("Skip Errors"));
 					if(ret == 0)
 						skipErrors = true;
 					else if(ret == 2)
@@ -373,7 +373,7 @@ int FeatureSettingsMenu::GetMenuInternal()
 				if(noErrors)
 					WindowPrompt(tr("Success."), tr("All files extracted."), tr("OK"));
 				else
-					WindowPrompt(tr("Process finished."), tr("Errors occured."), tr("OK"));
+					WindowPrompt(tr("Process finished."), tr("Errors occurred."), tr("OK"));
 			}
 			gameList.FilterList(filter.c_str());
 		}
@@ -404,7 +404,7 @@ int FeatureSettingsMenu::GetMenuInternal()
 			ProgressCancelEnable(false);
 
 			if(Error)
-				WindowPrompt(tr("Process finished."), tr("Errors occured."), tr("OK"));
+				WindowPrompt(tr("Process finished."), tr("Errors occurred."), tr("OK"));
 			else
 				WindowPrompt(tr("Success."), tr("All files extracted."), tr("OK"));
 		}
@@ -435,7 +435,7 @@ int FeatureSettingsMenu::GetMenuInternal()
 			ProgressCancelEnable(false);
 
 			if(Error)
-				WindowPrompt(tr("Process finished."), tr("Errors occured."), tr("OK"));
+				WindowPrompt(tr("Process finished."), tr("Errors occurred."), tr("OK"));
 			else
 				WindowPrompt(tr("Success."), tr("All files extracted."), tr("OK"));
 		}
@@ -451,7 +451,7 @@ int FeatureSettingsMenu::GetMenuInternal()
 			char *nandPath = (char *) memalign(32, ISFS_MAXPATH);
 			if(!nandPath)
 			{
-				WindowPrompt(tr("Error"), tr("Not enough memory."), tr("OK"));
+				WindowPrompt(tr("Error:"), tr("Not enough memory."), tr("OK"));
 				return MENU_NONE;
 			}
 
@@ -493,7 +493,7 @@ int FeatureSettingsMenu::GetMenuInternal()
 				if(ret != PROGRESS_CANCELED)
 				{
 					if(ret < 0)
-						WindowPrompt(tr("Process finished."), tr("Errors occured."), tr("OK"));
+						WindowPrompt(tr("Process finished."), tr("Errors occurred."), tr("OK"));
 					else
 						WindowPrompt(tr("Success."), tr("All files extracted."), tr("OK"));
 				}
@@ -561,7 +561,7 @@ int FeatureSettingsMenu::GetMenuInternal()
 							if(wadFile.Install(Settings.NandEmuChanPath))
 							{
 								//gprintf("Success : %s\n", wadList->GetFilepath(i));
-								wadList->RemoveEntrie(i);
+								wadList->RemoveEntry(i);
 								--i;
 							}
 							else 	// install error - Try to cleanup any partially installed wad data
@@ -581,7 +581,7 @@ int FeatureSettingsMenu::GetMenuInternal()
 								if(wadFile.UnInstall(Settings.NandEmuChanPath))
 								{
 									//gprintf("uninst. : %s\n", wadList->GetFilepath(i));
-									wadList->RemoveEntrie(i);
+									wadList->RemoveEntry(i);
 									--i;
 								}
 							}

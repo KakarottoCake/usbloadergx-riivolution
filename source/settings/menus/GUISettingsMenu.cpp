@@ -154,10 +154,11 @@ GuiSettingsMenu::GuiSettingsMenu()
 	Options->SetName(Idx++, "%s", tr( "Remember Last Game" ));
 	Options->SetName(Idx++, "%s", tr( "Mark New Games" ));
 	Options->SetName(Idx++, "%s", tr( "Show Play Count" ));
-	Options->SetName(Idx++, "%s", tr( "Show Favorite on banner" ));
+	Options->SetName(Idx++, "%s", tr( "Show Favorite on Banner" ));
 	Options->SetName(Idx++, "%s", tr( "Show Free Space" ));
 	Options->SetName(Idx++, "%s", tr( "Show Game Count" ));
 	Options->SetName(Idx++, "%s", tr( "HOME Menu" ));
+	Options->SetName(Idx++, "%s", tr( "Silent HOME Menu" ));
 	Options->SetName(Idx++, "%s", tr( "Use System Font" ));
 	Options->SetName(Idx++, "%s", tr( "Virtual Pointer Speed" ));
 	Options->SetName(Idx++, "%s", tr( "Adjust Overscan X" ));
@@ -239,7 +240,7 @@ void GuiSettingsMenu::SetOptionValues()
 	//! Settings: Show Play Count
 	Options->SetValue(Idx++, "%s", tr( OnOffText[Settings.ShowPlayCount] ));
 
-	//! Settings: Show Favorite on banner window
+	//! Settings: Show Favorite on Banner Window
 	Options->SetValue(Idx++, "%s", tr( BannerFavIconText[Settings.bannerFavIcon] ));
 
 	//! Settings: Show Free Space
@@ -248,8 +249,11 @@ void GuiSettingsMenu::SetOptionValues()
 	//! Settings: Show Game Count
 	Options->SetValue(Idx++, "%s", tr( OnOffText[Settings.ShowGameCount] ));
 
-	//! Settings: Home Menu style
+	//! Settings: HOME Menu
 	Options->SetValue(Idx++, "%s", tr( HomeMenuText[Settings.HomeMenu] ));
+
+	//! Settings: Silent HOME Menu
+	Options->SetValue(Idx++, "%s", tr( OnOffText[Settings.SilentHomeMenu] ));
 
 	//! Settings: Use System Font
 	Options->SetValue(Idx++, "%s", tr( OnOffText[Settings.UseSystemFont] ));
@@ -278,7 +282,7 @@ int GuiSettingsMenu::GetMenuInternal()
 	{
 		if (!Settings.godmode)
 		{
-			WindowPrompt(tr( "Language change:" ), tr( "Console should be unlocked to modify it." ), tr( "OK" ));
+			WindowPrompt(tr( "Language Change:" ), tr( "Console should be unlocked to modify it." ), tr( "OK" ));
 			return MENU_NONE;
 		}
 		SetEffect(EFFECT_FADE, -20);
@@ -329,11 +333,11 @@ int GuiSettingsMenu::GetMenuInternal()
 	//! Settings: Clock Font Scale Factor
 	else if (ret == ++Idx)
 	{
-		char entrie[20];
-		snprintf(entrie, sizeof(entrie), "%g", Settings.ClockFontScaleFactor);
-		int ret = OnScreenNumpad(entrie, sizeof(entrie));
+		char entry[20];
+		snprintf(entry, sizeof(entry), "%g", Settings.ClockFontScaleFactor);
+		int ret = OnScreenNumpad(entry, sizeof(entry));
 		if(ret)
-			Settings.ClockFontScaleFactor = LIMIT(atof(entrie), 0.01f, 1.5f);
+			Settings.ClockFontScaleFactor = LIMIT(atof(entry), 0.01f, 1.5f);
 	}
 
 	//! Settings: Tooltips
@@ -345,11 +349,11 @@ int GuiSettingsMenu::GetMenuInternal()
 	//! Settings: Tooltip Delay
 	else if (ret == ++Idx)
 	{
-		char entrie[20];
-		snprintf(entrie, sizeof(entrie), "%i", Settings.TooltipDelay);
-		int ret = OnScreenNumpad(entrie, sizeof(entrie));
+		char entry[20];
+		snprintf(entry, sizeof(entry), "%i", Settings.TooltipDelay);
+		int ret = OnScreenNumpad(entry, sizeof(entry));
 		if(ret)
-			Settings.TooltipDelay = atoi(entrie);
+			Settings.TooltipDelay = atoi(entry);
 	}
 
 	//! Settings: Flip-X
@@ -378,21 +382,21 @@ int GuiSettingsMenu::GetMenuInternal()
 	//! Settings: Widescreen Factor
 	else if (ret == ++Idx)
 	{
-		char entrie[20];
-		snprintf(entrie, sizeof(entrie), "%g", Settings.WSFactor);
-		int ret = OnScreenNumpad(entrie, sizeof(entrie));
+		char entry[20];
+		snprintf(entry, sizeof(entry), "%g", Settings.WSFactor);
+		int ret = OnScreenNumpad(entry, sizeof(entry));
 		if(ret)
-			Settings.WSFactor = LIMIT(atof(entrie), 0.01f, 1.5f);
+			Settings.WSFactor = LIMIT(atof(entry), 0.01f, 1.5f);
 	}
 
 	//! Settings: Font Scale Factor
 	else if (ret == ++Idx)
 	{
-		char entrie[20];
-		snprintf(entrie, sizeof(entrie), "%g", Settings.FontScaleFactor);
-		int ret = OnScreenNumpad(entrie, sizeof(entrie));
+		char entry[20];
+		snprintf(entry, sizeof(entry), "%g", Settings.FontScaleFactor);
+		int ret = OnScreenNumpad(entry, sizeof(entry));
 		if(ret)
-			Settings.FontScaleFactor = LIMIT(atof(entrie), 0.01f, 1.5f);
+			Settings.FontScaleFactor = LIMIT(atof(entry), 0.01f, 1.5f);
 	}
 
 	//! Settings: Keyboard
@@ -445,7 +449,7 @@ int GuiSettingsMenu::GetMenuInternal()
 		if (++Settings.ShowPlayCount >= MAX_ON_OFF) Settings.ShowPlayCount = 0;
 	}
 
-	//! Settings: Show favorite on banner window
+	//! Settings: Show Favorite on Banner Window
 	else if (ret == ++Idx)
 	{
 		if (++Settings.bannerFavIcon >= BANNER_FAVICON_MAX_CHOICE) Settings.bannerFavIcon = 0;
@@ -463,10 +467,16 @@ int GuiSettingsMenu::GetMenuInternal()
 		if (++Settings.ShowGameCount >= MAX_ON_OFF) Settings.ShowGameCount = 0;
 	}
 
-	//! Settings: Home Menu Style
+	//! Settings: HOME Menu
 	else if (ret == ++Idx)
 	{
 		if (++Settings.HomeMenu >= HOME_MENU_MAX_CHOICE) Settings.HomeMenu = 0;
+	}
+
+	//! Settings: Silent HOME Menu
+	else if (ret == ++Idx)
+	{
+		if (++Settings.SilentHomeMenu >= MAX_ON_OFF) Settings.SilentHomeMenu = 0;
 	}
 
 	//! Settings: Use System Font
@@ -487,22 +497,22 @@ int GuiSettingsMenu::GetMenuInternal()
 	//! Settings: Virtual Pointer Speed
 	else if (ret == ++Idx)
 	{
-		char entrie[20];
-		snprintf(entrie, sizeof(entrie), "%g", Settings.PointerSpeed);
-		int ret = OnScreenNumpad(entrie, sizeof(entrie));
+		char entry[20];
+		snprintf(entry, sizeof(entry), "%g", Settings.PointerSpeed);
+		int ret = OnScreenNumpad(entry, sizeof(entry));
 		if(ret)
-			Settings.PointerSpeed = atof(entrie);
+			Settings.PointerSpeed = atof(entry);
 	}
 
 	//! Settings: Adjust Overscan X
 	else if (ret == ++Idx)
 	{
-		char entrie[20];
-		snprintf(entrie, sizeof(entrie), "%i", Settings.AdjustOverscanX);
-		int ret = OnScreenNumpad(entrie, sizeof(entrie));
+		char entry[20];
+		snprintf(entry, sizeof(entry), "%i", Settings.AdjustOverscanX);
+		int ret = OnScreenNumpad(entry, sizeof(entry));
 		if(ret)
 		{
-			Settings.AdjustOverscanX = atoi(entrie);
+			Settings.AdjustOverscanX = atoi(entry);
 			AdjustOverscan(Settings.AdjustOverscanX, Settings.AdjustOverscanY);
 		}
 	}
@@ -510,12 +520,12 @@ int GuiSettingsMenu::GetMenuInternal()
 	//! Settings: Adjust Overscan Y
 	else if (ret == ++Idx)
 	{
-		char entrie[20];
-		snprintf(entrie, sizeof(entrie), "%i", Settings.AdjustOverscanY);
-		int ret = OnScreenNumpad(entrie, sizeof(entrie));
+		char entry[20];
+		snprintf(entry, sizeof(entry), "%i", Settings.AdjustOverscanY);
+		int ret = OnScreenNumpad(entry, sizeof(entry));
 		if(ret)
 		{
-			Settings.AdjustOverscanY = atoi(entrie);
+			Settings.AdjustOverscanY = atoi(entry);
 			AdjustOverscan(Settings.AdjustOverscanX, Settings.AdjustOverscanY);
 		}
 	}

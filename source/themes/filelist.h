@@ -1,7 +1,7 @@
 /****************************************************************************
  * USB Loader GX resource files.
  * This file is generated automatically.
- * Includes 199 files.
+ * Includes 208 files.
  *
  * NOTE:
  * Any manual modification of this file will be overwriten by the generation.
@@ -101,9 +101,18 @@
 #include "keyboard_textbox_png.h"
 #include "little_star_png.h"
 #include "loader_mode_png.h"
+#include "loader_mode_over_png.h"
 #include "lock_png.h"
 #include "lock_gray_png.h"
 #include "menu_button_png.h"
+#include "menu_button_custom_png.h"
+#include "menu_button_custom_over_png.h"
+#include "menu_button_emunand_png.h"
+#include "menu_button_emunand_over_png.h"
+#include "menu_button_gc_png.h"
+#include "menu_button_gc_over_png.h"
+#include "menu_button_nand_png.h"
+#include "menu_button_nand_over_png.h"
 #include "menu_button_over_png.h"
 #include "microphone_png.h"
 #include "microphoneR_png.h"
@@ -304,9 +313,18 @@ RecourceFile Resources::RecourceFiles[] =
 	{"keyboard_textbox.png", keyboard_textbox_png, keyboard_textbox_png_size, NULL, 0},
 	{"little_star.png", little_star_png, little_star_png_size, NULL, 0},
 	{"loader_mode.png", loader_mode_png, loader_mode_png_size, NULL, 0},
+	{"loader_mode_over.png", loader_mode_over_png, loader_mode_over_png_size, NULL, 0},
 	{"lock.png", lock_png, lock_png_size, NULL, 0},
 	{"lock_gray.png", lock_gray_png, lock_gray_png_size, NULL, 0},
 	{"menu_button.png", menu_button_png, menu_button_png_size, NULL, 0},
+	{"menu_button_custom.png", menu_button_custom_png, menu_button_custom_png_size, NULL, 0},
+	{"menu_button_custom_over.png", menu_button_custom_over_png, menu_button_custom_over_png_size, NULL, 0},
+	{"menu_button_emunand.png", menu_button_emunand_png, menu_button_emunand_png_size, NULL, 0},
+	{"menu_button_emunand_over.png", menu_button_emunand_over_png, menu_button_emunand_over_png_size, NULL, 0},
+	{"menu_button_gc.png", menu_button_gc_png, menu_button_gc_png_size, NULL, 0},
+	{"menu_button_gc_over.png", menu_button_gc_over_png, menu_button_gc_over_png_size, NULL, 0},
+	{"menu_button_nand.png", menu_button_nand_png, menu_button_nand_png_size, NULL, 0},
+	{"menu_button_nand_over.png", menu_button_nand_over_png, menu_button_nand_over_png_size, NULL, 0},
 	{"menu_button_over.png", menu_button_over_png, menu_button_over_png_size, NULL, 0},
 	{"microphone.png", microphone_png, microphone_png_size, NULL, 0},
 	{"microphoneR.png", microphoneR_png, microphoneR_png_size, NULL, 0},

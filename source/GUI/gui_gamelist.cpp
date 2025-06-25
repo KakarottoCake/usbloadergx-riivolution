@@ -51,7 +51,7 @@ GuiGameList::GuiGameList(int w, int h, int offset)
 	scrollBar.SetPageSize(pagesize);
 	scrollBar.SetSelectedItem(selectedItem);
 	scrollBar.SetSelectedIndex(listOffset);
-	scrollBar.SetEntrieCount(gameList.size());
+	scrollBar.SetEntryCount(gameList.size());
 	scrollBar.listChanged.connect(this, &GuiGameList::onListChange);
 
 	bgGameImg = new GuiImage(bgGames);
@@ -289,7 +289,7 @@ void GuiGameList::Update(GuiTrigger * t)
 	scrollBar.SetPageSize(pagesize);
 	scrollBar.SetSelectedItem(selectedItem);
 	scrollBar.SetSelectedIndex(listOffset);
-	scrollBar.SetEntrieCount(gameList.size());
+	scrollBar.SetEntryCount(gameList.size());
 
 	if (updateCB) updateCB(this);
 }

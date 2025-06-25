@@ -217,7 +217,6 @@ void FlyingButtonsMenu::SetMainButton(int position, const char * ButtonText, Gui
 	MainButton[position]->SetLabel(MainButtonTxt[position]);
 	MainButton[position]->SetSoundOver(btnSoundOver);
 	MainButton[position]->SetSoundClick(btnSoundClick);
-	MainButton[position]->SetEffectGrow();
 	MainButton[position]->SetTrigger(trigA);
 }
 
@@ -358,10 +357,6 @@ void FlyingButtonsMenu::ShowButtonsEffects(int effect, int effect_speed)
 
 	while (parentElement && MainButton[FirstItem]->GetEffect() > 0)
 		usleep(10000);
-
-	//! Allow button grow only after slide animation is done
-	for(int i = FirstItem; i < (int) MainButton.size() && i < FirstItem+DISPLAY_BUTTONS; ++i)
-		MainButton[i]->SetEffectGrow();
 }
 
 void FlyingButtonsMenu::SlideButtons(int direction)

@@ -29,6 +29,8 @@
 #include "sys.h"
 #include "filebrowser.h"
 
+#define STD_MAX_FIX 16
+
 /*** Extern variables ***/
 extern GuiWindow * mainWindow;
 extern u8 shutdown;
@@ -75,7 +77,7 @@ int InitBrowsers()
 	browsers.clear();
 	browser = NULL;
 	char rootdir[ROOTDIRLEN];
-	for (int i = 3; i < STD_MAX; i++)
+	for (int i = 3; i < STD_MAX_FIX; i++)
 	{
 		if (strcmp(devoptab_list[i]->name, "stdnull") && devoptab_list[i]->write_r != NULL)
 		{
@@ -313,7 +315,7 @@ int BrowseDevice(char * Path, int Path_size, int Flags, FILTERCASCADE *Filter/*=
 
 	if (InitBrowsers() || ParseDirectory(Path, Flags, Filter))
 	{
-		WindowPrompt(tr( "Error" ), 0, tr( "OK" ));
+		WindowPrompt(tr( "Error:" ), 0, tr( "OK" ));
 		return -1;
 	}
 	int menu = MENU_NONE;
@@ -384,19 +386,20 @@ int BrowseDevice(char * Path, int Path_size, int Flags, FILTERCASCADE *Filter/*=
 	AdressText.SetAlignment(ALIGN_LEFT, ALIGN_MIDDLE);
 	AdressText.SetPosition(20, 0);
 	AdressText.SetMaxWidth(Address.GetWidth() - 40, SCROLL_HORIZONTAL);
-	GuiImage AdressbarImg(&Address);
-	GuiButton Adressbar(Address.GetWidth(), Address.GetHeight());
-	Adressbar.SetAlignment(ALIGN_CENTER, ALIGN_TOP);
-	Adressbar.SetPosition(0, fileBrowser.GetTop() - 45);
-	Adressbar.SetImage(&AdressbarImg);
-	Adressbar.SetLabel(&AdressText);
+	GuiImage AddressbarImg(&Address);
+	GuiButton Addressbar(Address.GetWidth(), Address.GetHeight());
+	Addressbar.SetAlignment(ALIGN_CENTER, ALIGN_TOP);
+	Addressbar.SetPosition(0, fileBrowser.GetTop() - 45);
+	Addressbar.SetImage(&AddressbarImg);
+	Addressbar.SetLabel(&AdressText);
+	Addressbar.SetTrigger(&trigA);
 
 	HaltGui();
 	GuiWindow w(screenwidth, screenheight);
 	w.Append(&ExitBtn);
 	//  w.Append(&titleTxt);
 	w.Append(&fileBrowser);
-	w.Append(&Adressbar);
+	w.Append(&Addressbar);
 	w.Append(&okBtn);
 	if (!(Flags & FB_NOFOLDER_BTN)) w.Append(&folderBtn);
 	if (browsers.size() > 1 && !(Flags & FB_NODEVICE_BTN)) w.Append(&usbBtn);
@@ -497,9 +500,10 @@ int BrowseDevice(char * Path, int Path_size, int Flags, FILTERCASCADE *Filter/*=
 				}
 			}
 		}
-		else if (folderBtn.GetState() == STATE_CLICKED)
+		else if (folderBtn.GetState() == STATE_CLICKED || Addressbar.GetState() == STATE_CLICKED)
 		{
 			folderBtn.ResetState();
+			Addressbar.ResetState();
 
 			HaltGui();
 			mainWindow->Remove(&w);
@@ -523,7 +527,7 @@ int BrowseDevice(char * Path, int Path_size, int Flags, FILTERCASCADE *Filter/*=
 					if (WindowPrompt(tr( "Directory does not exist!" ),
 							tr( "The entered directory does not exist. Would you like to create it?" ),
 							tr( "OK" ), tr( "Cancel" )) == 1) if (CreateSubfolder(newfolder) == false) WindowPrompt(
-							tr( "Error !" ), tr( "Can't create directory" ), tr( "OK" ));
+							tr( "Error:" ), tr( "Can't create directory" ), tr( "OK" ));
 				}
 				if (ParseDirectory(newfolder, Flags, Filter) == 0)
 				{

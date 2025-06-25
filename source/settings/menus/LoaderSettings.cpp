@@ -230,9 +230,10 @@ LoaderSettings::LoaderSettings()
 
 LoaderSettings::~LoaderSettings()
 {
-	if(oldLoaderMode != Settings.LoaderMode)
+	if (oldLoaderMode != Settings.LoaderMode)
 	{
-		if(Settings.LoaderMode & MODE_WIIGAMES && (gameList.GameCount() == 0))
+		bool usingWiiGames = (Settings.LoaderMode & MODE_WIIGAMES) || (Settings.LayoutVersion >= 2 && Settings.GameDisplayType == DISP_WII);
+		if (usingWiiGames && (gameList.GameCount() == 0))
 		{
 			WBFS_ReInit(Settings.SDMode ? WBFS_DEVICE_SDHC : WBFS_DEVICE_USB);
 			gameList.ReadGameList();
@@ -241,12 +242,12 @@ LoaderSettings::~LoaderSettings()
 		gameList.LoadUnfiltered();
 	}
 	
-	if(oldGameCubeSource != Settings.GameCubeSource)
+	if (oldGameCubeSource != Settings.GameCubeSource)
 	{
 		GCGames::Instance()->LoadAllGames();
 	}
 	
-	if(oldLoaderIOS != Settings.LoaderIOS)
+	if (oldLoaderIOS != Settings.LoaderIOS)
 	{
 		editMetaArguments();
 	}
@@ -268,13 +269,13 @@ void LoaderSettings::SetOptionNames()
 	Options->SetName(Idx++, "%s", tr( "Patch Country Strings" ));
 	Options->SetName(Idx++, "%s", tr( "Ocarina" ));
 	Options->SetName(Idx++, "%s", tr( "Private Server" ));
-	if(Settings.PrivateServer == PRIVSERV_CUSTOM)
+	if (Settings.PrivateServer == PRIVSERV_CUSTOM)
 	{
 		Options->SetName(Idx++, "%s", tr( "Custom Address" ));
 	}
 	Options->SetName(Idx++, "%s", tr( "Loaders IOS" ));
 	Options->SetName(Idx++, "%s", tr( "Games IOS" ));
-	if(Settings.AutoIOS == GAME_IOS_CUSTOM)
+	if (Settings.AutoIOS == GAME_IOS_CUSTOM)
 	{
 		Options->SetName(Idx++, "%s", tr( "Custom Games IOS" ));
 	}
@@ -312,7 +313,7 @@ void LoaderSettings::SetOptionNames()
 	Options->SetName(Idx++, "%s", tr( "PAL50 Patch" ));
 	Options->SetName(Idx++, "%s", tr( "WiiU Widescreen" ));
 	Options->SetName(Idx++, "%s", tr( "Video scale" ));
-	if(Settings.NINVideoScale != 0)
+	if (Settings.NINVideoScale != 0)
 	{
 		Options->SetName(Idx++, "%s", tr( "Video Scale Value" ));
 	}
@@ -384,7 +385,7 @@ void LoaderSettings::SetOptionValues()
 	Options->SetValue(Idx++, "%s", tr( PrivServText[Settings.PrivateServer] ));
 
 	//! Settings: Custom Address
-	if(Settings.PrivateServer == PRIVSERV_CUSTOM)
+	if (Settings.PrivateServer == PRIVSERV_CUSTOM)
 		Options->SetValue(Idx++, "%s", Settings.CustomAddress);
 
 	//! Settings: Loaders IOS
@@ -400,7 +401,7 @@ void LoaderSettings::SetOptionValues()
 		Options->SetValue(Idx++, "********");
 
 	//! Settings: Custom Games IOS
-	if(Settings.AutoIOS == GAME_IOS_CUSTOM)
+	if (Settings.AutoIOS == GAME_IOS_CUSTOM)
 	{
 		if (Settings.godmode)
 			Options->SetValue(Idx++, "%i", Settings.cios);
@@ -514,7 +515,7 @@ void LoaderSettings::SetOptionValues()
 	Options->SetValue(Idx++, "%s", tr(OnOffText[Settings.NINWiiUWide]));
 
 	//! Settings: NIN VideoScale
-	if(Settings.NINVideoScale == 0)
+	if (Settings.NINVideoScale == 0)
 		Options->SetValue(Idx++, "%s", tr("Auto"));
 	else
 	{
@@ -541,7 +542,7 @@ void LoaderSettings::SetOptionValues()
 	Options->SetValue(Idx++, "%s", tr(OnOffText[Settings.NINBBA]));
 
 	//! Settings: NIN BBA Net Profile
-	if(Settings.NINBBAProfile == 0)
+	if (Settings.NINBBAProfile == 0)
 		Options->SetValue(Idx++, "%s", tr("Auto"));
 	else
 		Options->SetValue(Idx++, "%i", Settings.NINBBAProfile);
@@ -692,7 +693,7 @@ int LoaderSettings::GetMenuInternal()
 		{
 			// Only allow letters, numbers, periods and hyphens
 			if (strlen(entered) <= 3 || strpbrk(entered, blocked))
-				WindowPrompt(tr("Error"), tr("Please enter a valid address e.g. wiimmfi.de"), tr("OK"));
+				WindowPrompt(tr("Error:"), tr("Please enter a valid address e.g. wiimmfi.de"), tr("OK"));
 			else
 				snprintf(Settings.CustomAddress, sizeof(Settings.CustomAddress), entered);
 		}
@@ -701,25 +702,25 @@ int LoaderSettings::GetMenuInternal()
 	//! Settings: Loaders IOS
 	else if (ret == ++Idx)
 	{
-		if(!Settings.godmode)
+		if (!Settings.godmode)
 			return MENU_NONE;
 
 		char entered[4];
 		snprintf(entered, sizeof(entered), "%i", Settings.LoaderIOS);
-		if(OnScreenNumpad(entered, sizeof(entered)))
+		if (OnScreenNumpad(entered, sizeof(entered)))
 		{
-			if(atoi(entered) == 58) // allow only IOS58 for IOS <200
+			if (atoi(entered) == 58) // allow only IOS58 for IOS <200
 				Settings.LoaderIOS = 58;
 			else
 				Settings.LoaderIOS = LIMIT(atoi(entered), 200, 255);
 
-			if(NandTitles.IndexOf(TITLE_ID(1, Settings.LoaderIOS)) < 0)
+			if (NandTitles.IndexOf(TITLE_ID(1, Settings.LoaderIOS)) < 0)
 			{
-				WindowPrompt(tr("Warning:"), tr("This IOS was not found on the titles list. If you are sure you have it installed than ignore this warning."), tr("OK"));
+				WindowPrompt(tr("Warning:"), tr("This IOS was not found on the titles list. If you are sure you have it installed then ignore this warning."), tr("OK"));
 			}
-			else if(Settings.LoaderIOS == 254)
+			else if (Settings.LoaderIOS == 254)
 			{
-				WindowPrompt(tr("Warning:"), tr("This IOS is the BootMii IOS. If you are sure it is not BootMii and you have something else installed there than ignore this warning."), tr("OK"));
+				WindowPrompt(tr("Warning:"), tr("This IOS is the BootMii IOS. If you are sure it is not BootMii and you have something else installed there then ignore this warning."), tr("OK"));
 			}
 		}
 	}
@@ -727,7 +728,7 @@ int LoaderSettings::GetMenuInternal()
 	//! Settings: Games IOS
 	else if (ret == ++Idx)
 	{
-		if(!Settings.godmode)
+		if (!Settings.godmode)
 			return MENU_NONE;
 		if (++Settings.AutoIOS >= GAME_IOS_MAX) Settings.AutoIOS = GAME_IOS_AUTO;
 		Options->ClearList();
@@ -738,22 +739,22 @@ int LoaderSettings::GetMenuInternal()
 	//! Settings: Custom Games IOS
 	else if (Settings.AutoIOS == GAME_IOS_CUSTOM && ret == ++Idx)
 	{
-		if(!Settings.godmode)
+		if (!Settings.godmode)
 			return MENU_NONE;
 
 		char entered[4];
 		snprintf(entered, sizeof(entered), "%i", Settings.cios);
-		if(OnScreenNumpad(entered, sizeof(entered)))
+		if (OnScreenNumpad(entered, sizeof(entered)))
 		{
 			Settings.cios = LIMIT(atoi(entered), 200, 255);
 
-			if(NandTitles.IndexOf(TITLE_ID(1, Settings.cios)) < 0)
+			if (NandTitles.IndexOf(TITLE_ID(1, Settings.cios)) < 0)
 			{
-				WindowPrompt(tr("Warning:"), tr("This IOS was not found on the titles list. If you are sure you have it installed than ignore this warning."), tr("OK"));
+				WindowPrompt(tr("Warning:"), tr("This IOS was not found on the titles list. If you are sure you have it installed then ignore this warning."), tr("OK"));
 			}
-			else if(Settings.cios == 254)
+			else if (Settings.cios == 254)
 			{
-				WindowPrompt(tr("Warning:"), tr("This IOS is the BootMii IOS. If you are sure it is not BootMii and you have something else installed there than ignore this warning."), tr("OK"));
+				WindowPrompt(tr("Warning:"), tr("This IOS is the BootMii IOS. If you are sure it is not BootMii and you have something else installed there then ignore this warning."), tr("OK"));
 			}
 		}
 	}
@@ -784,13 +785,13 @@ int LoaderSettings::GetMenuInternal()
 	{
 		if (Settings.SDMode)
 		{
-			// D2X can't load a game from an SD and save to an SD at the same time
+			// d2x can't load a game from an SD and save to an SD at the same time
 			WindowPrompt(tr("Warning:"), tr("This setting doesn't work in SD card mode."), tr("OK"));
 			Settings.NandEmuMode = EMUNAND_OFF;
 		}
 		else if (Settings.AutoIOS == GAME_IOS_CUSTOM && !IosLoader::IsD2X(Settings.cios))
 		{
-			WindowPrompt(tr("Error:"), tr("NAND emulation is only available on D2X cIOS!"), tr("OK"));
+			WindowPrompt(tr("Error:"), tr("NAND emulation is only available on d2x cIOS!"), tr("OK"));
 			Settings.NandEmuMode = EMUNAND_OFF;
 		}
 		else if (++Settings.NandEmuMode >= EMUNAND_NEEK) Settings.NandEmuMode = EMUNAND_OFF;
@@ -799,7 +800,7 @@ int LoaderSettings::GetMenuInternal()
 	//! Settings: EmuNAND Channel Mode
 	else if (ret == ++Idx )
 	{
-		if(++Settings.NandEmuChanMode >= EMUNAND_MAX) Settings.NandEmuChanMode = EMUNAND_PARTIAL;
+		if (++Settings.NandEmuChanMode >= EMUNAND_MAX) Settings.NandEmuChanMode = EMUNAND_PARTIAL;
 	}
 
 	//! Settings: Hooktype
@@ -872,9 +873,9 @@ int LoaderSettings::GetMenuInternal()
 	else if (ret == ++Idx)
 	{
 		Settings.DMLVideo++;
-		if(Settings.DMLVideo == DML_VIDEO_FORCE_PATCH) // Skip Force Patch
+		if (Settings.DMLVideo == DML_VIDEO_FORCE_PATCH) // Skip Force Patch
 			Settings.DMLVideo++;
-		if(Settings.DMLVideo >= DML_VIDEO_MAX_CHOICE) Settings.DMLVideo = 0;
+		if (Settings.DMLVideo >= DML_VIDEO_MAX_CHOICE) Settings.DMLVideo = 0;
 	}
 
 	//! Settings: DML + NIN Force Widescreen
@@ -984,21 +985,21 @@ int LoaderSettings::GetMenuInternal()
 	
 	else if (Settings.NINVideoScale != 0 && ret == ++Idx)
 	{
-		char entrie[20];
-		snprintf(entrie, sizeof(entrie), "%i", Settings.NINVideoScale);
-		int ret = OnScreenNumpad(entrie, sizeof(entrie));
-		if(ret)
-			Settings.NINVideoScale = LIMIT(atoi(entrie), 40, 120);
+		char entry[20];
+		snprintf(entry, sizeof(entry), "%i", Settings.NINVideoScale);
+		int ret = OnScreenNumpad(entry, sizeof(entry));
+		if (ret)
+			Settings.NINVideoScale = LIMIT(atoi(entry), 40, 120);
 	}
 
 	//! Settings: NIN VideoOffset
 	else if (ret == ++Idx)
 	{
-		char entrie[20];
-		snprintf(entrie, sizeof(entrie), "%i", Settings.NINVideoOffset);
-		int ret = OnScreenNumpad(entrie, sizeof(entrie));
-		if(ret)
-			Settings.NINVideoOffset = LIMIT(atoi(entrie), -20, 20);
+		char entry[20];
+		snprintf(entry, sizeof(entry), "%i", Settings.NINVideoOffset);
+		int ret = OnScreenNumpad(entry, sizeof(entry));
+		if (ret)
+			Settings.NINVideoOffset = LIMIT(atoi(entry), -20, 20);
 	}
 
 	//! Settings: NIN Remove Read Speed Limiter

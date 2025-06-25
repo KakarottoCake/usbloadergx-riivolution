@@ -34,6 +34,7 @@
 #include "FeatureSettingsMenu.hpp"
 #include "HardDriveSM.hpp"
 #include "BannerSettingsMenu.hpp"
+#include "SoundOperations/MusicPlayer.h"
 
 GlobalSettings::GlobalSettings()
 	: FlyingButtonsMenu(tr("Global Settings"))
@@ -74,8 +75,8 @@ void GlobalSettings::SetupMainButtons()
 	SetMainButton(pos++, tr( "Loader Settings" ), MainButtonImgData, MainButtonImgOverData);
 	SetMainButton(pos++, tr( "Hard Drive Settings" ), MainButtonImgData, MainButtonImgOverData);
 	SetMainButton(pos++, tr( "Features" ), MainButtonImgData, MainButtonImgOverData);
-	SetMainButton(pos++, tr( "Banner Animation Settings" ), MainButtonImgData, MainButtonImgOverData);
-	SetMainButton(pos++, tr( "Sound" ), MainButtonImgData, MainButtonImgOverData);
+	SetMainButton(pos++, tr( "Banner Settings" ), MainButtonImgData, MainButtonImgOverData);
+	SetMainButton(pos++, tr( "Sound Settings" ), MainButtonImgData, MainButtonImgOverData);
 	SetMainButton(pos++, tr( "Parental Control" ), MainButtonImgData, MainButtonImgOverData);
 	SetMainButton(pos++, tr( "Custom Paths" ), MainButtonImgData, MainButtonImgOverData);
 	SetMainButton(pos++, tr( "Theme Menu" ), MainButtonImgData, MainButtonImgOverData);
@@ -147,7 +148,7 @@ void GlobalSettings::CreateSettingsMenu(int menuNr)
 		CurrentMenu = new FeatureSettingsMenu();
 		Append(CurrentMenu);
 	}
-	//! Banner Animation Settings
+	//! Banner Settings
 	else if(menuNr == Idx++)
 	{
 		if(!Settings.godmode && (Settings.ParentalBlocks & BLOCK_BANNER_SETTINGS))
@@ -161,7 +162,7 @@ void GlobalSettings::CreateSettingsMenu(int menuNr)
 		CurrentMenu = new BannerSettingsMenu();
 		Append(CurrentMenu);
 	}
-	//! Sound
+	//! Sound Settings
 	else if(menuNr == Idx++)
 	{
 		if(!Settings.godmode && (Settings.ParentalBlocks & BLOCK_SOUND_SETTINGS))
@@ -241,13 +242,18 @@ void GlobalSettings::CreateSettingsMenu(int menuNr)
 			return;
 		}
 
-		int choice = WindowPrompt(tr( "Are you sure you want to reset?" ), 0, tr( "Yes" ), tr( "Cancel" ));
+		int choice = WindowPrompt(tr( "Default Settings" ), tr( "Are you sure you want to reset?" ), tr( "Yes" ), tr( "Cancel" ));
 		if (choice == 1)
 		{
 			HaltGui();
 			gettextCleanUp();
 			Settings.Reset();
+			Settings.LoadLanguage(Settings.language_path, CONSOLE_DEFAULT);
 			returnMenu = MENU_SETTINGS;
+			AdjustOverscan(Settings.AdjustOverscanX, Settings.AdjustOverscanY);
+			MusicPlayer::Instance()->SetVolume(Settings.volume);
+			Theme::SetDefault();
+			Theme::Reload();
 			ResumeGui();
 		}
 	}

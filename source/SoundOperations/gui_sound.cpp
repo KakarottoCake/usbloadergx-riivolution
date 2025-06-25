@@ -27,6 +27,8 @@
 #include "GUI/gui.h"
 #include "utils/uncompress.h"
 #include "FileOperations/fileops.h"
+#include "SoundOperations/MusicPlayer.h"
+#include "memory/mem2.h"
 #include "SoundHandler.hpp"
 #include "WavDecoder.hpp"
 
@@ -67,8 +69,6 @@ extern "C" void SoundCallback(s32 voice)
 	else if(decoder->IsEOF())
 	{
 		ASND_StopVoice(voice);
-		//if(voice == 0)
-			//MusicPlayer::Instance()->SetPlaybackFinished(true); //see if next music must be played
 	}
 	else
 	{
@@ -87,10 +87,11 @@ GuiSound::GuiSound(const char * filepath)
 	volume = 255;
 	SoundEffectLength = 0;
 	loop = 0;
+	allocated = false;
 	Load(filepath);
 }
 
-GuiSound::GuiSound(const u8 * snd, s32 len, int vol, int v)
+GuiSound::GuiSound(const u8 * snd, s32 len, int vol, int v, bool isallocated)
 {
 	sound = NULL;
 	length = 0;
@@ -102,15 +103,18 @@ GuiSound::GuiSound(const u8 * snd, s32 len, int vol, int v)
 	if(voice > 0)
 		VoiceUsed[voice] = true;
 
-	volume = vol;
+	volume = LIMIT((255*vol)/100, 0, 255);
+
 	SoundEffectLength = 0;
 	loop = 0;
-	Load(snd, len);
+	allocated = false;
+	Load(snd, len, isallocated);
 }
 
 GuiSound::~GuiSound()
 {
 	FreeMemory();
+	sound = NULL;
 	if(voice > 0)
 		VoiceUsed[voice] = false;
 }
@@ -121,10 +125,13 @@ void GuiSound::FreeMemory()
 
 	SoundHandler::Instance()->RemoveDecoder(voice);
 
-	if(sound != NULL && SoundEffectLength != 0)
-		free(sound);
+	if(allocated && sound != NULL)
+	{
+		MEM2_free(sound);
+		sound = NULL;
+		allocated = false;
+	}
 
-	sound = NULL;
 	SoundEffectLength = 0;
 }
 
@@ -152,7 +159,7 @@ bool GuiSound::Load(const char * filepath)
 	return true;
 }
 
-bool GuiSound::Load(const u8 * snd, s32 len)
+bool GuiSound::Load(const u8 * snd, s32 len, bool isallocated)
 {
 	FreeMemory();
 
@@ -161,6 +168,7 @@ bool GuiSound::Load(const u8 * snd, s32 len)
 
 	sound = (u8 *) snd;
 	length = len;
+	allocated = isallocated;
 
 	SoundHandler::Instance()->AddDecoder(voice, sound, length);
 
@@ -185,16 +193,20 @@ bool GuiSound::LoadSoundEffect(const u8 * snd, s32 len)
 	decoder.Rewind();
 
 	u32 done = 0;
-	sound = (u8 *) malloc(4096);
+	sound = (u8 *) MEM2_alloc(4096);
+	if (!sound)
+		return false;
 	memset(sound, 0, 4096);
 
 	while(1)
 	{
-		u8 * tmpsnd = (u8 *) realloc(sound, done+4096);
+		u8 * tmpsnd = (u8 *) MEM2_realloc(sound, done+4096);
 		if(!tmpsnd)
 		{
-			free(sound);
+			MEM2_free(sound);
 			sound = NULL;
+			SoundEffectLength = 0;
+			allocated = false;
 			return false;
 		}
 
@@ -207,8 +219,9 @@ bool GuiSound::LoadSoundEffect(const u8 * snd, s32 len)
 		done += read;
 	}
 
-	sound = (u8 *) realloc(sound, done);
+	sound = (u8 *) MEM2_realloc(sound, done);
 	SoundEffectLength = done;
+	allocated = true;
 
 	return true;
 }
@@ -269,12 +282,15 @@ void GuiSound::Pause()
 	if(voice < 0 || voice >= 16)
 		return;
 
-	ASND_StopVoice(voice);
+	ASND_PauseVoice(voice, 1);
 }
 
 void GuiSound::Resume()
 {
-	Play();
+	if(voice < 0 || voice >= 16)
+		Play();
+
+	ASND_PauseVoice(voice, 0);
 }
 
 bool GuiSound::IsPlaying()
@@ -298,9 +314,7 @@ void GuiSound::SetVolume(int vol)
 	if(vol < 0)
 		return;
 
-	volume = (255 * vol)/100;
-	if(volume > 255)
-		volume = 255;
+	volume = LIMIT((255*vol)/100, 0, 255);
 
 	ASND_ChangeVolumeVoice(voice, volume, volume);
 }

@@ -52,7 +52,7 @@ void GCDeleteMenu::browserRefresh(void)
 		const struct discHdr *gcDiscHdr = &GCGames::Instance()->GetSDHeaders().at(i);
 		float fSize = GCGames::Instance()->GetGameSize((char*)gcDiscHdr->id);
 
-		browser->AddEntrie(GameTitles.GetTitle(gcDiscHdr));
+		browser->AddEntry(GameTitles.GetTitle(gcDiscHdr));
 
 		char size_text[20];
 		snprintf(size_text, sizeof(size_text), "(%.2fGB)", fSize);

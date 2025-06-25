@@ -34,7 +34,7 @@ static const char * OnOffText[] =
 };
 
 BannerSettingsMenu::BannerSettingsMenu()
-	: SettingsMenu(tr("Banner Animation Settings"), &GuiOptions, MENU_NONE)
+	: SettingsMenu(tr("Banner Settings"), &GuiOptions, MENU_NONE)
 {
 	int Idx = 0;
 	Options->SetName(Idx++, "%s", tr( "Cache BNR Files" ));
@@ -106,71 +106,71 @@ int BannerSettingsMenu::GetMenuInternal()
 	//! Settings: Zoom Duration (Speed)
 	else if (ret == ++Idx)
 	{
-		char entrie[20];
-		snprintf(entrie, sizeof(entrie), "%i", Settings.BannerZoomDuration);
-		int ret = OnScreenNumpad(entrie, sizeof(entrie));
+		char entry[20];
+		snprintf(entry, sizeof(entry), "%i", Settings.BannerZoomDuration);
+		int ret = OnScreenNumpad(entry, sizeof(entry));
 		if(ret)
-			Settings.BannerZoomDuration = atoi(entrie);
+			Settings.BannerZoomDuration = atoi(entry);
 	}
 
 	//! Settings: Grid Scroll Speed
 	else if (ret == ++Idx)
 	{
-		char entrie[20];
-		snprintf(entrie, sizeof(entrie), "%g", Settings.BannerGridSpeed);
-		int ret = OnScreenNumpad(entrie, sizeof(entrie));
+		char entry[20];
+		snprintf(entry, sizeof(entry), "%g", Settings.BannerGridSpeed);
+		int ret = OnScreenNumpad(entry, sizeof(entry));
 		if(ret)
-			Settings.BannerGridSpeed = atof(entrie);
+			Settings.BannerGridSpeed = atof(entry);
 	}
 
 	//! Settings: Frame Projection X-Offset
 	else if (ret == ++Idx)
 	{
-		char entrie[20];
-		snprintf(entrie, sizeof(entrie), "%g", Settings.BannerProjectionOffsetX);
-		int ret = OnScreenNumpad(entrie, sizeof(entrie));
+		char entry[20];
+		snprintf(entry, sizeof(entry), "%g", Settings.BannerProjectionOffsetX);
+		int ret = OnScreenNumpad(entry, sizeof(entry));
 		if(ret)
-			Settings.BannerProjectionOffsetX = atof(entrie);
+			Settings.BannerProjectionOffsetX = atof(entry);
 	}
 
 	//! Settings: Frame Projection Y-Offset
 	else if (ret == ++Idx)
 	{
-		char entrie[20];
-		snprintf(entrie, sizeof(entrie), "%g", Settings.BannerProjectionOffsetY);
-		int ret = OnScreenNumpad(entrie, sizeof(entrie));
+		char entry[20];
+		snprintf(entry, sizeof(entry), "%g", Settings.BannerProjectionOffsetY);
+		int ret = OnScreenNumpad(entry, sizeof(entry));
 		if(ret)
-			Settings.BannerProjectionOffsetY = atof(entrie);
+			Settings.BannerProjectionOffsetY = atof(entry);
 	}
 
 	//! Settings: Frame Projection Width
 	else if (ret == ++Idx)
 	{
-		char entrie[20];
-		snprintf(entrie, sizeof(entrie), "%g", Settings.BannerProjectionWidth);
-		int ret = OnScreenNumpad(entrie, sizeof(entrie));
+		char entry[20];
+		snprintf(entry, sizeof(entry), "%g", Settings.BannerProjectionWidth);
+		int ret = OnScreenNumpad(entry, sizeof(entry));
 		if(ret)
-			Settings.BannerProjectionWidth = atof(entrie);
+			Settings.BannerProjectionWidth = atof(entry);
 	}
 
 	//! Settings: Frame Projection Height
 	else if (ret == ++Idx)
 	{
-		char entrie[20];
-		snprintf(entrie, sizeof(entrie), "%g", Settings.BannerProjectionHeight);
-		int ret = OnScreenNumpad(entrie, sizeof(entrie));
+		char entry[20];
+		snprintf(entry, sizeof(entry), "%g", Settings.BannerProjectionHeight);
+		int ret = OnScreenNumpad(entry, sizeof(entry));
 		if(ret)
-			Settings.BannerProjectionHeight = atof(entrie);
+			Settings.BannerProjectionHeight = atof(entry);
 	}
 
 	//! Settings: GC Banner Scale
 	else if (ret == ++Idx)
 	{
-		char entrie[20];
-		snprintf(entrie, sizeof(entrie), "%g", Settings.GCBannerScale);
-		int ret = OnScreenNumpad(entrie, sizeof(entrie));
+		char entry[20];
+		snprintf(entry, sizeof(entry), "%g", Settings.GCBannerScale);
+		int ret = OnScreenNumpad(entry, sizeof(entry));
 		if(ret)
-			Settings.GCBannerScale = atof(entrie);
+			Settings.GCBannerScale = atof(entry);
 	}
 
 	SetOptionValues();

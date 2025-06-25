@@ -36,8 +36,8 @@
 #include "wad/nandtitle.h"
 #include "FreeTypeGX.h"
 
-FreeTypeGX * fontSystem = NULL;
-static FT_Byte * customFont = NULL;
+FreeTypeGX *fontSystem = NULL;
+static FT_Byte *customFont = NULL;
 static u32 customFontSize = 0;
 
 bool Theme::ShowTooltips = true;
@@ -46,10 +46,10 @@ void Theme::Reload()
 {
 	HaltGui();
 	mainWindow->Remove(bgImg);
-	for(int i = 0; i < 4; ++i)
+	for (int i = 0; i < 4; ++i)
 	{
 		char image[50];
-		snprintf(image, sizeof(image), "player%i_point.png", i+1);
+		snprintf(image, sizeof(image), "player%i_point.png", i + 1);
 		pointer[i]->SetImage(image);
 	}
 	delete btnSoundClick;
@@ -79,76 +79,118 @@ void Theme::SetDefault()
 	CleanUp();
 	strcpy(Settings.theme, "");
 	LoadFont("");
+	LoadNewTheme();
+	Settings.LayoutVersion = 2;
 }
 
-bool Theme::Load(const char * theme_file_path)
+bool Theme::Load(const char *theme_file_path)
 {
-	bool result = LoadTheme(theme_file_path);
-	if(!result)
-		return result;
+	u8 ThemeLayoutVersion = 1;
+	char Foldername[256] = {0};
+	bool foundLayout = false, foundFolder = false;
 
-	Theme::ShowTooltips = (thInt("1 - Enable tooltips: 0 for off and 1 for on") != 0);
-
-	FILE * file = fopen(theme_file_path, "rb");
-	if(!file)
+	FILE *file = fopen(theme_file_path, "rb");
+	if (!file)
 		return false;
 
 	char line[300];
-	char * Foldername = NULL;
-
 	while (fgets(line, sizeof(line), file))
 	{
-		char * ptr = strcasestr(line, "Image-Folder:");
-		if(!ptr)
-			continue;
-
-		ptr += strlen("Image-Folder:");
-
-		while(*ptr != '\0' && *ptr == ' ') ptr++;
-
-		Foldername = ptr;
-
-		while(*ptr != '\\' && *ptr != '"' && *ptr != '\0') ptr++;
-
-		*ptr = '\0';
-		break;
+		if (!foundLayout)
+		{
+			char *ptr = strcasestr(line, "Theme-Layout:");
+			if (ptr)
+			{
+				ptr += strlen("Theme-Layout:");
+				while (*ptr == ' ')
+					ptr++;
+				ThemeLayoutVersion = atoi(ptr);
+				foundLayout = true;
+			}
+		}
+		if (!foundFolder)
+		{
+			char *ptr = strcasestr(line, "Image-Folder:");
+			if (ptr)
+			{
+				ptr += strlen("Image-Folder:");
+				while (*ptr == ' ')
+					ptr++;
+				char *end = ptr;
+				while (*end != '\\' && *end != '"' && *end != '\0' && *end != '\n' && *end != '\r')
+					end++;
+				size_t len = end - ptr;
+				if (len > 0 && len < sizeof(Foldername))
+				{
+					strncpy(Foldername, ptr, len);
+					Foldername[len] = '\0';
+					foundFolder = true;
+				}
+			}
+		}
+		if (foundLayout && foundFolder)
+			break;
 	}
-
 	fclose(file);
 
-	if(!Foldername)
-		return result;
-
-	char theme_path[300];
-	snprintf(theme_path, sizeof(theme_path), theme_file_path);
-
-	char * ptr = strrchr(theme_path, '/');
-	if(ptr) *ptr = '\0';
-
-	snprintf(theme_path + strlen(theme_path), sizeof(theme_path) - strlen(theme_path), "/%s", Foldername);
-	if(!Resources::LoadFiles(theme_path))
+	if (!foundFolder || strlen(Foldername) == 0)
 	{
-		const char * ThemeFilename = strrchr(theme_file_path, '/')+1;
-		char Filename[255];
-		snprintf(Filename, sizeof(Filename), ThemeFilename);
-
-		char * fileext = strrchr(Filename, '.');
-		if(fileext) *fileext = 0;
-
-		char * ptr = strrchr(theme_path, '/');
-		*ptr = 0;
-		snprintf(theme_path + strlen(theme_path), sizeof(theme_path) - strlen(theme_path), "/%s", Filename);
-		Resources::LoadFiles(theme_path);
+		if (ThemeLayoutVersion >= 2)
+			LoadNewTheme();
+		return false;
 	}
 
-	//! Override font.ttf with the theme font.ttf if it exists in the image folder
-	char FontPath[310];
-	snprintf(FontPath, sizeof(FontPath), "%s/font.ttf", theme_path);
+	// Checks passed, now apply theme
+	ThemeCleanUp();
 
-	if(CheckFile(FontPath))
-		Theme::LoadFont(theme_path);
+	if (ThemeLayoutVersion >= 2)
+		LoadNewTheme();
 
-	return result;
+	if (!LoadTheme(theme_file_path))
+	{
+		if (ThemeLayoutVersion >= 2)
+			LoadNewTheme();
+		return false;
+	}
+
+	Theme::ShowTooltips = (thInt("1 - Enable tooltips: 0 for off and 1 for on") != 0);
+
+	// Build theme path
+	std::string themePath(theme_file_path);
+	size_t lastSlash = themePath.find_last_of('/');
+	if (lastSlash != std::string::npos)
+		themePath = themePath.substr(0, lastSlash);
+	themePath += "/";
+	themePath += Foldername;
+
+	// Try loading resources
+	if (!Resources::LoadFiles(themePath.c_str()))
+	{
+		std::string themeFilePathStr(theme_file_path);
+		size_t fileNameSlash = themeFilePathStr.find_last_of('/');
+		std::string themeFilename = (fileNameSlash != std::string::npos)
+										? themeFilePathStr.substr(fileNameSlash + 1)
+										: themeFilePathStr;
+		size_t dot = themeFilename.find_last_of('.');
+		if (dot != std::string::npos)
+			themeFilename = themeFilename.substr(0, dot);
+		lastSlash = themePath.find_last_of('/');
+		if (lastSlash != std::string::npos)
+			themePath = themePath.substr(0, lastSlash);
+		themePath += "/";
+		themePath += themeFilename;
+		Resources::LoadFiles(themePath.c_str());
+	}
+
+	// Override font.ttf with the themes font.ttf
+	std::string fontPath = themePath + "/font.ttf";
+	if (CheckFile(fontPath.c_str()))
+		Theme::LoadFont(themePath.c_str());
+	else
+		Theme::LoadFont("");
+
+	Settings.LayoutVersion = ThemeLayoutVersion;
+	return true;
 }
 
 bool Theme::LoadFont(const char *path)
@@ -157,8 +199,9 @@ bool Theme::LoadFont(const char *path)
 	bool result = false;
 	FILE *pfile = NULL;
 
-	delete [] customFont;
+	delete[] customFont;
 	customFont = NULL;
+	customFontSize = 0;
 
 	snprintf(FontPath, sizeof(FontPath), "%s/font.ttf", path);
 
@@ -183,17 +226,17 @@ bool Theme::LoadFont(const char *path)
 	FT_Byte *loadedFont = customFont;
 	u32 loadedFontSize = customFontSize;
 
-	if(!loadedFont && Settings.UseSystemFont)
+	if (!loadedFont && Settings.UseSystemFont)
 	{
 		//! Default to system font if no custom is loaded
-		loadedFont = (u8 *) SystemMenuResources::Instance()->GetSystemFont();
+		loadedFont = (u8 *)SystemMenuResources::Instance()->GetSystemFont();
 		loadedFontSize = SystemMenuResources::Instance()->GetSystemFontSize();
-		if(loadedFont)
+		if (loadedFont)
 			isSystemFont = true;
 	}
-	if(!loadedFont)
+	if (!loadedFont)
 	{
-		loadedFont = (FT_Byte *) Resources::GetFile("font.ttf");
+		loadedFont = (FT_Byte *)Resources::GetFile("font.ttf");
 		loadedFontSize = Resources::GetFileSize("font.ttf");
 	}
 
@@ -210,7 +253,8 @@ void Theme::ClearFontData()
 		delete fontSystem;
 	fontSystem = NULL;
 
-	if(customFont)
-		delete [] customFont;
+	if (customFont)
+		delete[] customFont;
 	customFont = NULL;
+	customFontSize = 0;
 }

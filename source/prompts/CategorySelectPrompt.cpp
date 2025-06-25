@@ -62,7 +62,7 @@ void CategorySelectPrompt::onBrowserRefresh()
 			}
 		}
 
-		browser->AddEntrie(tr(GameCategories.CategoryList.getCurrentName().c_str()), checked);
+		browser->AddEntry(tr(GameCategories.CategoryList.getCurrentName().c_str()), checked);
 	}
 	while(GameCategories.CategoryList.goToNext());
 

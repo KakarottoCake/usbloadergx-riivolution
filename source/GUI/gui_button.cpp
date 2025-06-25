@@ -48,15 +48,17 @@ GuiButton::GuiButton(int w, int h)
 	bOldTooltipVisible = false;
 }
 
-GuiButton::GuiButton(GuiImage* img, GuiImage* imgOver, int hor, int vert, int x, int y, GuiTrigger* trig,
-		GuiSound* sndOver, GuiSound* sndClick, u8 grow)
+GuiButton::GuiButton(GuiImage *img, GuiImage *imgOver, int hor, int vert, int x, int y, GuiTrigger *trig,
+					 GuiSound *sndOver, GuiSound *sndClick, u8 grow)
 {
 	width = img ? img->GetWidth() : 0;
 	height = img ? img->GetHeight() : 0;
 	image = img;
-	if(image) image->SetParent(this);
+	if (image)
+		image->SetParent(this);
 	imageOver = imgOver;
-	if (imageOver) imageOver->SetParent(this);
+	if (imageOver)
+		imageOver->SetParent(this);
 	imageHold = NULL;
 	imageClick = NULL;
 	icon = NULL;
@@ -94,15 +96,17 @@ GuiButton::GuiButton(GuiImage* img, GuiImage* imgOver, int hor, int vert, int x,
 	}
 }
 
-GuiButton::GuiButton(GuiImage* img, GuiImage* imgOver, int hor, int vert, int x, int y, GuiTrigger* trig,
-		GuiSound* sndOver, GuiSound* sndClick, u8 grow, GuiTooltip* tt, int ttx, int tty, int h_align, int v_align)
+GuiButton::GuiButton(GuiImage *img, GuiImage *imgOver, int hor, int vert, int x, int y, GuiTrigger *trig,
+					 GuiSound *sndOver, GuiSound *sndClick, u8 grow, GuiTooltip *tt, int ttx, int tty, int h_align, int v_align)
 {
 	width = img ? img->GetWidth() : 0;
 	height = img ? img->GetHeight() : 0;
 	image = img;
-	if(image) image->SetParent(this);
+	if (image)
+		image->SetParent(this);
 	imageOver = imgOver;
-	if (imageOver) imageOver->SetParent(this);
+	if (imageOver)
+		imageOver->SetParent(this);
 	imageHold = NULL;
 	imageClick = NULL;
 	icon = NULL;
@@ -140,7 +144,7 @@ GuiButton::GuiButton(GuiImage* img, GuiImage* imgOver, int hor, int vert, int x,
 	}
 
 	toolTip = tt;
-	if(toolTip)
+	if (toolTip)
 	{
 		toolTip->SetParent(this);
 		toolTip->SetAlignment(h_align, v_align);
@@ -156,97 +160,109 @@ GuiButton::~GuiButton()
 {
 }
 
-void GuiButton::SetImage(GuiImage* img)
+void GuiButton::SetImage(GuiImage *img)
 {
-	LOCK( this );
+	LOCK(this);
 	image = img;
-	if (img) img->SetParent(this);
+	if (img)
+		img->SetParent(this);
 }
-void GuiButton::SetImageOver(GuiImage* img)
+void GuiButton::SetImageOver(GuiImage *img)
 {
-	LOCK( this );
+	LOCK(this);
 	imageOver = img;
-	if (img) img->SetParent(this);
+	if (img)
+		img->SetParent(this);
 }
-void GuiButton::SetImageHold(GuiImage* img)
+void GuiButton::SetImageHold(GuiImage *img)
 {
-	LOCK( this );
+	LOCK(this);
 	imageHold = img;
-	if (img) img->SetParent(this);
+	if (img)
+		img->SetParent(this);
 }
-void GuiButton::SetImageClick(GuiImage* img)
+void GuiButton::SetImageClick(GuiImage *img)
 {
-	LOCK( this );
+	LOCK(this);
 	imageClick = img;
-	if (img) img->SetParent(this);
+	if (img)
+		img->SetParent(this);
 }
-void GuiButton::SetIcon(GuiImage* img)
+void GuiButton::SetIcon(GuiImage *img)
 {
-	LOCK( this );
+	LOCK(this);
 	icon = img;
-	if (img) img->SetParent(this);
+	if (img)
+		img->SetParent(this);
 }
-void GuiButton::SetIconOver(GuiImage* img)
+void GuiButton::SetIconOver(GuiImage *img)
 {
-	LOCK( this );
+	LOCK(this);
 	iconOver = img;
-	if (img) img->SetParent(this);
+	if (img)
+		img->SetParent(this);
 }
-void GuiButton::SetIconHold(GuiImage* img)
+void GuiButton::SetIconHold(GuiImage *img)
 {
-	LOCK( this );
+	LOCK(this);
 	iconHold = img;
-	if (img) img->SetParent(this);
+	if (img)
+		img->SetParent(this);
 }
-void GuiButton::SetIconClick(GuiImage* img)
+void GuiButton::SetIconClick(GuiImage *img)
 {
-	LOCK( this );
+	LOCK(this);
 	iconClick = img;
-	if (img) img->SetParent(this);
+	if (img)
+		img->SetParent(this);
 }
-void GuiButton::SetLabel(GuiText* txt, int n)
+void GuiButton::SetLabel(GuiText *txt, int n)
 {
-	LOCK( this );
+	LOCK(this);
 	label[n] = txt;
-	if (txt) txt->SetParent(this);
+	if (txt)
+		txt->SetParent(this);
 }
-void GuiButton::SetLabelOver(GuiText* txt, int n)
+void GuiButton::SetLabelOver(GuiText *txt, int n)
 {
-	LOCK( this );
+	LOCK(this);
 	labelOver[n] = txt;
-	if (txt) txt->SetParent(this);
+	if (txt)
+		txt->SetParent(this);
 }
-void GuiButton::SetLabelHold(GuiText* txt, int n)
+void GuiButton::SetLabelHold(GuiText *txt, int n)
 {
-	LOCK( this );
+	LOCK(this);
 	labelHold[n] = txt;
-	if (txt) txt->SetParent(this);
+	if (txt)
+		txt->SetParent(this);
 }
-void GuiButton::SetLabelClick(GuiText* txt, int n)
+void GuiButton::SetLabelClick(GuiText *txt, int n)
 {
-	LOCK( this );
+	LOCK(this);
 	labelClick[n] = txt;
-	if (txt) txt->SetParent(this);
+	if (txt)
+		txt->SetParent(this);
 }
-void GuiButton::SetSoundOver(GuiSound * snd)
+void GuiButton::SetSoundOver(GuiSound *snd)
 {
-	LOCK( this );
+	LOCK(this);
 	soundOver = snd;
 }
-void GuiButton::SetSoundHold(GuiSound * snd)
+void GuiButton::SetSoundHold(GuiSound *snd)
 {
-	LOCK( this );
+	LOCK(this);
 	soundHold = snd;
 }
-void GuiButton::SetSoundClick(GuiSound * snd)
+void GuiButton::SetSoundClick(GuiSound *snd)
 {
-	LOCK( this );
+	LOCK(this);
 	soundClick = snd;
 }
 
-void GuiButton::SetToolTip(GuiTooltip* tt, int x, int y, int h_align, int v_align)
+void GuiButton::SetToolTip(GuiTooltip *tt, int x, int y, int h_align, int v_align)
 {
-	LOCK( this );
+	LOCK(this);
 	if (tt)
 	{
 		toolTip = tt;
@@ -259,20 +275,22 @@ void GuiButton::SetToolTip(GuiTooltip* tt, int x, int y, int h_align, int v_alig
 
 void GuiButton::RemoveToolTip()
 {
-	LOCK( this );
+	LOCK(this);
 	toolTip = NULL;
 }
 
 void GuiButton::RemoveSoundOver()
 {
-	LOCK( this );
+	LOCK(this);
 	soundOver = NULL;
 }
+
 void GuiButton::RemoveSoundClick()
 {
-	LOCK( this );
+	LOCK(this);
 	soundClick = NULL;
 }
+
 void GuiButton::SetSkew(int XX1, int YY1, int XX2, int YY2, int XX3, int YY3, int XX4, int YY4)
 {
 	if (image)
@@ -290,14 +308,15 @@ void GuiButton::SetSkew(int XX1, int YY1, int XX2, int YY2, int XX3, int YY3, in
 
 void GuiButton::SetSkew(int *skew)
 {
-	if (image) image->SetSkew(skew);
+	if (image)
+		image->SetSkew(skew);
 }
 
 void GuiButton::SetState(int s, int c)
 {
 	GuiElement::SetState(s, c);
 
-	if(c < 0 || c > 3)
+	if (c < 0 || c > 3)
 		return;
 
 	if (s == STATE_CLICKED)
@@ -318,53 +337,83 @@ void GuiButton::SetState(int s, int c)
  */
 void GuiButton::Draw()
 {
-	LOCK( this );
-	if (!this->IsVisible()) return;
+	LOCK(this);
+	if (!this->IsVisible())
+		return;
 
 	// draw image
 	if ((state == STATE_SELECTED || state == STATE_HELD) && imageOver)
 		imageOver->Draw();
-	else if (image) image->Draw();
+	else if (image)
+		image->Draw();
 	// draw icon
 	if ((state == STATE_SELECTED || state == STATE_HELD) && iconOver)
 		iconOver->Draw();
-	else if (icon) icon->Draw();
+	else if (icon)
+		icon->Draw();
 	// draw text
 	for (int i = 0; i < 3; i++)
 	{
 		if ((state == STATE_SELECTED || state == STATE_HELD) && labelOver[i])
 			labelOver[i]->Draw();
-		else if (label[i]) label[i]->Draw();
+		else if (label[i])
+			label[i]->Draw();
 	}
 
 	this->UpdateEffects();
 }
-void GuiButton::DrawTooltip()
+
+void GuiButton::DrawTooltip(bool autoalign)
 {
 	if (!toolTip)
 		return;
 
-	LOCK( this );
+	LOCK(this);
 
 	bool isVisible = this->IsVisible() && state == STATE_SELECTED;
 
 	if (isVisible)
 	{
-		if(!bOldTooltipVisible) {
+		if (!bOldTooltipVisible)
+		{
 			ToolTipDelay.reset();
 		}
-		else if(!toolTip->IsVisible() && (int) ToolTipDelay.elapsed_millisecs() > Settings.TooltipDelay)
+		else if (!toolTip->IsVisible() && (int)ToolTipDelay.elapsed_millisecs() > Settings.TooltipDelay)
 		{
+			if (autoalign && this->yoffset > 300)
+			{
+				if (this->xoffset <= 150)
+					toolTip->SetAlignment(ALIGN_LEFT, ALIGN_BOTTOM);
+				else if (this->xoffset >= 490)
+					toolTip->SetAlignment(ALIGN_RIGHT, ALIGN_BOTTOM);
+				else
+					toolTip->SetAlignment(ALIGN_CENTER, ALIGN_BOTTOM);
+
+				toolTip->SetPosition(0, -this->height - 5);
+			}
+
+			else if (autoalign && this->yoffset <= 301)
+			{
+				if (this->xoffset <= 150)
+					toolTip->SetAlignment(ALIGN_LEFT, ALIGN_TOP);
+				else if (this->xoffset >= 490)
+					toolTip->SetAlignment(ALIGN_RIGHT, ALIGN_TOP);
+				else
+					toolTip->SetAlignment(ALIGN_CENTER, ALIGN_TOP);
+
+				toolTip->SetPosition(0, this->height + 24);
+			}
+
 			toolTip->SetEffect(EFFECT_FADE, 20);
 			toolTip->SetVisible(true);
 		}
 	}
 	else
 	{
-		if(bOldTooltipVisible)
+		if (bOldTooltipVisible)
 			toolTip->SetEffect(EFFECT_FADE, -20);
 
-		if(toolTip->GetEffect() == 0)
+		if (toolTip->GetEffect() == 0)
 			toolTip->SetVisible(false);
 	}
 
@@ -372,39 +421,41 @@ void GuiButton::DrawTooltip()
 
 	bOldTooltipVisible = isVisible;
 }
+
 void GuiButton::ScrollIsOn(int f)
 {
 	scrollison = f;
 }
 
-void GuiButton::Update(GuiTrigger * t)
+void GuiButton::Update(GuiTrigger *t)
 {
-	LOCK( this );
+	LOCK(this);
 	if (!this->IsVisible() || state == STATE_CLICKED || state == STATE_DISABLED || !t)
 		return;
-	else if (parentElement && parentElement->GetState() == STATE_DISABLED) return;
+	else if (parentElement && parentElement->GetState() == STATE_DISABLED)
+		return;
 
 #ifdef HW_RVL
 	// cursor
-	if ( t->wpad.ir.valid )
+	if (t->wpad.ir.valid)
 	{
-		if ( this->IsInside( t->wpad.ir.x, t->wpad.ir.y ) )
+		if (this->IsInside(t->wpad.ir.x, t->wpad.ir.y))
 		{
-			if ( state == STATE_DEFAULT ) // we weren't on the button before!
+			if (state == STATE_DEFAULT) // we weren't on the button before!
 
 			{
-				if ( scrollison == 0 )
+				if (scrollison == 0)
 				{
-					this->SetState( STATE_SELECTED, t->chan );
+					this->SetState(STATE_SELECTED, t->chan);
 				}
 
-				if ( this->Rumble() && scrollison == 0 )
-				rumbleRequest[t->chan] = 1;
+				if (this->Rumble() && scrollison == 0)
+					rumbleRequest[t->chan] = 1;
 
-				if ( soundOver && scrollison == 0 )
-				soundOver->Play();
+				if (soundOver && scrollison == 0)
+					soundOver->Play();
 
-				if ( effectsOver && !effects && scrollison == 0 )
+				if (effectsOver && !effects && scrollison == 0)
 				{
 					// initiate effects
 					effects = effectsOver;
@@ -415,10 +466,10 @@ void GuiButton::Update(GuiTrigger * t)
 		}
 		else
 		{
-			if ( state == STATE_SELECTED && ( stateChan == t->chan || stateChan == -1 ) )
-			this->ResetState();
+			if (state == STATE_SELECTED && (stateChan == t->chan || stateChan == -1))
+				this->ResetState();
 
-			if ( effectTarget == effectTargetOver && effectAmount == effectAmountOver )
+			if (effectTarget == effectTargetOver && effectAmount == effectAmountOver)
 			{
 				// initiate effects (in reverse)
 				effects = effectsOver;
@@ -429,7 +480,8 @@ void GuiButton::Update(GuiTrigger * t)
 	}
 #else
 
-	if (state == STATE_SELECTED && (stateChan == t->chan || stateChan == -1)) this->ResetState();
+	if (state == STATE_SELECTED && (stateChan == t->chan || stateChan == -1))
+		this->ResetState();
 
 	if (effectTarget == effectTargetOver && effectAmount == effectAmountOver)
 	{
@@ -456,24 +508,18 @@ void GuiButton::Update(GuiTrigger * t)
 				// lower 16 bits only (classic controller)
 				cc_btns = t->wpad.btns_d >> 16;
 				cc_btns_trig = trigger[i]->wpad.btns_d >> 16;
-				
-				if( ((t->wpad.btns_d > 0 && wm_btns == wm_btns_trig) 
-					|| (t->wpad.exp.type == WPAD_EXP_CLASSIC && cc_btns == cc_btns_trig)
-					|| (t->wpad.exp.type == WPAD_EXP_GUITARHERO3 && cc_btns == cc_btns_trig))
-					|| (t->pad.btns_d > 0 && t->pad.btns_d == trigger[i]->pad.btns_d))
+
+				if (((t->wpad.btns_d > 0 && wm_btns == wm_btns_trig) || (t->wpad.exp.type == WPAD_EXP_CLASSIC && cc_btns == cc_btns_trig) || (t->wpad.exp.type == WPAD_EXP_GUITARHERO3 && cc_btns == cc_btns_trig)) || (t->pad.btns_d > 0 && t->pad.btns_d == trigger[i]->pad.btns_d))
 				{
 					if (t->chan == stateChan || stateChan == -1)
 					{
-						if (state == STATE_SELECTED)
+						if (state == STATE_SELECTED || trigger[i]->type == TRIGGER_BUTTON_ONLY)
 						{
+							if (toolTip)
+								toolTip->SetVisible(false);
 							this->SetState(STATE_CLICKED, t->chan);
-
-							if (soundClick) soundClick->Play();
-						}
-						else if (trigger[i]->type == TRIGGER_BUTTON_ONLY)
-						{
-							this->SetState(STATE_CLICKED, t->chan);
-							if (soundClick) soundClick->Play();
+							if (soundClick)
+								soundClick->Play();
 						}
 					}
 				}
@@ -499,21 +545,14 @@ void GuiButton::Update(GuiTrigger * t)
 				cc_btns = t->wpad.btns_d >> 16;
 				cc_btns_h = t->wpad.btns_h >> 16;
 				cc_btns_trig = trigger[i]->wpad.btns_h >> 16;
-				
-				if( (t->wpad.btns_d > 0 && wm_btns == wm_btns_trig) 
-					|| (t->wpad.exp.type == WPAD_EXP_CLASSIC && cc_btns == cc_btns_trig)
-					|| (t->wpad.exp.type == WPAD_EXP_GUITARHERO3 && cc_btns == cc_btns_trig)
-					|| (t->pad.btns_d > 0 && t->pad.btns_d == trigger[i]->pad.btns_d))
+
+				if ((t->wpad.btns_d > 0 && wm_btns == wm_btns_trig) || (t->wpad.exp.type == WPAD_EXP_CLASSIC && cc_btns == cc_btns_trig) || (t->wpad.exp.type == WPAD_EXP_GUITARHERO3 && cc_btns == cc_btns_trig) || (t->pad.btns_d > 0 && t->pad.btns_d == trigger[i]->pad.btns_d))
 				{
 					if (trigger[i]->type == TRIGGER_HELD && state == STATE_SELECTED && (t->chan == stateChan || stateChan == -1))
 						this->SetState(STATE_CLICKED, t->chan);
 				}
 
-				if( (t->wpad.btns_h > 0 && wm_btns_h == wm_btns_trig) 
-					|| (t->wpad.exp.type == WPAD_EXP_CLASSIC && cc_btns_h == cc_btns_trig)
-					|| (t->wpad.exp.type == WPAD_EXP_GUITARHERO3 && cc_btns_h == cc_btns_trig)
-					|| (t->pad.btns_h > 0 && t->pad.btns_h == trigger[i]->pad.btns_h)
-				)
+				if ((t->wpad.btns_h > 0 && wm_btns_h == wm_btns_trig) || (t->wpad.exp.type == WPAD_EXP_CLASSIC && cc_btns_h == cc_btns_trig) || (t->wpad.exp.type == WPAD_EXP_GUITARHERO3 && cc_btns_h == cc_btns_trig) || (t->pad.btns_h > 0 && t->pad.btns_h == trigger[i]->pad.btns_h))
 				{
 					if (trigger[i]->type == TRIGGER_HELD)
 						held = true;
@@ -542,6 +581,6 @@ void GuiButton::Update(GuiTrigger * t)
 		}
 	}
 
-	if (updateCB) updateCB(this);
+	if (updateCB)
+		updateCB(this);
 }
-

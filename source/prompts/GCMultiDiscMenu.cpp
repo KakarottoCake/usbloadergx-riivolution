@@ -38,7 +38,7 @@ void GCMultiDiscMenu::browserRefresh(void)
 
 	for(u32 i = 0; i < gcGameList.size(); ++i)
 	{
-		browser->AddEntrie(gcGameList[i].title);
+		browser->AddEntry(gcGameList[i].title);
 	}
 }
 

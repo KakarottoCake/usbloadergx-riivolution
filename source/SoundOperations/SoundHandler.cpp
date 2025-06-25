@@ -45,7 +45,7 @@ SoundHandler::SoundHandler()
 	if(!ThreadStack)
 		return;
 
-	LWP_CreateThread(&SoundThread, UpdateThread, this, ThreadStack, 32768, 80);
+	LWP_CreateThread(&SoundThread, UpdateThread, this, ThreadStack, 32768, 100);
 }
 
 SoundHandler::~SoundHandler()
@@ -58,24 +58,6 @@ SoundHandler::~SoundHandler()
 		free(ThreadStack);
 
 	ClearDecoderList();
-}
-
-SoundHandler * SoundHandler::Instance()
-{
-	if (instance == NULL)
-	{
-		instance = new SoundHandler();
-	}
-	return instance;
-}
-
-void SoundHandler::DestroyInstance()
-{
-	if(instance)
-	{
-		delete instance;
-	}
-	instance = NULL;
 }
 
 void SoundHandler::AddDecoder(int voice, const char * filepath)

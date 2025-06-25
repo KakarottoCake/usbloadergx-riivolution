@@ -382,7 +382,15 @@ int GameList::EnabledList()
 	if (Settings.TitlesType == TITLETYPE_FROMWIITDB)
 		GameTitles.LoadTitlesFromGameTDB(Settings.titlestxt_path);
 	
-	GetGameListHeaders(EnabledGameList, Settings.LoaderMode);
+	if (Settings.LayoutVersion >= 2)
+	{
+		if (Settings.GameDisplayType == DISP_CUSTOM)
+			GetGameListHeaders(EnabledGameList, Settings.LoaderMode);
+		else
+			GetGameListHeaders(EnabledGameList, Settings.GameDisplayType);
+	}
+	else
+		GetGameListHeaders(EnabledGameList, Settings.LoaderMode);
 
 	return EnabledGameList.size();
 }

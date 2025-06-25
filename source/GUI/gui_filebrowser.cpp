@@ -187,8 +187,7 @@ void GuiFileBrowser::Update(GuiTrigger * t)
 		(t->pad.btns_d & (PAD_BUTTON_UP | PAD_BUTTON_DOWN)))
 		pressedChan = t->chan;
 
-	if(browser->browserList.size() > FILEBROWSERSIZE)
-		scrollBar.Update(t);
+	scrollBar.Update(t);
 
 	if(pressedChan == -1 || (!t->wpad.btns_h && !t->pad.btns_h))
 	{
@@ -213,5 +212,5 @@ void GuiFileBrowser::Update(GuiTrigger * t)
 	scrollBar.SetPageSize(FILEBROWSERSIZE);
 	scrollBar.SetSelectedItem(selectedItem);
 	scrollBar.SetSelectedIndex(browser->pageIndex);
-	scrollBar.SetEntrieCount(browser->browserList.size());
+	scrollBar.SetEntryCount(browser->browserList.size());
 }

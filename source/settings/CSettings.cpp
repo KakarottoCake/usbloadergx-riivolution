@@ -118,9 +118,11 @@ void CSettings::SetDefault()
 	volume = 80;
 	sfxvolume = 80;
 	gamesoundvolume = 80;
+	ResampleTo48kHz = ON;
 	tooltips = ON;
-	gamesound = ON;
+	gamesound = 0;
 	parentalcontrol = PARENTAL_LVL_ADULT;
+	LayoutVersion = 2;
 	BootIOS = 58;
 	LoaderIOS = 249;
 	cios = 249;
@@ -150,6 +152,7 @@ void CSettings::SetDefault()
 	GameSplit = GAMESPLIT_4GB;
 	InstallPartitions = REMOVE_UPDATE_PARTITION;
 	HomeMenu = HOME_MENU_DEFAULT;
+	SilentHomeMenu = ON;
 	MultiplePartitions = OFF;
 	BlockIOSReload = AUTO;
 	USBPort = 0;
@@ -176,14 +179,15 @@ void CSettings::SetDefault()
 	ShowPlayCount = ON;
 	bannerFavIcon = BANNER_FAVICON_SINGLE_LINEA;
 	RememberUnlock = ON;
-	LoaderMode = MODE_WIIGAMES | MODE_GCGAMES;
+	GameDisplayType = DISP_CUSTOM; // Old style by default
+	LoaderMode = MODE_WIIGAMES | MODE_GCGAMES | MODE_NANDCHANNELS;
 	SearchMode = SEARCH_BEGINNING;
 	GameAspectRatio = ASPECT_SYSTEM_DEFAULT;
 	PointerSpeed = 0.18f;
 	UseChanLauncher = OFF;
 	AdjustOverscanX = 0;
 	AdjustOverscanY = 0;
-	TooltipDelay = 1500; // ms
+	TooltipDelay = 800; // ms
 	GameWindowMode = GAMEWINDOW_BANNER;
 	CacheBNRFiles = ON;
 	BannerAnimStart = BANNER_START_ON_ZOOM;
@@ -339,6 +343,7 @@ bool CSettings::Save()
 	fprintf(file, "volume = %d\n", volume);
 	fprintf(file, "sfxvolume = %d\n", sfxvolume);
 	fprintf(file, "gamesoundvolume = %d\n", gamesoundvolume);
+	fprintf(file, "ResampleTo48kHz = %d\n", ResampleTo48kHz);
 	fprintf(file, "tooltips = %d\n", tooltips);
 	fprintf(file, "RememberUnlock = %d\n", RememberUnlock);
 	char EncryptedTxt[50];
@@ -398,6 +403,7 @@ bool CSettings::Save()
 	fprintf(file, "ParentalBlocks = %08X\n", (unsigned int)ParentalBlocks);
 	fprintf(file, "returnTo = %s\n", returnTo);
 	fprintf(file, "HomeMenu = %d\n", HomeMenu);
+	fprintf(file, "SilentHomeMenu = %d\n", SilentHomeMenu);
 	fprintf(file, "MultiplePartitions = %d\n", MultiplePartitions);
 	fprintf(file, "USBPort = %d\n", USBPort);
 	fprintf(file, "BlockIOSReload = %d\n", BlockIOSReload);
@@ -446,6 +452,7 @@ bool CSettings::Save()
 	fprintf(file, "WiirdDebuggerPause = %d\n", WiirdDebuggerPause);
 	fprintf(file, "ShowPlayCount = %d\n", ShowPlayCount);
 	fprintf(file, "bannerFavIcon = %d\n", bannerFavIcon);
+	fprintf(file, "GameDisplayType = %d\n", GameDisplayType);
 	fprintf(file, "LoaderMode = %d\n", LoaderMode);
 	fprintf(file, "SearchMode = %d\n", SearchMode);
 	fprintf(file, "GameAspectRatio = %d\n", GameAspectRatio);
@@ -635,6 +642,11 @@ bool CSettings::SetSetting(char *name, char *value)
 		gamesoundvolume = atoi(value);
 		return true;
 	}
+	else if (strcmp(name, "ResampleTo48kHz") == 0)
+	{
+		ResampleTo48kHz = atoi(value);
+		return true;
+	}
 	else if (strcmp(name, "tooltips") == 0)
 	{
 		tooltips = atoi(value);
@@ -651,7 +663,7 @@ bool CSettings::SetSetting(char *name, char *value)
 		strlcpy(EncryptedTxt, value, sizeof(EncryptedTxt));
 		DecryptString(EncryptedTxt, unlockCode);
 
-		if(!RememberUnlock && strlen(unlockCode) > 0 && strcmp(unlockCode, "not set") != 0)
+		if(!RememberUnlock && strlen(unlockCode) > 0 && strcmp(unlockCode, "Not set") != 0)
 			godmode = 0;
 		return true;
 	}
@@ -785,6 +797,11 @@ bool CSettings::SetSetting(char *name, char *value)
 		HomeMenu = atoi(value);
 		return true;
 	}
+	else if (strcmp(name, "SilentHomeMenu") == 0)
+	{
+		SilentHomeMenu = atoi(value);
+		return true;
+	}
 	else if (strcmp(name, "MultiplePartitions") == 0)
 	{
 		MultiplePartitions = atoi(value);
@@ -891,6 +908,10 @@ bool CSettings::SetSetting(char *name, char *value)
 	else if(strcmp(name, "NandEmuChanMode") == 0)
 	{
 		NandEmuChanMode = atoi(value);
+	}
+	else if(strcmp(name, "GameDisplayType") == 0)
+	{
+		GameDisplayType = atoi(value);
 	}
 	else if(strcmp(name, "LoaderMode") == 0)
 	{
@@ -1698,4 +1719,9 @@ bool CSettings::LoadLanguage(const char *path, int lang)
 	}
 
 	return ret;
+}
+
+extern "C" u8 GetLayoutVersion(void)
+{
+    return Settings.LayoutVersion;
 }

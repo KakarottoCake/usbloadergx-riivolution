@@ -13,6 +13,7 @@
 #include "system/IosLoader.h"
 #include "cache/cache.hpp"
 #include "settings/GameTitles.h"
+#include "SoundOperations/MusicPlayer.h"
 
 #define WII_MAGIC   0x5D1C9EA3
 
@@ -27,7 +28,7 @@ int MenuGCInstall()
 	GCDumper gcDumper;
 	if(gcDumper.ReadDiscHeader() < 0)
 	{
-		WindowPrompt(tr("Error"), tr("Error reading disc"), tr("OK"));
+		WindowPrompt(tr("Error:"), tr("Error reading disc"), tr("OK"));
 		return MENU_DISCLIST;
 	}
 
@@ -35,7 +36,7 @@ int MenuGCInstall()
 
 	if(gcDumper.GetDiscHeaders().size() == 0)
 	{
-		WindowPrompt(tr("Error"), tr("No games found on the disc"), tr("OK"));
+		WindowPrompt(tr("Error:"), tr("No games found on the disc"), tr("OK"));
 		return MENU_DISCLIST;
 	}
 	else if(gcDumper.GetDiscHeaders().size() > 1)
@@ -62,7 +63,7 @@ int MenuGCInstall()
 	}
 	else
 	{
-		if(!WindowPrompt(tr( "Continue to install game?" ), gcDumper.GetDiscHeaders().at(0).title, tr("Yes"), tr( "Cancel" )))
+		if(!WindowPrompt(tr( "Continue To Install Game?" ), gcDumper.GetDiscHeaders().at(0).title, tr("Yes"), tr( "Cancel" )))
 			return MENU_DISCLIST;
 
 		installGames.push_back(0);
@@ -75,14 +76,14 @@ int MenuGCInstall()
 	//! If a different main path than the SD path is selected ask where to install
 	int destination = Settings.SDMode ? 2 : 1;
 	if(!Settings.SDMode && strcmp(Settings.GameCubePath, Settings.GameCubeSDPath) != 0)
-		destination = WindowPrompt(tr("Where should the game be installed to?"), 0, tr("Main Path"), tr("SD Path"), tr("Cancel"));
+		destination = WindowPrompt(tr("Where Should the Game Be Installed To?"), 0, tr("Main Path"), tr("SD Path"), tr("Cancel"));
 	if(!destination)
 		return MENU_DISCLIST;
 		
 	//! Alert the user if he is dumping on SD with DIOS MIOS (USB) installed
 	if(destination == 2 && IosLoader::GetMIOSInfo() == DIOS_MIOS)
 	{
-		if(!WindowPrompt(tr("Are you sure you want to install on SD?"), ("You have DIOS-MIOS installed so the game need to be on a FAT32 USB. You will need to install DIOS-MIOS Lite to run this game from SD."), tr("Yes"), tr( "Cancel" )))
+		if(!WindowPrompt(tr("Are You Sure You Want to Install on SD?"), tr("You have DIOS-MIOS installed, so this game needs to be on a FAT32 USB storage device. You'll need to install DIOS-MIOS Lite to run this game from an SD card."), tr("Yes"), tr( "Cancel" )))
 			return MENU_DISCLIST;
 	}
 
@@ -104,7 +105,7 @@ int MenuGCInstall()
 		//! check if the game is already installed on SD/USB
 		if(GCGames::Instance()->IsInstalled((char *)gcDumper.GetDiscHeaders().at(installGames[i]).id, gcDumper.GetDiscHeaders().at(installGames[i]).disc_no))
 		{
-			WindowPrompt(tr("Game is already installed:"), gcDumper.GetDiscHeaders().at(installGames[i]).title, tr("OK"));
+			WindowPrompt(tr("Game Is Already Installed:"), gcDumper.GetDiscHeaders().at(installGames[i]).title, tr("OK"));
 			if(i+1 < installGames.size()) {
 				continue;
 			}
@@ -185,16 +186,16 @@ int MenuGCInstall()
 
 	gameList.FilterList();
 	isCacheCurrent();
-	bgMusic->Pause();
+	MusicPlayer::Instance()->SetVolume(0);
 	GuiSound instsuccess(Resources::GetFile("success.ogg"), Resources::GetFileSize("success.ogg"), Settings.sfxvolume);
 	instsuccess.SetVolume(Settings.sfxvolume);
 	instsuccess.SetLoop(0);
 	instsuccess.Play();
 	char gamesTxt[20];
 	snprintf(gamesTxt, sizeof(gamesTxt), "%i %s", installed_games, tr("Games"));
-	WindowPrompt(tr("Successfully installed:"), installGames.size() > 1 ? gamesTxt : gcDumper.GetDiscHeaders().at(installGames[0]).title, tr( "OK" ));
+	WindowPrompt(tr("Successfully Installed:"), installGames.size() > 1 ? gamesTxt : gcDumper.GetDiscHeaders().at(installGames[0]).title, tr( "OK" ));
 	instsuccess.Stop();
-	bgMusic->Resume();
+	MusicPlayer::Instance()->SetVolume(Settings.volume);
 
 	return MENU_DISCLIST;
 }
@@ -212,16 +213,16 @@ int MenuInstall()
 
 	int ret, choice = 0;
 
-	ret = DiscWait(tr( "Insert Disk" ), tr( "Waiting..." ), tr( "Cancel" ), 0, 0);
+	ret = DiscWait(tr( "Insert Disc" ), tr( "Waiting..." ), tr( "Cancel" ), 0, 0);
 	if (ret < 0)
 	{
-		WindowPrompt(tr( "Error reading Disc" ), 0, tr( "Back" ));
+		WindowPrompt(tr( "Error Reading Disc" ), 0, tr( "Back" ));
 		return MENU_DISCLIST;
 	}
 	ret = Disc_Open(true);
 	if (ret < 0)
 	{
-		WindowPrompt(tr( "Could not open Disc" ), 0, tr( "Back" ));
+		WindowPrompt(tr( "Could Not Open Disc" ), 0, tr( "Back" ));
 		return MENU_DISCLIST;
 	}
 
@@ -231,7 +232,7 @@ int MenuInstall()
 
 	if ((headerdisc.magic != WII_MAGIC) && (headerdisc.gc_magic != GCGames::MAGIC))
 	{
-		choice = WindowPrompt(tr( "Not a Wii or a GameCube Disc" ), tr( "Insert a Wii or a GameCube Disc!" ), tr( "OK" ), tr( "Back" ));
+		choice = WindowPrompt(tr( "Not a Wii or a GameCube Disc" ), tr( "Insert a Wii or a GameCube disc!" ), tr( "OK" ), tr( "Back" ));
 		if (choice == 1)
 			return MenuInstall();
 		else
@@ -246,7 +247,7 @@ int MenuInstall()
 	ret = WBFS_CheckGame(headerdisc.id);
 	if (ret)
 	{
-		WindowPrompt(tr( "Game is already installed:" ), headerdisc.title, tr( "Back" ));
+		WindowPrompt(tr( "Game Is Already Installed:" ), headerdisc.title, tr( "Back" ));
 		return MENU_DISCLIST;
 	}
 
@@ -256,20 +257,25 @@ int MenuInstall()
 	gamesize = (float) WBFS_EstimeGameSize();
 
 	char gametxt[strlen(headerdisc.title) + 16];
-	snprintf(gametxt, sizeof(gametxt), "%s : %.2fGB", headerdisc.title, gamesize/GB_SIZE);
+	if (gamesize < MB_SIZE)
+		snprintf(gametxt, sizeof(gametxt), "%s : %.2fKB", headerdisc.title, gamesize/KB_SIZE);
+	else if (gamesize > MB_SIZE && gamesize < GB_SIZE)
+		snprintf(gametxt, sizeof(gametxt), "%s : %.2fMB", headerdisc.title, gamesize/MB_SIZE);
+	else
+		snprintf(gametxt, sizeof(gametxt), "%s : %.2fGB", headerdisc.title, gamesize/GB_SIZE);
 
 	wiilight(1);
-	choice = WindowPrompt(tr( "Continue to install game?" ), gametxt, tr( "OK" ), tr( "Cancel" ));
+	choice = WindowPrompt(tr( "Continue To Install Game?" ), gametxt, tr( "OK" ), tr( "Cancel" ));
 
 	if (choice == 1)
 	{
-		sprintf(gametxt, "%s", tr( "Installing game:" ));
+		sprintf(gametxt, "%s", tr( "Installing Game:" ));
 
 		if (gamesize/GB_SIZE > freespace)
 		{
 			char errortxt[50];
 			sprintf(errortxt, "%s: %.2fGB, %s: %.2fGB", tr( "Game Size" ), gamesize/GB_SIZE, tr( "Free Space" ), freespace);
-			WindowPrompt(tr( "Not enough free space!" ), errortxt, tr( "OK" ));
+			WindowPrompt(tr( "Not Enough Free Space!" ), errortxt, tr( "OK" ));
 		}
 		else
 		{
@@ -289,18 +295,18 @@ int MenuInstall()
 			}
 			else
 			{
-				ShowProgress(tr("Install finished"), headerdisc.title, tr("Reloading game list now, please wait..."), gamesize, gamesize, true, true);
+				ShowProgress(tr("Install Finished"), headerdisc.title, tr("Reloading game list now, please wait..."), gamesize, gamesize, true, true);
 				gameList.ReadGameList(); //get the entries again
 				gameList.FilterList();
 				isCacheCurrent();
-				bgMusic->Pause();
+				MusicPlayer::Instance()->SetVolume(0);
 				GuiSound instsuccess(Resources::GetFile("success.ogg"), Resources::GetFileSize("success.ogg"), Settings.sfxvolume);
 				instsuccess.SetVolume(Settings.sfxvolume);
 				instsuccess.SetLoop(0);
 				instsuccess.Play();
-				WindowPrompt(tr( "Successfully installed:" ), headerdisc.title, tr( "OK" ));
+				WindowPrompt(tr( "Successfully Installed:" ), headerdisc.title, tr( "OK" ));
 				instsuccess.Stop();
-				bgMusic->Resume();
+				MusicPlayer::Instance()->SetVolume(Settings.volume);
 			}
 		}
 	}

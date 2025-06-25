@@ -9,7 +9,7 @@
 class GuiOptionBrowser: public GuiElement, public sigslot::has_slots<>
 {
 	public:
-		GuiOptionBrowser(int w, int h, OptionList * l, const char * background);
+		GuiOptionBrowser(int w, int h, OptionList * l, const char * background, bool staticValues = false);
 		virtual ~GuiOptionBrowser();
 		int GetClickedOption();
 		int GetSelectedOption();
@@ -25,6 +25,11 @@ class GuiOptionBrowser: public GuiElement, public sigslot::has_slots<>
 		int selectedItem;
 		int listOffset;
 		int coL2;
+		int optionTxtLen;
+		int optionValLen;
+		int optionsValPos;
+		int fullWidth;
+		bool isStatic;
 
 		OptionList * options;
 		std::vector<GuiButton *> optionBtn;

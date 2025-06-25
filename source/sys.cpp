@@ -19,6 +19,7 @@
 #include "GameCube/GCGames.h"
 #include "themes/CTheme.h"
 #include "SoundOperations/SoundHandler.hpp"
+#include "SoundOperations/MusicPlayer.h"
 #include "utils/ThreadedTask.hpp"
 #include "audio.h"
 #include "lstub.h"
@@ -101,7 +102,7 @@ void AppCleanUp(void)
 	delete btnSoundClick;
 	delete btnSoundOver;
 	delete btnSoundClick2;
-	delete bgMusic;
+	delete homeout;
 	delete background;
 	delete bgImg;
 	delete mainWindow;
@@ -110,6 +111,7 @@ void AppCleanUp(void)
 
 	gettextCleanUp();
 	Theme::CleanUp();
+	MusicPlayer::DestroyInstance();
 	NewTitles::DestroyInstance();
 	ThreadedTask::DestroyInstance();
 	SoundHandler::DestroyInstance();

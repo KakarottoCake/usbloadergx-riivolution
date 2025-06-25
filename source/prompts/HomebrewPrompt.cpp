@@ -40,14 +40,15 @@ HomebrewPrompt::HomebrewPrompt(const char *name, const char *coder, const char *
 	whiteBox = Resources::GetImageData("bg_options.png");
 
 	iconImg = new GuiImage(iconImgData);
-	iconImg->SetAlignment(ALIGN_LEFT, ALIGN_TOP);
-	iconImg->SetPosition(45, 10);
+	iconImg->SetAlignment(ALIGN_RIGHT, ALIGN_TOP);
+	iconImg->SetPosition(-30, 35);
+	iconImg->SetWidescreen(Settings.widescreen);
 
 	dialogBoxImg->SetSkew(0, -80, 0, -80, 0, 50, 0, 50);
 	dialogBoxImg->SetWidescreen(false);
 
 	whiteBoxImg = new GuiImage(whiteBox);
-	whiteBoxImg->SetPosition(0, 110);
+	whiteBoxImg->SetPosition(0, 92);
 	whiteBoxImg->SetAlignment(ALIGN_CENTER, ALIGN_TOP);
 	whiteBoxImg->SetSkew(0, 0, 0, 0, 0, -120, 0, -120);
 
@@ -58,23 +59,23 @@ HomebrewPrompt::HomebrewPrompt(const char *name, const char *coder, const char *
 
 	coderTxt = new GuiText(fmt(tr( "Coded by: %s" ), coder), 16, thColor("r=0 g=0 b=0 a=255 - prompt windows text color"));
 	coderTxt->SetAlignment(ALIGN_LEFT, ALIGN_TOP);
-	coderTxt->SetPosition(180, 30);
-	coderTxt->SetMaxWidth(280);
+	coderTxt->SetPosition(40, 30);
+	coderTxt->SetMaxWidth(280, DOTTED);
 
 	versionTxt = new GuiText(fmt(tr( "Version: %s" ), version), 16, thColor("r=0 g=0 b=0 a=255 - prompt windows text color"));
 	versionTxt->SetAlignment(ALIGN_LEFT, ALIGN_TOP);
-	versionTxt->SetPosition(40, 65);
-	versionTxt->SetMaxWidth(430);
+	versionTxt->SetPosition(40, 50);
+	versionTxt->SetMaxWidth(430, DOTTED);
 
 	release_dateTxt = new GuiText(release_date, 16, thColor("r=0 g=0 b=0 a=255 - prompt windows text color"));
 	release_dateTxt->SetAlignment(ALIGN_LEFT, ALIGN_TOP);
-	release_dateTxt->SetPosition(40, 85);
+	release_dateTxt->SetPosition(40, 70);
 	release_dateTxt->SetMaxWidth(430);
 
 	const int pagesize = 6;
 	long_descriptionTxt = new Text(long_description, 20, thColor("r=0 g=0 b=0 a=255 - prompt windows text color"));
 	long_descriptionTxt->SetAlignment(ALIGN_LEFT, ALIGN_TOP);
-	long_descriptionTxt->SetPosition(46, 117);
+	long_descriptionTxt->SetPosition(46, 99);
 	long_descriptionTxt->SetMaxWidth(358);
 	long_descriptionTxt->SetLinesToDraw(pagesize);
 	long_descriptionTxt->Refresh();
@@ -83,9 +84,9 @@ HomebrewPrompt::HomebrewPrompt(const char *name, const char *coder, const char *
 	char filesizeCH[15];
 	if (filesize <= 1024.0)
 		snprintf(filesizeCH, sizeof(filesizeCH), "%lld B", filesize);
-	if (filesize > 1024.0)
+	else if (filesize > 1024.0)
 		snprintf(filesizeCH, sizeof(filesizeCH), "%0.2f KB", filesize / 1024.0);
-	if (filesize > 1048576.0)
+	else
 		snprintf(filesizeCH, sizeof(filesizeCH), "%0.2f MB", filesize / 1048576.0);
 
 	filesizeTxt = new GuiText(filesizeCH, 16, thColor("r=0 g=0 b=0 a=255 - prompt windows text color"));
@@ -94,9 +95,9 @@ HomebrewPrompt::HomebrewPrompt(const char *name, const char *coder, const char *
 
 	scrollBar = new GuiScrollbar(150);
 	scrollBar->SetAlignment(ALIGN_LEFT, ALIGN_TOP);
-	scrollBar->SetPosition(393, 115);
+	scrollBar->SetPosition(393, 97);
 	scrollBar->SetPageSize(pagesize);
-	scrollBar->SetEntrieCount(long_descriptionTxt->GetTotalLinesCount());
+	scrollBar->SetEntryCount(long_descriptionTxt->GetTotalLinesCount());
 	scrollBar->listChanged.connect(this, &HomebrewPrompt::onListChange);
 
 	Append(whiteBoxImg);
@@ -115,9 +116,9 @@ HomebrewPrompt::HomebrewPrompt(const char *name, const char *coder, const char *
 	AddButton(tr( "Back" ));
 
 	Button[0]->SetAlignment(ALIGN_LEFT, ALIGN_BOTTOM);
-	Button[0]->SetPosition(40, 2);
+	Button[0]->SetPosition(40, -15);
 	Button[1]->SetAlignment(ALIGN_RIGHT, ALIGN_BOTTOM);
-	Button[1]->SetPosition(-40, 2);
+	Button[1]->SetPosition(-40, -15);
 }
 
 HomebrewPrompt::~HomebrewPrompt()

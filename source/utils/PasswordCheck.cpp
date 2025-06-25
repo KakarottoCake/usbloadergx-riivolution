@@ -2,7 +2,7 @@
 
 int PasswordCheck(const char * password)
 {
-	if(!password || strcmp(password, "") == 0 || strcmp(password, "not set") == 0)
+	if(!password || strcmp(password, "") == 0 || strcmp(password, "Not set") == 0)
 		return 2;
 
 	char entered[100];

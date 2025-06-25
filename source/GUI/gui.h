@@ -44,7 +44,6 @@
 #include "input.h"
 #include "OptionList.hpp"
 #include "SoundOperations/gui_sound.h"
-#include "SoundOperations/gui_bgm.h"
 #include "utils/timer.h"
 #include "sigslot.h"
 
@@ -57,7 +56,7 @@ extern FreeTypeGX *fontSystem;
 extern GuiSound *btnSoundClick;
 extern GuiSound *btnSoundClick2;
 extern GuiSound *btnSoundOver;
-extern GuiBGM *bgMusic;
+extern GuiSound *homeout;
 
 #define SCROLL_INITIAL_DELAY	20
 #define SCROLL_LOOP_DELAY	   3
@@ -366,7 +365,7 @@ class GuiElement
 		virtual void Update(GuiTrigger * t);
 		//!Called constantly to redraw the element
 		virtual void Draw();
-		virtual void DrawTooltip();
+		virtual void DrawTooltip(bool autoalign = false);
 	protected:
 		void LockElement();
 		void UnlockElement();
@@ -486,7 +485,7 @@ class GuiWindow: public GuiElement
 		void SetDimScreen(bool d) { forceDim = d; }
 		//!Draws all the elements in this GuiWindow
 		void Draw();
-		void DrawTooltip();
+		void DrawTooltip(bool autoalign = false);
 		//!Updates the window and all elements contains within
 		//!Allows the GuiWindow and all elements to respond to the input data specified
 		//!\param t Pointer to a GuiTrigger, containing the current input data from PAD/WPAD
@@ -830,7 +829,7 @@ class GuiButton: public GuiElement
 		void RemoveToolTip();
 		//!Constantly called to draw the GuiButton
 		void Draw();
-		void DrawTooltip();
+		void DrawTooltip(bool autoalign = false);
 		//!Constantly called to allow the GuiButton to respond to updated input data
 		//!\param t Pointer to a GuiTrigger, containing the current input data from PAD/WPAD
 		void Update(GuiTrigger * t);

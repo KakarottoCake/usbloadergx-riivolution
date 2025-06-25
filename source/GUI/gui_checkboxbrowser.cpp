@@ -81,7 +81,7 @@ void GuiCheckboxBrowser::Clear()
 	checkBoxList.clear();
 }
 
-bool GuiCheckboxBrowser::AddEntrie(const std::string &text, bool checked, int style, bool multistates)
+bool GuiCheckboxBrowser::AddEntry(const std::string &text, bool checked, int style, bool multistates)
 {
 	LOCK(this);
 	int currentSize = checkBoxList.size();
@@ -219,5 +219,5 @@ void GuiCheckboxBrowser::Update(GuiTrigger *t)
 	scrollBar.SetPageSize(checkBoxDrawn.size());
 	scrollBar.SetSelectedItem(selectedItem);
 	scrollBar.SetSelectedIndex(pageIndex);
-	scrollBar.SetEntrieCount(checkBoxList.size());
+	scrollBar.SetEntryCount(checkBoxList.size());
 }

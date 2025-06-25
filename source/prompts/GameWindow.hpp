@@ -30,6 +30,7 @@ class GameWindow : public GuiWindow
 		bool hidden;
 		int returnVal;
 		int gameSelected;
+		int oldFavLevel;
 		GameBrowseMenu *browserMenu;
 		struct discHdr *dvdheader;
 		Banner gameBanner;

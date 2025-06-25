@@ -343,7 +343,9 @@ int StartUpProcess::Execute(bool quickGameBoot)
 	gprintf("Quick game boot: %s\n", quickGameBoot ? "yes" : "no");
 	if (quickGameBoot)
 	{
-		Settings.LoaderMode = MODE_ALL;
+		Settings.LoaderMode = MODE_WIIGAMES | MODE_GCGAMES | MODE_EMUCHANNELS;
+		Settings.GameDisplayType = DISP_CUSTOM;
+		Settings.CacheTitles = OFF;
 		Settings.AutobootDiscs = OFF;
 		Settings.skipSaving = true;
 	}
@@ -470,13 +472,13 @@ int StartUpProcess::FinalizeExecute()
 	SetTextf("Loading resources\n");
 	// Do not allow banner grid mode without AHBPROT
 	// this function does nothing if it was already initiated before
-	if (!SystemMenuResources::Instance()->IsLoaded() && !SystemMenuResources::Instance()->Init()
-		&& Settings.gameDisplay == BANNERGRID_MODE)
+	if (!SystemMenuResources::Instance()->IsLoaded() && !SystemMenuResources::Instance()->Init() && Settings.gameDisplay == BANNERGRID_MODE)
 	{
 		Settings.gameDisplay = LIST_MODE;
 		Settings.GameWindowMode = GAMEWINDOW_DISC;
 	}
 
+	LoadNewTheme();
 	gprintf("\tLoading font...%s\n", Theme::LoadFont(Settings.ConfigPath) ? "done" : "failed (using default)");
 	gprintf("\tLoading theme...%s\n", Theme::Load(Settings.theme) ? "done" : "failed (using default)");
 

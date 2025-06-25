@@ -563,7 +563,7 @@ int GameLoadSM::GetMenuInternal()
 		{
 			// Only allow letters, numbers, periods and hyphens
 			if ((strlen(entered) > 0 && strlen(entered) <= 3) || strpbrk(entered, blocked))
-				WindowPrompt(tr("Error"), tr("Please enter a valid address e.g. wiimmfi.de"), tr("OK"));
+				WindowPrompt(tr("Error:"), tr("Please enter a valid address e.g. wiimmfi.de"), tr("OK"));
 			else
 				GameConfig.CustomAddress = entered;
 		}

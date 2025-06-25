@@ -13,6 +13,7 @@ float getThemeFloat(const char *msgid);
 int getThemeAlignment(const char *msgid);
 GXColor getThemeColor(const char *msgid);
 bool LoadTheme(const char* themeFile);
+void LoadNewTheme(void);
 void ThemeCleanUp(void);
 
 #define thInt(s) getThemeInt(s)

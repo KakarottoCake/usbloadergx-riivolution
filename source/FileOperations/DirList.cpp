@@ -134,11 +134,11 @@ bool DirList::LoadPath(std::string &folderpath, const char *filter, u32 flags, s
 				continue;
 
 			if(strtokcmp(fileext, filter, ",") == 0)
-				AddEntrie(folderpath.c_str(), filename, st->st_size, (st->st_mode & S_IFDIR) ? true : false);
+				AddEntry(folderpath.c_str(), filename, st->st_size, (st->st_mode & S_IFDIR) ? true : false);
 		}
 		else
 		{
-			AddEntrie(folderpath.c_str(), filename, st->st_size, (st->st_mode & S_IFDIR) ? true : false);
+			AddEntry(folderpath.c_str(), filename, st->st_size, (st->st_mode & S_IFDIR) ? true : false);
 		}
 	}
 	closedir(dir);
@@ -148,7 +148,7 @@ bool DirList::LoadPath(std::string &folderpath, const char *filter, u32 flags, s
 	return true;
 }
 
-void DirList::AddEntrie(const char * folderpath, const char * filename, u64 filesize, bool isDir)
+void DirList::AddEntry(const char * folderpath, const char * filename, u64 filesize, bool isDir)
 {
 	if(!folderpath || !filename)
 		return;

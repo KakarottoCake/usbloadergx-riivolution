@@ -34,8 +34,7 @@ class GuiCheckboxBrowser : public GuiElement, public sigslot::has_slots<>
 	public:
 		GuiCheckboxBrowser(int w, int h, int maxSize = 7);
 		virtual ~GuiCheckboxBrowser();
-		bool AddEntrie(const std::string &text, bool checked = false, int style = GuiCheckbox::CHECKSIGN, bool multistates = false);
-		int GetSelected() const { return pageIndex+selectedItem; }
+		bool AddEntry(const std::string &text, bool checked = false, int style = GuiCheckbox::CHECKSIGN, bool multistates = false);
 		bool IsChecked(u32 i) { if(i >= checkBoxList.size()) return false; else return checkBoxList[i]->IsChecked(); }
 		GuiCheckbox *GetCheckbox(u32 i) { if(i >= checkBoxList.size()) return NULL; else return checkBoxList[i]; }
 		void SetMaxTextWidth(u32 w) { maxTextWidth = w; }

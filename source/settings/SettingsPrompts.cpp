@@ -18,6 +18,7 @@
 #include "prompts/filebrowser.h"
 #include "sys.h"
 #include "menu/menus.h"
+#include "SoundOperations/MusicPlayer.h"
 
 /*** Extern variables ***/
 extern u8 shutdown;
@@ -31,7 +32,7 @@ bool MenuBackgroundMusic()
 {
 	bool ret = false;
 	char entered[1024];
-	if (!Settings.ogg_path[0])
+	if (!Settings.ogg_path[0] || MusicPlayer::Instance()->GetPlayListCount() <= 1)
 		snprintf(entered, sizeof(entered), "%s/", Settings.BootDevice);
 	else
 	{
@@ -44,9 +45,9 @@ bool MenuBackgroundMusic()
 			pathptr++;
 			int choice = WindowPrompt(tr("Playing Music:" ), pathptr, tr("Play Previous"), tr("Play Next"), tr("Change Play Path"), tr("Cancel"));
 			if (choice == 1)
-				return bgMusic->PlayPrevious();
+				return MusicPlayer::Instance()->PlayPrevious();
 			else if (choice == 2)
-				return bgMusic->PlayNext();
+				return MusicPlayer::Instance()->PlayNext();
 			else if (choice == 3)
 				pathptr[0] = 0;
 			else
@@ -56,12 +57,11 @@ bool MenuBackgroundMusic()
 
 	if (BrowseDevice(entered, sizeof(entered), FB_DEFAULT))
 	{
-		if (!bgMusic->Load(entered))
+		if (!MusicPlayer::Instance()->Load(entered))
 			WindowPrompt(tr("Unsupported format!"), tr("Loading standard music."), tr("OK"));
 		else
 			ret = true;
-		bgMusic->Play();
-		bgMusic->SetVolume(Settings.volume);
+		MusicPlayer::Instance()->SetVolume(Settings.volume);
 	}
 
 	return ret;
@@ -146,7 +146,7 @@ int MenuLanguageSelect()
 	defaultBtn.SetTrigger( &trigA );
 	defaultBtn.SetEffectGrow();
 
-	GuiText updateBtnTxt( tr( "Update Files" ) , 22, thColor("r=0 g=0 b=0 a=255 - prompt windows button text color"));
+	GuiText updateBtnTxt( tr( "Update" ) , 22, thColor("r=0 g=0 b=0 a=255 - prompt windows button text color"));
 	updateBtnTxt.SetMaxWidth( btnOutline.GetWidth() - 30 );
 	GuiImage updateBtnImg( &btnOutline );
 	if ( Settings.wsprompt == ON )
@@ -180,7 +180,7 @@ int MenuLanguageSelect()
 
 	}
 
-	GuiOptionBrowser optionBrowser4( 396, 280, &options2, "bg_options_settings.png");
+	GuiOptionBrowser optionBrowser4(396, 280, &options2, "bg_options_settings.png");
 	optionBrowser4.SetPosition( 0, 90 );
 	optionBrowser4.SetAlignment( ALIGN_CENTER, ALIGN_TOP );
 
@@ -216,7 +216,7 @@ int MenuLanguageSelect()
 
 		else if ( defaultBtn.GetState() == STATE_CLICKED )
 		{
-			choice = WindowPrompt( tr( "Loading standard language." ), 0, tr( "OK" ), tr( "Cancel" ) );
+			choice = WindowPrompt( tr( "Loading Standard Language." ), 0, tr( "OK" ), tr( "Cancel" ) );
 			if ( choice == 1 )
 			{
 				Settings.LoadLanguage(NULL, CONSOLE_DEFAULT);
@@ -229,7 +229,7 @@ int MenuLanguageSelect()
 
 		else if ( updateBtn.GetState() == STATE_CLICKED )
 		{
-			choice = WindowPrompt( tr( "Update all Language Files" ), tr( "Do you wish to update/download all language files?" ), tr( "OK" ), tr( "Cancel" ) );
+			choice = WindowPrompt( tr( "Update All Language Files" ), tr( "Do you wish to update/download all language files?" ), tr( "OK" ), tr( "Cancel" ) );
 			if ( choice == 1 )
 			{
 				if (IsNetworkInit() || NetworkInitPrompt())
@@ -262,7 +262,7 @@ int MenuLanguageSelect()
 				if (entered[strlen(entered)-1] != '/')
 					strcat (entered, "/");
 				snprintf(Settings.languagefiles_path, sizeof(Settings.languagefiles_path), entered);
-				WindowPrompt(tr("Languagepath changed."), 0, tr("OK"));
+				WindowPrompt(tr("Language Path Changed."), 0, tr("OK"));
 			}
 			pathBtn.ResetState();
 		}
@@ -271,7 +271,7 @@ int MenuLanguageSelect()
 
 		if (ret >= 0)
 		{
-			choice = WindowPrompt( tr( "Do you want to change language?" ), 0, tr( "Yes" ), tr( "Cancel" ) );
+			choice = WindowPrompt( tr( "Do You Want To Change Language?" ), 0, tr( "Yes" ), tr( "Cancel" ) );
 			if (choice == 1)
 			{
 				char newLangPath[150];
@@ -281,7 +281,7 @@ int MenuLanguageSelect()
 				snprintf(newLangPath, sizeof(newLangPath), "%s", Dir.GetFilepath(ret));
 				if (!CheckFile(newLangPath))
 				{
-					WindowPrompt(tr("File not found."), tr("Loading standard language."), tr("OK"));
+					WindowPrompt(tr("File not found."), tr("Loading Standard Language."), tr("OK"));
 					Settings.LoadLanguage(NULL, CONSOLE_DEFAULT);
 				}
 				else

@@ -46,7 +46,7 @@ class CheckboxPrompt : private PromptWindow, public sigslot::has_slots<>
 		//! Destructor
 		virtual ~CheckboxPrompt();
 		//! Add new checkbox
-		void AddCheckBox(const char *text);
+		void AddCheckBox(const char *text, bool twoLines = false);
 		//! Default function to get the button pressed
 		int GetChoice();
 		//! Set a checkbox checked/unchecked
@@ -56,13 +56,12 @@ class CheckboxPrompt : private PromptWindow, public sigslot::has_slots<>
 						const char *chbx1 = 0, const char *chbx2 = 0,
 						const char *chbx3 = 0, const char *chbx4 = 0,
 						const char *chbx5 = 0, const char *chbx6 = 0,
-						int initChecks = 0);
+						int initChecks = 0, bool twoLines = false);
 	protected:
 		void OnCheckBoxClick(GuiButton *sender, int chan, const POINT &pointer);
 		std::vector<GuiText *> CheckboxTxt;
 		std::vector<GuiCheckbox *> Checkbox;
 };
 
-#define CheckboxWindow CheckboxPrompt::Show
-
+#define ShowSelectGames(t, cb1, cb2, cb3, cb4, ic) {CheckboxPrompt::Show(t, 0, cb1, cb2, cb3, cb4, 0, 0, ic, true)}
 #endif

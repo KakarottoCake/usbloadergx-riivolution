@@ -88,20 +88,34 @@ HomebrewBrowser::HomebrewBrowser()
 	for(int i = 0; i < HomebrewList->GetFilecount(); ++i)
 	{
 		MainButtonDesc[i] = new GuiText((char *) NULL, 18, (GXColor) {0, 0, 0, 255});
-		MainButtonDesc[i]->SetMaxWidth(MainButtonImgData->GetWidth() - 150, DOTTED);
 		MainButtonDesc[i]->SetAlignment(ALIGN_LEFT, ALIGN_MIDDLE);
-		MainButtonDesc[i]->SetPosition(148, 15);
-
 		MainButtonDescOver[i] = new GuiText((char *) NULL, 18, (GXColor) {0, 0, 0, 255});
-		MainButtonDescOver[i]->SetMaxWidth(MainButtonImgData->GetWidth() - 150, SCROLL_HORIZONTAL);
 		MainButtonDescOver[i]->SetAlignment(ALIGN_LEFT, ALIGN_MIDDLE);
-		MainButtonDescOver[i]->SetPosition(148, 15);
+
+		if (Settings.widescreen)
+		{
+			MainButtonDesc[i]->SetMaxWidth(MainButtonImgData->GetWidth() - 134, DOTTED);
+			MainButtonDesc[i]->SetPosition(116, 15);
+			MainButtonDescOver[i]->SetMaxWidth(MainButtonImgData->GetWidth() - 134, SCROLL_HORIZONTAL);
+			MainButtonDescOver[i]->SetPosition(116, 15);
+		}
+		else
+		{
+			MainButtonDesc[i]->SetMaxWidth(MainButtonImgData->GetWidth() - 168, DOTTED);
+			MainButtonDesc[i]->SetPosition(144, 15);
+			MainButtonDescOver[i]->SetMaxWidth(MainButtonImgData->GetWidth() - 168, SCROLL_HORIZONTAL);
+			MainButtonDescOver[i]->SetPosition(144, 15);
+		}
 	}
 }
 
 HomebrewBrowser::~HomebrewBrowser()
 {
 	HaltGui();
+
+	if (IsNetworkInit())
+		HaltNetworkThread();
+
 	delete HomebrewList;
 
 	Remove(wifiBtn);
@@ -117,14 +131,18 @@ HomebrewBrowser::~HomebrewBrowser()
 
 	for(u32 i = 0; i < MainButtonDesc.size(); ++i)
 	{
+		if (MainButton[i])
+		{
+			MainButton[i]->SetLabel(NULL, 1);
+			MainButton[i]->SetLabelOver(NULL, 1);
+		}
 		delete MainButtonDesc[i];
 		delete MainButtonDescOver[i];
-		MainButton[i]->SetLabel(NULL, 1);
-		MainButton[i]->SetLabelOver(NULL, 1);
 	}
+	MainButtonDesc.clear();
+	MainButtonDescOver.clear();
 
-	if (IsNetworkInit())
-		HaltNetworkThread();
+    // If MainButton and MainButtonTxt are dynamically allocated elsewhere, ensure they are deleted there.
 }
 
 int HomebrewBrowser::Execute()
@@ -173,8 +191,9 @@ void HomebrewBrowser::AddMainButtons()
 		IconImgData[n] = new GuiImageData(iconpath.c_str());
 		IconImg[n] = new GuiImage(IconImgData[n]);
 		IconImg[n]->SetAlignment(ALIGN_LEFT, ALIGN_MIDDLE);
-		IconImg[n]->SetPosition(12, 0);
+		IconImg[n]->SetPosition(Settings.widescreen ? 0 : 14, 0);
 		IconImg[n]->SetScale(0.95);
+		IconImg[n]->SetWidescreen(Settings.widescreen);
 		MainButton[i]->SetIcon(IconImg[n]);
 	}
 
@@ -228,9 +247,17 @@ void HomebrewBrowser::SetupMainButtons()
 		SetMainButton(i, HomebrewName, MainButtonImgData, MainButtonImgOverData);
 
 		MainButtonTxt[i]->SetFontSize(18);
-		MainButtonTxt[i]->SetMaxWidth(MainButtonImgData->GetWidth() - 150, DOTTED);
 		MainButtonTxt[i]->SetAlignment(ALIGN_LEFT, ALIGN_MIDDLE);
-		MainButtonTxt[i]->SetPosition(148, -12);
+		if (Settings.widescreen)
+		{
+			MainButtonTxt[i]->SetMaxWidth(MainButtonImgData->GetWidth() - 134, DOTTED);
+			MainButtonTxt[i]->SetPosition(116, -12);
+		}
+		else
+		{
+			MainButtonTxt[i]->SetMaxWidth(MainButtonImgData->GetWidth() - 168, DOTTED);
+			MainButtonTxt[i]->SetPosition(144, -12);
+		}
 		MainButton[i]->SetLabel(MainButtonDesc[i], 1);
 		MainButton[i]->SetLabelOver(MainButtonDescOver[i], 1);
 	}
@@ -311,7 +338,7 @@ void HomebrewBrowser::MainButtonClicked(int button)
 		LoadFileToMem(HomebrewList->GetFilepath(button), &buffer, &filesize);
 		if(!buffer)
 		{
-			WindowPrompt(tr("Error"), tr("Not enough memory."), tr("OK"));
+			WindowPrompt(tr("Error:"), tr("Not enough memory."), tr("OK"));
 			return;
 		}
 		FreeHomebrewBuffer();
@@ -369,7 +396,7 @@ int HomebrewBrowser::ReceiveFile()
 
 		if (result < 0)
 		{
-			WindowPrompt(tr( "Error while transfering data." ), 0, tr( "OK" ));
+			WindowPrompt(tr( "Error while transferring data." ), 0, tr( "OK" ));
 			free(buffer);
 			ProgressStop();
 			return MENU_NONE;
