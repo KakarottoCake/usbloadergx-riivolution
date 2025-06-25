@@ -24,9 +24,8 @@
  * for WiiXplorer 2010
  ***************************************************************************/
 #include <malloc.h>
+#include "utils/tools.h"
 #include "BufferCircle.hpp"
-
-#define ALIGN32(x) (((x) + 31) & ~31)
 
 BufferCircle::BufferCircle()
 {

@@ -59,7 +59,7 @@ INCLUDES	:=	source
 #---------------------------------------------------------------------------------
 # Options for code generation
 #---------------------------------------------------------------------------------
-CFLAGS		=	-ggdb -Os -Wall -Wno-multichar -Wno-unused-parameter -Wextra $(MACHDEP) $(INCLUDE) -D_GNU_SOURCE -DNDEBUG
+CFLAGS		=	-ggdb -Os -Wall -Wno-multichar -Wno-unused-parameter -Wextra $(MACHDEP) $(INCLUDE) -D_GNU_SOURCE -DNDEBUG -DWOLFSSL_USER_SETTINGS
 CXXFLAGS	=	$(CFLAGS)
 LDFLAGS		=	-ggdb $(MACHDEP) -Wl,-Map,$(notdir $@).map,--section-start,.init=0x80B00000,-wrap,malloc,-wrap,free,-wrap,memalign,-wrap,calloc,-wrap,realloc,-wrap,malloc_usable_size
 
@@ -133,7 +133,7 @@ export INCLUDE	:=	$(foreach dir,$(INCLUDES),-I$(CURDIR)/$(dir)) \
 export LIBPATHS	:=	$(foreach dir,$(LIBDIRS),-L$(dir)/lib) -L$(CURDIR)/source/libs/libdrc/ \
 					-L$(CURDIR)/source/libs/libext2fs -L$(CURDIR)/source/libs/libfat \
 					-L$(CURDIR)/source/libs/libntfs \
-					-L$(CURDIR)/source/libs/libwolfssl -L$(LIBOGC_LIB)
+					-L$(LIBOGC_LIB)
 
 export OUTPUT	:=	$(CURDIR)/$(TARGET)
 .PHONY: $(BUILD) channel lang theme all clean deploy zip reload release

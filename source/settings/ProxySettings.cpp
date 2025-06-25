@@ -4,15 +4,14 @@
 
 #include "ProxySettings.h"
 #include "settings/CSettings.h"
+#include "utils/tools.h"
 
-#define ALIGN32(x) (((x) + 31) & ~31)
-
-bool proxy_enabled;
-bool proxy_creds_enabled;
-char proxy_address[256];
-u16 proxy_port;
-char proxy_username[33];
-char proxy_password[33];
+bool proxy_enabled = false;
+bool proxy_creds_enabled = false;
+char proxy_address[256] = {0};
+u16 proxy_port = 0;
+char proxy_username[33] = {0};
+char proxy_password[33] = {0};
 
 void getProxyInfo()
 {

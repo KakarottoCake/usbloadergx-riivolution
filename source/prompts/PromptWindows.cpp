@@ -20,6 +20,7 @@
 #include "GUI/Text.hpp"
 #include "settings/CGameStatistics.h"
 #include "settings/GameTitles.h"
+#include "utils/tools.h"
 #include "network/networkops.h"
 #include "network/update.h"
 #include "network/https.h"

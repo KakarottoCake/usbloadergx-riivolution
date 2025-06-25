@@ -5,7 +5,7 @@
 #ifndef _HTTPS_H_
 #define _HTTPS_H_
 
-#include <libs/libwolfssl/ssl.h>
+#include <wolfssl/ssl.h>
 
 #include "dns.h"
 #include "memory/mem2.h"

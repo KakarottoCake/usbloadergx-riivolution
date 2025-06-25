@@ -298,13 +298,13 @@ bool connect_proxy(HTTP_INFO *httpinfo, char *host, char *username, char *passwo
         if (!(auth = base64(credentials, strlen(credentials), &len)))
             return false;
         len = snprintf(request, sizeof(request),
-                       "CONNECT %s:%i HTTP/1.1\r\nProxy-Authorization: Basic %s\r\nUser-Agent: curl/7.55.1\r\n\r\n",
+                       "CONNECT %s:%i HTTP/1.1\r\nProxy-Authorization: Basic %s\r\nUser-Agent: curl/8.12.1\r\n\r\n",
                        host, httpinfo->use_https ? 443 : 80, auth);
         MEM2_free(auth);
     }
     else
         len = snprintf(request, sizeof(request),
-                       "CONNECT %s:%i HTTP/1.1\r\nUser-Agent: curl/7.55.1\r\n\r\n",
+                       "CONNECT %s:%i HTTP/1.1\r\nUser-Agent: curl/8.12.1\r\n\r\n",
                        host, httpinfo->use_https ? 443 : 80);
     if (len > 0 && https_write(httpinfo, request, len, true) != len)
         return false;
@@ -361,6 +361,8 @@ void downloadfile(const char *url, struct download *buffer)
 {
     HTTP_INFO httpinfo = {0};
     // Always reset the size due to the image downloader looping
+    if (buffer->data)
+        MEM2_free(buffer->data);
     buffer->size = 0;
     // Check if we're using HTTPS and set the path
     char *path;
@@ -380,6 +382,8 @@ void downloadfile(const char *url, struct download *buffer)
         return;
     // Get the host
     int domainlength = path - url - 7 - httpinfo.use_https;
+    if (domainlength <= 0)
+        return;
     char host[domainlength + 1];
     strlcpy(host, url + 7 + httpinfo.use_https, domainlength + 1);
     // Start connecting
@@ -442,8 +446,8 @@ void downloadfile(const char *url, struct download *buffer)
             return;
         }
         // Custom I/O is essential due to how libogc handles errors
-        wolfSSL_SetIOSend(httpinfo.ctx, send_callback);
-        wolfSSL_SetIORecv(httpinfo.ctx, recv_callback);
+        wolfSSL_CTX_SetIOSend(httpinfo.ctx, send_callback);
+        wolfSSL_CTX_SetIORecv(httpinfo.ctx, recv_callback);
         // Create a new wolfSSL session
         if ((httpinfo.ssl = wolfSSL_new(httpinfo.ctx)) == NULL)
         {
@@ -454,7 +458,7 @@ void downloadfile(const char *url, struct download *buffer)
             return;
         }
         // Set the file descriptor
-        if (wolfSSL_set_fd(httpinfo.ssl, httpinfo.sock) != SSL_SUCCESS)
+        if (wolfSSL_set_fd(httpinfo.ssl, httpinfo.sock) != WOLFSSL_SUCCESS)
         {
 #ifdef DEBUG_NETWORK
             gprintf("Failed to set SSL file descriptor\n");
@@ -463,7 +467,7 @@ void downloadfile(const char *url, struct download *buffer)
             return;
         }
         // Attempt to resume the session
-        if (session && wolfSSL_set_session(httpinfo.ssl, session) != SSL_SUCCESS)
+        if (session && wolfSSL_set_session(httpinfo.ssl, session) != WOLFSSL_SUCCESS)
         {
 #ifdef DEBUG_NETWORK
             gprintf("Failed to set session (session timed out?)\n");
@@ -482,7 +486,7 @@ void downloadfile(const char *url, struct download *buffer)
                 https_close(&httpinfo);
                 return;
             }
-            if (wolfSSL_connect(httpinfo.ssl) == SSL_SUCCESS)
+            if (wolfSSL_connect(httpinfo.ssl) == WOLFSSL_SUCCESS)
                 break;
             usleep(10000);
         }
@@ -502,10 +506,9 @@ void downloadfile(const char *url, struct download *buffer)
         WOLFSSL_CIPHER *cipher = wolfSSL_get_current_cipher(httpinfo.ssl);
         gprintf("Using: %s - %s\n", wolfSSL_get_version(httpinfo.ssl), wolfSSL_CIPHER_get_name(cipher));
 #endif
-    }
-    // Save the session
-    if (httpinfo.use_https)
+        // Save the session
         session = wolfSSL_get_session(httpinfo.ssl);
+    }
     // Send our request
     char request[2300];
     int ret, len;

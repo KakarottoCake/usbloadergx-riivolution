@@ -28,8 +28,7 @@
 #include "ImageOperations/TplImage.h"
 #include "FileOperations/fileops.h"
 #include "utils/ResourceManager.h"
-
-#define ALIGN32(x) (((x) + 31) & ~31)
+#include "utils/tools.h"
 
 /**
  * Constructor for the GuiImageData class.

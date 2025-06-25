@@ -26,6 +26,7 @@ distribution.
 
 #include <gctypes.h>
 #include "utils/gx_addons.h"
+#include "utils/tools.h"
 #include "gecko.h"
 
 #define MAKE_FOURCC(a, b, c, d) ((a) * (1 << 24) + (b) * (1 << 16) + (c) * (1 << 8) + (d) * (1 << 0))
@@ -45,15 +46,6 @@ typedef struct
 {
 	float x, y, z;
 } Vec3f;
-
-#define ALIGN32(x) (((x) + 31) & ~31)
-#define LIMIT(x, min, max)																	\
-	({																						\
-		typeof( x ) _x = x;																	\
-		typeof( min ) _min = min;															\
-		typeof( max ) _max = max;															\
-		( ( ( _x ) < ( _min ) ) ? ( _min ) : ( ( _x ) > ( _max ) ) ? ( _max) : ( _x ) );	\
-	})
 
 #define MultiplyAlpha(a1, a2) (u8)((u16) (a1) * (u16) (a2) / 0xFF)
 #define FLOAT_2_U8(x) ((u8)((x) > 255.0f ? 255.0f : ((x) < 0.0f ? 0.0f : (x) + 0.5f)))
