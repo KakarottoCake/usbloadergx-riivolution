@@ -189,13 +189,13 @@ int MainMenu(int menu)
 	bgImg = new GuiImage(background);
 	mainWindow->Append(bgImg);
 
+	MountGamePartition();
+
 	ResumeGui();
 
 	MusicPlayer::Instance()->Load(Settings.ogg_path, true);
 	MusicPlayer::Instance()->SetVolume(Settings.volume);
 	MusicPlayer::Instance()->SetLoop(Settings.musicloopmode);
-
-	MountGamePartition();
 
 	WDVD_StopMotor();
 
