@@ -1189,7 +1189,7 @@ bool save_gamelist(bool bCSV) // save gamelist
 		fprintf(f, "# Only the size of the first disc is shown here.\n\n");
 
 		fprintf(f, "%.2fGB %s %.2fGB %s\n\n", freespace, tr( "of" ), (freespace + used), tr( "free" ));
-		fprintf(f, "ID       Size       Type                 System     Title\n");
+		fprintf(f, "ID       Size        Type                 System     Title\n");
 
 		for (i = 0; i < gameList.size(); i++)
 		{
