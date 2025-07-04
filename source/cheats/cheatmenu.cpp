@@ -7,6 +7,7 @@
 #include "language/gettext.h"
 #include "themes/CTheme.h"
 #include "FileOperations/fileops.h"
+#include "usbloader/diskspace.h"
 #include "menu.h"
 #include "sys.h"
 #include "gct.h"
@@ -66,12 +67,16 @@ int CheatMenu(const char * gameID)
 				char gctPath[200];
 				snprintf(gctPath, sizeof(gctPath), "%s%.6s.TXT", Settings.TxtCheatcodespath, gameID);
 				RemoveFile(gctPath);
+				InvalidateDiskSpaceCache();
 			}
 			break;
 		case 0:
 			download = WindowPrompt(tr( "Error:" ), tr( "No Cheat file found" ), tr( "Download Now" ), tr( "Cancel" ));
 			if (download == 1)
+			{
 				CodeDownload(gameID);
+				InvalidateDiskSpaceCache();
+			}
 			break;
 		case 1:
 			int cntcheats = gctCheats.getCnt();
@@ -160,6 +165,7 @@ int CheatMenu(const char * gameID)
 							gctCheats.createGCT(vActiveCheats, gctPath);
 							WindowPrompt(tr( "GCT File created" ), NULL, tr( "OK" ));
 						}
+						InvalidateDiskSpaceCache();
 					}
 					else
 						WindowPrompt(tr( "Error:" ), tr( "Could not create GCT file" ), tr( "OK" ));
@@ -187,7 +193,7 @@ int CheatMenu(const char * gameID)
 						for (int i = 0; i < cntcheats; i++)
 						{
 							cheatslst.SetValue(i, "%s", gctCheats.getCheatName(i).c_str());
-							// search after header and before footer
+							// Search after header and before footer
 							if(gctBuf && gctCheats.IsCheatIncluded(i, gctBuf, gctSize))
 								cheatslst.SetName(i, tr("ON"));
 							else
@@ -195,6 +201,7 @@ int CheatMenu(const char * gameID)
 						}
 						w.Append(&chtBrowser);
 					}
+					InvalidateDiskSpaceCache();
 					updateBtn.ResetState();
 				}
 			}

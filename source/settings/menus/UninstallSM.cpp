@@ -1,6 +1,6 @@
  /****************************************************************************
- * Copyright (C) 2010
- * by Dimok
+ * Copyright (C) 2010 by Dimok
+ * Copyright (C) 2025 by blackb0x
  *
  * This software is provided 'as-is', without any express or implied
  * warranty. In no event will the authors be held liable for any
@@ -33,6 +33,7 @@
 #include "settings/GameTitles.h"
 #include "prompts/PromptWindows.h"
 #include "language/gettext.h"
+#include "usbloader/diskspace.h"
 #include "usbloader/wbfs.h"
 #include "usbloader/GameList.h"
 #include "wstring.hpp"
@@ -218,6 +219,7 @@ int UninstallSM::GetMenuInternal()
 		if (CheckFile(filepath)) remove(filepath);
 		snprintf(filepath, sizeof(filepath), "%s%s.png", Settings.coversFull_path, GameID);
 		if (CheckFile(filepath)) remove(filepath);
+		InvalidateDiskSpaceCache();
 	}
 
 	//! Settings: Delete Disc Artwork
@@ -231,6 +233,7 @@ int UninstallSM::GetMenuInternal()
 		int choice = WindowPrompt(tr( "Delete" ), filepath, tr( "Yes" ), tr( "No" ));
 		if (choice == 1)
 			if (CheckFile(filepath)) remove(filepath);
+		InvalidateDiskSpaceCache();
 	}
 
 	//! Settings: Delete Cached Banner
@@ -249,6 +252,7 @@ int UninstallSM::GetMenuInternal()
 		if (CheckFile(filepath)) remove(filepath);
 		snprintf(filepath, sizeof(filepath), "%s%.3s.bnr", Settings.BNRCachePath, GameID);
 		if (CheckFile(filepath)) remove(filepath);
+		InvalidateDiskSpaceCache();
 	}
 
 	//! Settings: Delete Cheat TXT
@@ -262,6 +266,7 @@ int UninstallSM::GetMenuInternal()
 		int choice = WindowPrompt(tr( "Delete" ), filepath, tr( "Yes" ), tr( "No" ));
 		if (choice == 1)
 			if (CheckFile(filepath)) remove(filepath);
+		InvalidateDiskSpaceCache();
 	}
 
 	//! Settings: Delete Cheat GCT
@@ -275,6 +280,7 @@ int UninstallSM::GetMenuInternal()
 		int choice = WindowPrompt(tr( "Delete" ), filepath, tr( "Yes" ), tr( "No" ));
 		if (choice == 1)
 			if (CheckFile(filepath)) remove(filepath);
+		InvalidateDiskSpaceCache();
 	}
 
 	//! Settings: Delete EmuNAND Saves
@@ -299,6 +305,7 @@ int UninstallSM::GetMenuInternal()
 			snprintf(filepath, sizeof(filepath), "%s/title/00010000/%02x%02x%02x%02x/data", NandEmuPath, DiscHeader->id[0], DiscHeader->id[1], DiscHeader->id[2], DiscHeader->id[3]);
 			RemoveDirectory(filepath);
 		}
+		InvalidateDiskSpaceCache();
 	}
 
 	SetOptionValues();

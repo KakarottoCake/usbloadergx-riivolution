@@ -1,6 +1,6 @@
 /****************************************************************************
- * Copyright (C) 2025 by Dimok
  * Copyright (C) 2011 by Dimok
+ * Copyright (C) 2025 by blackb0x
  *
  * This software is provided 'as-is', without any express or implied
  * warranty. In no event will the authors be held liable for any
@@ -43,6 +43,7 @@
 #include "prompts/PromptWindows.h"
 #include "prompts/ProgressWindow.h"
 #include "prompts/filebrowser.h"
+#include "usbloader/diskspace.h"
 #include "usbloader/GameList.h"
 #include "usbloader/neek.hpp"
 #include "language/gettext.h"
@@ -225,7 +226,7 @@ int FeatureSettingsMenu::GetMenuInternal()
 	//! Settings: Rumble
 	else if (ret == ++Idx)
 	{
-		if (++Settings.rumble >= MAX_ON_OFF) Settings.rumble = 0; //RUMBLE
+		if (++Settings.rumble >= MAX_ON_OFF) Settings.rumble = 0;
 	}
 
 	//! Settings: AutoInit Network
@@ -384,7 +385,9 @@ int FeatureSettingsMenu::GetMenuInternal()
 				else
 					WindowPrompt(tr("Process finished."), tr("Errors occurred."), tr("OK"));
 			}
+
 			gameList.FilterList(filter.c_str());
+			InvalidateDiskSpaceCache();
 		}
 	}
 
@@ -411,6 +414,8 @@ int FeatureSettingsMenu::GetMenuInternal()
 
 			ProgressStop();
 			ProgressCancelEnable(false);
+
+			InvalidateDiskSpaceCache();
 
 			if(Error)
 				WindowPrompt(tr("Process finished."), tr("Errors occurred."), tr("OK"));
@@ -442,6 +447,8 @@ int FeatureSettingsMenu::GetMenuInternal()
 
 			ProgressStop();
 			ProgressCancelEnable(false);
+
+			InvalidateDiskSpaceCache();
 
 			if(Error)
 				WindowPrompt(tr("Process finished."), tr("Errors occurred."), tr("OK"));
@@ -508,6 +515,8 @@ int FeatureSettingsMenu::GetMenuInternal()
 				}
 			}
 			free(nandPath);
+
+			InvalidateDiskSpaceCache();
 		}
 	}
 

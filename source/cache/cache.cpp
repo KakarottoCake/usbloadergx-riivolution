@@ -41,6 +41,9 @@ void GetListWBFS(std::string &list)
 		if (!usb)
 			continue;
 		portPart = DeviceHandler::PartitionToPortPartition(i);
+		const char* fs = usb->GetFSName(portPart);
+		if (fs && strncmp(fs, "WBFS", 4) == 0)
+			continue;
 		snprintf(drive, sizeof(drive), "%s:/wbfs", usb->MountName(portPart));
 		gprintf("Partition: %d - %s\n", i, drive);
 		GetDirectoryList(drive, list);

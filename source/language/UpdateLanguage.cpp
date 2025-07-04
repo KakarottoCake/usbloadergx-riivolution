@@ -18,6 +18,7 @@
 #include "network/URL_List.h"
 #include "prompts/PromptWindows.h"
 #include "prompts/ProgressWindow.h"
+#include "usbloader/diskspace.h"
 #include "utils/ShowError.h"
 #include "gecko.h"
 #include "version.h"
@@ -89,6 +90,8 @@ int DownloadAllLanguageFiles()
 		Settings.LoadLanguage(Settings.language_path, CONSOLE_DEFAULT);
 	else
 		Settings.LoadLanguage(NULL, CONSOLE_DEFAULT);
+
+	InvalidateDiskSpaceCache();
 
 	return files_downloaded;
 }

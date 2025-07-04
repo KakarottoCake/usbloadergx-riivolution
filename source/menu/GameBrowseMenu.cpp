@@ -17,6 +17,7 @@
 #include "prompts/CheckboxPrompt.hpp"
 #include "themes/CTheme.h"
 #include "language/gettext.h"
+#include "usbloader/diskspace.h"
 #include "usbloader/wbfs.h"
 #include "usbloader/wdvd.h"
 #include "usbloader/GameList.h"
@@ -775,8 +776,16 @@ void GameBrowseMenu::ReloadBrowser(bool firstRun)
 	//! Check if the loaded setting is still in range
 	if (Settings.RememberLastGame)
 	{
-		Settings.SelectedGame = LIMIT(Settings.SelectedGame, 0, gameList.size() - 1);
-		Settings.GameListOffset = LIMIT(Settings.GameListOffset, 0, gameList.size() - 1);
+		if (gameList.size() > 0)
+		{
+			Settings.SelectedGame = LIMIT(Settings.SelectedGame, 0, gameList.size() - 1);
+			Settings.GameListOffset = LIMIT(Settings.GameListOffset, 0, gameList.size() - 1);
+		}
+		else
+		{
+			Settings.SelectedGame = 0;
+			Settings.GameListOffset = 0;
+		}
 	}
 	else
 	{
@@ -1278,7 +1287,7 @@ int GameBrowseMenu::MainLoop()
 	else if (listCoverBtn->GetState() == STATE_CLICKED)
 	{
 		gprintf("\tcoverBtn clicked\n");
-		
+
 		if (Settings.CoverAction == COVER_ACTION_DOWNLOAD)
 		{
 			if (ImageDownloader::DownloadImages())
@@ -2019,9 +2028,9 @@ void GameBrowseMenu::UpdateFreeSpace(void *arg)
 	if (Settings.ShowFreeSpace)
 	{
 		float freespace = 0.0, used = 0.0;
-		int ret = WBFS_DiskSpace(&used, &freespace);
-		if (ret >= 0 && allowUsedSpaceTxtUpdate)
+		if (allowUsedSpaceTxtUpdate)
 		{
+			GetPartitionDiskSpace(&freespace, &used);
 			usedSpaceTxt->SetVisible(true);
 			SetFreeSpace(freespace, used);
 		}

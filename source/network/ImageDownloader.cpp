@@ -1,6 +1,7 @@
 /****************************************************************************
  * Copyright (C) 2011 Dimok
  * Copyright (C) 2012 Cyan
+ * Copyright (C) 2025 blackb0x
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -26,6 +27,7 @@
 #include "settings/CSettings.h"
 #include "settings/GameTitles.h"
 #include "language/gettext.h"
+#include "usbloader/diskspace.h"
 #include "usbloader/GetMissingGameFiles.hpp"
 #include "utils/StringTools.h"
 #include "usbloader/GameList.h"
@@ -84,6 +86,8 @@ void ImageDownloader::Start(bool silent)
 	ProgressCancelEnable(false);
 
 	ProgressStop();
+
+	InvalidateDiskSpaceCache();
 
 	if(MissingImagesCount == 0)
 		WindowPrompt(tr("Download finished"), tr("All images downloaded successfully."), tr( "OK" ));

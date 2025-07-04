@@ -30,6 +30,7 @@
 #include "sys.h"
 #include "utils/ShowError.h"
 #include "FileOperations/fileops.h"
+#include "usbloader/diskspace.h"
 
 UpdateSM::UpdateSM()
 	: SettingsMenu(tr("Update Menu"), &GuiOptions, MENU_NONE)
@@ -82,14 +83,20 @@ int UpdateSM::GetMenuInternal()
 	else if (ret == ++Idx)
 	{
 		if (UpdateLanguageFiles() > 0)
+		{
+			InvalidateDiskSpaceCache();
 			WindowPrompt(tr("Successfully Updated"), 0, tr("OK"));
+		}
 	}
 
 	//! Settings: Update Cheat Files
 	else if (ret == ++Idx)
 	{
 		if (UpdateCheats() > 0)
+		{
+			InvalidateDiskSpaceCache();
 			WindowPrompt(tr("Successfully Updated"), 0, tr("OK"));
+		}
 		else
 			WindowPrompt(tr("Update Failed"), 0, tr("OK"));
 	}
@@ -100,11 +107,13 @@ int UpdateSM::GetMenuInternal()
 		if (!GetDirectorySize(Settings.covers_path))
 		{
 			UpdateCovers();
+			InvalidateDiskSpaceCache();
 		}
 		else if (WindowPrompt(tr("Cover Download"), tr("Are you sure you want to redownload everything?"), tr("Yes"), tr("Cancel")) > 0)
 		{
 			RemoveDirectory(Settings.covers_path);
 			UpdateCovers();
+			InvalidateDiskSpaceCache();
 		}
 	}
 
@@ -117,14 +126,20 @@ int UpdateSM::GetMenuInternal()
 		else if (gameTDB == -1)
 			WindowPrompt(tr("Update Failed"), 0, tr("OK"));
 		else if (gameTDB > 0)
+		{
+			InvalidateDiskSpaceCache();
 			WindowPrompt(tr("Successfully Updated"), 0, tr("OK"));
+		}
 	}
 
 	//! Settings: Update Nintendont
 	else if (ret == ++Idx)
 	{
 		if (UpdateNintendont() > 0)
+		{
+			InvalidateDiskSpaceCache();
 			WindowPrompt(tr("Successfully Updated"), 0, tr("OK"));
+		}
 		else
 			WindowPrompt(tr("Update Failed"), 0, tr("OK"));
 	}
