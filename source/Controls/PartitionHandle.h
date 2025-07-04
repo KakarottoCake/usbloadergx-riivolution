@@ -129,15 +129,15 @@ class PartitionHandle
 		//! Is the partition Mounted
 		bool IsMounted(int pos);
 		//! Mount a specific Partition
-		bool Mount(int pos, const char * name, bool forceFAT = false);
+		bool Mount(int pos, const char *name, bool forceFAT = false);
 		//! UnMount a specific Partition
 		void UnMount(int pos);
 		//! UnMount all Partition
 		void UnMountAll() { for(u32 i = 0; i < PartitionList.size(); ++i) UnMount(i); };
 		//! Get the Mountname
-		const char * MountName(int pos) { if(pos < 0 || pos >= (int) MountNameList.size() || !MountNameList[pos].size()) return ""; else return MountNameList[pos].c_str(); };
+		const char *MountName(int pos) { if(pos < 0 || pos >= (int) MountNameList.size() || !MountNameList[pos].size()) return ""; else return MountNameList[pos].c_str(); };
 		//! Get the Name of the FileSystem e.g. "FAT32"
-		const char * GetFSName(int pos) { if(valid(pos)) return PartitionList[pos].FSName; else return ""; };
+		const char *GetFSName(int pos) { if(valid(pos)) return PartitionList[pos].FSName; else return ""; };
 		//! Get the LBA where the partition is located
 		u32 GetLBAStart(int pos) { if(valid(pos)) return PartitionList[pos].LBA_Start; else return 0; };
 		//! Get the partition size in sectors of this partition
@@ -157,12 +157,12 @@ class PartitionHandle
 		//! Get the partition size in bytes
 		u64 GetSize(int pos) { if(valid(pos)) return (u64) PartitionList[pos].SecCount*BYTES_PER_SECTOR; else return 0; };
 		//! Get the whole partition record struct
-		PartitionFS * GetPartitionRecord(int pos) { if(valid(pos)) return &PartitionList[pos]; else return NULL; };
+		PartitionFS *GetPartitionRecord(int pos) { if(valid(pos)) return &PartitionList[pos]; else return NULL; };
 		//! Get the disc interface of this handle
-		const DISC_INTERFACE * GetDiscInterface() { return interface; };
+		const DISC_INTERFACE *GetDiscInterface() { return interface; };
 	protected:
 		bool valid(int pos) { return (pos >= 0 && pos < (int) PartitionList.size()); }
-		void AddPartition(const char * name, u64 lba_start, u64 sec_count, bool bootable, u8 part_type, u8 part_num, u8 part_TableType);
+		void AddPartition(const char *name, u64 lba_start, u64 sec_count, bool bootable, u8 part_type, u8 part_num, u8 part_TableType);
 		bool IsExisting(u64 lba);
 		int FindPartitions();
 		void CheckEBR(u8 PartNum, sec_t ebr_lba);
