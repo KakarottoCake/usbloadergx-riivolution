@@ -1054,8 +1054,9 @@ int GameBooter::BootDIOSMIOS(struct discHdr *gameHdr)
 	u8 *diskid = (u8 *)Disc_ID;
 	if (dmlJPNPatchChoice && diskid[3] == 'J')
 	{
-		*HW_VI1CFG = 0x0002A9E0;
-		DCFlushRange((void*)HW_VI1CFG, 4);
+		u32 region = *HW_VI1CFG;
+		*HW_VI1CFG = region | (1 << 17);
+		DCFlushRange((void *)HW_VI1CFG, 4);
 	}
 
 	gprintf("\nLoading BC for GameCube\n");
