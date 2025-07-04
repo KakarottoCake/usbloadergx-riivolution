@@ -2,8 +2,6 @@
 #define _WBFS_FAT_H
 
 #include <string>
-#include <set>
-#include <ogcsys.h>
 
 #include "usbloader/splits.h"
 #include "usbloader/wbfs.h"
@@ -34,10 +32,12 @@ class Wbfs_Fat: public Wbfs
 
 		u64 EstimateGameSize();
 
-		void AddHeader(const struct discHdr &discHeader);
+		void AddHeader(struct discHdr *discHeader);
 
 		virtual s32 GetFragList(u8 *);
 		virtual u8 GetFSType(void) { return PART_FS_FAT; }
+
+		static bool CheckLayoutB(char *fname, int len, u8* id, char *fname_title);
 		static void CleanTitleCharacters(char *title);
 	protected:
 
@@ -50,12 +50,10 @@ class Wbfs_Fat: public Wbfs
 		void ClosePart(wbfs_t* part);
 		wbfs_t* CreatePart(u8 *id, char *path);
 		std::string FindFilename(u8 *id);
-		std::string GetDir(struct discHdr *header);
-		bool IsDirectFile(const std::string &path);
-		bool ValidExtension(const char *filename);
-		bool TryAddGameFile(const std::string &fpath, const char *expected_id, const char *folder_title, std::set<std::string> &added_ids, bool use_folder_title);
+		void GetDir(struct discHdr *header, char *path);
+		bool IsDuplicateID(const u8 *id);
 		void Filename(u8 *id, char *fname, int len, char *path);
-		s32 GetHeadersCount();
+		void GetHeadersCount();
 
 		void mk_gameid_title(struct discHdr *header, char *name, int re_space, int layout);
 

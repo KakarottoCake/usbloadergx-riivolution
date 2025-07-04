@@ -73,35 +73,6 @@ void GCGames::clear()
 	std::vector<std::string>().swap(sdGCPathList);
 }
 
-bool GCGames::CheckLayoutB(char *fname, int len, u8 *id, char *fname_title)
-{
-	if (len <= 8)
-		return false;
-	if (fname[len - 8] != '[' || fname[len - 1] != ']')
-		return false;
-	if (!isGameID(&fname[len - 7]))
-		return false;
-	strncpy(fname_title, fname, TITLE_LEN);
-	// cut at '['
-	fname_title[len - 8] = 0;
-	int n = strlen(fname_title);
-	if (n == 0)
-		return false;
-	// cut trailing _ or ' '
-	if (fname_title[n - 1] == ' ' || fname_title[n - 1] == '_')
-	{
-		fname_title[n - 1] = 0;
-	}
-	if (strlen(fname_title) == 0)
-		return false;
-	if (id)
-	{
-		memcpy(id, &fname[len - 7], 6);
-		id[6] = 0;
-	}
-	return true;
-}
-
 void GCGames::LoadGameList(const std::string &path, std::vector<struct discHdr> &headerList, std::vector<std::string> &pathList)
 {
 	struct discHdr tmpHdr;
@@ -136,7 +107,7 @@ void GCGames::LoadGameList(const std::string &path, std::vector<struct discHdr> 
 		int len = strlen(dirname);
 		if (len >= 8)
 		{
-			if (CheckLayoutB((char *)dirname, len, id, fname_title))
+			if (Wbfs_Fat::CheckLayoutB((char *)dirname, len, id, fname_title))
 			{
 				// path/TITLE [GAMEID]/game.iso
 				lay_b = true;

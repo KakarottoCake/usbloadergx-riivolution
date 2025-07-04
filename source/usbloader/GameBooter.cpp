@@ -38,6 +38,7 @@
 #include "usbloader/playlog.h"
 #include "usbloader/MountGamePartition.h"
 #include "usbloader/AlternateDOLOffsets.h"
+#include "usbloader/wbfs/wbfs_fat.h"
 #include "GameCube/GCGames.h"
 #include "settings/newtitles.h"
 #include "network/Wiinnertag.h"
@@ -1109,7 +1110,7 @@ int GameBooter::BootDevolution(struct discHdr *gameHdr)
 	// Check if Devolution is available
 	u8 *loader_bin = NULL;
 	int DEVO_version = 0;
-	char DEVO_loader_path[110];
+	char DEVO_loader_path[MAX_FAT_PATH];
 	snprintf(DEVO_loader_path, sizeof(DEVO_loader_path), "%sloader.bin", Settings.DEVOLoaderPath);
 	FILE *f = fopen(DEVO_loader_path, "rb");
 	if (f)
@@ -1148,10 +1149,10 @@ int GameBooter::BootDevolution(struct discHdr *gameHdr)
 	// Devolution config
 	DEVO_CFG *devo_config = (DEVO_CFG *)0x80000020;
 
-	char disc1[100];
-	char disc2[100];
+	char disc1[MAX_FAT_PATH];
+	char disc2[MAX_FAT_PATH];
 	bool multiDisc = false;
-	char DEVO_memCard[100];
+	char DEVO_memCard[MAX_FAT_PATH];
 	snprintf(disc1, sizeof(disc1), "%s", RealPath);
 
 	snprintf(disc2, sizeof(disc2), "%s", RealPath);
@@ -1312,7 +1313,7 @@ int GameBooter::BootDevolution(struct discHdr *gameHdr)
 
 int GameBooter::BootNintendont(struct discHdr *gameHdr)
 {
-	char RealPath[100];
+	char RealPath[MAX_FAT_PATH];
 	if (gameHdr->type == TYPE_GAME_GC_DISC)
 		snprintf(RealPath, sizeof(RealPath), "di");
 	else
@@ -1362,7 +1363,7 @@ int GameBooter::BootNintendont(struct discHdr *gameHdr)
 	}
 
 	// Check if Nintendont boot.dol is available
-	char NIN_loader_path[255];
+	char NIN_loader_path[MAX_FAT_PATH];
 	if (strncmp(RealPath, "usb", 3) == 0) // Nintendont r39 only
 	{
 		snprintf(NIN_loader_path, sizeof(NIN_loader_path), "%sloaderusb.dol", ninLoaderPath);
@@ -1582,7 +1583,7 @@ int GameBooter::BootNintendont(struct discHdr *gameHdr)
 	// Check Ocarina and cheat file location. the .gct file need to be located on the same partition than the game.
 	if (ocarinaChoice && strcmp(DeviceHandler::GetDevicePrefix(RealPath), DeviceHandler::GetDevicePrefix(Settings.Cheatcodespath)) != 0)
 	{
-		char path[255], destPath[255];
+		char path[MAX_FAT_PATH], destPath[MAX_FAT_PATH];
 		int res = -1;
 		snprintf(path, sizeof(path), "%s%.6s.gct", Settings.Cheatcodespath, (char *)gameHdr->id);
 		snprintf(destPath, sizeof(destPath), "%s:/NINTemp.gct", DeviceHandler::GetDevicePrefix(RealPath));
@@ -1696,7 +1697,7 @@ int GameBooter::BootNintendont(struct discHdr *gameHdr)
 	bool bootDisc2 = false;
 	if (multiDiscChoice && gameHdr->type != TYPE_GAME_GC_DISC && gameHdr->disc_no == 0)
 	{
-		char disc2Path[255];
+		char disc2Path[MAX_FAT_PATH];
 		snprintf(disc2Path, sizeof(disc2Path), "%s", RealPath);
 		char *pathPtr = strrchr(disc2Path, '/');
 		if (pathPtr)
@@ -1715,7 +1716,7 @@ int GameBooter::BootNintendont(struct discHdr *gameHdr)
 	if (!gcPath)
 		gcPath = "";
 
-	char gamePath[255];
+	char gamePath[MAX_FAT_PATH];
 	snprintf(gamePath, sizeof(gamePath), "%s", gcPath);
 
 	if (bootDisc2)
