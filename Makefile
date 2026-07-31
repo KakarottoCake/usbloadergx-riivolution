@@ -26,6 +26,7 @@ SOURCES		:=	source \
 				source/mload \
 				source/mload/modules \
 				source/patches \
+				source/riivo \
 				source/usbloader \
 				source/xml \
 				source/network \

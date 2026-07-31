@@ -99,6 +99,21 @@ void ClearDOLList()
     dolCount = 0;
 }
 
+int RiivoGetDOLCount(void)
+{
+    return dolCount;
+}
+
+u8 *RiivoGetDOLDst(int i)
+{
+    return (i >= 0 && i < dolCount) ? dolList[i].dst : NULL;
+}
+
+int RiivoGetDOLLen(int i)
+{
+    return (i >= 0 && i < dolCount) ? dolList[i].len : 0;
+}
+
 void gamepatches(u8 videoSelected, u8 videoPatchDol, u8 aspectForce, u8 languageChoice, u8 patchcountrystring,
                  u8 vipatch, u8 deflicker, u8 disableMotor, u8 disableSpeaker,
                  u8 sneekVideoPatch, u8 hooktype, u8 videoWidth, u64 returnTo, u8 privateServer, const char *serverAddr)
@@ -211,7 +226,9 @@ void gamepatches(u8 videoSelected, u8 videoPatchDol, u8 aspectForce, u8 language
     DCFlushRange((void *)0x80000000, 0x3f00);
 
     free_wip();
-    ClearDOLList();
+    //! NOTE: the DOL section list is intentionally NOT cleared here. The caller
+    //! (GameBooter::BootGame) applies Riivolution memory patches, which need to
+    //! scan the loaded DOL sections, then calls ClearDOLList() itself.
 }
 
 /** Anti 002 fix for IOS 249 rev > 12 thanks to WiiPower **/

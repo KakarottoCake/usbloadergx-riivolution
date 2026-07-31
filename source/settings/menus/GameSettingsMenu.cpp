@@ -35,6 +35,7 @@
 #include "cheats/cheatmenu.h"
 #include "GameLoadSM.hpp"
 #include "GCGameLoadSM.hpp"
+#include "RiivoSM.hpp"
 #include "UninstallSM.hpp"
 
 GameSettingsMenu::GameSettingsMenu(GameBrowseMenu *parent, struct discHdr * header)
@@ -71,6 +72,12 @@ void GameSettingsMenu::SetupMainButtons()
 
 	SetMainButton(pos++, tr( "Game Load" ), MainButtonImgData, MainButtonImgOverData);
 	SetMainButton(pos++, tr( "Ocarina" ), MainButtonImgData, MainButtonImgOverData);
+	//! Riivolution (Wii games only)
+	if(		DiscHeader->type == TYPE_GAME_WII_IMG
+		||	DiscHeader->type == TYPE_GAME_WII_DISC)
+	{
+		SetMainButton(pos++, tr( "Riivolution" ), MainButtonImgData, MainButtonImgOverData);
+	}
 	SetMainButton(pos++, tr( "Categories" ), MainButtonImgData, MainButtonImgOverData);
 	if(		DiscHeader->type == TYPE_GAME_WII_IMG
 		||	DiscHeader->type == TYPE_GAME_WII_DISC
@@ -113,6 +120,17 @@ void GameSettingsMenu::CreateSettingsMenu(int menuNr)
 		char ID[7];
 		snprintf(ID, sizeof(ID), "%s", (char *) DiscHeader->id);
 		CheatMenu(ID);
+	}
+
+	//! Riivolution (Wii games only) - gate must match SetupMainButtons so Idx stays in sync
+	else if(	(DiscHeader->type == TYPE_GAME_WII_IMG
+			||	 DiscHeader->type == TYPE_GAME_WII_DISC)
+			&&	menuNr == Idx++)
+	{
+		HideMenu();
+		ResumeGui();
+		CurrentMenu = new RiivoSM(DiscHeader);
+		Append(CurrentMenu);
 	}
 
 	//! Categories

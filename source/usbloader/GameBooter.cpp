@@ -46,6 +46,10 @@
 #include "patches/gamepatches.h"
 #include "patches/wip.h"
 #include "patches/bca.h"
+#include "riivo/RiivoParser.hpp"
+#include "riivo/RiivoConfig.hpp"
+#include "riivo/RiivoMemory.hpp"
+#include "riivo/RiivoSave.hpp"
 #include "banner/OpeningBNR.hpp"
 #include "wad/nandtitle.h"
 #include "menu/menus.h"
@@ -610,6 +614,49 @@ int GameBooter::BootGame(struct discHdr *gameHdr, const s8 useOcarina)
 	if (Hooktype)
 		LoadGameConfig(Settings.Cheatcodespath);
 
+	//! Riivolution: parse the selected XML and resolve the current selection now.
+	//! The resolved set persists to the pre-entry window below, where the memory
+	//! engine (Phase 1) applies it after gamepatches().
+	Riivo::ResolvedPatchSet riivoSet;
+	std::string riivoDevice; // SD/USB mount prefix, e.g. "sd:"
+	if (game_cfg->RiivoPath.size() > 0)
+	{
+		char riivoId[7];
+		memcpy(riivoId, gameHeader.id, 6);
+		riivoId[6] = 0;
+
+		size_t colon = game_cfg->RiivoPath.find(':');
+		if (colon != std::string::npos)
+			riivoDevice = game_cfg->RiivoPath.substr(0, colon + 1);
+
+		Riivo::Disc riivoDisc;
+		std::string riivoErr;
+		if (Riivo::ParseFile(game_cfg->RiivoPath.c_str(), riivoDisc, &riivoErr))
+		{
+			gprintf("Riivo: XML valid for game: %d\n", riivoDisc.IsValidForGame(riivoId, 0, 0));
+			if (game_cfg->RiivoConfig.size() > 0)
+				Riivo::ApplySelection(riivoDisc, game_cfg->RiivoConfig);
+			Riivo::Resolve(riivoDisc, riivoId, riivoSet);
+			Riivo::DumpDisc(riivoDisc);
+			Riivo::DumpResolved(riivoSet);
+		}
+		else
+			gprintf("Riivo: parse failed: %s\n", riivoErr.c_str());
+	}
+
+	//! Riivolution <savegame> redirect (Phase 2): point the NAND-emu base at the
+	//! mod's folder so the mod save is isolated from the vanilla save. Requires
+	//! NAND emulation to be enabled for this game. Must run before SetupNandEmu.
+	std::string riivoNandPath; // backs NandEmuPath below; must outlive SetupNandEmu
+	if (!riivoSet.savegames.empty())
+	{
+		char riivoSaveId[7];
+		memcpy(riivoSaveId, gameHeader.id, 6);
+		riivoSaveId[6] = 0;
+		if (Riivo::SetupSavegame(riivoSet, riivoDevice, riivoSaveId, NandEmuMode != OFF, NandEmuPath, riivoNandPath))
+			NandEmuPath = riivoNandPath.c_str();
+	}
+
 	//! Setup NAND emulation
 	if (!exclude_game(gameHeader.id, true))
 		SetupNandEmu(NandEmuMode, NandEmuPath, gameHeader);
@@ -731,6 +778,13 @@ int GameBooter::BootGame(struct discHdr *gameHdr, const s8 useOcarina)
 					deflicker, disableMotor, disableSpeaker,
 					sneekChoice, Hooktype, videoWidth, returnToChoice, PRIVSERV_OFF, customAddress);
 	}
+
+	//! Riivolution memory patches (Phase 1). Applied after gamepatches() so the
+	//! loaded DOL is patched last (matching Dolphin's ordering). gamepatches() no
+	//! longer clears the DOL section list, so we scan it here then clear it below.
+	if (!riivoSet.memories.empty())
+		Riivo::ApplyMemoryPatches(riivoSet, riivoDevice);
+	ClearDOLList();
 
 	//! Load Code handler if needed
 	load_handler(Hooktype, WiirdDebugger, Settings.WiirdDebuggerPause);

@@ -252,6 +252,8 @@ bool CGameSettings::Save()
 		fprintf(f, "DEVODiscDelay:%d; ", GameList[i].DEVODiscDelay);
 		fprintf(f, "PrivateServer:%d; ", GameList[i].PrivateServer);
 		fprintf(f, "CustomAddress:%s; ", GameList[i].CustomAddress.c_str());
+		fprintf(f, "RiivoPath:%s; ", GameList[i].RiivoPath.c_str());
+		fprintf(f, "RiivoConfig:%s; ", GameList[i].RiivoConfig.c_str());
 		fprintf(f, "Locked:%d;\n", GameList[i].Locked);
 	}
 	fprintf(f, "# END\n");
@@ -608,6 +610,16 @@ bool CGameSettings::SetSetting(GameCFG & game, const char *name, const char *val
 			game.CustomAddress = value;
 		return true;
 	}
+	else if(strcmp(name, "RiivoPath") == 0)
+	{
+		game.RiivoPath = value;
+		return true;
+	}
+	else if(strcmp(name, "RiivoConfig") == 0)
+	{
+		game.RiivoConfig = value;
+		return true;
+	}
 
 	return false;
 }
@@ -777,5 +789,7 @@ void CGameSettings::SetDefault(GameCFG &game)
 	game.DEVODiscDelay = INHERIT;
 	game.PrivateServer = INHERIT;
 	game.CustomAddress.clear();
+	game.RiivoPath.clear();
+	game.RiivoConfig.clear();
 	game.Locked = OFF;
 }
