@@ -78,6 +78,8 @@ typedef struct _GameCFG
 	short DEVODiscDelay;
 	short PrivateServer;
 	std::string CustomAddress;
+	std::string RiivoPath;    // selected Riivolution XML (empty => disabled)
+	std::string RiivoConfig;  // serialized option->choice selection
 	short Locked;
 
 	void operator=(const struct _GameCFG &game)
@@ -151,6 +153,8 @@ typedef struct _GameCFG
 		this->DEVODiscDelay = game.DEVODiscDelay;
 		this->PrivateServer = game.PrivateServer;
 		this->CustomAddress = game.CustomAddress;
+		this->RiivoPath = game.RiivoPath;
+		this->RiivoConfig = game.RiivoConfig;
 		this->Locked = game.Locked;
 	}
 } GameCFG;

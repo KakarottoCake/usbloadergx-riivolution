@@ -10,6 +10,13 @@ extern "C" {
 bool exclude_game(u8 *gameid, bool checkEmuNAND);
 void RegisterDOL(u8 *dst, int len);
 void ClearDOLList();
+
+//! Accessors over the loaded DOL sections (valid between apploader load and
+//! ClearDOLList). Used by the Riivolution memory engine to scan for
+//! search/ocarina patterns in the game binary.
+int RiivoGetDOLCount(void);
+u8 *RiivoGetDOLDst(int i);
+int RiivoGetDOLLen(int i);
 void gamepatches(u8 videoSelected, u8 videoPatchDol, u8 aspectForce, u8 languageChoice, u8 patchcountrystring,
                  u8 vipatch, u8 deflicker, u8 disableMotor, u8 disableSpeaker,
                  u8 sneekVideoPatch, u8 hooktype, u8 videoWidth, u64 returnTo, u8 privateServer, const char *serverAddr);

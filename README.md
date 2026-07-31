@@ -1,26 +1,95 @@
 <p align="center"><a href="https://github.com/wiidev/usbloadergx/" title="USB Loader GX"><img src="data/web/logo.png"></a></p>
-<p align="center">
-<a href="https://github.com/wiidev/usbloadergx/releases" title="Releases"><img src="https://img.shields.io/github/v/release/wiidev/usbloadergx?logo=github"></a>
-<a href="https://github.com/wiidev/usbloadergx/actions" title="Actions"><img src="https://img.shields.io/github/actions/workflow/status/wiidev/usbloadergx/main.yml?branch=enhanced&logo=github"></a>
-</p>
 
-## Description
-USB Loader GX allows you to play Wii and GameCube games from a USB storage device or an SD card, launch other homebrew apps, create backups, use cheats in games, and a whole lot more.
+# USB Loader GX — Riivolution Edition
 
-## Installation
-1. Extract the apps folder to the root of your SD card and replace any existing files.
-2. Install the [latest d2x cIOS](https://github.com/wiidev/d2x-cios/releases).
-3. Optional: Update wiitdb.xml by selecting the update option within the loaders settings menu.
-4. Optional: Install the loaders [forwarder channel](https://raw.githubusercontent.com/wiidev/usbloadergx/updates/USBLoaderGX_forwarder%5BUNEO%5D.wad), then go into `Loader Settings` and set `Return To` to `UNEO`.
+A fork of [USB Loader GX](https://github.com/wiidev/usbloadergx) that adds **native
+Riivolution mod support**, so you can play game mods **on the fly** — no need to
+pre-patch or rebuild your game backup first.
 
-## d2x cIOS
-1. Use the correct cIOS package for your console — e.g., `d2x-v11-beta3` for the Wii and `d2x-v11-beta3-vWii` for the Wii U.
-2. When using the d2x cIOS installer, set the cIOS to the version that you downloaded — e.g., `d2x-v11-beta3`.
-3. Install the cIOS into each slot with the following settings.
+> ⚠️ **Work in progress.** Memory-based mods and mod-save redirection work today.
+> Full file-replacement mods are partly built and still need testing on a real Wii.
+> See [Status](#status) below before you get your hopes up.
 
-````
-Slot 248 base 38
-Slot 249 base 56
-Slot 250 base 57
-Slot 251 base 58
-````
+---
+
+## What is this, in plain English?
+
+**USB Loader GX** is a popular app for the Wii that launches your game backups from a
+USB drive or SD card.
+
+**Riivolution** is a modding system for Wii games. Fan-made mods — new levels, texture
+packs, translations, difficulty hacks — are distributed as a small folder of files plus
+an XML "recipe" that tells the console what to change. Think of it like the Wii's
+version of a mod loader.
+
+Normally, using a Riivolution mod means either running a separate Riivolution app, or
+using a PC tool to bake the mod permanently into a copy of the game (a big, slow,
+disk-hungry step). **This fork skips all that.** You pick the mod right inside USB
+Loader GX, launch the game, and the mod is applied in memory as the game boots. Your
+original game backup is never modified.
+
+## How you'll use it (once finished)
+
+1. Copy the mod's files to your SD card (exactly as the mod author instructs — usually a
+   `riivolution` folder plus a folder of game files).
+2. Open USB Loader GX and highlight your game.
+3. Open **Game Settings → Riivolution**.
+4. Pick the mod's XML and toggle the options it offers (e.g. "Widescreen: On",
+   "Character pack: B").
+5. Launch the game. That's it — the mod is live.
+
+Settings are saved **per game**, so each game remembers its own mod choices.
+
+## Status
+
+| Riivolution feature | What it does | State |
+|---|---|---|
+| `<memory>` patches | Directly change values in the game's code/RAM (most code mods, cheats-style hacks, ASM loaders) | ✅ Working |
+| `<memory search>` / `<memory ocarina>` | Find-and-patch and hook-injection variants | ✅ Working |
+| `<savegame>` | Give the mod its own separate save file so it can't corrupt your vanilla save | ✅ Working (needs NAND emulation enabled) |
+| Option / choice menus + `${param}` | The mod's configurable toggles | ✅ Working |
+| `<file>` / `<folder>` replacement | Swap real game files for modded ones from your SD card (new levels, textures, audio) | 🛠️ Loader logic built & tested; the on-console read-hook still needs hardware testing |
+| `<folder>` add-new-files | Mods that add brand-new files | ⏳ Planned |
+
+**How it works under the hood, briefly:** memory patches reuse the loader's existing
+"poke RAM before the game starts" machinery (the same idea as Ocarina cheats), so they
+need no custom cIOS. File replacement is the hard part — it requires intercepting the
+game's disc reads at runtime. This fork does that by patching the running cIOS **in
+memory at boot**, so there's **nothing extra to install and no risk of bricking from
+flashing a custom cIOS**.
+
+Full technical design and progress: [RIIVOLUTION_PLAN.md](RIIVOLUTION_PLAN.md).
+
+## Requirements
+
+- A Wii (or Wii U in vWii mode) already set up to run USB Loader GX.
+- The [latest d2x cIOS](https://github.com/wiidev/d2x-cios/releases) (same as stock USB
+  Loader GX — see [README.upstream.md](README.upstream.md) for cIOS slot setup).
+- For mod-save redirection, NAND emulation enabled for the game.
+
+## Building it yourself
+
+Same toolchain as upstream USB Loader GX (devkitPro / devkitPPC). The repository ships a
+`Dockerfile` that pins the exact toolchain:
+
+```bash
+docker build -o . .
+```
+
+The compiled `boot.dol` lands in the project directory.
+
+## Credits & license
+
+- Built on **[USB Loader GX](https://github.com/wiidev/usbloadergx)** by the wiidev team
+  and contributors — all original credits in [README.upstream.md](README.upstream.md).
+- Riivolution XML parsing and patch logic are ported from the excellent reference
+  implementation in **[Dolphin](https://github.com/dolphin-emu/dolphin)**
+  (`DiscIO/RiivolutionParser` / `RiivolutionPatcher`), and from the companion
+  ISO-patcher project **[riivolution-to-iso](https://github.com/KakarottoCake/riivolution-to-iso)**.
+- Riivolution patch format: <https://aerialx.github.io/rvlution.net/wiki/Patch_Format/>
+
+This project inherits USB Loader GX's **GPL-3.0** license. See
+[gpl-3.0.txt](gpl-3.0.txt) / the upstream repository for details.
+
+*Not affiliated with or endorsed by the upstream USB Loader GX team, Dolphin, or
+Nintendo. Use with your own legally-obtained games.*
