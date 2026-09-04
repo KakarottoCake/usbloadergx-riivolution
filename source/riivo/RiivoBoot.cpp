@@ -6,6 +6,7 @@
 #include <string.h>
 #include <malloc.h>
 #include <sys/stat.h>
+#include <algorithm>
 #include <gccore.h>
 #include <ogcsys.h>
 
@@ -17,6 +18,8 @@
 #include "RiivoFstInstall.hpp"
 #include "RiivoIosProbe.hpp"
 #include "RiivoDiPatch.hpp"
+#include "RiivoFragPlan.hpp"
+#include "usbloader/frag.h"
 #include "usbloader/wdvd.h"
 #include "system/IosLoader.h"
 #include "gecko.h"
@@ -41,12 +44,16 @@ namespace Riivo
 	//! know how much room the rebuilt table wants.
 	static u32 plannedFstSize = 0;
 
+	//! Sector size of the drive the backup is on, from SetBootContext.
+	static u32 bootSectorSize = 512;
+
 	void SetBootContext(const ResolvedPatchSet *set, const std::string &device,
-						const std::string &logPath)
+						const std::string &logPath, u32 sectorSize)
 	{
 		bootSet = set;
 		bootDevice = device;
 		bootLogPath = logPath;
+		bootSectorSize = sectorSize ? sectorSize : 512;
 	}
 
 	void AppendLog(const std::string &text)
@@ -190,6 +197,44 @@ namespace Riivo
 		*outSize = fstSize;
 		*outOffset = fstOffset;
 		return true;
+	}
+
+	static bool ByOffset(const ModExtent &a, const ModExtent &b)
+	{
+		return a.offset < b.offset;
+	}
+
+	//! Ask the builder where each mod file ended up and hand the extents back in
+	//! ascending order, which is what the fragment table and its lookup index
+	//! both assume. Files still sitting at their original disc offset were never
+	//! placed - their replacement was missing from the card - so they are left
+	//! out rather than dragged below the region and tripping the checks.
+	static void CollectExtents(const FstBuilder &builder, u64 region,
+							   const std::vector<RedirectSpec> &redirects,
+							   const std::vector<CreatedFile> &created,
+							   std::vector<ModExtent> &out)
+	{
+		out.clear();
+		out.reserve(redirects.size() + created.size());
+
+		for (size_t i = 0; i < redirects.size() + created.size(); ++i)
+		{
+			const std::string &disc = i < redirects.size()
+									  ? redirects[i].disc
+									  : created[i - redirects.size()].disc;
+			u64 off = 0;
+			u32 len = 0;
+			if (!builder.FindAssigned(disc, &off, &len))
+				continue;
+			if (len == 0 || off < region)
+				continue;
+			ModExtent e;
+			e.offset = off;
+			e.length = len;
+			out.push_back(e);
+		}
+
+		std::sort(out.begin(), out.end(), ByOffset);
 	}
 
 	static bool ExternalFileSize(const std::string &path, u32 *outSize)
@@ -356,11 +401,16 @@ namespace Riivo
 				++rejected;
 		}
 
-		//! The mod region has to start at 4 GiB, because that is the only
-		//! threshold the four-byte read patch can express - see RiivoDiPatch.hpp.
-		//! Everything below it stays real, decrypted, hash-checked game data.
+		//! The mod region has to clear two floors: the 4 GiB threshold the
+		//! four-byte read patch tests (RiivoDiPatch.hpp), and the end of the
+		//! backup's own virtual disc, or the game's fragments would shadow the
+		//! mod's. PlanRegionStart takes the higher of the two.
+		const FragList *gameFrags = frag_list_get();
+		const u64 imageBytes = gameFrags
+							   ? (u64) gameFrags->size * bootSectorSize
+							   : 0;
 		const u64 extent = builder.OriginalExtent();
-		const u64 region = RIIVO_REGION_BYTES;
+		const u64 region = PlanRegionStart(imageBytes, bootSectorSize);
 		const bool extentFits = extent < region;
 		builder.Layout(region, 0x800);
 
@@ -402,6 +452,54 @@ namespace Riivo
 			 planned, planned);
 		if (planned > 15000)
 			out += "  WARNING: that is close to the cIOS fragment limit.\n";
+
+		// ------------------------------------------------------------------
+		// Does the mod fit on the virtual disc the cIOS reads?
+		// ------------------------------------------------------------------
+		out += "\nRoom on the virtual disc\n";
+		out += "------------------------\n";
+
+		if (!gameFrags)
+		{
+			out += "  The loader did not build a fragment list for this game, so there\n"
+				   "  is no virtual disc to extend. That happens when the game is read\n"
+				   "  straight off a real DVD, which this cannot work with.\n\n";
+		}
+		else
+		{
+			Addf(out, "  backup declares    : %u sectors of %u bytes = %llu bytes\n",
+				 gameFrags->size, bootSectorSize, (unsigned long long) imageBytes);
+			Addf(out, "  its fragments      : %u of %u\n",
+				 gameFrags->num, RIIVO_FRAG_MAX);
+
+			//! Feed the laid-out files through the same checks that will gate
+			//! the real thing: ordering, alignment, the read ceiling, the table.
+			std::vector<ModExtent> extents;
+			CollectExtents(builder, region, redirects, created, extents);
+
+			const FragPlan plan =
+				PlanFragRegion(imageBytes, bootSectorSize, gameFrags->num, extents);
+
+			if (!plan.ok)
+			{
+				Addf(out, "  REFUSED: %s\n", plan.why.c_str());
+			}
+			else
+			{
+				Addf(out, "  mod region         : 0x%010llx .. 0x%010llx\n",
+					 (unsigned long long) plan.regionStart,
+					 (unsigned long long) plan.regionEnd);
+				Addf(out, "  files to place     : %u\n", plan.files);
+				Addf(out, "  fragments needed   : %u at best, %u free in the table\n",
+					 plan.minFragments, plan.fragsAvailable);
+				Addf(out, "  payload            : %llu bytes\n",
+					 (unsigned long long) plan.payloadBytes);
+				Addf(out, "  spare below ceiling: %llu bytes\n",
+					 (unsigned long long) plan.ceilingSpare);
+				out += "  Everything fits.\n";
+			}
+			out += "\n";
+		}
 
 		//! Go looking for the cIOS code that has to be patched. This is the one
 		//! input that cannot be worked out anywhere but on the console itself.

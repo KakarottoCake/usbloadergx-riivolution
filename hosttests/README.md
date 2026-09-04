@@ -18,6 +18,7 @@ Any C++ compiler will do (`g++` on PATH). Two shims in `shim/` stand in for
 | `test_fstbuild` | `RiivoFstBuild`: round-tripping an untouched table, replacing a file with a bigger one, adding files into directories that do not exist yet, directory subtree-end indices staying consistent after an insertion, malformed and hostile tables, 64-bit offsets past the 4 GiB line | 49 |
 | `test_scale` | the same rebuilder against a realistic 3920-file table — growth, timing, and that every relocated range is aligned and non-overlapping | 2159 |
 | `test_pipeline` | the seam `RiivoBoot::PrepareFileRedirects` walks on console: disc FST → `BuildRedirects` → `FstBuilder` → rebuilt table, including case-insensitive matching between a mod folder and the disc | 24 |
+| `test_fragplan` | `PlanFragRegion`: where the mod region can sit on the virtual disc — clear of the backup's own fragments, above the patch's 4 GiB threshold, below the cIOS read ceiling, and within the 20000-fragment table | 28 |
 | `test_fstinstall` | `PlaceFst`: where the rebuilt table goes in the running game's memory, how much heap that costs, and — mostly — every case where it must refuse rather than guess | 37 |
 
 ## Why the seam test exists

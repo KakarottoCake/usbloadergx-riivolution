@@ -55,6 +55,43 @@ next to the XML you selected. It records whether the XML parsed, whether it matc
 game you launched, which options were active, every patch that was enabled, and any
 `valuefile` that could not be read. Please attach that file to any bug report.
 
+## Changed in v0.9 - where the mod actually lives
+
+The cIOS reads your game through a *fragment list* — a table mapping offsets on a virtual
+disc to real sectors on your drive. Adding the mod means extending that table so the extra
+offsets point at ordinary files on your card. This build works out exactly where that
+region can sit and whether everything fits, and prints it in the log.
+
+Three constraints decide it, and all three are now checked before anything is attempted:
+
+1. It must start **at or above 4 GiB**, because that's the only threshold the four-byte
+   patch can express.
+2. It must start **at or above the end of your backup's own virtual disc** — otherwise the
+   game's fragments would shadow the mod's, and files would silently read as the wrong
+   data rather than fail.
+3. It must end **below the cIOS read ceiling**, past which every read is refused.
+
+For a normal single-layer backup that puts the region at about **4.70 GB**, leaving
+roughly **2.7 GB** of space under the ceiling — comfortably more than a mod like Spectral
+needs.
+
+### A limitation that falls out of this
+
+Constraint 2 rules out **dual-layer games**. Their backup already fills the address space
+right up to the ceiling, so there is nowhere left to put anything. That is a real
+consequence of the approach, not something I've overlooked. Single-layer games — including
+Super Mario Galaxy 2 — are fine.
+
+### Also
+
+- The log now reports your backup's declared size, how many of the 20000 fragment slots it
+  already uses, and how many the mod would need.
+- 28 more automated checks — **2297 total, all passing**.
+
+Still not applied. What's left is the mechanical part: reading each mod file's real sectors
+off the card, appending them to the table, and writing the rebuilt file table into the
+game's memory.
+
 ## Changed in v0.8 - the patch, and it is four bytes
 
 I said I needed a photograph of your cIOS's memory before I could write the disc-read

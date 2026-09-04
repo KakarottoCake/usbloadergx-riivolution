@@ -675,7 +675,8 @@ int GameBooter::BootGame(struct discHdr *gameHdr, const s8 useOcarina)
 		//! Hand the resolved set to the Phase 3 code, which runs later on, deep
 		//! inside BootPartition. riivoSet outlives this scope; riivoDisc does not,
 		//! and is deliberately not passed along.
-		Riivo::SetBootContext(&riivoSet, riivoDevice, riivoLogPath);
+		Riivo::SetBootContext(&riivoSet, riivoDevice, riivoLogPath,
+							  Settings.SDMode ? 512 : hdd_sector_size[usbport]);
 		Riivo::ReportCios();
 	}
 
