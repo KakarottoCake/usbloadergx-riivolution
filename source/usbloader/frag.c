@@ -262,6 +262,11 @@ out:
 	return ret_val;
 }
 
+const FragList *frag_list_get(void)
+{
+	return frag_list;
+}
+
 int get_frag_list(u8 *id)
 {
 	return WBFS_GetFragList(id);
