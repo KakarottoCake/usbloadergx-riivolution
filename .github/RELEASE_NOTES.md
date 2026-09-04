@@ -55,6 +55,19 @@ next to the XML you selected. It records whether the XML parsed, whether it matc
 game you launched, which options were active, every patch that was enabled, and any
 `valuefile` that could not be read. Please attach that file to any bug report.
 
+## Changed in v1.0.1
+
+- **Fixed: 4K-sector drives could never activate.** The mod's files were laid out on 2 KB
+  boundaries (a Wii disc's own granularity) but a fragment has to start on a boundary of
+  the *drive's* sectors. On a 4K-native drive every file failed the alignment check and
+  the whole thing refused. It now aligns to whichever is larger.
+- Clarified what does and does not work with **`.wbfs` files**: they are fine. A game
+  stored as a `.wbfs` container on a FAT/NTFS/ext drive goes through a second layer of
+  mapping to find its real sectors, and the fragment list that comes out of that is in
+  exactly the same address space the mod's files are added to. A raw **WBFS partition** is
+  a different matter - it has no filesystem, so there is nowhere to put the mod's files in
+  the first place, and that is refused with a message saying so.
+
 ## Changed in v1.0 - it is switched on
 
 This is the first build that actually tries to run the mod. Everything up to now

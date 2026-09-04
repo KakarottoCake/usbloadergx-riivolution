@@ -537,7 +537,12 @@ namespace Riivo
 		const u64 extent = builder.OriginalExtent();
 		const u64 region = PlanRegionStart(imageBytes, bootSectorSize);
 		const bool extentFits = extent < region;
-		builder.Layout(region, 0x800);
+		//! Align to the drive's own sectors, never to less: a fragment cannot
+		//! begin part-way through one. 2 KB is the floor because that is a Wii
+		//! disc's own granularity, but a 4K-native drive needs 4 KB and would
+		//! otherwise have every file rejected by the alignment check later.
+		const u32 layoutAlign = bootSectorSize > 0x800 ? bootSectorSize : 0x800;
+		builder.Layout(region, layoutAlign);
 
 		std::vector<u8> newFst;
 		builder.Serialize(newFst, true);
