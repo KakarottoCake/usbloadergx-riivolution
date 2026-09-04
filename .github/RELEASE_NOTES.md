@@ -55,6 +55,26 @@ next to the XML you selected. It records whether the XML parsed, whether it matc
 game you launched, which options were active, every patch that was enabled, and any
 `valuefile` that could not be read. Please attach that file to any bug report.
 
+## Changed in v0.4 - Phase 3 begins
+
+File replacement still does not work. What this build adds is the **loader half** of it,
+running for real on your console but in **dry-run mode** — it reads your game's actual
+file table off the disc, matches the mod against it, and writes down exactly what it
+would redirect. It changes nothing about how the game boots, so it is safe to run.
+
+Launch your game with the mod selected and then read
+`<device>:/riivolution/usbloadergx_riivo.log`. It will now also contain:
+
+- **A cIOS survey** — every cIOS slot on your console, its d2x version and base IOS, and
+  which one the game actually ran under. The disc-read hook has to patch that specific
+  cIOS, so this decides how the next step gets written.
+- **A Phase 3 dry run** — your disc's FST (offset, size, file count), every disc byte
+  range the mod would redirect and to which file on your card, anything missing from the
+  card, and any files the mod adds that have no disc entry.
+
+**Please send that log.** It is the input for the IOS-side hook, which cannot be written
+blind.
+
 ## Changed in v0.3
 
 - **A warning before launch instead of a black screen.** Riivolution is applied after
