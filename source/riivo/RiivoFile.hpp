@@ -25,7 +25,16 @@ namespace Riivo
 		u32 length;           // bytes to redirect; 0 => "whole external file" (resolved at HW via stat)
 		u32 fileOffset;       // start offset within the external file
 		u32 discLength;       // size of the disc file being replaced, from the FST
+		std::string disc;     // matched disc path, lower-cased, e.g. "/audiores/x.ast"
 		std::string external; // full external path, e.g. "sd:/mymod/E/boot.arc"
+	};
+
+	//! An external file with no counterpart on the disc. These are the files a
+	//! mod ADDS, and they need a new FST entry rather than a redirect.
+	struct CreatedFile
+	{
+		std::string disc;     // where it should appear on the disc
+		std::string external; // where it actually is on the card
 	};
 
 	//! Enumerates files under an external folder. Backed by readdir on hardware;
@@ -44,7 +53,7 @@ namespace Riivo
 	//! rebuild) rather than redirected.
 	void BuildRedirects(const Fst &fst, const ResolvedPatchSet &set, const std::string &device,
 						DirLister *lister, std::vector<RedirectSpec> &out,
-						std::vector<std::string> *outCreated = 0);
+						std::vector<CreatedFile> *outCreated = 0);
 
 	//! Concrete DirLister backed by opendir/readdir (real SD/USB filesystem).
 	//! Returns file paths relative to the listed directory.

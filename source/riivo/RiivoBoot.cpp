@@ -13,6 +13,7 @@
 #include "RiivoConfig.hpp"
 #include "RiivoFst.hpp"
 #include "RiivoFile.hpp"
+#include "RiivoFstBuild.hpp"
 #include "usbloader/wdvd.h"
 #include "system/IosLoader.h"
 #include "gecko.h"
@@ -127,7 +128,7 @@ namespace Riivo
 	}
 
 	// --------------------------------------------------------------------
-	// 2. Disc FST + redirect dry run
+	// 2. Disc FST, redirect plan and file-table rebuild
 	// --------------------------------------------------------------------
 
 	static u32 be32(const u8 *p)
@@ -201,10 +202,12 @@ namespace Riivo
 			return;
 
 		std::string out;
-		out += "\n\nPhase 3 dry run - file/folder replacement\n"
-			   "-----------------------------------------\n"
-			   "Working out what WOULD be redirected. None of it is applied yet: the\n"
-			   "IOS-side disc-read hook that carries it out is still being written.\n\n";
+		out += "\n\nPhase 3 - file/folder replacement plan\n"
+			   "--------------------------------------\n"
+			   "Worked out against the real disc, then discarded. Nothing below is\n"
+			   "applied yet: the console decrypts disc reads inside IOS, so plaintext\n"
+			   "files cannot be substituted from the loader alone. The note at the end\n"
+			   "says exactly what is still missing.\n\n";
 
 		u8 *fstData = 0;
 		u32 fstSize = 0, fstOffset = 0;
@@ -221,11 +224,11 @@ namespace Riivo
 		Addf(out, "disc FST : offset 0x%08x, %u bytes, %s, %u file(s)\n",
 			 fstOffset, fstSize, parsed ? "parsed OK" : "PARSE FAILED",
 			 (unsigned) fst.FileCount());
-		free(fstData);
 
 		if (!parsed)
 		{
-			out += "\nThe FST could not be parsed, so no redirect could be worked out.\n";
+			free(fstData);
+			out += "\nThe FST could not be parsed, so no plan could be worked out.\n";
 			AppendLog(out);
 			return;
 		}
@@ -235,15 +238,14 @@ namespace Riivo
 
 		FsDirLister lister;
 		std::vector<RedirectSpec> redirects;
-		std::vector<std::string> created;
+		std::vector<CreatedFile> created;
 		BuildRedirects(fst, *bootSet, bootDevice, &lister, redirects, &created);
 
-		//! Size accounting. This is the question that decides whether plain
-		//! redirection can ever work for this mod: a replacement that is bigger
-		//! than the file it stands in for cannot just be read in place, because
-		//! the disc's file table still advertises the old, smaller length.
+		//! Size accounting. A replacement bigger than the file it stands in for
+		//! cannot be served by redirection alone: the file table still advertises
+		//! the old length, so the game never asks for the extra bytes.
 		int missing = 0, fits = 0, grows = 0;
-		u64 maxDiscOffset = 0;
+		u64 maxDiscOffset = 0, modBytes = 0;
 		std::vector<size_t> growers;
 
 		for (size_t i = 0; i < redirects.size(); ++i)
@@ -258,6 +260,7 @@ namespace Riivo
 				++missing;
 				continue;
 			}
+			modBytes += extSize;
 			if (extSize > r.discLength)
 			{
 				++grows;
@@ -267,9 +270,11 @@ namespace Riivo
 				++fits;
 		}
 
-		Addf(out, "external files seen : %u\n", (unsigned) (redirects.size() + created.size()));
+		Addf(out, "external files seen : %u\n",
+			 (unsigned) (redirects.size() + created.size()));
 		Addf(out, "  matched on disc   : %u\n", (unsigned) redirects.size());
-		Addf(out, "  no disc entry     : %u\n", (unsigned) created.size());
+		Addf(out, "  no disc entry     : %u  (files the mod ADDS)\n",
+			 (unsigned) created.size());
 		Addf(out, "  metadata ignored  : %d  (macOS ._ twins, .DS_Store, Thumbs.db)\n\n",
 			 lister.skipped);
 
@@ -278,16 +283,13 @@ namespace Riivo
 		Addf(out, "  same size or smaller : %d\n", fits);
 		Addf(out, "  LARGER than original : %d\n", grows);
 		Addf(out, "  missing from card    : %d\n", missing);
-		Addf(out, "  highest disc offset  : 0x%010llx\n\n", (unsigned long long) maxDiscOffset);
+		Addf(out, "  highest disc offset  : 0x%010llx\n\n",
+			 (unsigned long long) maxDiscOffset);
 
 		if (grows > 0)
 		{
-			out += "A replacement bigger than the original cannot simply be read in its\n"
-				   "place: the disc's file table still advertises the old length, so the\n"
-				   "game would only ever ask for that many bytes. Making these work needs\n"
-				   "the in-RAM file-table rebuild (Phase 4), not just read redirection.\n\n";
 			out += "biggest growers:\n";
-			for (size_t n = 0; n < growers.size() && n < 15; ++n)
+			for (size_t n = 0; n < growers.size() && n < 10; ++n)
 			{
 				const RedirectSpec &r = redirects[growers[n]];
 				u32 extSize = 0;
@@ -295,49 +297,111 @@ namespace Riivo
 				Addf(out, "  disc %8u -> ext %8u  %s\n",
 					 (unsigned) r.discLength, (unsigned) extSize, r.external.c_str());
 			}
-			if (growers.size() > 15)
-				Addf(out, "  ... and %u more\n", (unsigned) (growers.size() - 15));
+			if (growers.size() > 10)
+				Addf(out, "  ... and %u more\n", (unsigned) (growers.size() - 10));
 			out += "\n";
 		}
 
-		out += "Sample of the redirects that would be applied:\n";
-		for (size_t i = 0; i < redirects.size() && i < 25; ++i)
-		{
-			const RedirectSpec &r = redirects[i];
-			u32 extSize = 0;
-			const bool have = ExternalFileSize(r.external, &extSize);
-			Addf(out, "  disc 0x%010llx len %-8u <- %-8u %s%s\n",
-				 (unsigned long long) r.discOffset, (unsigned) r.discLength, (unsigned) extSize,
-				 r.external.c_str(), have ? "" : "   [MISSING ON CARD]");
-		}
-		if (redirects.size() > 25)
-			Addf(out, "  ... and %u more\n", (unsigned) (redirects.size() - 25));
-
-		if (!created.empty())
-		{
-			Addf(out, "\n%u external file(s) have no entry on the disc at all - these are\n"
-					  "files the mod ADDS. Adding files needs the Phase 4 file-table\n"
-					  "rebuild, so they would be ignored by redirection alone:\n",
-				 (unsigned) created.size());
-			for (size_t i = 0; i < created.size() && i < 15; ++i)
-				Addf(out, "  %s\n", created[i].c_str());
-			if (created.size() > 15)
-				Addf(out, "  ... and %u more\n", (unsigned) (created.size() - 15));
-		}
-
 		if (missing > 0)
-			Addf(out, "\nWARNING: %d redirect target(s) are not on the card. Check that the\n"
-					  "mod's files were copied to the same device as the XML.\n", missing);
+			Addf(out, "WARNING: %d target(s) are not on the card. Check that the mod's\n"
+					  "files were copied to the same device as the XML.\n\n", missing);
 
-		if (redirects.empty() && created.empty())
-			out += "\nNothing resolved. Either the mod's disc paths do not match this game,\n"
-				   "or its files are not where the XML expects them.\n";
-		else
-			out += "\nThe loader side works. What is still missing is the IOS-side read hook\n"
-				   "that would make the console fetch those ranges from the card at runtime.\n";
+		// ------------------------------------------------------------------
+		// The rebuilt file table. Every route to working replacement needs
+		// this, so measure it against the real disc rather than guessing.
+		// ------------------------------------------------------------------
+		out += "Rebuilt file table\n";
+		out += "------------------\n";
+
+		FstBuilder builder;
+		if (!builder.Parse(fstData, fstSize, true))
+		{
+			out += "  the FST would not parse into an editable tree.\n";
+			free(fstData);
+			AppendLog(out);
+			return;
+		}
+		free(fstData);
+		fstData = 0;
+
+		u32 planned = 0, rejected = 0;
+		bool isNew = false;
+		for (size_t i = 0; i < redirects.size(); ++i)
+		{
+			u32 extSize = 0;
+			if (!ExternalFileSize(redirects[i].external, &extSize))
+				continue;
+			if (builder.AddOrReplace(redirects[i].disc, extSize, &isNew))
+				++planned;
+			else
+				++rejected;
+		}
+		for (size_t i = 0; i < created.size(); ++i)
+		{
+			u32 extSize = 0;
+			if (!ExternalFileSize(created[i].external, &extSize))
+				continue;
+			modBytes += extSize;
+			if (builder.AddOrReplace(created[i].disc, extSize, &isNew))
+				++planned;
+			else
+				++rejected;
+		}
+
+		//! Put the mod above everything still living on the disc, aligned so each
+		//! range starts on a device sector - a fragment cannot begin mid-sector.
+		const u64 extent = builder.OriginalExtent();
+		const u64 region = (extent + 0x1fffffULL) & ~0x1fffffULL;
+		builder.Layout(region, 0x800);
+
+		std::vector<u8> newFst;
+		builder.Serialize(newFst, true);
+		const FstBuildStats &st = builder.Stats();
+
+		Addf(out, "  entries planned    : %u  (%u rejected)\n", planned, rejected);
+		Addf(out, "  replaced / added   : %u / %u  (+%u new directories)\n",
+			 st.replaced, st.added, st.addedDirs);
+		Addf(out, "  table entries      : %u  (disc listed %u file(s))\n",
+			 st.entryCount, (unsigned) fst.FileCount());
+		Addf(out, "  table size         : %u bytes, was %u  (%+d)\n",
+			 st.fstSize, fstSize, (int) st.fstSize - (int) fstSize);
+		Addf(out, "  disc data ends at  : 0x%010llx\n", (unsigned long long) extent);
+		Addf(out, "  mod relocated to   : 0x%010llx .. 0x%010llx\n",
+			 (unsigned long long) region, (unsigned long long) st.highestOffset);
+		Addf(out, "  mod payload        : %llu bytes\n", (unsigned long long) modBytes);
+
+		//! d2x refuses reads past the disc-type limit (dip.h). Those constants are
+		//! word offsets, hence the <<2 here.
+		const u64 dvd5 = 0x46090000ULL << 2;
+		const u64 dvd9 = 0x7ED38000ULL << 2;
+		Addf(out, "  DVD5 read ceiling  : 0x%010llx  %s\n", (unsigned long long) dvd5,
+			 st.highestOffset <= dvd5 ? "(fits)" : "(EXCEEDED)");
+		Addf(out, "  DVD9 read ceiling  : 0x%010llx  %s\n", (unsigned long long) dvd9,
+			 st.highestOffset <= dvd9 ? "(fits)" : "(EXCEEDED)");
+
+		//! FRAG_MAX in the cIOS is 20000 fragments for the whole virtual disc,
+		//! shared with the game image itself. A contiguous external file costs one
+		//! fragment; a fragmented one costs more.
+		Addf(out, "  fragment budget    : %u file(s) need at least %u of 20000 slots\n",
+			 planned, planned);
+		if (planned > 15000)
+			out += "  WARNING: that is close to the cIOS fragment limit.\n";
+
+		out += "\nWhy none of this is applied\n";
+		out += "---------------------------\n";
+		out += "The loader hands the cIOS a fragment list mapping virtual disc offsets\n"
+			   "to sectors on your drive, and that list serves the RAW backup - which\n"
+			   "keeps the game partition encrypted, exactly as it was pressed. When the\n"
+			   "running game reads a file, the IOS DI module decrypts whatever the\n"
+			   "fragment list returned. Point a fragment at a plaintext file on the card\n"
+			   "and the console decrypts bytes that were never encrypted, so the game\n"
+			   "gets noise. Making this work needs code running inside IOS, after\n"
+			   "decryption. That is the piece still to be written, and the table measured\n"
+			   "above is what it will install.\n";
 
 		AppendLog(out);
-		gprintf("Riivo: dry run - %u redirect(s), %u new, %d grow, %d missing\n",
-				(unsigned) redirects.size(), (unsigned) created.size(), grows, missing);
+		gprintf("Riivo: plan - %u redirect, %u new, %u entries, fst %u bytes\n",
+				(unsigned) redirects.size(), (unsigned) created.size(),
+				st.entryCount, st.fstSize);
 	}
 }

@@ -79,6 +79,34 @@ Status: scoping draft. Source surveyed: `usbloadergx/` @ HEAD (shallow clone).
       handles sub-range offset/length, `create=true` → Phase-4 created list, folder
       name-matching. Plus `FsDirLister` (readdir-backed external enumeration). Host
       test 8/8. All modules compile for target.
+    - `RiivoBoot.{hpp,cpp}` — runs on the console in the one window where the
+      partition is open *and* SD/USB are still mounted: reads boot.bin at 0x420,
+      pulls the FST off the disc, resolves the mod against it, and writes the whole
+      plan to the log. Also surveys every cIOS slot.
+  - **MEASURED ON HARDWARE (v0.5 log, Super Mario Galaxy 2 + Super Mario Spectral)
+    — this is what killed the redirect-only design:**
+    - 2148 real mod files (after discarding macOS `._` twins).
+    - **1881 of them (87.6%) have no disc entry at all** — files the mod *adds*.
+      A read redirect cannot serve a file the file table does not list.
+    - Of the 267 that do match, **64 are bigger than the original**. The table still
+      advertises the old length, so the game never asks for the extra bytes.
+    - Servable by pure read redirection: **203 / 2148 = 9.5%.**
+    - Conclusion: the FST rebuild is **mandatory**, not a later nicety. It moved from
+      Phase 4 to the critical path.
+    - Also measured: a single-layer disc yields FST offsets up to `0xff72d4e0`, which
+      overflows `u32 offset = raw << 2`. Offsets are now `u64` throughout.
+  - **DONE + host-verified (the rebuild engine):**
+    - `RiivoFstBuild.{hpp,cpp}` — parses the flat 12-byte-entry FST into an editable
+      tree, `AddOrReplace` (creating missing parent directories), `Layout` (hands
+      every modded file a fresh sector-aligned range above `OriginalExtent()`), and
+      `Serialize` back to the on-disc format with every directory's subtree-end index
+      recomputed. Console-dependency-free so it can be tested on a host.
+    - Host tests: 49 checks (round-trip, replace-bigger, add-into-new-dirs, subtree
+      ends after insertion, hostile input, 64-bit offsets past the 4 GiB line) and a
+      3920-file scale test rebuilding a realistic table, 2159 checks. 0 failures.
+    - Wired into the on-console report, so the next log states the real entry count,
+      new table size, relocated region, DVD5/DVD9 read ceilings and fragment budget
+      for *this* disc and *this* mod.
   - **REMAINING — hardware milestone (cannot compile/host-verify here):**
     1. *Fraglist + registration (loader C, compilable, not verifiable):* for each
        `RedirectSpec`, stat the external file (fill length when 0) and build its
@@ -100,10 +128,26 @@ Status: scoping draft. Source surveyed: `usbloadergx/` @ HEAD (shallow clone).
     FST → `RiivoFst::Parse` → `BuildRedirects` → build fraglists → register → then let
     `BootPartition`/`ShutDownDevices` proceed. This ordering is the integration spec
     for the hardware step (not yet wired, to avoid unverifiable disc-read/timing code).
-  - Note on why not pure-SETFRAG: the disc data cIOS frag-maps is *encrypted*;
-    external Riivolution files are plaintext, so they must be substituted at the
-    post-decryption read level — hence a read-hook, not just extra fragments.
-- Phase 4 (`<folder>` create=true + in-RAM FST rebuild): not started.
+  - **Why not pure-SETFRAG (settled, and worth stating precisely because it is easy
+    to get backwards).** ULGX hands the cIOS a fragment list mapping virtual disc
+    offsets to sectors on the drive. That list serves the **raw backup**, in which the
+    game partition is still encrypted exactly as pressed. Three things pin this down:
+    1. ULGX never sends `IOCTL_DI_CRYPT_SET (0xF2)`, so `MODE_CRYPT` is unset and
+       `IOCTL_DI_LOW_READ` falls through to `DI_HandleCmd` — the stock IOS DI code,
+       which decrypts.
+    2. `set_frag_list()` verifies itself with `WDVD_UnencryptedRead(discid, 32, 0)`,
+       i.e. it reads the *unencrypted* header area through the fraglist. That only
+       makes sense if everything else it serves is encrypted.
+    3. Therefore pointing a fragment at a plaintext file makes the console decrypt
+       bytes that were never encrypted — the game receives noise.
+    So the substitution must happen **inside IOS, after decryption**. An earlier note
+    in this file claimed the ARM hook could be skipped; that was wrong and is
+    retracted here.
+- **Phase 4 (in-RAM FST rebuild) — engine DONE, install step pending.** Folded into
+  Phase 3 above, because the hardware measurement showed 90% of a real mod is
+  unreachable without it. `RiivoFstBuild` produces the replacement table; what remains
+  is writing it into the game's memory (the apploader leaves the FST at `*0x80000038`)
+  and pairing it with the IOS read hook that serves the relocated ranges.
 
 ## 1. What the loader already does (the pieces we reuse)
 
