@@ -45,8 +45,11 @@ namespace Riivo
 		const u64 start = PlanRegionStart(imageBytes, sectorSize);
 
 		//! If the backup already reaches the ceiling there is nowhere to put
-		//! anything. That is the dual-layer case, and it is not a bug.
-		if (start >= RIIVO_READ_CEILING)
+		//! anything. That is the dual-layer case, and it is not a bug: the only
+		//! way past the single-layer limit is to make the cIOS call the disc
+		//! dual-layer, and doing that to a single-layer game turns its
+		//! anti-piracy read into a success instead of the failure it expects.
+		if (start >= RIIVO_DVD5_CEILING)
 			return Refuse("the backup already fills the disc address space - "
 						  "dual-layer games cannot be patched this way");
 
@@ -86,8 +89,8 @@ namespace Riivo
 
 		p.regionEnd = RoundUp(end, sectorSize);
 
-		if (p.regionEnd > RIIVO_READ_CEILING)
-			return Refuse("the mod does not fit below the cIOS read ceiling");
+		if (p.regionEnd > RIIVO_DVD5_CEILING)
+			return Refuse("the mod does not fit below the single-layer read limit");
 
 		//! One fragment per file is the best case - a file stored contiguously.
 		//! Fragmentation on the card only ever adds more, so this is a floor,
@@ -100,7 +103,7 @@ namespace Riivo
 		if (p.minFragments > p.fragsAvailable)
 			return Refuse("the mod needs more fragments than the cIOS table holds");
 
-		p.ceilingSpare = RIIVO_READ_CEILING - p.regionEnd;
+		p.ceilingSpare = RIIVO_DVD5_CEILING - p.regionEnd;
 		p.ok = true;
 		return p;
 	}

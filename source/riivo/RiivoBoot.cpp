@@ -76,12 +76,13 @@ namespace Riivo
 	//! the report can say that rather than blaming a missing list.
 	static bool fragListUntouched = false;
 
-	//! How far the virtual disc was enlarged, or zero if it was not touched.
-	//! Every byte of this is a byte that reads back as zeros instead of
-	//! failing, and a Wii game treats a successful read past the end of the
-	//! disc as proof it is running from a copy - so it is kept as small as the
-	//! mod allows and reported in the log.
-	static u64 reservedBytes = 0;
+	//! Why, when it is not the missing hardware access the report assumes by
+	//! default. Empty means AHBPROT.
+	static std::string fragRefusal;
+
+	//! Where the GAME's own fragments ended, captured in SetupDisc before the
+	//! mod's were appended to the same list.
+	static u64 origMappedEnd = 0;
 
 	//! The cIOS probe and the four-byte patch, both done in SetupDisc rather
 	//! than later with everything else.
@@ -617,8 +618,12 @@ namespace Riivo
 		//! Using the declared size here forced the mod above the whole disc,
 		//! which meant enlarging the disc, which is what tripped the
 		//! anti-piracy check. A mod that fits in the sparse tail needs neither.
-		u64 gameDataEnd = 0;
-		if (gameFrags)
+		//! Measured in SetupDisc, BEFORE the mod's fragments were appended. The
+		//! list here contains both, so recomputing it now would measure the mod
+		//! against itself: the floor would land above the mod and every file it
+		//! placed would then be refused for sitting below the region start.
+		u64 gameDataEnd = origMappedEnd;
+		if (gameDataEnd == 0 && gameFrags)
 		{
 			for (u32 i = 0; i < gameFrags->num; ++i)
 			{
@@ -630,7 +635,13 @@ namespace Riivo
 		}
 		const u64 extent = builder.OriginalExtent();
 		const u64 region = PlanRegionStart(gameDataEnd, bootSectorSize);
-		const bool extentFits = extent < region;
+
+		//! The routing boundary is fixed at 4 GiB by the patch, not by wherever
+		//! the region happens to start. Testing against `region` would pass a
+		//! disc whose own data sits between 4 GiB and the region, and every one
+		//! of those reads would be sent down the raw path and come back
+		//! undecrypted.
+		const bool extentFits = extent < RIIVO_REGION_BYTES;
 		//! Align to the drive's own sectors, never to less: a fragment cannot
 		//! begin part-way through one. 2 KB is the floor because that is a Wii
 		//! disc's own granularity, but a 4K-native drive needs 4 KB and would
@@ -697,7 +708,14 @@ namespace Riivo
 		std::vector<ModExtent> extents;
 		std::vector<PlacedFile> placed;
 
-		if (fragListUntouched)
+		if (fragListUntouched && !fragRefusal.empty())
+		{
+			Addf(out, "  SKIPPED: %s. The fragment list was left exactly as it was and\n"
+					  "  the game is being read precisely as stock USB Loader GX reads\n"
+					  "  it. Everything measured above is a dry run.\n\n",
+				 fragRefusal.c_str());
+		}
+		else if (fragListUntouched)
 		{
 			out += "  SKIPPED: the loader was not given hardware access (AHBPROT), so\n"
 				   "  the cIOS cannot be patched and file replacement is impossible on\n"
@@ -720,13 +738,16 @@ namespace Riivo
 				 imageSectors, bootSectorSize, (unsigned long long) imageBytes);
 			Addf(out, "  game data ends at  : 0x%010llx  (the floor the mod must clear)\n",
 				 (unsigned long long) gameDataEnd);
-			if (reservedBytes)
-				Addf(out, "  disc enlarged to   : %llu bytes  (reads past that still fail)\n",
-					 (unsigned long long) reservedBytes);
-			else
-				out += "  disc NOT enlarged  : the mod fits in the sparse tail, so a read\n"
-					   "                       past the end of the disc still fails - which\n"
-					   "                       is what the anti-piracy check looks at.\n";
+			out += "  disc NOT enlarged  : the declared size is the backup's own. A mod\n"
+				   "                       fragment is found by lookup, not by size, so an\n"
+				   "                       unmapped read past the end of the disc still\n"
+				   "                       fails - which is what the anti-piracy check\n"
+				   "                       looks at.\n";
+			Addf(out, "  single-layer limit : 0x%010llx  (%llu bytes of room above the\n"
+					  "                       game's data for the mod to live in)\n",
+				 (unsigned long long) RIIVO_DVD5_CEILING,
+				 (unsigned long long) (RIIVO_DVD5_CEILING > gameDataEnd
+									   ? RIIVO_DVD5_CEILING - gameDataEnd : 0));
 			Addf(out, "  its fragments      : %u of %u\n",
 				 gameFrags->num, RIIVO_FRAG_MAX);
 
@@ -897,6 +918,7 @@ namespace Riivo
 		if (cand.empty())
 		{
 			fragListUntouched = true;
+			fragRefusal = "none of the mod's files were found on the card";
 			gprintf("Riivo: no mod files found on the card, list left alone\n");
 			return;
 		}
@@ -911,6 +933,11 @@ namespace Riivo
 			if (e > gameEnd)
 				gameEnd = e;
 		}
+
+		//! Keep it: after the append below, frag_list_get() returns a list whose
+		//! fragments are the game's AND the mod's, so recomputing this later
+		//! would measure the mod against itself and refuse its own placement.
+		origMappedEnd = gameEnd;
 
 		const u32 align = sector > 0x800 ? sector : 0x800;
 		const u64 regionStart = PlanRegionStart(gameEnd, align);
@@ -934,26 +961,36 @@ namespace Riivo
 		modRegionStart = regionStart;
 		modRegionEnd = cursor;
 
-		//! Reserve only as far as the mod actually reaches, and only when it
-		//! reaches past what the backup already declares.
+		//! Everything the mod uses has to fit under the SINGLE-layer ceiling.
 		//!
-		//! This used to jump straight to the read ceiling, which made every
-		//! offset up to 8.5 GB readable. Games check for that: a read past the
-		//! end of the disc is supposed to FAIL, and one that quietly returns
-		//! zeros instead is how a Wii game decides it is running from a copy.
-		//! Super Mario Galaxy 2 answers with Error #001.
-		const u64 declared = (u64) origImageSectors * sector;
-		if (modRegionEnd > declared)
+		//! __DI_CheckOffset refuses any read at or past DVD5_LENGTH while the
+		//! cIOS believes the disc is single-layer, and that belief is exactly
+		//! what a game's anti-piracy check tests: the SDK reads one sector just
+		//! past the end of the disc and expects it to FAIL with 0x00052100. The
+		//! only way to place a mod above that line is to make the cIOS promote
+		//! the disc to dual-layer, and promoting a single-layer game hands that
+		//! check a successful read instead - which is precisely how it decides
+		//! it is running from a copy. So the line is not negotiable, and a mod
+		//! that does not fit under it is refused here rather than on the
+		//! console.
+		if (modRegionEnd > RIIVO_DVD5_CEILING)
 		{
-			u64 want = modRegionEnd;
-			if (want > RIIVO_DVD5_CEILING && want < RIIVO_DVD9_PROBE_BYTES)
-				want = RIIVO_DVD9_PROBE_BYTES;
-			if (want > RIIVO_READ_CEILING)
-				want = RIIVO_READ_CEILING;
-			const u32 sectors = (u32) ((want + sector - 1) / sector);
-			frag_list_reserve(sectors);
-			reservedBytes = (u64) sectors * sector;
+			fragRefusal = "mod needs more room than the disc has below the "
+						  "single-layer read limit";
+			gprintf("Riivo: mod ends at 0x%010llx, above the DVD5 ceiling "
+					"0x%010llx - refusing\n",
+					(unsigned long long) modRegionEnd,
+					(unsigned long long) RIIVO_DVD5_CEILING);
+			modOffsets.clear();
+			modRegionStart = modRegionEnd = 0;
+			fragListUntouched = true;
+			return;
 		}
+
+		//! What the backup says its own virtual disc is, captured before any of
+		//! this. frag_append rewrites the field on every call, so it has to be
+		//! put back afterwards - see below.
+		const u64 declared = (u64) origImageSectors * sector;
 
 		//! Append the mod's fragments to the list the loader is about to hand
 		//! over. set_frag_list registers the lot in one go, a few lines later in
@@ -964,11 +1001,44 @@ namespace Riivo
 			modOffsets.clear();
 			fragsRegistered = false;
 		}
+		else if (fragStats.failed)
+		{
+			//! A file that could not be mapped keeps its assigned offset, so the
+			//! rebuilt table would point the game at unmapped space and it would
+			//! read sparse zeros. Partial coverage is not a partial success.
+			gprintf("Riivo: %u file(s) could not be mapped, refusing\n", fragStats.failed);
+			modOffsets.clear();
+			fragsRegistered = false;
+		}
 		else
 		{
 			fragsRegistered = true;
 			gprintf("Riivo: %u mod fragment(s) appended, %u total\n",
 					fragStats.files, fragStats.fragsAfter);
+		}
+
+		//! Put the declared size back, LAST. frag_append ends with
+		//!     ff->size = offset + count;
+		//! which is an assignment, not a maximum, and it runs on every call - so
+		//! appending the mod silently redefines the virtual disc as ending at
+		//! the last mod fragment, shrinking or stretching it to suit whatever
+		//! went in last.
+		//!
+		//! The value it goes back to is the backup's own, unchanged. The disc is
+		//! never enlarged for the mod's benefit: __Frag_Get looks the offset up
+		//! in the fragment table FIRST and only consults the declared size when
+		//! nothing matched, so a mod fragment above the declared end is read
+		//! perfectly well while an unmapped offset past it still fails - which
+		//! is exactly what a real disc does, and what the game's anti-piracy
+		//! check is looking for.
+		{
+			FragList *fl = frag_list_mutable();
+			if (fl && declared)
+			{
+				fl->size = (u32) ((declared + sector - 1) / sector);
+				gprintf("Riivo: declared size restored to %u sectors (%llu bytes)\n",
+						fl->size, (unsigned long long) declared);
+			}
 		}
 
 		//! Find the cIOS read handler and patch it now, while the access to do

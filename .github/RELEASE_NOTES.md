@@ -63,6 +63,20 @@ next to the XML you selected. It records whether the XML parsed, whether it matc
 game you launched, which options were active, every patch that was enabled, and any
 `valuefile` that could not be read. Please attach that file to any bug report.
 
+## Changed in v1.8
+
+- Fixed: the mod's own fragments were being used as the floor the mod had to clear, so
+  every file it placed was then refused.
+- Fixed: adding the mod's fragments overwrote the disc's declared size. It is now put
+  back afterwards.
+- The virtual disc is never enlarged and the console is never told a single-layer game is
+  dual-layer.
+- A mod that does not fit below the single-layer limit is now refused before launch
+  instead of on the console. That is about 385 MB of mod on a typical backup.
+- A file the loader could not locate on your card now stops the whole thing rather than
+  leaving a gap.
+- 2334 automated checks, all passing.
+
 ## Changed in v1.7
 
 - Fixed: "The cIOS refused the extended list (-128)". d2x blocks the fragment ioctl once a

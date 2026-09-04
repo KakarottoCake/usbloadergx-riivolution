@@ -20,8 +20,17 @@ static void ck(bool c, const char *w)
 	if (!c) { printf("  FAIL: %s\n", w); ++failures; }
 }
 
-//! A single-layer backup: 4.7 GB of virtual disc.
+//! A single-layer backup: 4.7 GB of virtual disc. Note this is slightly ABOVE
+//! the cIOS's own single-layer read limit - a real disc's last megabyte is
+//! padding and is never read.
 static const u64 DVD5_IMAGE = 4699979776ULL;
+
+//! Where the data on a real backup actually ends, measured on the tester's
+//! console. This, not the declared size, is the floor the mod has to clear:
+//! __Frag_Get returns the first fragment covering an offset, so only offsets
+//! the game genuinely maps would shadow the mod.
+static const u64 DATA_END = 0x00ff7bffe0ULL;
+
 static const u32 SECTOR = 512;
 
 //! Lay n files of `size` back to back from `start`, sector aligned.
@@ -63,15 +72,16 @@ int main()
 
 	printf("2. a realistic mod is accepted\n");
 	{
-		const u64 start = PlanRegionStart(DVD5_IMAGE, SECTOR);
-		//! 2148 files averaging 512 KB - roughly the measured Spectral shape.
-		std::vector<ModExtent> mods = Pack(start, 512 * 1024, 2148, SECTOR);
-		FragPlan p = PlanFragRegion(DVD5_IMAGE, SECTOR, 300, mods);
+		const u64 start = PlanRegionStart(DATA_END, SECTOR);
+		//! 700 files averaging 512 KB - 367 MB, which is about as much as the
+		//! room below the single-layer limit holds.
+		std::vector<ModExtent> mods = Pack(start, 512 * 1024, 700, SECTOR);
+		FragPlan p = PlanFragRegion(DATA_END, SECTOR, 300, mods);
 		ck(p.ok, "accepted");
-		ck(p.files == 2148, "file count");
-		ck(p.minFragments == 2148, "one fragment per file at best");
-		ck(p.fragsAvailable > 2148, "the table has room");
-		ck(p.regionEnd <= RIIVO_READ_CEILING, "ends below the ceiling");
+		ck(p.files == 700, "file count");
+		ck(p.minFragments == 700, "one fragment per file at best");
+		ck(p.fragsAvailable > 700, "the table has room");
+		ck(p.regionEnd <= RIIVO_DVD5_CEILING, "ends below the single-layer limit");
 		ck(p.ceilingSpare > 0, "with room to spare");
 		printf("   %u files, %.2f GB payload, %.2f GB spare below the ceiling\n",
 			   p.files, p.payloadBytes / 1e9, p.ceilingSpare / 1e9);
@@ -89,56 +99,56 @@ int main()
 
 	printf("4. placement mistakes are caught, not shipped\n");
 	{
-		const u64 start = PlanRegionStart(DVD5_IMAGE, SECTOR);
+		const u64 start = PlanRegionStart(DATA_END, SECTOR);
 
 		//! Below the region: the game's own fragments would shadow it.
 		std::vector<ModExtent> low = Pack(start, 4096, 2, SECTOR);
 		low[0].offset = start - SECTOR;
-		ck(!PlanFragRegion(DVD5_IMAGE, SECTOR, 0, low).ok, "a file below the region");
+		ck(!PlanFragRegion(DATA_END, SECTOR, 0, low).ok, "a file below the region");
 
 		//! Not sector aligned: a fragment cannot start mid-sector.
 		std::vector<ModExtent> odd = Pack(start, 4096, 2, SECTOR);
 		odd[1].offset += 1;
-		ck(!PlanFragRegion(DVD5_IMAGE, SECTOR, 0, odd).ok, "an unaligned file");
+		ck(!PlanFragRegion(DATA_END, SECTOR, 0, odd).ok, "an unaligned file");
 
 		//! Overlapping, which would corrupt the cIOS's sorted lookup index.
 		std::vector<ModExtent> over = Pack(start, 4096, 3, SECTOR);
 		over[2].offset = over[1].offset;
-		ck(!PlanFragRegion(DVD5_IMAGE, SECTOR, 0, over).ok, "overlapping files");
+		ck(!PlanFragRegion(DATA_END, SECTOR, 0, over).ok, "overlapping files");
 
 		//! Descending, same reason.
 		std::vector<ModExtent> desc = Pack(start, 4096, 3, SECTOR);
 		u64 t = desc[1].offset; desc[1].offset = desc[2].offset; desc[2].offset = t;
-		ck(!PlanFragRegion(DVD5_IMAGE, SECTOR, 0, desc).ok, "out of order files");
+		ck(!PlanFragRegion(DATA_END, SECTOR, 0, desc).ok, "out of order files");
 
-		ck(!PlanFragRegion(DVD5_IMAGE, SECTOR, 0, std::vector<ModExtent>()).ok,
+		ck(!PlanFragRegion(DATA_END, SECTOR, 0, std::vector<ModExtent>()).ok,
 		   "no files at all");
-		ck(!PlanFragRegion(DVD5_IMAGE, 500, 0, Pack(start, 4096, 2, SECTOR)).ok,
+		ck(!PlanFragRegion(DATA_END, 500, 0, Pack(start, 4096, 2, SECTOR)).ok,
 		   "a sector size that is not a power of two");
-		ck(!PlanFragRegion(DVD5_IMAGE, 8192, 0, Pack(start, 4096, 2, SECTOR)).ok,
+		ck(!PlanFragRegion(DATA_END, 8192, 0, Pack(start, 4096, 2, SECTOR)).ok,
 		   "an out-of-range sector size");
 	}
 
 	printf("5. the ceiling and the fragment table are both hard limits\n");
 	{
-		const u64 start = PlanRegionStart(DVD5_IMAGE, SECTOR);
+		const u64 start = PlanRegionStart(DATA_END, SECTOR);
 
-		//! Enough payload to run past the read ceiling.
-		const u64 room = RIIVO_READ_CEILING - start;
+		//! Enough payload to run past the single-layer limit.
+		const u64 room = RIIVO_DVD5_CEILING - start;
 		const u32 big = 16 * 1024 * 1024;
 		const int tooMany = (int) (room / big) + 8;
-		FragPlan p = PlanFragRegion(DVD5_IMAGE, SECTOR, 0, Pack(start, big, tooMany, SECTOR));
-		ck(!p.ok, "refused when the mod runs past the ceiling");
-		ck(p.why.find("ceiling") != std::string::npos, "and says why");
+		FragPlan p = PlanFragRegion(DATA_END, SECTOR, 0, Pack(start, big, tooMany, SECTOR));
+		ck(!p.ok, "refused when the mod runs past the limit");
+		ck(p.why.find("single-layer") != std::string::npos, "and says why");
 
 		//! The game's own fragments leave too little of the table.
-		FragPlan q = PlanFragRegion(DVD5_IMAGE, SECTOR, RIIVO_FRAG_MAX - 100,
+		FragPlan q = PlanFragRegion(DATA_END, SECTOR, RIIVO_FRAG_MAX - 100,
 									Pack(start, 4096, 500, SECTOR));
 		ck(!q.ok, "refused when the fragment table is nearly full");
 		ck(q.why.find("fragments") != std::string::npos, "and says why");
 
 		//! A completely full table leaves nothing, without underflowing.
-		FragPlan r = PlanFragRegion(DVD5_IMAGE, SECTOR, RIIVO_FRAG_MAX + 500,
+		FragPlan r = PlanFragRegion(DATA_END, SECTOR, RIIVO_FRAG_MAX + 500,
 									Pack(start, 4096, 2, SECTOR));
 		ck(!r.ok, "refused when the table is already over full");
 		ck(r.fragsAvailable == 0, "and the count did not wrap");
@@ -147,39 +157,39 @@ int main()
 	printf("6. a 4 KB sector drive works too\n");
 	{
 		const u32 sec = 4096;
-		const u64 start = PlanRegionStart(DVD5_IMAGE, sec);
+		const u64 start = PlanRegionStart(DATA_END, sec);
 		ck((start % sec) == 0, "region aligned to the larger sector");
-		FragPlan p = PlanFragRegion(DVD5_IMAGE, sec, 300, Pack(start, 100000, 64, sec));
+		FragPlan p = PlanFragRegion(DATA_END, sec, 300, Pack(start, 100000, 64, sec));
 		ck(p.ok, "accepted");
 		ck((p.regionEnd % sec) == 0, "region end aligned");
 	}
 
-	printf("7. the reservation must not be mistaken for the backup's own size\n");
+	printf("7. the declared size is never mistaken for the floor\n");
 	{
-		//! The regression this pins down. PrepareFragList raises the fragment
-		//! list's declared size all the way to the read ceiling, so the cIOS
-		//! promotes the disc to dual-layer limits. Reading that field back
-		//! afterwards and calling it "the backup's size" made every game look
-		//! like it filled the address space, and every game was refused as
-		//! dual-layer - including single-layer ones like the tester's NSMBW.
-		const u64 reserved = RIIVO_READ_CEILING;   // what the field says AFTER reserving
-		const u64 real     = 4699979776ULL;        // what the backup actually declares
-
+		//! The regression this pins down. An earlier version raised the fragment
+		//! list's declared size to make room for the mod, then read that same
+		//! field back and called it "the backup's size" - so every game looked
+		//! like it filled the address space and every game was refused as
+		//! dual-layer. Nothing inflates the field any more, but the shape of the
+		//! mistake is worth keeping: an inflated figure must still be refused,
+		//! and the real one must still work.
+		const u64 inflated = RIIVO_READ_CEILING;
 		std::vector<ModExtent> mods =
-			Pack(PlanRegionStart(reserved, SECTOR), 4096, 4, SECTOR);
-		FragPlan wrong = PlanFragRegion(reserved, SECTOR, 3, mods);
-		ck(!wrong.ok, "the inflated figure refuses (this was the bug)");
+			Pack(PlanRegionStart(inflated, SECTOR), 4096, 4, SECTOR);
+		ck(!PlanFragRegion(inflated, SECTOR, 3, mods).ok,
+		   "an inflated figure refuses (this was the bug)");
 
-		//! With the real figure the same mod is placeable. These are the
-		//! tester's numbers: 1092 files, 658 MB of payload, 3 game fragments.
-		const u64 start = PlanRegionStart(real, SECTOR);
-		FragPlan right = PlanFragRegion(real, SECTOR,
-										3, Pack(start, 602753, 1092, SECTOR));
-		ck(right.ok, "the real figure accepts the tester's NSMBW mod");
-		ck(right.regionStart >= real, "region clears the backup");
+		//! And the floor that is actually used is where the data ends, which on
+		//! both tester backups is below the 4 GiB line - so the whole gap between
+		//! there and the single-layer limit is available.
+		const u64 start = PlanRegionStart(DATA_END, SECTOR);
+		FragPlan right = PlanFragRegion(DATA_END, SECTOR, 3,
+										Pack(start, 602753, 600, SECTOR));
+		ck(right.ok, "a 360 MB mod fits above the data end");
+		ck(right.regionStart >= DATA_END, "region clears the game's data");
 		ck(right.regionStart >= RIIVO_REGION_BYTES, "and clears the 4 GiB line");
-		ck(right.files == 1092, "all 1092 files placed");
-		printf("   region at 0x%llx, %llu bytes spare below the ceiling\n",
+		ck(right.files == 600, "all 600 files placed");
+		printf("   region at 0x%llx, %llu bytes spare below the limit\n",
 			   (unsigned long long) right.regionStart,
 			   (unsigned long long) right.ceilingSpare);
 	}
@@ -192,64 +202,66 @@ int main()
 		//! the same place - refused as "two files overlap". CollectPlaced now
 		//! keys on the disc path so only one survives; this pins down what the
 		//! planner does with the two shapes either side of that fix.
-		const u64 start = PlanRegionStart(DVD5_IMAGE, SECTOR);
+		const u64 start = PlanRegionStart(DATA_END, SECTOR);
 
 		std::vector<ModExtent> dup = Pack(start, 4096, 3, SECTOR);
 		dup.push_back(dup[1]);                       // the same file claimed twice
 		std::sort(dup.begin(), dup.end(), ByOffset);
-		ck(!PlanFragRegion(DVD5_IMAGE, SECTOR, 3, dup).ok,
+		ck(!PlanFragRegion(DATA_END, SECTOR, 3, dup).ok,
 		   "a duplicated extent is still refused (the symptom)");
 
 		std::vector<ModExtent> once = Pack(start, 4096, 3, SECTOR);
-		FragPlan p = PlanFragRegion(DVD5_IMAGE, SECTOR, 3, once);
+		FragPlan p = PlanFragRegion(DATA_END, SECTOR, 3, once);
 		ck(p.ok, "the de-duplicated form is accepted (the fix)");
 		ck(p.files == 3, "and keeps one extent per disc file");
 	}
 
-	printf("9. the floor is where the game's data ends, not where its disc does\n");
+	printf("9. how much room there actually is, and what will not fit\n");
 	{
 		//! Error #001. A Wii game checks that a read past the end of the disc
 		//! FAILS; one that returns zeros instead is how it concludes it is
-		//! running from a copy. Enlarging the virtual disc is what makes those
-		//! reads succeed, so it has to be avoided whenever the mod can be
-		//! placed inside what the backup already declares.
-		//!
-		//! Both tester backups: 4.685 GB declared, real data ending at
-		//! 0x00ff7bffe0 - which is BELOW 4 GiB, so the region starts at the
-		//! patch threshold and there is 390 MB of sparse tail to use.
+		//! running from a copy. The SDK reads one sector just past the
+		//! single-layer end and requires that error - so the disc has to stay
+		//! single-layer, and the mod has to fit under that line. There is no
+		//! version of "enlarge the disc a bit" that survives the check.
 		const u64 declared = 4685037568ULL;
-		const u64 dataEnd  = 0x00ff7bffe0ULL;
-		ck(dataEnd < RIIVO_REGION_BYTES, "the game's data ends below the 4 GiB line");
+		ck(DATA_END < RIIVO_REGION_BYTES, "the game's data ends below the 4 GiB line");
 
-		const u64 start = PlanRegionStart(dataEnd, SECTOR);
+		const u64 start = PlanRegionStart(DATA_END, SECTOR);
 		ck(start == RIIVO_REGION_BYTES, "so the mod starts exactly at 4 GiB");
 		ck(start < declared, "which is inside the disc the backup already declares");
 
-		//! Super Mario Gravity: 8 MB. Comfortably inside the tail, so the disc
-		//! never has to be enlarged and the anti-piracy read still fails.
-		FragPlan small = PlanFragRegion(dataEnd, SECTOR, 3, Pack(start, 52863, 151, SECTOR));
-		ck(small.ok, "an 8 MB mod is placeable");
-		ck(small.regionEnd <= declared, "entirely inside the declared disc - no enlarging");
-		printf("   8 MB mod ends at 0x%llx, %llu bytes below the declared end\n",
-			   (unsigned long long) small.regionEnd,
-			   (unsigned long long) (declared - small.regionEnd));
+		//! That leaves this much, and it is the whole budget.
+		const u64 room = RIIVO_DVD5_CEILING - start;
+		ck(room > 400000000ULL && room < 410000000ULL, "about 385 MB of room");
+		printf("   room for a mod: %llu bytes (%.0f MB)\n",
+			   (unsigned long long) room, room / 1048576.0);
 
-		//! Newer SMBW: 645 MB. Does not fit in the 390 MB tail, so this one
-		//! genuinely does need a larger disc - but only to its own end, not to
-		//! the read ceiling.
-		FragPlan big = PlanFragRegion(dataEnd, SECTOR, 3, Pack(start, 602753, 1067, SECTOR));
-		ck(big.ok, "a 645 MB mod is still placeable");
-		ck(big.regionEnd > declared, "but it does run past the declared end");
-		ck(big.regionEnd < RIIVO_READ_CEILING, "and nowhere near the read ceiling");
-		printf("   645 MB mod needs 0x%llx, %llu bytes beyond the declared end\n",
-			   (unsigned long long) big.regionEnd,
-			   (unsigned long long) (big.regionEnd - declared));
+		//! Super Mario Gravity: 8 MB. Comfortably inside.
+		FragPlan small = PlanFragRegion(DATA_END, SECTOR, 3, Pack(start, 52863, 151, SECTOR));
+		ck(small.ok, "an 8 MB mod is placeable");
+		ck(small.regionEnd <= declared, "entirely inside the declared disc");
+		ck(small.regionEnd <= RIIVO_DVD5_CEILING, "and under the single-layer limit");
+
+		//! Newer SMBW: 645 MB. Does not fit, and has to be refused here rather
+		//! than discovered as an anti-piracy screen on the console.
+		FragPlan big = PlanFragRegion(DATA_END, SECTOR, 3, Pack(start, 602753, 1067, SECTOR));
+		ck(!big.ok, "a 645 MB mod is refused, not squeezed in");
+		ck(big.why.find("single-layer") != std::string::npos, "and says why");
+		printf("   645 MB mod: %s\n", big.why.c_str());
 
 		//! Using the declared size as the floor - what it did before - pushes
-		//! even the 8 MB mod above the whole disc, forcing the enlargement that
-		//! caused the problem.
+		//! even the 8 MB mod above the whole disc, which is above the limit.
 		ck(PlanRegionStart(declared, SECTOR) >= declared,
 		   "the old floor put the mod above the disc (this was the cause)");
+		ck(RIIVO_DVD5_CEILING - PlanRegionStart(declared, SECTOR) < 16 * 1024 * 1024,
+		   "leaving under 16 MB instead of 386");
+		//! A 100 MB mod: fine from the data end, impossible from the declared one.
+		ck(PlanFragRegion(DATA_END, SECTOR, 3, Pack(start, 524288, 200, SECTOR)).ok,
+		   "a 100 MB mod fits above the data end");
+		ck(!PlanFragRegion(declared, SECTOR, 3,
+						   Pack(PlanRegionStart(declared, SECTOR), 524288, 200, SECTOR)).ok,
+		   "but not above the declared end");
 	}
 
 	printf("\n%d checks, %d failure(s)\n", checks, failures);
