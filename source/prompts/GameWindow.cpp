@@ -24,6 +24,8 @@
 #include "utils/tools.h"
 #include "cache/cache.hpp"
 #include "SoundOperations/MusicPlayer.h"
+#include "riivo/RiivoParser.hpp"
+#include "riivo/RiivoConfig.hpp"
 
 #define NONE		0
 #define LEFT		1
@@ -838,6 +840,41 @@ void GameWindow::BootGame(struct discHdr *header)
 				return;
 			}
 		}
+	}
+
+	//! Riivolution pre-flight. Everything Riivolution does happens after the GUI
+	//! is gone, so a misconfigured mod just black-screens after the health and
+	//! safety screen with nothing to explain it. Check the likely mistakes here,
+	//! while there is still a screen to complain on, and let the user back out.
+	if (game_cfg->RiivoPath.size() > 0)
+	{
+		Riivo::Disc riivoDisc;
+		std::string riivoErr;
+		std::string warning;
+
+		if (!Riivo::ParseFile(game_cfg->RiivoPath.c_str(), riivoDisc, &riivoErr))
+		{
+			warning = tr( "The selected Riivolution XML could not be read, so no mod will be applied." );
+		}
+		else
+		{
+			if (game_cfg->RiivoConfig.size() > 0)
+				Riivo::ApplySelection(riivoDisc, game_cfg->RiivoConfig);
+
+			Riivo::ResolvedPatchSet riivoSet;
+			Riivo::Resolve(riivoDisc, IDfull, riivoSet);
+
+			if (!riivoDisc.IsValidForGame(IDfull, 0, 0))
+				warning = tr( "The selected Riivolution XML is meant for a different game. Applying it will most likely crash." );
+			else if (!riivoSet.files.empty() || !riivoSet.folders.empty())
+				warning = tr( "This mod replaces files on the disc, which this build cannot do yet. The game will most likely hang on a black screen after the health and safety screen." );
+			else if (riivoSet.IsEmpty())
+				warning = tr( "No Riivolution patches are enabled for this game - every option is set to Disabled." );
+		}
+
+		if (warning.size() > 0 && !WindowPrompt(tr( "Riivolution:" ), warning.c_str(),
+											    tr( "Continue" ), tr( "Cancel" )))
+			return;
 	}
 
 	GameStatistics.SetPlayCount(header->id, GameStatistics.GetPlayCount(header->id)+1);
