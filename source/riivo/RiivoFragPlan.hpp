@@ -48,6 +48,15 @@ namespace Riivo
 	//! been recognised as dual-layer (dip.h, DVD9_LENGTH).
 	static const u64 RIIVO_READ_CEILING = 0x7ED38000ULL * 4;
 
+	//! The single-layer limit. Past this the cIOS refuses every read unless it
+	//! has decided the disc is dual-layer.
+	static const u64 RIIVO_DVD5_CEILING = 0x46090000ULL * 4;
+
+	//! Where __DI_CheckDisc() probes to make that decision - word offset
+	//! 0x47000000. A declared size reaching this point makes the probe hit a
+	//! sparse zero block, succeed, and promote the disc to dual-layer limits.
+	static const u64 RIIVO_DVD9_PROBE_BYTES = 0x47000000ULL * 4;
+
 	//! FRAG_MAX in the cIOS. Shared between the game's own fragments and ours.
 	static const u32 RIIVO_FRAG_MAX = 20000;
 

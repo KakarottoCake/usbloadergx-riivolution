@@ -206,6 +206,52 @@ int main()
 		ck(p.files == 3, "and keeps one extent per disc file");
 	}
 
+	printf("9. the floor is where the game's data ends, not where its disc does\n");
+	{
+		//! Error #001. A Wii game checks that a read past the end of the disc
+		//! FAILS; one that returns zeros instead is how it concludes it is
+		//! running from a copy. Enlarging the virtual disc is what makes those
+		//! reads succeed, so it has to be avoided whenever the mod can be
+		//! placed inside what the backup already declares.
+		//!
+		//! Both tester backups: 4.685 GB declared, real data ending at
+		//! 0x00ff7bffe0 - which is BELOW 4 GiB, so the region starts at the
+		//! patch threshold and there is 390 MB of sparse tail to use.
+		const u64 declared = 4685037568ULL;
+		const u64 dataEnd  = 0x00ff7bffe0ULL;
+		ck(dataEnd < RIIVO_REGION_BYTES, "the game's data ends below the 4 GiB line");
+
+		const u64 start = PlanRegionStart(dataEnd, SECTOR);
+		ck(start == RIIVO_REGION_BYTES, "so the mod starts exactly at 4 GiB");
+		ck(start < declared, "which is inside the disc the backup already declares");
+
+		//! Super Mario Gravity: 8 MB. Comfortably inside the tail, so the disc
+		//! never has to be enlarged and the anti-piracy read still fails.
+		FragPlan small = PlanFragRegion(dataEnd, SECTOR, 3, Pack(start, 52863, 151, SECTOR));
+		ck(small.ok, "an 8 MB mod is placeable");
+		ck(small.regionEnd <= declared, "entirely inside the declared disc - no enlarging");
+		printf("   8 MB mod ends at 0x%llx, %llu bytes below the declared end\n",
+			   (unsigned long long) small.regionEnd,
+			   (unsigned long long) (declared - small.regionEnd));
+
+		//! Newer SMBW: 645 MB. Does not fit in the 390 MB tail, so this one
+		//! genuinely does need a larger disc - but only to its own end, not to
+		//! the read ceiling.
+		FragPlan big = PlanFragRegion(dataEnd, SECTOR, 3, Pack(start, 602753, 1067, SECTOR));
+		ck(big.ok, "a 645 MB mod is still placeable");
+		ck(big.regionEnd > declared, "but it does run past the declared end");
+		ck(big.regionEnd < RIIVO_READ_CEILING, "and nowhere near the read ceiling");
+		printf("   645 MB mod needs 0x%llx, %llu bytes beyond the declared end\n",
+			   (unsigned long long) big.regionEnd,
+			   (unsigned long long) (big.regionEnd - declared));
+
+		//! Using the declared size as the floor - what it did before - pushes
+		//! even the 8 MB mod above the whole disc, forcing the enlargement that
+		//! caused the problem.
+		ck(PlanRegionStart(declared, SECTOR) >= declared,
+		   "the old floor put the mod above the disc (this was the cause)");
+	}
+
 	printf("\n%d checks, %d failure(s)\n", checks, failures);
 	return failures ? 1 : 0;
 }
