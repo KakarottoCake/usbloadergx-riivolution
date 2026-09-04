@@ -14,6 +14,8 @@
 #include "RiivoFst.hpp"
 #include "RiivoFile.hpp"
 #include "RiivoFstBuild.hpp"
+#include "RiivoFstInstall.hpp"
+#include "RiivoIosProbe.hpp"
 #include "usbloader/wdvd.h"
 #include "system/IosLoader.h"
 #include "gecko.h"
@@ -32,6 +34,11 @@ namespace Riivo
 	static const ResolvedPatchSet *bootSet = 0;
 	static std::string bootDevice;
 	static std::string bootLogPath;
+
+	//! Size of the table PrepareFileRedirects worked out, carried across to
+	//! ReportFstPlacement - which runs later, after the apploader, and needs to
+	//! know how much room the rebuilt table wants.
+	static u32 plannedFstSize = 0;
 
 	void SetBootContext(const ResolvedPatchSet *set, const std::string &device,
 						const std::string &logPath)
@@ -357,6 +364,7 @@ namespace Riivo
 		std::vector<u8> newFst;
 		builder.Serialize(newFst, true);
 		const FstBuildStats &st = builder.Stats();
+		plannedFstSize = st.fstSize;
 
 		Addf(out, "  entries planned    : %u  (%u rejected)\n", planned, rejected);
 		Addf(out, "  replaced / added   : %u / %u  (+%u new directories)\n",
@@ -387,6 +395,15 @@ namespace Riivo
 		if (planned > 15000)
 			out += "  WARNING: that is close to the cIOS fragment limit.\n";
 
+		//! Go looking for the cIOS code that has to be patched. This is the one
+		//! input that cannot be worked out anywhere but on the console itself.
+		{
+			std::string dumpPath = bootDevice + "/riivolution/usbloadergx_riivo_dip.bin";
+			IosProbe probe;
+			ProbeIosPlugin(dumpPath, probe);
+			out += DescribeProbe(probe);
+		}
+
 		out += "\nWhy none of this is applied\n";
 		out += "---------------------------\n";
 		out += "The loader hands the cIOS a fragment list mapping virtual disc offsets\n"
@@ -403,5 +420,55 @@ namespace Riivo
 		gprintf("Riivo: plan - %u redirect, %u new, %u entries, fst %u bytes\n",
 				(unsigned) redirects.size(), (unsigned) created.size(),
 				st.entryCount, st.fstSize);
+	}
+
+	// --------------------------------------------------------------------
+	// 3. Where the rebuilt table would go in the game's memory
+	// --------------------------------------------------------------------
+
+	void ReportFstPlacement()
+	{
+		if (!bootSet || plannedFstSize == 0)
+			return;
+
+		const ArenaInfo arena = ReadArenaInfo();
+		const FstPlacement place = PlaceFst(arena, plannedFstSize, 32);
+
+		std::string out;
+		out += "\n\nWhere the rebuilt table would go\n";
+		out += "--------------------------------\n";
+		out += "Read from the boot-info block the apploader has just filled in.\n\n";
+
+		Addf(out, "  arena low    : %08x\n", arena.arenaLo);
+		Addf(out, "  arena high   : %08x\n", arena.arenaHi);
+		Addf(out, "  table now at : %08x, %u bytes reserved\n",
+			 arena.fstAddr, arena.fstMaxSize);
+		Addf(out, "  rebuilt size : %u bytes\n\n", plannedFstSize);
+
+		if (!place.ok)
+		{
+			Addf(out, "  REFUSED: %s\n", place.why.c_str());
+			out += "\n  Nothing would be written. Refusing is the right outcome here -\n"
+				   "  a wrong address writes over the running game and shows up as a\n"
+				   "  hang with nothing on screen.\n";
+		}
+		else if (place.inPlace)
+		{
+			Addf(out, "  fits in the room the apploader already set aside (%u bytes spare)\n",
+				 arena.fstMaxSize - plannedFstSize);
+			out += "  Nothing would move and the game's heap would be untouched.\n";
+		}
+		else
+		{
+			Addf(out, "  would go at  : %08x  (extended downwards)\n", place.fstAddr);
+			Addf(out, "  arena high   : %08x -> %08x\n", arena.arenaHi, place.newArenaHi);
+			Addf(out, "  taken from the game's heap : %u KB\n", place.reserved / 1024);
+			Addf(out, "  heap the game still has    : %u MB\n",
+				 place.heapLeft / (1024 * 1024));
+		}
+
+		AppendLog(out);
+		gprintf("Riivo: placement %s (%08x, %u bytes)\n",
+				place.ok ? "ok" : "refused", place.fstAddr, plannedFstSize);
 	}
 }

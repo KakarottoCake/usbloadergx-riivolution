@@ -55,6 +55,48 @@ next to the XML you selected. It records whether the XML parsed, whether it matc
 game you launched, which options were active, every patch that was enabled, and any
 `valuefile` that could not be read. Please attach that file to any bug report.
 
+## Changed in v0.7 - the last thing I need from your console
+
+**Please run your game once with the mod selected, then send me two files:**
+
+```
+<device>:/riivolution/usbloadergx_riivo.log
+<device>:/riivolution/usbloadergx_riivo_dip.bin
+```
+
+The `.bin` is new, about 32 KB, and it is the one thing I cannot work out from
+here. Nothing in this build changes how your game boots — it reads, measures and
+writes those two files.
+
+### Why one more round
+
+I found the route to making this actually work, and it is much smaller than I
+feared. Your cIOS reads the game off your drive through a fragment list, and it
+has **two** read paths: the normal one that decrypts (and checks hashes), and one
+that hands back raw bytes untouched. Mod files get relocated to their own region
+high above the real game data, so the change needed is roughly *"reads above this
+line take the raw path"*. That is a couple of instructions. Everything below the
+line — the actual game — is untouched and still verified exactly as before.
+
+The catch is that those instructions have to be written against your cIOS's real
+compiled code, and that code cannot be obtained anywhere but a running console:
+IOS modules run at addresses the Wii's ARM chip remaps privately, d2x does not
+ship the plugin as a separate file, and the layout shifts between cIOS versions.
+So this build scans your console's memory for the plugin's fingerprints and
+photographs the surrounding code into that `.bin`. With it I can write the patch
+against real instructions instead of guessing; without it I would be shipping you
+blind attempts, one reboot at a time.
+
+### Also in this build
+
+- **Where the rebuilt file table would go.** The table has to be written into the
+  game's memory and the game pointed at it. That is done by taking a slice of the
+  heap the game has not claimed yet — the same trick the console's own loader
+  uses. Measured on a normal layout it costs about **272 KB out of 24 MB**. The
+  placement logic refuses rather than guesses on anything unexpected, because a
+  wrong address there overwrites the running game and looks like a hang.
+- 37 more automated checks, mostly of those refusals — **2269 total, all passing**.
+
 ## Changed in v0.6 - the answer, and the engine that follows from it
 
 The v0.5 log answered the design question, and the answer was worse than hoped. Measured
@@ -74,9 +116,9 @@ game would never even ask. So the file table itself has to be rebuilt.
 **That rebuild engine is now written and tested.** It reads the game's real file table,
 inserts entries for every file the mod adds (creating folders as needed), corrects the
 size of every file the mod replaces, and hands each one a fresh location. It is covered
-by 2232 automated checks — including a full rebuild of a 3920-file table — which run on a
-PC rather than on your console, so this part did not cost you any reboots. They are in
-the repository under `hosttests/` if you want to run them yourself.
+by automated checks — including a full rebuild of a 3920-file table — which run on a PC
+rather than on your console, so this part did not cost you any reboots. They are in the
+repository under `hosttests/` if you want to run them yourself.
 
 This build runs the whole thing against your actual disc and writes the result to the
 log — real entry counts, the new table size, where the mod would live, and whether that
