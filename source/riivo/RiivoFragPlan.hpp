@@ -18,12 +18,19 @@
  *  2. It must start at or above the end of the backup's own virtual disc, or
  *     the game's fragments would shadow the mod's - a lookup returns the first
  *     fragment covering an offset, and the game's come first in the table.
- *  3. It must end below the dual-layer read ceiling the cIOS enforces
- *     (0x7ED38000 words). Past that every read is refused outright.
+ *  3. It must end below the SINGLE-layer read limit the cIOS enforces
+ *     (0x46090000 words). Past that every read is refused outright unless the
+ *     cIOS has decided the disc is dual-layer - and making it decide that
+ *     about a single-layer game is not an option. The game's own anti-piracy
+ *     check reads one sector just past the single-layer end and requires it to
+ *     FAIL; promote the disc and that read succeeds, which is the definition
+ *     of a copy as far as the game is concerned.
  *
  * Constraint 2 is what rules out dual-layer games: their backup already fills
  * the address space up to the ceiling, leaving nowhere to put anything. That is
- * a real limitation of this approach, not an oversight.
+ * a real limitation of this approach, not an oversight. Constraint 3 caps how
+ * big a mod can be: roughly 385 MB above the 4 GiB line, less whatever the
+ * game's own data reaches past it.
  *
  * The offset the cIOS ends up using is the same one the game asked for -
  * __DI_ReadUnencrypted adds config.offset[0]+config.offset[1], and both are
@@ -55,6 +62,9 @@ namespace Riivo
 	//! Where __DI_CheckDisc() probes to make that decision - word offset
 	//! 0x47000000. A declared size reaching this point makes the probe hit a
 	//! sparse zero block, succeed, and promote the disc to dual-layer limits.
+	//! Nothing here does that on purpose; it is recorded so the reason stays
+	//! visible, because promoting a single-layer game is what an anti-piracy
+	//! check is looking for.
 	static const u64 RIIVO_DVD9_PROBE_BYTES = 0x47000000ULL * 4;
 
 	//! FRAG_MAX in the cIOS. Shared between the game's own fragments and ours.
