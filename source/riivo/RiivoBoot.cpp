@@ -24,6 +24,7 @@
 #include "usbloader/frag.h"
 #include "usbloader/wbfs.h"
 #include "settings/CSettings.h"
+#include "Controls/DeviceHandler.hpp"
 #include "memory/mem2.h"
 #include "usbloader/wdvd.h"
 #include "system/IosLoader.h"
@@ -125,17 +126,80 @@ namespace Riivo
 	//! The game's id, needed to ask which partition it lives on.
 	static u8 bootGameId[8] = { 0 };
 
+	//! The USB port the backup is on, so the mod can be checked against it.
+	static int bootUsbPort = 0;
+
+	//! Where the mod's own files live, resolved in SetupDisc. The cIOS reads
+	//! EVERY fragment in the list from a single drive - set_frag_list hands it
+	//! one device number - so a mod on the other drive is not an error, it just
+	//! reads the wrong sectors and comes back as noise.
+	struct ModDevice
+	{
+		int drive;      //!< DeviceHandler's SD / USB1..USB8, -1 if unknown
+		bool onSd;
+		int fsType;     //!< PART_FS_*, -1 if unknown
+		u32 lbaStart;
+		int usbPort;
+		ModDevice() : drive(-1), onSd(false), fsType(-1), lbaStart(0), usbPort(-1) {}
+	};
+
+	static ModDevice modDev;
+	static bool listFromSd = false;
+
 	void SetBootContext(const ResolvedPatchSet *set, const std::string &device,
 						const std::string &logPath, u32 sectorSize,
-						const u8 *gameId)
+						const u8 *gameId, int usbPort)
 	{
 		bootSet = set;
 		bootDevice = device;
 		bootLogPath = logPath;
 		bootSectorSize = sectorSize ? sectorSize : 512;
+		bootUsbPort = usbPort;
 		memset(bootGameId, 0, sizeof(bootGameId));
 		if (gameId)
 			memcpy(bootGameId, gameId, 6);
+	}
+
+	//! Ask DeviceHandler which drive a mount prefix ("sd:", "usb1:") names, and
+	//! that drive's own filesystem and starting sector.
+	//!
+	//! The mod's OWN partition is what matters here, not the game's. NTFS and
+	//! ext report sectors relative to the partition they are on, so adding the
+	//! game's starting sector to a file on a different partition points the
+	//! fragment somewhere else entirely - and the read succeeds, quietly, with
+	//! the wrong bytes.
+	static ModDevice ResolveModDevice(const std::string &device)
+	{
+		ModDevice m;
+		if (device.empty())
+			return m;
+		m.drive = DeviceHandler::PathToDriveType(device.c_str());
+		if (m.drive < 0)
+			return m;
+		m.onSd = (m.drive == SD);
+		m.fsType = DeviceHandler::GetFilesystemType(m.drive);
+
+		DeviceHandler *dh = DeviceHandler::Instance();
+		if (!dh)
+			return m;
+
+		PartitionHandle *h = 0;
+		int pos = -1;
+		if (m.onSd)
+		{
+			h = dh->GetSDHandle();
+			pos = DeviceHandler::GetSDPartition();
+		}
+		else
+		{
+			const int part = m.drive - USB1;
+			h = dh->GetUSBHandleFromPartition(part);
+			pos = DeviceHandler::PartitionToPortPartition(part);
+			m.usbPort = DeviceHandler::PartitionToUSBPort(part);
+		}
+		if (h && pos >= 0)
+			m.lbaStart = h->GetLBAStart(pos);
+		return m;
 	}
 
 	void AppendLog(const std::string &text)
@@ -399,6 +463,35 @@ namespace Riivo
 		if (!VerifyModFragment(placed[0].offset, placed[0].external, why))
 		{
 			Addf(out, "  The read-back check failed: %s\n", why.c_str());
+
+			//! A read that SUCCEEDS with the wrong bytes means the fragment
+			//! pointed somewhere real but wrong, so print the mapping itself:
+			//! the disc offset asked for, the sector it resolves to, and what
+			//! the game's own first fragment looks like for comparison. That is
+			//! enough to tell a wrong drive from a wrong partition base.
+			const FragList *fl = frag_list_get();
+			if (fl)
+			{
+				const u32 want = (u32) (placed[0].offset / bootSectorSize);
+				for (u32 i = 0; i < fl->num; ++i)
+				{
+					if (fl->frag[i].offset <= want
+						&& fl->frag[i].offset + fl->frag[i].count > want)
+					{
+						Addf(out, "  that offset maps to  : sector %u on the %s "
+								  "(fragment %u of %u)\n",
+							 fl->frag[i].sector + (want - fl->frag[i].offset),
+							 listFromSd ? "SD card" : "USB drive", i, fl->num);
+						break;
+					}
+				}
+				if (fl->num)
+					Addf(out, "  the game's first is  : disc sector %u -> drive "
+							  "sector %u, %u sector(s)\n",
+						 fl->frag[0].offset, fl->frag[0].sector, fl->frag[0].count);
+				Addf(out, "  mod file             : %s\n", placed[0].external.c_str());
+			}
+
 			out += "  Nothing was patched. The game boots unmodified.\n";
 			return;
 		}
@@ -749,7 +842,29 @@ namespace Riivo
 				 (unsigned long long) (RIIVO_DVD5_CEILING > gameDataEnd
 									   ? RIIVO_DVD5_CEILING - gameDataEnd : 0));
 			Addf(out, "  its fragments      : %u of %u\n",
-				 gameFrags->num, RIIVO_FRAG_MAX);
+				 fragStats.fragsBefore ? fragStats.fragsBefore : gameFrags->num,
+				 RIIVO_FRAG_MAX);
+
+			//! Which drive everything is on. The cIOS serves the whole list from
+			//! one device, so a mismatch here reads the mod's sector numbers off
+			//! the game's disk and hands the game noise - a successful read of
+			//! the wrong bytes, which is the hardest kind of failure to see.
+			Addf(out, "  game read from     : %s%s\n",
+				 listFromSd ? "SD card" : "USB drive",
+				 listFromSd ? "" : (bootUsbPort == 1 ? " (port 1)" : " (port 0)"));
+			Addf(out, "  mod files on       : %s  (%s, starts at sector %u)\n",
+				 bootDevice.c_str(),
+				 modDev.fsType == PART_FS_FAT ? "FAT"
+				 : modDev.fsType == PART_FS_NTFS ? "NTFS"
+				 : modDev.fsType == PART_FS_EXT ? "ext"
+				 : modDev.fsType == PART_FS_WBFS ? "raw WBFS" : "unknown",
+				 modDev.lbaStart);
+			Addf(out, "  game partition     : %s, starts at sector %u\n",
+				 bootFsType == PART_FS_FAT ? "FAT"
+				 : bootFsType == PART_FS_NTFS ? "NTFS"
+				 : bootFsType == PART_FS_EXT ? "ext"
+				 : bootFsType == PART_FS_WBFS ? "raw WBFS" : "unknown",
+				 bootFsLba);
 
 			//! Report how the fragments actually went in, back in SetupDisc.
 			if (fragsRegistered)
@@ -902,6 +1017,50 @@ namespace Riivo
 		gprintf("Riivo: partition lookup %s (fs %u, lba %u)\n",
 				bootFsKnown ? "ok" : "FAILED", bootFsType, bootFsLba);
 
+		//! The cIOS reads the WHOLE fragment list from one drive: set_frag_list
+		//! passes Settings.SDMode as its device and every fragment, the game's
+		//! and the mod's alike, is served from that one. A mod on the other
+		//! drive does not fail - the sector numbers are simply read off the
+		//! wrong disk and the game gets noise. Measured on a tester's console:
+		//! the read-back returned 67f8b995 where the mod file starts "Yaz0".
+		modDev = ResolveModDevice(bootDevice);
+		listFromSd = (Settings.SDMode != 0);
+
+		if (modDev.drive < 0)
+		{
+			fragRefusal = "the drive the mod is on could not be identified";
+			fragListUntouched = true;
+			return;
+		}
+		if (modDev.onSd != listFromSd)
+		{
+			fragRefusal = modDev.onSd
+						  ? "the mod is on the SD card but the game is being read "
+							"from USB - they have to be on the same drive"
+						  : "the mod is on the USB drive but the game is being read "
+							"from the SD card - they have to be on the same drive";
+			gprintf("Riivo: mod on %s, list served from %s - refusing\n",
+					modDev.onSd ? "SD" : "USB", listFromSd ? "SD" : "USB");
+			fragListUntouched = true;
+			return;
+		}
+		if (!modDev.onSd && modDev.usbPort >= 0 && modDev.usbPort != bootUsbPort)
+		{
+			fragRefusal = "the mod and the game are on two different USB drives";
+			fragListUntouched = true;
+			return;
+		}
+		if (modDev.fsType != PART_FS_FAT && modDev.fsType != PART_FS_NTFS
+			&& modDev.fsType != PART_FS_EXT)
+		{
+			fragRefusal = "the mod is on a filesystem whose layout cannot be read";
+			fragListUntouched = true;
+			return;
+		}
+		gprintf("Riivo: mod on %s (fs %d, lba %u), list from %s\n",
+				bootDevice.c_str(), modDev.fsType, modDev.lbaStart,
+				listFromSd ? "SD" : "USB");
+
 		//! Work the whole placement out HERE, from the files on the card.
 		//!
 		//! d2x blocks IOCTL_DI_FRAG_SET once a title is running
@@ -995,7 +1154,11 @@ namespace Riivo
 		//! Append the mod's fragments to the list the loader is about to hand
 		//! over. set_frag_list registers the lot in one go, a few lines later in
 		//! SetupDisc, which is the call d2x still allows.
-		if (!AppendModFragments(placed, sector, bootFsType, bootFsLba, fragStats))
+		//! The MOD's filesystem and starting sector, not the game's. They are
+		//! usually the same partition, but nothing guarantees it, and using the
+		//! game's would silently point the fragments at the wrong place.
+		if (!AppendModFragments(placed, sector, (u8) modDev.fsType,
+								modDev.lbaStart, fragStats))
 		{
 			gprintf("Riivo: fragment build failed: %s\n", fragStats.firstFailure.c_str());
 			modOffsets.clear();

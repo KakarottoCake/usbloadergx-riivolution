@@ -140,11 +140,16 @@ namespace Riivo
 			}
 		}
 
-		//! DVD9_LENGTH is the best anchor: it is a 32-bit constant unique to the
-		//! read-limit check, which sits in the same function we need to patch.
-		//! Fall back to DVD5 if the compiler folded DVD9 differently.
+		//! Anchor the dump on the dispatch we actually patch, when it was found.
+		//! Anchoring on DVD9_LENGTH instead put the dump 280 KB away from the
+		//! patch site on a real console - the constant lives in
+		//! __DI_CheckOffset's literal pool, which the linker placed nowhere near
+		//! the LOW_READ handler. A dump that does not contain the instructions
+		//! in question is useless.
 		u32 anchor = 0;
-		if (!out.patterns[0].hits.empty())
+		if (!out.patchSites.empty())
+			anchor = out.patchSites[0];
+		else if (!out.patterns[0].hits.empty())
 			anchor = out.patterns[0].hits[0];
 		else if (!out.patterns[1].hits.empty())
 			anchor = out.patterns[1].hits[0];
