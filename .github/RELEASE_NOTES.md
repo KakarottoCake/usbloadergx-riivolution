@@ -63,6 +63,13 @@ next to the XML you selected. It records whether the XML parsed, whether it matc
 game you launched, which options were active, every patch that was enabled, and any
 `valuefile` that could not be read. Please attach that file to any bug report.
 
+## Changed in v1.4
+
+- Fixed: the cIOS probe and the four-byte patch now run in `SetupDisc`, where hardware
+  access still exists. They were running later, in `BootPartition`, by which point
+  AHBPROT is closed and neither could ever succeed.
+- The log now reports the patch result from the early window, and says why if it failed.
+
 ## Changed in v1.3
 
 - Fixed: the fragment list was enlarged even when file replacement could not run, so the

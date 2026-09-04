@@ -76,6 +76,23 @@ namespace Riivo
 	//! the report can say that rather than blaming a missing list.
 	static bool fragListUntouched = false;
 
+	//! The cIOS probe and the four-byte patch, both done in SetupDisc rather
+	//! than later with everything else.
+	//!
+	//! Measured on a tester's console: AHBPROT is open when SetupDisc runs and
+	//! CLOSED by the time BootPartition does, so a probe from the later window
+	//! reads nothing and the patch can never be written. Whatever closes it
+	//! between the two, the privileged work has to happen while the access is
+	//! still there, so it is done here and the result carried forward.
+	//!
+	//! Applying the patch before the rest of the plan is known is safe, and is
+	//! the same reasoning that already let it be applied before the table was
+	//! installed: on its own it only changes how reads at or above 4 GiB are
+	//! served, and a game whose file table was never rebuilt does not make any.
+	static IosProbe bootProbe;
+	static bool patchApplied = false;
+	static std::string patchWhy;
+
 	//! The game's id, needed to ask which partition it lives on.
 	static u8 bootGameId[8] = { 0 };
 
@@ -325,7 +342,7 @@ namespace Riivo
 	//!     in, so the game is never pointed at a region nothing serves.
 	static void Activate(std::string &out, const FragPlan &plan,
 						 const std::vector<PlacedFile> &placed,
-						 const std::vector<u8> &newFst, u32 patchSite)
+						 const std::vector<u8> &newFst)
 	{
 		if (placed.empty())
 		{
@@ -375,13 +392,10 @@ namespace Riivo
 		Addf(out, "  read-back check      : passed at 0x%010llx\n",
 			 (unsigned long long) placed[0].offset);
 
-		if (!ApplyDiPatch(patchSite, why))
-		{
-			Addf(out, "  The cIOS patch failed: %s\n", why.c_str());
-			out += "  The game boots unmodified.\n";
-			return;
-		}
-		Addf(out, "  cIOS read patch      : applied at %08x\n", patchSite);
+		//! The patch itself went in back in SetupDisc; this only records that it
+		//! is in place before the table that depends on it is installed.
+		Addf(out, "  cIOS read patch      : already applied at %08x\n",
+			 bootProbe.patchSites[0]);
 
 		//! Last: hold on to the rebuilt table. Installing it is what actually
 		//! points the game at the mod, and it can only happen once the apploader
@@ -694,13 +708,14 @@ namespace Riivo
 			out += "\n";
 		}
 
-		//! Go looking for the cIOS code that has to be patched.
-		IosProbe probe;
-		{
-			std::string dumpPath = bootDevice + "/riivolution/usbloadergx_riivo_dip.bin";
-			ProbeIosPlugin(dumpPath, probe);
-			out += DescribeProbe(probe);
-		}
+		//! The probe and the patch already happened, back in SetupDisc, because
+		//! that is the last point where the access to do them is guaranteed.
+		out += DescribeProbe(bootProbe);
+		if (patchApplied)
+			Addf(out, "\n  The cIOS read patch was applied early, at %08x.\n",
+				 bootProbe.patchSites[0]);
+		else if (!patchWhy.empty())
+			Addf(out, "\n  The cIOS read patch was NOT applied: %s\n", patchWhy.c_str());
 
 		// ------------------------------------------------------------------
 		// Switch it on, but only if every single check above came back clean.
@@ -708,14 +723,14 @@ namespace Riivo
 		out += "\nSwitching it on\n";
 		out += "---------------\n";
 
-		if (!(extentFits && plan.ok && gameFrags && probe.patchSites.size() == 1))
+		if (!(extentFits && plan.ok && gameFrags && patchApplied))
 		{
 			out += "  Not attempted - one of the checks above did not pass. The game\n"
 				   "  boots exactly as it would without Riivolution.\n";
 		}
 		else
 		{
-			Activate(out, plan, placed, newFst, probe.patchSites[0]);
+			Activate(out, plan, placed, newFst);
 		}
 
 		out += "\nHow this works\n";
@@ -796,6 +811,26 @@ namespace Riivo
 		const int ret = frag_list_reserve(sectors);
 
 		gprintf("Riivo: reserved %u sectors of virtual disc (%d)\n", sectors, ret);
+
+		//! Find the cIOS read handler and patch it now, while the access to do
+		//! it still exists. The card is mounted at this point - SetupDisc
+		//! unmounts it a few lines further on - so the dump can be written too.
+		const std::string dumpPath = bootDevice + "/riivolution/usbloadergx_riivo_dip.bin";
+		ProbeIosPlugin(dumpPath, bootProbe);
+
+		if (bootProbe.patchSites.size() == 1)
+		{
+			patchApplied = ApplyDiPatch(bootProbe.patchSites[0], patchWhy);
+			gprintf("Riivo: early cIOS patch at %08x: %s\n",
+					bootProbe.patchSites[0],
+					patchApplied ? "applied" : patchWhy.c_str());
+		}
+		else
+		{
+			patchWhy = bootProbe.patchSites.empty()
+					   ? "the patch site was not found in the running cIOS"
+					   : "the patch site was found more than once, which is not expected";
+		}
 	}
 
 	void ReportFstPlacement()
