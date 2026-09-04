@@ -50,6 +50,7 @@
 #include "riivo/RiivoConfig.hpp"
 #include "riivo/RiivoMemory.hpp"
 #include "riivo/RiivoSave.hpp"
+#include "riivo/RiivoBoot.hpp"
 #include "banner/OpeningBNR.hpp"
 #include "wad/nandtitle.h"
 #include "menu/menus.h"
@@ -148,6 +149,13 @@ u32 GameBooter::BootPartition(char *dolpath, u8 videoselected, u8 alternatedol, 
 	ret = WDVD_OpenPartition(offset, NULL);
 	if (ret < 0)
 		return 0;
+
+	//! Riivolution file redirection (Phase 3). This is the only window that
+	//! works: the partition is open so the FST can be read off the disc, and
+	//! ShutDownDevices() has not run yet so SD/USB is still mounted. The RAM
+	//! copy of the FST does not exist until the apploader below has run, by
+	//! which point the card is gone.
+	Riivo::PrepareFileRedirects();
 
 	/* Setup low memory */
 	Disc_SetLowMem(&gameHdr);
@@ -652,10 +660,17 @@ int GameBooter::BootGame(struct discHdr *gameHdr, const s8 useOcarina)
 
 		//! Leave a breadcrumb next to the XML so a tester without a USB Gecko can
 		//! tell what happened after the console has rebooted into the game.
-		Riivo::WriteLog(riivoDevice + "/riivolution/usbloadergx_riivo.log", riivoId,
+		const std::string riivoLogPath = riivoDevice + "/riivolution/usbloadergx_riivo.log";
+		Riivo::WriteLog(riivoLogPath, riivoId,
 						game_cfg->RiivoPath, riivoParsed ? NULL : riivoErr.c_str(),
 						riivoParsed ? &riivoDisc : NULL, riivoParsed ? &riivoSet : NULL,
 						riivoValuefileFails);
+
+		//! Hand the resolved set to the Phase 3 code, which runs later on, deep
+		//! inside BootPartition. riivoSet outlives this scope; riivoDisc does not,
+		//! and is deliberately not passed along.
+		Riivo::SetBootContext(&riivoSet, riivoDevice, riivoLogPath);
+		Riivo::ReportCios();
 	}
 
 	//! Riivolution <savegame> redirect (Phase 2): point the NAND-emu base at the

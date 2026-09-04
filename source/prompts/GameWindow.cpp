@@ -867,7 +867,7 @@ void GameWindow::BootGame(struct discHdr *header)
 			if (!riivoDisc.IsValidForGame(IDfull, 0, 0))
 				warning = tr( "The selected Riivolution XML is meant for a different game. Applying it will most likely crash." );
 			else if (!riivoSet.files.empty() || !riivoSet.folders.empty())
-				warning = tr( "This mod replaces files on the disc, which this build cannot do yet. The game will most likely hang on a black screen after the health and safety screen." );
+				warning = tr( "This mod replaces files on the disc, which this build cannot do yet, so the game will most likely hang on a black screen. Launching anyway still writes a full report to the riivolution folder." );
 			else if (riivoSet.IsEmpty())
 				warning = tr( "No Riivolution patches are enabled for this game - every option is set to Disabled." );
 		}
