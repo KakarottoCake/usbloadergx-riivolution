@@ -28,11 +28,19 @@ Choices are stored per game, so each game remembers its own mod setup.
 | Option / choice menus and `${param}` substitution | Working |
 | `<file>` / `<folder>` file replacement | **Not applied.** Parsed and planned only |
 
-That last row is the important caveat: **mods that replace files on the disc — new
-levels, textures, models, audio — will not do anything yet.** The loader-side logic
-exists but the on-console disc-read hook that makes it take effect is unfinished. Mods
-that work purely through code patches (and mod loaders that bootstrap from a `<memory>`
-patch) are the ones worth testing right now.
+That last row is the important caveat, and it is the one most likely to bite you:
+**mods that replace files on the disc — new levels, textures, models, audio — will not
+work yet.** The loader-side logic exists but the on-console disc-read hook that makes it
+take effect is unfinished.
+
+This matters more than it sounds, because most big mods are *both*: a `<memory>` patch
+installs the mod's loader, and that loader then reads replacement files. Apply only the
+first half and the game boots into a loader whose files aren't there — which shows up as
+a **black screen right after the health and safety screen**. That is expected in this
+build, not a bug in your setup. From v0.3 the loader warns you before launching instead
+of leaving you at a black screen.
+
+Mods that work purely through code patches are the ones worth testing right now.
 
 ## Checking what happened
 
@@ -47,7 +55,16 @@ next to the XML you selected. It records whether the XML parsed, whether it matc
 game you launched, which options were active, every patch that was enabled, and any
 `valuefile` that could not be read. Please attach that file to any bug report.
 
-## Changed in this build (v0.2)
+## Changed in v0.3
+
+- **A warning before launch instead of a black screen.** Riivolution is applied after
+  the loader has torn down the screen, so anything wrong with the setup used to show up
+  only as a hang after the health and safety screen. The loader now checks before it
+  boots and tells you if: the XML can't be read, the XML is for a different game, the
+  mod needs file replacement (which this build can't do), or every option is still set
+  to Disabled. You can Continue anyway or Cancel.
+
+## Changed in v0.2
 
 - **Riivolution is now the first button in Game Settings**, above Game Load, instead of
   sitting after Ocarina. It only appears for Wii games.

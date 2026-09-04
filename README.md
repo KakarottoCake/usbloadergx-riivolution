@@ -51,6 +51,17 @@ Settings are saved **per game**, so each game remembers its own mod choices.
 | `<file>` / `<folder>` replacement | Swap real game files for modded ones from your SD card (new levels, textures, audio) | 🛠️ Loader logic built & tested; the on-console read-hook still needs hardware testing |
 | `<folder>` add-new-files | Mods that add brand-new files | ⏳ Planned |
 
+## "It black-screens right after the health and safety screen"
+
+That is the expected failure for a mod that replaces disc files, which this build cannot
+do yet. Most large mods install their loader with a `<memory>` patch and then have that
+loader read replacement files off the SD card — apply only the first half and the game
+jumps into a loader whose files are missing, and hangs.
+
+The loader now checks for this before booting and warns you, along with the other common
+setup mistakes (XML for the wrong game, XML that won't parse, every option left on
+Disabled). If you get the warning and Continue anyway, expect the hang.
+
 ## Did it work? (checking without a USB Gecko)
 
 Riivolution runs at the very end of the boot sequence, after the loader has already torn
