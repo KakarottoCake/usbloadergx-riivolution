@@ -672,7 +672,10 @@ int GameBooter::BootGame(struct discHdr *gameHdr, const s8 useOcarina)
 
 		//! Leave a breadcrumb next to the XML so a tester without a USB Gecko can
 		//! tell what happened after the console has rebooted into the game.
-		const std::string riivoLogPath = riivoDevice + "/riivolution/usbloadergx_riivo.log";
+		//! One log per game, named after it, so testing several does not keep
+		//! overwriting the same file.
+		const std::string riivoLogPath = riivoDevice + "/riivolution/usbloadergx_riivo_"
+										 + riivoId + ".log";
 		Riivo::WriteLog(riivoLogPath, riivoId,
 						game_cfg->RiivoPath, riivoParsed ? NULL : riivoErr.c_str(),
 						riivoParsed ? &riivoDisc : NULL, riivoParsed ? &riivoSet : NULL,

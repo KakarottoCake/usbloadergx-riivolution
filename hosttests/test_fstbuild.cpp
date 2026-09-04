@@ -3,6 +3,7 @@
 #include <string.h>
 #include <vector>
 #include <string>
+#include <map>
 #include "riivo/RiivoFstBuild.hpp"
 #include "riivo/RiivoFst.hpp"
 
@@ -215,6 +216,56 @@ int main()
 		ck(f != 0, "present after serialise");
 		// stored as offset>>2, so 0x120000000 -> 0x48000000, which fits
 		if (f) ck(f->offset == high, "round-trips through the shifted field");
+	}
+
+	printf("LayoutFrom: offsets decided before the table could be read\n");
+	{
+		//! d2x refuses IOCTL_DI_FRAG_SET once a title is running, and opening
+		//! the game partition starts one - so the fragments must be registered
+		//! before the file table can be read. The placement is therefore made
+		//! from the files on the card and applied to the table afterwards.
+		//! These two have to agree exactly or the game reads the wrong bytes.
+		FstBuilder b;
+		bool n = false;
+		b.AddOrReplace("/ObjectData/One.arc", 0x2000, &n);
+		b.AddOrReplace("/StageData/Deep/Two.arc", 0x3000, &n);
+		b.AddOrReplace("/Three.arc", 0x1000, &n);
+
+		//! Keys are lower-cased with a leading slash, which is what
+		//! NormaliseDiscPath produces on the other side.
+		std::map<std::string, u64> byPath;
+		byPath["/objectdata/one.arc"]     = 0x100000000ULL;
+		byPath["/stagedata/deep/two.arc"] = 0x100002000ULL;
+		byPath["/three.arc"]              = 0x100005000ULL;
+
+		ck(b.LayoutFrom(byPath) == 0, "every modded entry was placed");
+
+		u64 off = 0;
+		ck(b.FindAssigned("/ObjectData/One.arc", &off, 0) && off == 0x100000000ULL,
+		   "nested file took its assigned offset");
+		ck(b.FindAssigned("/StageData/Deep/Two.arc", &off, 0) && off == 0x100002000ULL,
+		   "deeper file too");
+		ck(b.FindAssigned("/Three.arc", &off, 0) && off == 0x100005000ULL,
+		   "and one at the root");
+		ck(b.Stats().highestOffset == 0x100005000ULL + 0x1000,
+		   "the high-water mark covers the last file");
+
+		//! A modded entry with no offset would be pointed at whatever happens
+		//! to be there, so it must be reported rather than silently placed.
+		FstBuilder c;
+		c.AddOrReplace("/ObjectData/One.arc", 0x2000, &n);
+		c.AddOrReplace("/Missing.arc", 0x1000, &n);
+		std::map<std::string, u64> partial;
+		partial["/objectdata/one.arc"] = 0x100000000ULL;
+		ck(c.LayoutFrom(partial) == 1, "an unplaced entry is counted, not ignored");
+
+		//! Case in the table must not matter - the mod's folder rules and the
+		//! disc's own spelling routinely differ.
+		FstBuilder d;
+		d.AddOrReplace("/MiXeD/CaSe.arc", 0x800, &n);
+		std::map<std::string, u64> lower;
+		lower["/mixed/case.arc"] = 0x100008000ULL;
+		ck(d.LayoutFrom(lower) == 0, "a lower-cased key matches a mixed-case entry");
 	}
 
 	printf("\n%d checks, %d failure(s)\n", checks, failures);

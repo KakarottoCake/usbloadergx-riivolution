@@ -28,6 +28,7 @@
 #include <gctypes.h>
 #include <string>
 #include <vector>
+#include <map>
 
 namespace Riivo
 {
@@ -95,6 +96,20 @@ namespace Riivo
 			//! at least the device sector size, otherwise a fragment cannot start
 			//! at the boundary. Fills in each entry's offset.
 			void Layout(u64 regionStart, u32 align);
+
+			//! Assign offsets that were decided BEFORE the file table could be
+			//! read, keyed by disc path.
+			//!
+			//! The fragment list has to be registered while no title is running
+			//! - d2x blocks IOCTL_DI_FRAG_SET once one is, and opening the game
+			//! partition is what starts one - but the table can only be read
+			//! with that partition open. So the placement is worked out first,
+			//! from the files on the card, and applied here afterwards.
+			//!
+			//! Returns the number of modded entries the map had no offset for.
+			//! Those cannot be served by anything and make the result unusable,
+			//! so a non-zero answer must be treated as a refusal.
+			u32 LayoutFrom(const std::map<std::string, u64> &byDiscPath);
 
 			//! Serialise back to the on-disc format. `shifted` must match Parse.
 			void Serialize(std::vector<u8> &out, bool shifted) const;

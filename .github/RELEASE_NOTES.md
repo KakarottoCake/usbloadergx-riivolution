@@ -63,6 +63,18 @@ next to the XML you selected. It records whether the XML parsed, whether it matc
 game you launched, which options were active, every patch that was enabled, and any
 `valuefile` that could not be read. Please attach that file to any bug report.
 
+## Changed in v1.7
+
+- Fixed: "The cIOS refused the extended list (-128)". d2x blocks the fragment ioctl once a
+  title is running, and opening the game partition starts one. The mod's fragments are now
+  worked out and handed over in `SetupDisc`, in the same call the loader already makes.
+- The rebuilt file table is now made to agree with that placement instead of choosing its
+  own.
+- Fixed: the mod's files were being measured in the wrong directory, so a mod that needed
+  a larger disc could fail to get one.
+- Logs are now per game: `usbloadergx_riivo_<GAMEID>.log`, and the cIOS dump alongside it.
+- 16 more automated checks - 2330 total, all passing.
+
 ## Changed in v1.6
 
 - Fixed: Error #001 / anti-piracy screen. The virtual disc was enlarged to 8.5 GB on every

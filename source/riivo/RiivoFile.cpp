@@ -5,6 +5,8 @@
 #include <string.h>
 #include <strings.h>
 #include <sys/stat.h>
+#include <ctype.h>
+#include <algorithm>
 #include "RiivoFile.hpp"
 #include "RiivoConfig.hpp"
 #include "gecko.h"
@@ -168,6 +170,94 @@ namespace Riivo
 			spec.external = external;
 			out.push_back(spec);
 		}
+	}
+
+	std::string NormaliseDiscPath(const std::string &path)
+	{
+		std::string out;
+		size_t i = 0;
+		while (i < path.size())
+		{
+			while (i < path.size() && path[i] == '/')
+				++i;
+			size_t j = i;
+			while (j < path.size() && path[j] != '/')
+				++j;
+			if (j > i)
+			{
+				out += '/';
+				for (size_t k = i; k < j; ++k)
+					out += (char) tolower((unsigned char) path[k]);
+			}
+			i = j;
+		}
+		return out;
+	}
+
+	static bool ByCandidateDisc(const ModCandidate &a, const ModCandidate &b)
+	{
+		return a.disc < b.disc;
+	}
+
+	void ListModFiles(const ResolvedPatchSet &set, const std::string &device,
+					  DirLister *lister, std::vector<ModCandidate> &out)
+	{
+		out.clear();
+
+		for (size_t i = 0; i < set.files.size(); ++i)
+		{
+			const ResolvedFile &f = set.files[i];
+			ModCandidate c;
+			c.external = JoinPath(device, f.root, f.external);
+			c.disc = NormaliseDiscPath(f.disc);
+			struct stat st;
+			if (c.disc.empty() || stat(c.external.c_str(), &st) != 0 || !S_ISREG(st.st_mode))
+				continue;
+			c.size = (u32) st.st_size;
+			out.push_back(c);
+		}
+
+		if (lister)
+		{
+			for (size_t i = 0; i < set.folders.size(); ++i)
+			{
+				const ResolvedFolder &f = set.folders[i];
+				const std::string discDir = DiscPath(f.disc);
+				const std::string extDir = JoinPath(device, f.root, f.external);
+
+				std::vector<std::string> rel;
+				lister->List(extDir, f.recursive, rel);
+
+				for (size_t j = 0; j < rel.size(); ++j)
+				{
+					ModCandidate c;
+					c.external = JoinDisc(extDir, rel[j]);
+					c.disc = NormaliseDiscPath(JoinDisc(discDir, rel[j]));
+					struct stat st;
+					if (c.disc.empty() || stat(c.external.c_str(), &st) != 0
+						|| !S_ISREG(st.st_mode))
+						continue;
+					c.size = (u32) st.st_size;
+					out.push_back(c);
+				}
+			}
+		}
+
+		//! Overlapping <folder> rules name the same disc file more than once.
+		//! Keep the last, which is the one AddOrReplace keeps when the table is
+		//! rebuilt, then sort so the placement is identical on every boot.
+		std::sort(out.begin(), out.end(), ByCandidateDisc);
+		std::vector<ModCandidate> unique;
+		unique.reserve(out.size());
+		for (size_t i = 0; i < out.size(); ++i)
+		{
+			if (i + 1 < out.size() && out[i].disc == out[i + 1].disc)
+				continue;
+			unique.push_back(out[i]);
+		}
+		out.swap(unique);
+
+		gprintf("Riivo file: %u mod file(s) enumerated\n", (unsigned) out.size());
 	}
 
 	void BuildRedirects(const Fst &fst, const ResolvedPatchSet &set, const std::string &device,

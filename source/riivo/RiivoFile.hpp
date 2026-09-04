@@ -55,6 +55,31 @@ namespace Riivo
 						DirLister *lister, std::vector<RedirectSpec> &out,
 						std::vector<CreatedFile> *outCreated = 0);
 
+	//! One file the mod supplies, found WITHOUT consulting the disc.
+	struct ModCandidate
+	{
+		std::string disc;     // where it should appear, lower-cased, leading '/'
+		std::string external; // where it really is on the card
+		u32 size;             // from stat
+	};
+
+	//! Enumerate everything the mod would put on the disc, before the disc can
+	//! be read at all.
+	//!
+	//! The fragment list has to be handed to the cIOS while no title is running,
+	//! which is before the game partition - and therefore the file table - can
+	//! be opened. So placement is decided from this list, and the rebuilt table
+	//! is made to agree with it afterwards. It shares BuildRedirects' path
+	//! helpers precisely so the two cannot disagree about where a file goes.
+	//!
+	//! Sorted by disc path, so the placement is the same on every boot.
+	void ListModFiles(const ResolvedPatchSet &set, const std::string &device,
+					  DirLister *lister, std::vector<ModCandidate> &out);
+
+	//! Lower-case a disc path and strip empty components, giving the exact key
+	//! FstBuilder::LayoutFrom expects.
+	std::string NormaliseDiscPath(const std::string &path);
+
 	//! Concrete DirLister backed by opendir/readdir (real SD/USB filesystem).
 	//! Returns file paths relative to the listed directory.
 	struct FsDirLister : public DirLister
