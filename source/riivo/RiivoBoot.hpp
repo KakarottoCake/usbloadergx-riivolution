@@ -39,7 +39,8 @@ namespace Riivo
 	//! `sectorSize` is the geometry of the drive the backup lives on; the mod
 	//! region has to be aligned to it because a fragment cannot start mid-sector.
 	void SetBootContext(const ResolvedPatchSet *set, const std::string &device,
-						const std::string &logPath, u32 sectorSize);
+						const std::string &logPath, u32 sectorSize,
+						const u8 *gameId);
 
 	//! Append a block of text to the boot log set up by SetBootContext.
 	//! No-op when there is no log path or the device has already gone away.
@@ -62,6 +63,13 @@ namespace Riivo
 	//! ShutDownDevices() unmounts the moment BootPartition returns.
 	//! Reports only; installs nothing.
 	void ReportFstPlacement();
+
+	//! Retain and enlarge the game's fragment list before it is handed to
+	//! the cIOS, so there is room above the backup for the mod and so the
+	//! disc is recognised as dual-layer (which raises the read ceiling from
+	//! 4.7 GB to 8.5 GB). Must be called between get_frag_list and
+	//! set_frag_list; does nothing unless file/folder patches are active.
+	void PrepareFragList();
 }
 
 #endif

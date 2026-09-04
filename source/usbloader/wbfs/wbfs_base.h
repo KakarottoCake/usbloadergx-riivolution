@@ -33,6 +33,10 @@ class Wbfs
 		virtual s32 ReIDGame(u8 *discid, const void *newID) = 0;
 		virtual u64 EstimateGameSize(void) = 0;
 		virtual u8 GetFSType(void) { return PART_FS_WBFS; }
+		//! Where this partition starts on the drive. Fragment lookups on NTFS and
+		//! ext report sectors relative to it, so callers outside this class need
+		//! it to turn them into absolute sectors.
+		u32 GetLBA(void) const { return lba; }
 		const wbfs_t *GetHDDHandle(void) { return hdd; }
 	protected:
 		wbfs_t *hdd;

@@ -35,6 +35,11 @@ extern "C"
 
 	s32 WBFS_GetFragList(u8 *id);
 
+	//! Filesystem type (PART_FS_*) and starting LBA of the partition this game
+	//! lives on. Riivolution needs both to look up the real sectors of the mod's
+	//! own files, the same way get_frag_list_for_file does for the backup.
+	s32 WBFS_GetFsInfo(u8 *id, u8 *outFsType, u32 *outLba);
+
 	s32 WBFS_OpenAll();
 	s32 WBFS_OpenPartSD();
 	s32 WBFS_OpenPart(int part_num);

@@ -182,6 +182,52 @@ namespace Riivo
 		free(buf);
 	}
 
+	bool ApplyDiPatch(u32 site, std::string &why)
+	{
+		if (!AHBPROT_DISABLED)
+		{
+			why = "AHBPROT is closed, so IOS memory cannot be written";
+			return false;
+		}
+		if (site < MEM2_CACHED || site + DI_READ_PATTERN_LEN >= MEM2_END)
+		{
+			why = "the patch site is not in MEM2";
+			return false;
+		}
+
+		//! Never write without confirming what is there first. The probe found
+		//! this address, but it costs one comparison to be certain nothing has
+		//! moved since, and the cost of being wrong is a console that hangs.
+		for (u32 k = 0; k < DI_READ_PATTERN_LEN; ++k)
+		{
+			if (*(vu8 *) (site + k + UNCACHED_BIAS) == DI_READ_PATTERN[k])
+				continue;
+			why = "the bytes at the patch site are not the ones expected";
+			return false;
+		}
+
+		//! Write through the cached view and flush, which is what every other
+		//! runtime IOS patch in this loader does (libruntimeiospatch's
+		//! apply_patch), then read back uncached to confirm it landed.
+		u8 *dst = (u8 *) site;
+		for (u32 k = 0; k < DI_READ_REPLACE_LEN; ++k)
+			dst[k] = DI_READ_REPLACE[k];
+
+		DCFlushRange((void *) (site & ~31u), DI_READ_REPLACE_LEN + 64);
+		ICInvalidateRange((void *) (site & ~31u), DI_READ_REPLACE_LEN + 64);
+
+		for (u32 k = 0; k < DI_READ_REPLACE_LEN; ++k)
+		{
+			if (*(vu8 *) (site + k + UNCACHED_BIAS) == DI_READ_REPLACE[k])
+				continue;
+			why = "the patch did not stick - the write was refused";
+			return false;
+		}
+
+		gprintf("Riivo: DI read patch applied at %08x\n", site);
+		return true;
+	}
+
 	std::string DescribeProbe(const IosProbe &p)
 	{
 		std::string out;

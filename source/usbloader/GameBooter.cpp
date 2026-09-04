@@ -257,6 +257,12 @@ int GameBooter::SetupDisc(struct discHdr &gameHeader)
 		gprintf("%d\n", ret);
 		if (ret < 0)
 			return ret;
+		//! Riivolution needs the list kept and enlarged before it goes to the
+		//! cIOS - it has to be extended later, and the enlarged size is what
+		//! makes the disc count as dual-layer, which is where the room for the
+		//! mod comes from. Does nothing when no file/folder patches are active.
+		Riivo::PrepareFragList();
+
 		DeviceHandler::Instance()->UnMountSD();
 		ret = set_frag_list(gameHeader.id, Settings.SDMode);
 		if (ret < 0)
@@ -676,7 +682,8 @@ int GameBooter::BootGame(struct discHdr *gameHdr, const s8 useOcarina)
 		//! inside BootPartition. riivoSet outlives this scope; riivoDisc does not,
 		//! and is deliberately not passed along.
 		Riivo::SetBootContext(&riivoSet, riivoDevice, riivoLogPath,
-							  Settings.SDMode ? 512 : hdd_sector_size[usbport]);
+							  Settings.SDMode ? 512 : hdd_sector_size[usbport],
+							  gameHeader.id);
 		Riivo::ReportCios();
 	}
 
