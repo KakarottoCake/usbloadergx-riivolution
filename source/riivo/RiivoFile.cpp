@@ -2,6 +2,8 @@
  * Riivolution support for USB Loader GX
  ***************************************************************************/
 #include <dirent.h>
+#include <string.h>
+#include <strings.h>
 #include <sys/stat.h>
 #include "RiivoFile.hpp"
 #include "RiivoConfig.hpp"
@@ -13,8 +15,23 @@ namespace Riivo
 	// readdir-backed folder enumeration (real filesystem)
 	// --------------------------------------------------------------------
 
+	//! Filesystem metadata that is never mod content. A mod archive unpacked on a
+	//! Mac carries a "._name" AppleDouble twin for every real file, which would
+	//! otherwise double the enumeration and produce thousands of entries that
+	//! match nothing on the disc.
+	static bool IsMetadataFile(const char *name)
+	{
+		if (name[0] == '.' && name[1] == '_')
+			return true;
+		if (strcasecmp(name, ".DS_Store") == 0)
+			return true;
+		if (strcasecmp(name, "Thumbs.db") == 0)
+			return true;
+		return false;
+	}
+
 	static void ListRecurse(const std::string &base, const std::string &rel, bool recursive,
-							std::vector<std::string> &out)
+							std::vector<std::string> &out, int *skipped)
 	{
 		const std::string dirPath = rel.empty() ? base : (base + "/" + rel);
 		DIR *dir = opendir(dirPath.c_str());
@@ -26,6 +43,12 @@ namespace Riivo
 			if (ent->d_name[0] == '.' &&
 				(ent->d_name[1] == 0 || (ent->d_name[1] == '.' && ent->d_name[2] == 0)))
 				continue; // skip . and ..
+			if (IsMetadataFile(ent->d_name))
+			{
+				if (skipped)
+					++(*skipped);
+				continue;
+			}
 			const std::string childRel = rel.empty() ? std::string(ent->d_name)
 													 : (rel + "/" + ent->d_name);
 			const std::string childFull = dirPath + "/" + ent->d_name;
@@ -35,7 +58,7 @@ namespace Riivo
 			if (S_ISDIR(st.st_mode))
 			{
 				if (recursive)
-					ListRecurse(base, childRel, recursive, out);
+					ListRecurse(base, childRel, recursive, out, skipped);
 			}
 			else
 				out.push_back(childRel);
@@ -45,7 +68,7 @@ namespace Riivo
 
 	void FsDirLister::List(const std::string &fullDir, bool recursive, std::vector<std::string> &out)
 	{
-		ListRecurse(fullDir, "", recursive, out);
+		ListRecurse(fullDir, "", recursive, out, &skipped);
 	}
 
 	//! Normalise a Riivo disc= value to a full lower-cased path with leading '/'.
@@ -92,6 +115,7 @@ namespace Riivo
 		spec.discOffset = entry->offset + f.offset; // f.offset patches a sub-range
 		spec.length = f.length;                     // 0 => whole external file (resolved at HW)
 		spec.fileOffset = f.fileoffset;
+		spec.discLength = entry->length;
 		spec.external = external;
 		out.push_back(spec);
 	}
@@ -128,6 +152,7 @@ namespace Riivo
 			spec.discOffset = entry->offset;
 			spec.length = f.length; // 0 => whole external file
 			spec.fileOffset = 0;
+			spec.discLength = entry->length;
 			spec.external = external;
 			out.push_back(spec);
 		}

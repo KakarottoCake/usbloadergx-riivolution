@@ -24,6 +24,7 @@ namespace Riivo
 		u32 discOffset;       // byte offset on the disc where the redirect starts
 		u32 length;           // bytes to redirect; 0 => "whole external file" (resolved at HW via stat)
 		u32 fileOffset;       // start offset within the external file
+		u32 discLength;       // size of the disc file being replaced, from the FST
 		std::string external; // full external path, e.g. "sd:/mymod/E/boot.arc"
 	};
 
@@ -49,7 +50,13 @@ namespace Riivo
 	//! Returns file paths relative to the listed directory.
 	struct FsDirLister : public DirLister
 	{
+		FsDirLister() : skipped(0) {}
 		void List(const std::string &fullDir, bool recursive, std::vector<std::string> &out);
+
+		//! Filesystem metadata files ignored so far (macOS "._" AppleDouble twins,
+		//! .DS_Store, Thumbs.db). Mods unzipped on a Mac are full of these and they
+		//! would otherwise flood the redirect table with entries matching nothing.
+		int skipped;
 	};
 }
 
