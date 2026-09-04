@@ -74,7 +74,9 @@ game would never even ask. So the file table itself has to be rebuilt.
 **That rebuild engine is now written and tested.** It reads the game's real file table,
 inserts entries for every file the mod adds (creating folders as needed), corrects the
 size of every file the mod replaces, and hands each one a fresh location. It is covered
-by 2208 automated checks, including a full rebuild of a 3920-file table.
+by 2232 automated checks — including a full rebuild of a 3920-file table — which run on a
+PC rather than on your console, so this part did not cost you any reboots. They are in
+the repository under `hosttests/` if you want to run them yourself.
 
 This build runs the whole thing against your actual disc and writes the result to the
 log — real entry counts, the new table size, where the mod would live, and whether that
