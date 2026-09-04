@@ -16,6 +16,7 @@
 #include "RiivoFstBuild.hpp"
 #include "RiivoFstInstall.hpp"
 #include "RiivoIosProbe.hpp"
+#include "RiivoDiPatch.hpp"
 #include "usbloader/wdvd.h"
 #include "system/IosLoader.h"
 #include "gecko.h"
@@ -212,9 +213,9 @@ namespace Riivo
 		out += "\n\nPhase 3 - file/folder replacement plan\n"
 			   "--------------------------------------\n"
 			   "Worked out against the real disc, then discarded. Nothing below is\n"
-			   "applied yet: the console decrypts disc reads inside IOS, so plaintext\n"
-			   "files cannot be substituted from the loader alone. The note at the end\n"
-			   "says exactly what is still missing.\n\n";
+			   "applied yet - this run is checking that the pieces line up on your\n"
+			   "console before anything is switched on. The note at the end says what\n"
+			   "is left.\n\n";
 
 		u8 *fstData = 0;
 		u32 fstSize = 0, fstOffset = 0;
@@ -355,10 +356,12 @@ namespace Riivo
 				++rejected;
 		}
 
-		//! Put the mod above everything still living on the disc, aligned so each
-		//! range starts on a device sector - a fragment cannot begin mid-sector.
+		//! The mod region has to start at 4 GiB, because that is the only
+		//! threshold the four-byte read patch can express - see RiivoDiPatch.hpp.
+		//! Everything below it stays real, decrypted, hash-checked game data.
 		const u64 extent = builder.OriginalExtent();
-		const u64 region = (extent + 0x1fffffULL) & ~0x1fffffULL;
+		const u64 region = RIIVO_REGION_BYTES;
+		const bool extentFits = extent < region;
 		builder.Layout(region, 0x800);
 
 		std::vector<u8> newFst;
@@ -373,9 +376,14 @@ namespace Riivo
 			 st.entryCount, (unsigned) fst.FileCount());
 		Addf(out, "  table size         : %u bytes, was %u  (%+d)\n",
 			 st.fstSize, fstSize, (int) st.fstSize - (int) fstSize);
-		Addf(out, "  disc data ends at  : 0x%010llx\n", (unsigned long long) extent);
+		Addf(out, "  disc data ends at  : 0x%010llx  (%s)\n",
+			 (unsigned long long) extent,
+			 extentFits ? "below the 4 GiB line, good"
+						: "AT OR ABOVE 4 GiB - THIS GAME CANNOT BE PATCHED THIS WAY");
 		Addf(out, "  mod relocated to   : 0x%010llx .. 0x%010llx\n",
 			 (unsigned long long) region, (unsigned long long) st.highestOffset);
+		Addf(out, "  headroom below     : %llu bytes spare before the line\n",
+			 (unsigned long long) (extentFits ? region - extent : 0));
 		Addf(out, "  mod payload        : %llu bytes\n", (unsigned long long) modBytes);
 
 		//! d2x refuses reads past the disc-type limit (dip.h). Those constants are
@@ -404,17 +412,21 @@ namespace Riivo
 			out += DescribeProbe(probe);
 		}
 
-		out += "\nWhy none of this is applied\n";
-		out += "---------------------------\n";
-		out += "The loader hands the cIOS a fragment list mapping virtual disc offsets\n"
-			   "to sectors on your drive, and that list serves the RAW backup - which\n"
-			   "keeps the game partition encrypted, exactly as it was pressed. When the\n"
-			   "running game reads a file, the IOS DI module decrypts whatever the\n"
-			   "fragment list returned. Point a fragment at a plaintext file on the card\n"
-			   "and the console decrypts bytes that were never encrypted, so the game\n"
-			   "gets noise. Making this work needs code running inside IOS, after\n"
-			   "decryption. That is the piece still to be written, and the table measured\n"
-			   "above is what it will install.\n";
+		out += "\nWhat is left\n";
+		out += "------------\n";
+		out += "The fragment list the loader gives the cIOS serves the RAW backup, which\n"
+			   "keeps the game partition encrypted exactly as it was pressed, and the IOS\n"
+			   "disc code decrypts whatever comes back. A fragment aimed at a plaintext\n"
+			   "file on the card would decrypt into noise - which is why this needs a\n"
+			   "change inside IOS rather than only in the loader.\n\n"
+			   "That change is now known, and it is four bytes: the read handler's test\n"
+			   "for 'is this image already decrypted' becomes a test for 'is this read at\n"
+			   "or above 4 GiB'. Mod files live above that line and are served raw from\n"
+			   "the fragment list, with no decryption and no hash check. Everything below\n"
+			   "the line is real game data and is read exactly as it always was.\n\n"
+			   "Still to build: extending the fragment list to cover the relocated files,\n"
+			   "and writing the rebuilt table into the game's memory. Both are measured\n"
+			   "above. Nothing is written to your console by this build.\n";
 
 		AppendLog(out);
 		gprintf("Riivo: plan - %u redirect, %u new, %u entries, fst %u bytes\n",
