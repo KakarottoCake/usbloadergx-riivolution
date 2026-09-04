@@ -96,7 +96,7 @@ namespace Riivo
 	}
 
 	static void BuildFile(const Fst &fst, const ResolvedFile &f, const std::string &device,
-						  std::vector<RedirectSpec> &out, std::vector<std::string> *outCreated)
+						  std::vector<RedirectSpec> &out, std::vector<CreatedFile> *outCreated)
 	{
 		const FstFile *entry = fst.FindFile(f.disc);
 		const std::string external = JoinPath(device, f.root, f.external);
@@ -105,7 +105,12 @@ namespace Riivo
 		{
 			// No such disc file. Only meaningful if create=true (Phase 4 FST rebuild).
 			if (f.create && outCreated)
-				outCreated->push_back(external);
+			{
+				CreatedFile cf;
+				cf.disc = f.disc;
+				cf.external = external;
+				outCreated->push_back(cf);
+			}
 			else
 				gprintf("Riivo file: disc file not found, skipped: %s\n", f.disc.c_str());
 			return;
@@ -116,13 +121,14 @@ namespace Riivo
 		spec.length = f.length;                     // 0 => whole external file (resolved at HW)
 		spec.fileOffset = f.fileoffset;
 		spec.discLength = entry->length;
+		spec.disc = entry->path;
 		spec.external = external;
 		out.push_back(spec);
 	}
 
 	static void BuildFolder(const Fst &fst, const ResolvedFolder &f, const std::string &device,
 							DirLister *lister, std::vector<RedirectSpec> &out,
-							std::vector<std::string> *outCreated)
+							std::vector<CreatedFile> *outCreated)
 	{
 		if (!lister)
 			return;
@@ -143,7 +149,12 @@ namespace Riivo
 			if (!entry)
 			{
 				if (f.create && outCreated)
-					outCreated->push_back(external);
+				{
+					CreatedFile cf;
+					cf.disc = discFile;
+					cf.external = external;
+					outCreated->push_back(cf);
+				}
 				// else: external file with no disc counterpart and no create => ignored
 				continue;
 			}
@@ -153,6 +164,7 @@ namespace Riivo
 			spec.length = f.length; // 0 => whole external file
 			spec.fileOffset = 0;
 			spec.discLength = entry->length;
+			spec.disc = entry->path;
 			spec.external = external;
 			out.push_back(spec);
 		}
@@ -160,7 +172,7 @@ namespace Riivo
 
 	void BuildRedirects(const Fst &fst, const ResolvedPatchSet &set, const std::string &device,
 						DirLister *lister, std::vector<RedirectSpec> &out,
-						std::vector<std::string> *outCreated)
+						std::vector<CreatedFile> *outCreated)
 	{
 		for (size_t i = 0; i < set.files.size(); ++i)
 			BuildFile(fst, set.files[i], device, out, outCreated);

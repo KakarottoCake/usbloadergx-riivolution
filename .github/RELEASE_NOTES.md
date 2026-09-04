@@ -55,6 +55,38 @@ next to the XML you selected. It records whether the XML parsed, whether it matc
 game you launched, which options were active, every patch that was enabled, and any
 `valuefile` that could not be read. Please attach that file to any bug report.
 
+## Changed in v0.6 - the answer, and the engine that follows from it
+
+The v0.5 log answered the design question, and the answer was worse than hoped. Measured
+on your console, on Super Mario Galaxy 2 with Super Mario Spectral:
+
+| | files |
+|---|---|
+| real mod files (after discarding macOS `._` twins) | 2148 |
+| **no entry on the disc at all** — files the mod *adds* | **1881 (87.6%)** |
+| match a disc file but are **bigger** than it | 64 |
+| could be served by simply reading a different file | **203 (9.5%)** |
+
+Simply pointing disc reads at files on your card was never going to run this mod. A
+level hack is mostly *new* files, and the disc's file table has no entry for them — the
+game would never even ask. So the file table itself has to be rebuilt.
+
+**That rebuild engine is now written and tested.** It reads the game's real file table,
+inserts entries for every file the mod adds (creating folders as needed), corrects the
+size of every file the mod replaces, and hands each one a fresh location. It is covered
+by 2208 automated checks, including a full rebuild of a 3920-file table.
+
+This build runs the whole thing against your actual disc and writes the result to the
+log — real entry counts, the new table size, where the mod would live, and whether that
+fits inside what your cIOS will read. Nothing is applied, so it is safe to run.
+
+**One correction to what I told you earlier.** I previously said the IOS-side hook might
+not be needed. That was wrong, and this build's log now explains why: the fragment list
+the loader gives the cIOS serves your backup with the game partition still *encrypted*,
+and the console decrypts whatever comes back. A plaintext file from your card, fed
+through that path, decrypts into noise. The substitution has to happen inside IOS, after
+decryption. That hook is the remaining work.
+
 ## Changed in v0.5 - Phase 3 recon, second pass
 
 The v0.4 dry run worked: it read the game's real file table off the disc and resolved
