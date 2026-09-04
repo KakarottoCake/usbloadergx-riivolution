@@ -63,6 +63,16 @@ next to the XML you selected. It records whether the XML parsed, whether it matc
 game you launched, which options were active, every patch that was enabled, and any
 `valuefile` that could not be read. Please attach that file to any bug report.
 
+## Changed in v1.6
+
+- Fixed: Error #001 / anti-piracy screen. The virtual disc was enlarged to 8.5 GB on every
+  launch, which made reads past the end of the disc succeed instead of fail.
+- The mod is now placed above where the game's data actually ends, not above the disc's
+  declared size, so it usually fits without enlarging anything at all.
+- When enlarging is unavoidable, the disc now grows only as far as the mod reaches.
+- The log reports whether the disc was enlarged, and by how much.
+- 9 more automated checks - 2323 total, all passing.
+
 ## Changed in v1.5
 
 - Fixed: "Could not tell which partition the game is on". The lookup ran after `SetupDisc`
