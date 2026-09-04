@@ -26,21 +26,20 @@ Choices are stored per game, so each game remembers its own mod setup.
 | `<memory>` direct / `valuefile` / `search` / `ocarina` patches | Working |
 | `<savegame>` redirect (mod gets its own save) | Working — requires NAND emulation on for that game |
 | Option / choice menus and `${param}` substitution | Working |
-| `<file>` / `<folder>` file replacement | **Not applied.** Parsed and planned only |
+| `<file>` / `<folder>` file replacement | **Attempted from v1.0.** See below |
 
-That last row is the important caveat, and it is the one most likely to bite you:
-**mods that replace files on the disc — new levels, textures, models, audio — will not
-work yet.** The loader-side logic exists but the on-console disc-read hook that makes it
-take effect is unfinished.
+File replacement is switched on from v1.0. When every check passes, the mod's files are
+added to the table the console reads the game through, the file table is rebuilt so the
+game knows about them, and a four-byte change in memory makes the console serve them.
 
-This matters more than it sounds, because most big mods are *both*: a `<memory>` patch
-installs the mod's loader, and that loader then reads replacement files. Apply only the
-first half and the game boots into a loader whose files aren't there — which shows up as
-a **black screen right after the health and safety screen**. That is expected in this
-build, not a bug in your setup. From v0.3 the loader warns you before launching instead
-of leaving you at a black screen.
+It checks itself before committing: it reads the first mod file back *through the console*
+and compares it with the file on your card. If anything is off — the mod on a different
+drive from the game, a filesystem whose layout can't be read, a dual-layer game, a game
+whose own data crosses the 4 GiB line — it stops and the game boots exactly as it would
+without Riivolution. The log says which check stopped it.
 
-Mods that work purely through code patches are the ones worth testing right now.
+This is new and has had little time on real hardware, so treat a working boot as good news
+rather than the expected outcome, and please send the log either way.
 
 ## Checking what happened
 
