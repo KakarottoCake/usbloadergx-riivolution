@@ -279,3 +279,17 @@ s32 WBFS_GetFragList(u8 *id)
 
 	return WbfsList[part_num]->GetFragList(id);
 }
+
+s32 WBFS_GetFsInfo(u8 *id, u8 *outFsType, u32 *outLba)
+{
+	int part_num = gameList.GetPartitionNumber(id);
+	if (!VALID(part_num))
+		return -1;
+
+	if (outFsType)
+		*outFsType = WbfsList[part_num]->GetFSType();
+	if (outLba)
+		*outLba = WbfsList[part_num]->GetLBA();
+
+	return 0;
+}

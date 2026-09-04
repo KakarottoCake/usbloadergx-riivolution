@@ -110,7 +110,12 @@ namespace Riivo
 
 	bool InstallFst(const FstPlacement &place, const std::vector<u8> &fst)
 	{
-		if (!place.ok || fst.empty())
+		return fst.empty() ? false : InstallFst(place, &fst[0], (u32) fst.size());
+	}
+
+	bool InstallFst(const FstPlacement &place, const u8 *fst, u32 size)
+	{
+		if (!place.ok || !fst || size == 0)
 			return false;
 
 		//! PlaceFst has already proved this lands inside MEM1, but this write
@@ -118,22 +123,22 @@ namespace Riivo
 		//! than trust a struct that could have been built any number of ways.
 		if (place.fstAddr < MEM1_BASE || place.fstAddr >= MEM1_END)
 			return false;
-		if ((u64) place.fstAddr + fst.size() > MEM1_END)
+		if ((u64) place.fstAddr + size > MEM1_END)
 			return false;
 
-		memcpy((void *) place.fstAddr, &fst[0], fst.size());
-		DCFlushRange((void *) place.fstAddr, fst.size());
+		memcpy((void *) place.fstAddr, fst, size);
+		DCFlushRange((void *) place.fstAddr, size);
 
 		//! Point the game at the new table and, if it grew, hand it the smaller
 		//! heap. Order matters only in that both must be in place before the
 		//! game starts; nothing is running yet.
 		*(vu32 *) 0x80000038 = place.fstAddr;
-		*(vu32 *) 0x8000003C = (u32) fst.size();
+		*(vu32 *) 0x8000003C = size;
 		*(vu32 *) 0x80000034 = place.newArenaHi;
 		DCFlushRange((void *) 0x80000030, 0x20);
 
 		gprintf("Riivo: FST installed at %08x, %u bytes, arenaHi %08x\n",
-				place.fstAddr, (unsigned) fst.size(), place.newArenaHi);
+				place.fstAddr, (unsigned) size, place.newArenaHi);
 		return true;
 	}
 
@@ -143,6 +148,7 @@ namespace Riivo
 	//! arithmetic worth checking.
 	ArenaInfo ReadArenaInfo() { return ArenaInfo(); }
 	bool InstallFst(const FstPlacement &, const std::vector<u8> &) { return false; }
+	bool InstallFst(const FstPlacement &, const u8 *, u32) { return false; }
 
 #endif
 }

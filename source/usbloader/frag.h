@@ -45,6 +45,24 @@ int get_frag_list(u8 *id);
 // The master list registered with the cIOS, or NULL if none was built.
 // Riivolution reads its size to work out where a mod region can start.
 const FragList *frag_list_get(void);
+
+// ... and the same list, writable, so Riivolution can append the mod's files.
+FragList *frag_list_mutable(void);
+
+// Raise the declared virtual-disc size to at least `sectors`, without adding
+// any fragments. Offsets inside the declared size but not covered by a fragment
+// read back as zeros, so this costs nothing on disk - but it is what makes the
+// cIOS decide the disc is dual-layer when it probes for a second layer, and
+// that raises its read ceiling from 4.7 GB to 8.5 GB. Must be called before
+// set_frag_list, because the size travels with the list.
+int frag_list_reserve(u32 sectors);
+
+// Ask set_frag_list to keep the list instead of freeing it, so Riivolution can
+// extend it later. Must be set before set_frag_list runs.
+void frag_list_retain(int on);
+
+// Hand the (extended) list to the cIOS again, replacing the one it holds.
+int frag_list_register(bool sd_only);
 int set_frag_list(u8 *id, bool sd_only);
 
 #ifdef __cplusplus

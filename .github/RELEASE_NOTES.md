@@ -55,6 +55,56 @@ next to the XML you selected. It records whether the XML parsed, whether it matc
 game you launched, which options were active, every patch that was enabled, and any
 `valuefile` that could not be read. Please attach that file to any bug report.
 
+## Changed in v1.0 - it is switched on
+
+This is the first build that actually tries to run the mod. Everything up to now
+measured and refused; this one, when every check passes, does the four things that make
+it real:
+
+1. **Extends the fragment list** — looks up where each of the mod's files physically sits
+   on your drive and adds them to the table the cIOS reads the game through.
+2. **Checks its own work** — reads the first mod file back *through the cIOS*, at the
+   offset the game will ask for, and compares it against the file on your card. If those
+   don't match, it stops here.
+3. **Patches the cIOS** — the four bytes, in memory only.
+4. **Installs the rebuilt file table** into the game's memory and points the game at it.
+
+### If something is wrong, the game still boots
+
+The order above is chosen so that every failure leaves your console in a state that boots
+the game normally:
+
+- A half-built fragment list is never handed over.
+- The extended list, once handed over, is a **superset** of the original — every read
+  below the mod region is byte-for-byte what it was.
+- The four-byte patch on its own changes nothing, because a game with an unmodified file
+  table never reads above the 4 GiB line.
+- The rebuilt table is only installed *after* the patch is confirmed in place, so the game
+  is never pointed at a region nothing is serving.
+
+Both logs are written **before** the game is launched, so even if it hangs, the log tells
+us exactly how far it got and which step stopped.
+
+### One more thing that had to change
+
+Your backup declares how big its virtual disc is, and the cIOS uses that to decide whether
+the disc is single- or dual-layer — which sets the read ceiling. A single-layer disc caps
+reads at 4.699 GB, which is *exactly* where the mod region starts, so every mod read would
+have been refused. The loader now declares a larger virtual disc before handing the list
+over, so the cIOS's second-layer probe succeeds and the ceiling becomes 8.5 GB. Nothing is
+added to your drive by this — unmapped areas simply read as zeros.
+
+### What to send
+
+The same log as before, whatever happens:
+
+```
+<device>:/riivolution/usbloadergx_riivo.log
+```
+
+It now ends with a **Switching it on** section saying either what was activated, or which
+check stopped it and why.
+
 ## Changed in v0.9 - where the mod actually lives
 
 The cIOS reads your game through a *fragment list* — a table mapping offsets on a virtual

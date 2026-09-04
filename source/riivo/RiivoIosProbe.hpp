@@ -78,6 +78,16 @@ namespace Riivo
 
 	//! Human-readable rendering of a probe result, for the boot log.
 	std::string DescribeProbe(const IosProbe &p);
+
+	//! Write the four bytes at `site`, which must be a patch site the probe
+	//! found. Verifies the bytes are the ones expected before writing and reads
+	//! them back afterwards, so a half-applied patch is reported rather than
+	//! left in place. Returns false and fills `why` on any mismatch.
+	//!
+	//! Applying this to a game whose file table has NOT been rebuilt is
+	//! harmless: it only changes what happens to reads at or above 4 GiB, and
+	//! an unmodified game never makes one.
+	bool ApplyDiPatch(u32 site, std::string &why);
 }
 
 #endif

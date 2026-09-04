@@ -19,6 +19,7 @@
 #define SAFE_FREE(x) if(x) { free(x); x = NULL; }
 
 static FragList *frag_list = NULL;
+static int frag_retain = 0;
 
 void frag_init(FragList *ff, int maxnum)
 {
@@ -267,9 +268,41 @@ const FragList *frag_list_get(void)
 	return frag_list;
 }
 
+FragList *frag_list_mutable(void)
+{
+	return frag_list;
+}
+
+int frag_list_reserve(u32 sectors)
+{
+	if (frag_list == NULL)
+		return -2;
+	if (frag_list->size < sectors)
+		frag_list->size = sectors;
+	return 0;
+}
+
 int get_frag_list(u8 *id)
 {
 	return WBFS_GetFragList(id);
+}
+
+void frag_list_retain(int on)
+{
+	frag_retain = on;
+}
+
+int frag_list_register(bool sd_only)
+{
+	int size;
+	if (frag_list == NULL)
+		return -2;
+
+	// (+1 for header which is same size as fragment)
+	size = sizeof(Fragment) * (frag_list->num + 1);
+
+	gprintf("Re-registering frag list, %d fragment(s)\n", frag_list->num);
+	return WDVD_SetFragList(sd_only ? 2 : WBFS_DEVICE_USB, frag_list, size);
 }
 
 int set_frag_list(u8 *id, bool sd_only)
@@ -283,8 +316,14 @@ int set_frag_list(u8 *id, bool sd_only)
 	gprintf("Calling WDVD_SetFragList, frag list size %d\n", size);
 	int ret = WDVD_SetFragList(sd_only ? 2 : WBFS_DEVICE_USB, frag_list, size);
 
-	free(frag_list);
-	frag_list = NULL;
+	// Riivolution extends this list later, in the one window where the
+	// partition is open and the card is still mounted, so it asks for the
+	// list to be kept rather than thrown away here.
+	if (!frag_retain)
+	{
+		free(frag_list);
+		frag_list = NULL;
+	}
 
 	if (ret)
 		return ret;

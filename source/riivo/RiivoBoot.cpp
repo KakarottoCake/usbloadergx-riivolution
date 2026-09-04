@@ -19,7 +19,11 @@
 #include "RiivoIosProbe.hpp"
 #include "RiivoDiPatch.hpp"
 #include "RiivoFragPlan.hpp"
+#include "RiivoFragBuild.hpp"
 #include "usbloader/frag.h"
+#include "usbloader/wbfs.h"
+#include "settings/CSettings.h"
+#include "memory/mem2.h"
 #include "usbloader/wdvd.h"
 #include "system/IosLoader.h"
 #include "gecko.h"
@@ -47,13 +51,20 @@ namespace Riivo
 	//! Sector size of the drive the backup is on, from SetBootContext.
 	static u32 bootSectorSize = 512;
 
+	//! The game's id, needed to ask which partition it lives on.
+	static u8 bootGameId[8] = { 0 };
+
 	void SetBootContext(const ResolvedPatchSet *set, const std::string &device,
-						const std::string &logPath, u32 sectorSize)
+						const std::string &logPath, u32 sectorSize,
+						const u8 *gameId)
 	{
 		bootSet = set;
 		bootDevice = device;
 		bootLogPath = logPath;
 		bootSectorSize = sectorSize ? sectorSize : 512;
+		memset(bootGameId, 0, sizeof(bootGameId));
+		if (gameId)
+			memcpy(bootGameId, gameId, 6);
 	}
 
 	void AppendLog(const std::string &text)
@@ -199,42 +210,156 @@ namespace Riivo
 		return true;
 	}
 
-	static bool ByOffset(const ModExtent &a, const ModExtent &b)
+	static bool ByPlacedOffset(const PlacedFile &a, const PlacedFile &b)
 	{
 		return a.offset < b.offset;
 	}
 
-	//! Ask the builder where each mod file ended up and hand the extents back in
-	//! ascending order, which is what the fragment table and its lookup index
-	//! both assume. Files still sitting at their original disc offset were never
-	//! placed - their replacement was missing from the card - so they are left
-	//! out rather than dragged below the region and tripping the checks.
-	static void CollectExtents(const FstBuilder &builder, u64 region,
-							   const std::vector<RedirectSpec> &redirects,
-							   const std::vector<CreatedFile> &created,
-							   std::vector<ModExtent> &out)
+	//! Ask the builder where each mod file ended up and hand the list back in
+	//! ascending offset order, which is what the fragment table and its lookup
+	//! index both assume. Files still sitting at their original disc offset were
+	//! never placed - their replacement was missing from the card - so they are
+	//! left out rather than dragged below the region and tripping the checks.
+	static void CollectPlaced(const FstBuilder &builder, u64 region,
+							  const std::vector<RedirectSpec> &redirects,
+							  const std::vector<CreatedFile> &created,
+							  std::vector<PlacedFile> &out)
 	{
 		out.clear();
 		out.reserve(redirects.size() + created.size());
 
 		for (size_t i = 0; i < redirects.size() + created.size(); ++i)
 		{
-			const std::string &disc = i < redirects.size()
+			const bool isRedirect = i < redirects.size();
+			const std::string &disc = isRedirect
 									  ? redirects[i].disc
 									  : created[i - redirects.size()].disc;
+			const std::string &ext = isRedirect
+									 ? redirects[i].external
+									 : created[i - redirects.size()].external;
 			u64 off = 0;
 			u32 len = 0;
 			if (!builder.FindAssigned(disc, &off, &len))
 				continue;
 			if (len == 0 || off < region)
 				continue;
-			ModExtent e;
-			e.offset = off;
-			e.length = len;
-			out.push_back(e);
+			PlacedFile f;
+			f.offset = off;
+			f.length = len;
+			f.external = ext;
+			out.push_back(f);
 		}
 
-		std::sort(out.begin(), out.end(), ByOffset);
+		std::sort(out.begin(), out.end(), ByPlacedOffset);
+	}
+
+	static void ToExtents(const std::vector<PlacedFile> &in,
+						  std::vector<ModExtent> &out)
+	{
+		out.clear();
+		out.reserve(in.size());
+		for (size_t i = 0; i < in.size(); ++i)
+		{
+			ModExtent e;
+			e.offset = in[i].offset;
+			e.length = in[i].length;
+			out.push_back(e);
+		}
+	}
+
+	//! The rebuilt table, waiting for the apploader to finish so it can be put
+	//! into the game's memory. Held in MEM2 on purpose: the apploader fills MEM1
+	//! with the game and would walk straight over anything parked there.
+	static u8 *pendingFst = 0;
+	static u32 pendingFstSize = 0;
+
+	//! Register the extended fragment list, prove it reads back correctly, and
+	//! only then touch the cIOS. Ordered so that every failure leaves the console
+	//! in a state that still boots the game unmodified:
+	//!
+	//!   - a half-built fragment list is simply never registered;
+	//!   - the extended list, if registered, is a superset of the game's own, so
+	//!     every read below the mod region is byte-for-byte what it was;
+	//!   - the four-byte patch alone changes nothing, because an unmodified file
+	//!     table never sends the game above the 4 GiB line;
+	//!   - the rebuilt table is stashed for installation ONLY once the patch is
+	//!     in, so the game is never pointed at a region nothing serves.
+	static void Activate(std::string &out, const FragPlan &plan,
+						 const std::vector<PlacedFile> &placed,
+						 const std::vector<u8> &newFst, u32 patchSite)
+	{
+		if (placed.empty())
+		{
+			out += "  Nothing was placed, so there is nothing to switch on.\n";
+			return;
+		}
+
+		u8 fsType = 0;
+		u32 lba = 0;
+		if (WBFS_GetFsInfo(bootGameId, &fsType, &lba) < 0)
+		{
+			out += "  Could not tell which partition the game is on.\n";
+			return;
+		}
+
+		FragBuildStats fs;
+		if (!AppendModFragments(placed, bootSectorSize, fsType, lba, fs))
+		{
+			Addf(out, "  Could not build the fragments: %s\n", fs.firstFailure.c_str());
+			out += "  The list was not registered, so nothing changed.\n";
+			return;
+		}
+
+		Addf(out, "  located on the drive : %u file(s)", fs.files);
+		if (fs.failed)
+			Addf(out, ", %u could not be located", fs.failed);
+		out += "\n";
+		Addf(out, "  fragments            : %u -> %u of %u\n",
+			 fs.fragsBefore, fs.fragsAfter, RIIVO_FRAG_MAX);
+
+		const int reg = frag_list_register(Settings.SDMode);
+		if (reg < 0)
+		{
+			Addf(out, "  The cIOS refused the extended list (%d).\n", reg);
+			return;
+		}
+
+		//! Prove the whole chain before touching any code: read the first mod
+		//! file back through the cIOS at the offset the game will ask for.
+		std::string why;
+		if (!VerifyModFragment(placed[0].offset, placed[0].external, why))
+		{
+			Addf(out, "  The read-back check failed: %s\n", why.c_str());
+			out += "  Nothing was patched. The game boots unmodified.\n";
+			return;
+		}
+		Addf(out, "  read-back check      : passed at 0x%010llx\n",
+			 (unsigned long long) placed[0].offset);
+
+		if (!ApplyDiPatch(patchSite, why))
+		{
+			Addf(out, "  The cIOS patch failed: %s\n", why.c_str());
+			out += "  The game boots unmodified.\n";
+			return;
+		}
+		Addf(out, "  cIOS read patch      : applied at %08x\n", patchSite);
+
+		//! Last: hold on to the rebuilt table. Installing it is what actually
+		//! points the game at the mod, and it can only happen once the apploader
+		//! has run and said where the table lives.
+		pendingFst = (u8 *) MEM2_alloc(newFst.size());
+		if (!pendingFst)
+		{
+			out += "  Out of memory for the rebuilt table, so it will not be\n"
+				   "  installed. The patch above is harmless on its own.\n";
+			return;
+		}
+		memcpy(pendingFst, &newFst[0], newFst.size());
+		pendingFstSize = (u32) newFst.size();
+
+		Addf(out, "  rebuilt table        : %u bytes held, ready to install\n",
+			 pendingFstSize);
+		out += "\n  Riivolution is ON for this boot.\n";
 	}
 
 	static bool ExternalFileSize(const std::string &path, u32 *outSize)
@@ -459,6 +584,10 @@ namespace Riivo
 		out += "\nRoom on the virtual disc\n";
 		out += "------------------------\n";
 
+		FragPlan plan;
+		std::vector<ModExtent> extents;
+		std::vector<PlacedFile> placed;
+
 		if (!gameFrags)
 		{
 			out += "  The loader did not build a fragment list for this game, so there\n"
@@ -474,11 +603,10 @@ namespace Riivo
 
 			//! Feed the laid-out files through the same checks that will gate
 			//! the real thing: ordering, alignment, the read ceiling, the table.
-			std::vector<ModExtent> extents;
-			CollectExtents(builder, region, redirects, created, extents);
+			CollectPlaced(builder, region, redirects, created, placed);
+			ToExtents(placed, extents);
 
-			const FragPlan plan =
-				PlanFragRegion(imageBytes, bootSectorSize, gameFrags->num, extents);
+			plan = PlanFragRegion(imageBytes, bootSectorSize, gameFrags->num, extents);
 
 			if (!plan.ok)
 			{
@@ -501,13 +629,28 @@ namespace Riivo
 			out += "\n";
 		}
 
-		//! Go looking for the cIOS code that has to be patched. This is the one
-		//! input that cannot be worked out anywhere but on the console itself.
+		//! Go looking for the cIOS code that has to be patched.
+		IosProbe probe;
 		{
 			std::string dumpPath = bootDevice + "/riivolution/usbloadergx_riivo_dip.bin";
-			IosProbe probe;
 			ProbeIosPlugin(dumpPath, probe);
 			out += DescribeProbe(probe);
+		}
+
+		// ------------------------------------------------------------------
+		// Switch it on, but only if every single check above came back clean.
+		// ------------------------------------------------------------------
+		out += "\nSwitching it on\n";
+		out += "---------------\n";
+
+		if (!(extentFits && plan.ok && gameFrags && probe.patchSites.size() == 1))
+		{
+			out += "  Not attempted - one of the checks above did not pass. The game\n"
+				   "  boots exactly as it would without Riivolution.\n";
+		}
+		else
+		{
+			Activate(out, plan, placed, newFst, probe.patchSites[0]);
 		}
 
 		out += "\nWhat is left\n";
@@ -536,13 +679,46 @@ namespace Riivo
 	// 3. Where the rebuilt table would go in the game's memory
 	// --------------------------------------------------------------------
 
+	void PrepareFragList()
+	{
+		if (!bootSet)
+			return;
+		if (bootSet->files.empty() && bootSet->folders.empty())
+			return;
+
+		//! Keep the list alive: set_frag_list frees it the moment it has handed
+		//! it to the cIOS, and the mod's fragments cannot be worked out until
+		//! later, when the partition is open.
+		frag_list_retain(1);
+
+		//! Declare a virtual disc big enough to reach the dual-layer probe point.
+		//! The cIOS decides the disc type by trying to read near the second
+		//! layer; inside the declared size that read comes back as zeros and
+		//! succeeds, so the disc is taken for dual-layer and the read ceiling
+		//! goes from 4.7 GB to 8.5 GB - which is the only reason there is room
+		//! above the backup for the mod at all. No fragments are added here, so
+		//! this costs nothing on the drive.
+		const u32 sector = bootSectorSize ? bootSectorSize : 512;
+		const u32 sectors = (u32) (RIIVO_READ_CEILING / sector);
+		const int ret = frag_list_reserve(sectors);
+
+		gprintf("Riivo: reserved %u sectors of virtual disc (%d)\n", sectors, ret);
+	}
+
 	void ReportFstPlacement()
 	{
-		if (!bootSet || plannedFstSize == 0)
+		if (!bootSet)
+			return;
+
+		//! The size that matters is the table actually held for installation;
+		//! fall back to the planned size when nothing was switched on, so the
+		//! report still says where it would have gone.
+		const u32 want = pendingFstSize ? pendingFstSize : plannedFstSize;
+		if (want == 0)
 			return;
 
 		const ArenaInfo arena = ReadArenaInfo();
-		const FstPlacement place = PlaceFst(arena, plannedFstSize, 32);
+		const FstPlacement place = PlaceFst(arena, want, 32);
 
 		std::string out;
 		out += "\n\nWhere the rebuilt table would go\n";
@@ -553,7 +729,7 @@ namespace Riivo
 		Addf(out, "  arena high   : %08x\n", arena.arenaHi);
 		Addf(out, "  table now at : %08x, %u bytes reserved\n",
 			 arena.fstAddr, arena.fstMaxSize);
-		Addf(out, "  rebuilt size : %u bytes\n\n", plannedFstSize);
+		Addf(out, "  rebuilt size : %u bytes\n\n", want);
 
 		if (!place.ok)
 		{
@@ -577,8 +753,26 @@ namespace Riivo
 				 place.heapLeft / (1024 * 1024));
 		}
 
+		//! This is the step that actually points the game at the mod. It only
+		//! runs when the fragment list, the read-back check and the cIOS patch
+		//! all succeeded earlier - otherwise pendingFst was never filled in, and
+		//! the game boots with its own table exactly as it always did.
+		if (pendingFst && pendingFstSize && place.ok)
+		{
+			if (InstallFst(place, pendingFst, pendingFstSize))
+				out += "\n  Installed. The game will read the mod's files.\n";
+			else
+				out += "\n  The table could not be written, so the game boots with its\n"
+					   "  own. The cIOS patch is harmless on its own.\n";
+		}
+		else if (pendingFst)
+		{
+			out += "\n  Held a rebuilt table but could not place it, so it was not\n"
+				   "  installed. The game boots unmodified.\n";
+		}
+
 		AppendLog(out);
 		gprintf("Riivo: placement %s (%08x, %u bytes)\n",
-				place.ok ? "ok" : "refused", place.fstAddr, plannedFstSize);
+				place.ok ? "ok" : "refused", place.fstAddr, want);
 	}
 }

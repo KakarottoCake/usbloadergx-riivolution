@@ -82,6 +82,10 @@ namespace Riivo
 	//! Copy `fst` to the placement and repoint the boot-info block at it.
 	//! Target only; does nothing and returns false unless `place.ok`.
 	bool InstallFst(const FstPlacement &place, const std::vector<u8> &fst);
+
+	//! Same, for a table already sitting in its own buffer - which is how it
+	//! arrives here, since it has to survive the apploader in MEM2.
+	bool InstallFst(const FstPlacement &place, const u8 *fst, u32 size);
 }
 
 #endif
