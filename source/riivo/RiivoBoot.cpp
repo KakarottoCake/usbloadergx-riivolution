@@ -112,6 +112,15 @@ namespace Riivo
 	static u8 bootFsType = 0;
 	static u32 bootFsLba = 0;
 
+	//! The placement decided in SetupDisc: disc path -> byte offset on the
+	//! virtual disc, plus the region it occupies and how the fragments went.
+	//! The rebuilt table is made to agree with this, not the other way round.
+	static std::map<std::string, u64> modOffsets;
+	static u64 modRegionStart = 0;
+	static u64 modRegionEnd = 0;
+	static bool fragsRegistered = false;
+	static FragBuildStats fragStats;
+
 	//! The game's id, needed to ask which partition it lives on.
 	static u8 bootGameId[8] = { 0 };
 
@@ -369,37 +378,19 @@ namespace Riivo
 			return;
 		}
 
-		//! Looked up back in SetupDisc, before the SD unmount takes the
-		//! partition object away.
-		const u8 fsType = bootFsType;
-		const u32 lba = bootFsLba;
-		if (!bootFsKnown)
+		//! The fragments went in back in SetupDisc, inside the list the loader
+		//! handed over with set_frag_list. Nothing is registered here: d2x
+		//! blocks IOCTL_DI_FRAG_SET once a title is running, and the game
+		//! partition being open means one is - that refusal is what returned
+		//! -128 when this used to re-register at this point.
+		if (!fragsRegistered)
 		{
-			out += "  Could not tell which partition the game is on.\n";
+			out += "  The mod's fragments were never registered, so there is\n"
+				   "  nothing for the rebuilt table to point at.\n";
 			return;
 		}
-
-		FragBuildStats fs;
-		if (!AppendModFragments(placed, bootSectorSize, fsType, lba, fs))
-		{
-			Addf(out, "  Could not build the fragments: %s\n", fs.firstFailure.c_str());
-			out += "  The list was not registered, so nothing changed.\n";
-			return;
-		}
-
-		Addf(out, "  located on the drive : %u file(s)", fs.files);
-		if (fs.failed)
-			Addf(out, ", %u could not be located", fs.failed);
-		out += "\n";
-		Addf(out, "  fragments            : %u -> %u of %u\n",
-			 fs.fragsBefore, fs.fragsAfter, RIIVO_FRAG_MAX);
-
-		const int reg = frag_list_register(Settings.SDMode);
-		if (reg < 0)
-		{
-			Addf(out, "  The cIOS refused the extended list (%d).\n", reg);
-			return;
-		}
+		Addf(out, "  fragments            : %u -> %u of %u, registered in SetupDisc\n",
+			 fragStats.fragsBefore, fragStats.fragsAfter, RIIVO_FRAG_MAX);
 
 		//! Prove the whole chain before touching any code: read the first mod
 		//! file back through the cIOS at the offset the game will ask for.
@@ -645,7 +636,17 @@ namespace Riivo
 		//! disc's own granularity, but a 4K-native drive needs 4 KB and would
 		//! otherwise have every file rejected by the alignment check later.
 		const u32 layoutAlign = bootSectorSize > 0x800 ? bootSectorSize : 0x800;
-		builder.Layout(region, layoutAlign);
+
+		//! Apply the placement decided in SetupDisc rather than choosing a new
+		//! one: the fragments are already registered against those offsets and
+		//! cannot be changed now, because d2x refuses IOCTL_DI_FRAG_SET once
+		//! the game partition is open. Layout() is only used when nothing was
+		//! placed, so the report still shows what would have happened.
+		u32 unplaced = 0;
+		if (!modOffsets.empty())
+			unplaced = builder.LayoutFrom(modOffsets);
+		else
+			builder.Layout(region, layoutAlign);
 
 		std::vector<u8> newFst;
 		builder.Serialize(newFst, true);
@@ -729,12 +730,37 @@ namespace Riivo
 			Addf(out, "  its fragments      : %u of %u\n",
 				 gameFrags->num, RIIVO_FRAG_MAX);
 
-			//! Feed the laid-out files through the same checks that will gate
-			//! the real thing: ordering, alignment, the read ceiling, the table.
-			CollectPlaced(builder, region, redirects, created, placed);
+			//! Report how the fragments actually went in, back in SetupDisc.
+			if (fragsRegistered)
+			{
+				Addf(out, "  mod fragments      : %u file(s) located, %u fragment(s) total\n",
+					 fragStats.files, fragStats.fragsAfter);
+				if (fragStats.failed)
+					Addf(out, "  could not locate   : %u file(s)\n", fragStats.failed);
+			}
+			else
+			{
+				Addf(out, "  FRAGMENTS NOT REGISTERED: %s\n",
+					 fragStats.firstFailure.empty() ? "the mod's files could not be located"
+													: fragStats.firstFailure.c_str());
+			}
+
+			//! Every modded entry must have been given an offset in SetupDisc.
+			//! One that was not is pointed at whatever happens to be there, so
+			//! the whole table has to be refused.
+			if (unplaced)
+				Addf(out, "  %u modded entr%s no placement, so the table is unusable\n",
+					 unplaced, unplaced == 1 ? "y has" : "ies have");
+
+			//! Feed the placed files through the same checks that would gate a
+			//! fresh layout: ordering, alignment, the read ceiling, the table.
+			CollectPlaced(builder, modOffsets.empty() ? region : modRegionStart,
+						  redirects, created, placed);
 			ToExtents(placed, extents);
 
-			plan = PlanFragRegion(gameDataEnd, bootSectorSize, gameFrags->num, extents);
+			plan = PlanFragRegion(gameDataEnd, bootSectorSize,
+								  fragStats.fragsBefore ? fragStats.fragsBefore
+														: gameFrags->num, extents);
 
 			if (!plan.ok)
 			{
@@ -772,7 +798,8 @@ namespace Riivo
 		out += "\nSwitching it on\n";
 		out += "---------------\n";
 
-		if (!(extentFits && plan.ok && gameFrags && patchApplied))
+		if (!(extentFits && plan.ok && gameFrags && patchApplied
+			  && fragsRegistered && unplaced == 0))
 		{
 			out += "  Not attempted - one of the checks above did not pass. The game\n"
 				   "  boots exactly as it would without Riivolution.\n";
@@ -854,46 +881,59 @@ namespace Riivo
 		gprintf("Riivo: partition lookup %s (fs %u, lba %u)\n",
 				bootFsKnown ? "ok" : "FAILED", bootFsType, bootFsLba);
 
-		//! How much room the mod actually needs, measured from the files on the
-		//! card. This has to be answered HERE, before the list is handed over,
-		//! even though the exact layout is not worked out until the partition
-		//! is open - so it is deliberately an over-estimate.
-		u64 modBytes = 0;
+		//! Work the whole placement out HERE, from the files on the card.
+		//!
+		//! d2x blocks IOCTL_DI_FRAG_SET once a title is running
+		//! (Stealth_CheckRunningTitle in its plugin), and opening the game
+		//! partition is what starts one - so the extended list has to be handed
+		//! over before that, in the same call the loader already makes. The file
+		//! table cannot be read until afterwards, so the table is made to agree
+		//! with this placement rather than the other way round.
+		std::vector<ModCandidate> cand;
 		{
 			FsDirLister lister;
-			for (size_t i = 0; i < bootSet->folders.size(); ++i)
-			{
-				std::vector<std::string> files;
-				lister.List(bootSet->folders[i].external,
-							bootSet->folders[i].recursive, files);
-				for (size_t j = 0; j < files.size(); ++j)
-				{
-					struct stat st;
-					if (stat(files[j].c_str(), &st) == 0 && S_ISREG(st.st_mode))
-						modBytes += (u64) st.st_size;
-				}
-			}
-			for (size_t i = 0; i < bootSet->files.size(); ++i)
-			{
-				struct stat st;
-				if (stat(bootSet->files[i].external.c_str(), &st) == 0 && S_ISREG(st.st_mode))
-					modBytes += (u64) st.st_size;
-			}
+			ListModFiles(*bootSet, bootDevice, &lister, cand);
+		}
+		if (cand.empty())
+		{
+			fragListUntouched = true;
+			gprintf("Riivo: no mod files found on the card, list left alone\n");
+			return;
 		}
 
-		//! Each file is padded up to a sector and the same file can be listed by
-		//! more than one folder rule, so leave generous slack. Being too big
-		//! here only costs the anti-piracy margin below; being too small makes
-		//! the layout refuse later, which is merely a wasted boot.
-		const u64 need = RIIVO_REGION_BYTES + modBytes + (modBytes / 4) + (64 << 20);
+		//! The floor is where the game's own fragments end - see the report in
+		//! PrepareFileRedirects for why that, and not the declared size.
+		const u32 sector = bootSectorSize ? bootSectorSize : 512;
+		u64 gameEnd = 0;
+		for (u32 i = 0; i < before->num; ++i)
+		{
+			const u64 e = (u64) (before->frag[i].offset + before->frag[i].count) * sector;
+			if (e > gameEnd)
+				gameEnd = e;
+		}
 
-		//! Declare a virtual disc big enough to reach the dual-layer probe point.
-		//! The cIOS decides the disc type by trying to read near the second
-		//! layer; inside the declared size that read comes back as zeros and
-		//! succeeds, so the disc is taken for dual-layer and the read ceiling
-		//! goes from 4.7 GB to 8.5 GB - which is the only reason there is room
-		//! above the backup for the mod at all. No fragments are added here, so
-		//! this costs nothing on the drive.
+		const u32 align = sector > 0x800 ? sector : 0x800;
+		const u64 regionStart = PlanRegionStart(gameEnd, align);
+
+		std::vector<PlacedFile> placed;
+		placed.reserve(cand.size());
+		u64 cursor = regionStart;
+		for (size_t i = 0; i < cand.size(); ++i)
+		{
+			if (cand[i].size == 0)
+				continue;
+			cursor = (cursor + align - 1) & ~((u64) align - 1);
+			PlacedFile pf;
+			pf.offset = cursor;
+			pf.length = cand[i].size;
+			pf.external = cand[i].external;
+			placed.push_back(pf);
+			modOffsets[cand[i].disc] = cursor;
+			cursor += cand[i].size;
+		}
+		modRegionStart = regionStart;
+		modRegionEnd = cursor;
+
 		//! Reserve only as far as the mod actually reaches, and only when it
 		//! reaches past what the backup already declares.
 		//!
@@ -901,42 +941,41 @@ namespace Riivo
 		//! offset up to 8.5 GB readable. Games check for that: a read past the
 		//! end of the disc is supposed to FAIL, and one that quietly returns
 		//! zeros instead is how a Wii game decides it is running from a copy.
-		//! Super Mario Galaxy 2 answers with Error #001, which is exactly what
-		//! a tester saw. Anything the mod does not need must still fail.
-		const u32 sector = bootSectorSize ? bootSectorSize : 512;
+		//! Super Mario Galaxy 2 answers with Error #001.
 		const u64 declared = (u64) origImageSectors * sector;
-
-		if (need <= declared)
+		if (modRegionEnd > declared)
 		{
-			//! It fits in the disc the backup already claims to be, so there is
-			//! nothing to declare and no reads to open up. The best outcome.
-			gprintf("Riivo: mod fits inside the declared disc (%llu <= %llu), no reservation\n",
-					(unsigned long long) need, (unsigned long long) declared);
-		}
-		else
-		{
-			//! Past the single-layer ceiling the cIOS refuses reads outright
-			//! unless it believes the disc is dual-layer, and it decides that
-			//! by probing near the second layer - so the declared size has to
-			//! reach the probe point for that to be believed.
-			u64 want = need;
+			u64 want = modRegionEnd;
 			if (want > RIIVO_DVD5_CEILING && want < RIIVO_DVD9_PROBE_BYTES)
 				want = RIIVO_DVD9_PROBE_BYTES;
 			if (want > RIIVO_READ_CEILING)
 				want = RIIVO_READ_CEILING;
-
 			const u32 sectors = (u32) ((want + sector - 1) / sector);
-			const int ret = frag_list_reserve(sectors);
+			frag_list_reserve(sectors);
 			reservedBytes = (u64) sectors * sector;
+		}
 
-			gprintf("Riivo: reserved %u sectors = %llu bytes (%d)\n",
-					sectors, (unsigned long long) reservedBytes, ret);
+		//! Append the mod's fragments to the list the loader is about to hand
+		//! over. set_frag_list registers the lot in one go, a few lines later in
+		//! SetupDisc, which is the call d2x still allows.
+		if (!AppendModFragments(placed, sector, bootFsType, bootFsLba, fragStats))
+		{
+			gprintf("Riivo: fragment build failed: %s\n", fragStats.firstFailure.c_str());
+			modOffsets.clear();
+			fragsRegistered = false;
+		}
+		else
+		{
+			fragsRegistered = true;
+			gprintf("Riivo: %u mod fragment(s) appended, %u total\n",
+					fragStats.files, fragStats.fragsAfter);
 		}
 
 		//! Find the cIOS read handler and patch it now, while the access to do
 		//! it still exists. The card is mounted at this point - SetupDisc
 		//! unmounts it a few lines further on - so the dump can be written too.
-		const std::string dumpPath = bootDevice + "/riivolution/usbloadergx_riivo_dip.bin";
+		const std::string dumpPath = bootDevice + "/riivolution/usbloadergx_riivo_"
+									 + (const char *) bootGameId + "_dip.bin";
 		ProbeIosPlugin(dumpPath, bootProbe);
 
 		if (bootProbe.patchSites.size() == 1)

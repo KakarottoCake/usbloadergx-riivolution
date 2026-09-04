@@ -251,6 +251,50 @@ namespace Riivo
 		}
 	}
 
+	//! Walk the same tree Layout() does, but take each offset from `byPath`
+	//! instead of allocating it. `prefix` is the path built so far.
+	static void WalkLayoutFrom(FstNode &n, const std::string &prefix,
+							   const std::map<std::string, u64> &byPath,
+							   FstBuildStats *st, u32 *missing)
+	{
+		for (size_t i = 0; i < n.children.size(); ++i)
+		{
+			FstNode &c = n.children[i];
+			const std::string here = prefix + "/" + ToLower(c.name);
+			if (c.isDir)
+			{
+				WalkLayoutFrom(c, here, byPath, st, missing);
+				continue;
+			}
+			if (!c.modded)
+			{
+				++st->unchanged;
+				continue;
+			}
+			std::map<std::string, u64>::const_iterator it = byPath.find(here);
+			if (it == byPath.end())
+			{
+				//! Nothing was placed for this entry, so pointing the game at
+				//! it would read whatever happens to be there. Leave the offset
+				//! alone and let the caller refuse.
+				++(*missing);
+				continue;
+			}
+			c.offset = it->second;
+			if (c.offset + c.length > st->highestOffset)
+				st->highestOffset = c.offset + c.length;
+		}
+	}
+
+	u32 FstBuilder::LayoutFrom(const std::map<std::string, u64> &byDiscPath)
+	{
+		stats.unchanged = 0;
+		stats.highestOffset = 0;
+		u32 missing = 0;
+		WalkLayoutFrom(root, "", byDiscPath, &stats, &missing);
+		return missing;
+	}
+
 	void FstBuilder::Layout(u64 regionStart, u32 align)
 	{
 		if (align == 0)
