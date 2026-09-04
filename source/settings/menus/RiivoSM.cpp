@@ -4,6 +4,7 @@
  * Per-game Riivolution configuration page. Modeled on GameLoadSM.
  ***************************************************************************/
 #include <dirent.h>
+#include <stdio.h>
 #include <strings.h>
 #include <string.h>
 #include <gccore.h>
@@ -148,13 +149,21 @@ void RiivoSM::SetOptionValues()
 {
 	int Idx = 0;
 
-	//! Row 0: selected XML file name, or OFF.
+	//! Row 0: selected XML file name, or why there isn't one.
 	if (GameConfig.RiivoPath.empty())
-		Options->SetValue(Idx++, "%s", tr( "OFF" ));
+		Options->SetValue(Idx++, "%s", xmlFiles.empty()
+						  ? tr( "None found" ) : tr( "OFF" ));
 	else if (!discLoaded)
 		Options->SetValue(Idx++, "%s (%s)", BaseName(GameConfig.RiivoPath), tr( "parse error" ));
 	else
-		Options->SetValue(Idx++, "%s", BaseName(GameConfig.RiivoPath));
+	{
+		char id[7];
+		snprintf(id, sizeof(id), "%.6s", (const char *) Header->id);
+		if (!disc.IsValidForGame(id, 0, 0))
+			Options->SetValue(Idx++, "%s (%s)", BaseName(GameConfig.RiivoPath), tr( "other game" ));
+		else
+			Options->SetValue(Idx++, "%s", BaseName(GameConfig.RiivoPath));
+	}
 
 	//! Option rows: current choice name, or Disabled.
 	for (size_t i = 0; i < flatOptions.size(); ++i)

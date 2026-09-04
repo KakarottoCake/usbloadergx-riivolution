@@ -615,8 +615,11 @@ int GameBooter::BootGame(struct discHdr *gameHdr, const s8 useOcarina)
 		LoadGameConfig(Settings.Cheatcodespath);
 
 	//! Riivolution: parse the selected XML and resolve the current selection now.
-	//! The resolved set persists to the pre-entry window below, where the memory
-	//! engine (Phase 1) applies it after gamepatches().
+	//! This has to happen here, while SD/USB are still mounted: ShutDownDevices()
+	//! runs long before the pre-entry window where the memory engine (Phase 1)
+	//! actually applies the patches, so anything that needs the filesystem -
+	//! reading the XML, loading <memory valuefile=> blobs, writing the boot log -
+	//! must be done up front.
 	Riivo::ResolvedPatchSet riivoSet;
 	std::string riivoDevice; // SD/USB mount prefix, e.g. "sd:"
 	if (game_cfg->RiivoPath.size() > 0)
@@ -631,17 +634,28 @@ int GameBooter::BootGame(struct discHdr *gameHdr, const s8 useOcarina)
 
 		Riivo::Disc riivoDisc;
 		std::string riivoErr;
-		if (Riivo::ParseFile(game_cfg->RiivoPath.c_str(), riivoDisc, &riivoErr))
+		int riivoValuefileFails = 0;
+		bool riivoParsed = Riivo::ParseFile(game_cfg->RiivoPath.c_str(), riivoDisc, &riivoErr);
+		if (riivoParsed)
 		{
 			gprintf("Riivo: XML valid for game: %d\n", riivoDisc.IsValidForGame(riivoId, 0, 0));
 			if (game_cfg->RiivoConfig.size() > 0)
 				Riivo::ApplySelection(riivoDisc, game_cfg->RiivoConfig);
 			Riivo::Resolve(riivoDisc, riivoId, riivoSet);
+			//! Inline every valuefile before the devices go away.
+			riivoValuefileFails = Riivo::PreloadValueFiles(riivoSet, riivoDevice);
 			Riivo::DumpDisc(riivoDisc);
 			Riivo::DumpResolved(riivoSet);
 		}
 		else
 			gprintf("Riivo: parse failed: %s\n", riivoErr.c_str());
+
+		//! Leave a breadcrumb next to the XML so a tester without a USB Gecko can
+		//! tell what happened after the console has rebooted into the game.
+		Riivo::WriteLog(riivoDevice + "/riivolution/usbloadergx_riivo.log", riivoId,
+						game_cfg->RiivoPath, riivoParsed ? NULL : riivoErr.c_str(),
+						riivoParsed ? &riivoDisc : NULL, riivoParsed ? &riivoSet : NULL,
+						riivoValuefileFails);
 	}
 
 	//! Riivolution <savegame> redirect (Phase 2): point the NAND-emu base at the

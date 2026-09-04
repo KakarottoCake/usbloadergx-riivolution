@@ -357,4 +357,97 @@ namespace Riivo
 			gprintf("  savegame: external='%s' (root='%s') clone=%d\n",
 					set.savegames[i].external.c_str(), set.savegames[i].root.c_str(), set.savegames[i].clone);
 	}
+
+	// --------------------------------------------------------------------
+	// Boot log (see the header for why this exists)
+	// --------------------------------------------------------------------
+
+	void WriteLog(const std::string &path, const char *gameId, const std::string &xmlPath,
+				  const char *parseError, const Disc *disc, const ResolvedPatchSet *set,
+				  int valuefileFailures)
+	{
+		FILE *f = fopen(path.c_str(), "w");
+		if (!f)
+		{
+			gprintf("Riivo: could not write log to %s\n", path.c_str());
+			return;
+		}
+
+		fprintf(f, "USB Loader GX - Riivolution boot log\n");
+		fprintf(f, "game id : %s\n", gameId ? gameId : "(unknown)");
+		fprintf(f, "xml     : %s\n", xmlPath.c_str());
+
+		if (parseError)
+		{
+			fprintf(f, "\nRESULT  : XML FAILED TO PARSE\n");
+			fprintf(f, "reason  : %s\n", parseError);
+			fprintf(f, "\nNothing was applied to the game.\n");
+			fclose(f);
+			return;
+		}
+
+		if (disc)
+		{
+			fprintf(f, "root    : %s\n", disc->root.c_str());
+			fprintf(f, "matches this game: %s\n", disc->IsValidForGame(gameId, 0, 0)
+					? "yes" : "NO - this XML is meant for a different game");
+
+			fprintf(f, "\nOptions\n-------\n");
+			int shown = 0;
+			for (size_t sec = 0; sec < disc->sections.size(); ++sec)
+			{
+				fprintf(f, "[%s]\n", disc->sections[sec].name.c_str());
+				for (size_t o = 0; o < disc->sections[sec].options.size(); ++o, ++shown)
+				{
+					const Option &opt = disc->sections[sec].options[o];
+					const int sel = opt.selectedChoice;
+					const char *chosen = "Disabled";
+					if (sel > 0 && sel <= (int) opt.choices.size())
+						chosen = opt.choices[sel - 1].name.c_str();
+					fprintf(f, "  %-40s = %s\n", opt.name.c_str(), chosen);
+				}
+			}
+			if (shown == 0)
+				fprintf(f, "  (this XML defines no options)\n");
+		}
+
+		if (set)
+		{
+			fprintf(f, "\nPatches enabled by that selection\n");
+			fprintf(f, "---------------------------------\n");
+			fprintf(f, "memory   : %u\n", (unsigned) set->memories.size());
+			fprintf(f, "savegame : %u\n", (unsigned) set->savegames.size());
+			fprintf(f, "file     : %u  (NOT applied - file replacement is unfinished)\n",
+					(unsigned) set->files.size());
+			fprintf(f, "folder   : %u  (NOT applied - file replacement is unfinished)\n",
+					(unsigned) set->folders.size());
+
+			for (size_t i = 0; i < set->memories.size(); ++i)
+			{
+				const ResolvedMemory &m = set->memories[i];
+				fprintf(f, "  memory 0x%08x %-7s %u byte(s)%s\n",
+						m.offset | 0x80000000,
+						m.ocarina ? "ocarina" : (m.search ? "search" : "direct"),
+						(unsigned) m.value.size(),
+						m.valuefile.empty() ? "" : "  <- VALUEFILE MISSING");
+			}
+			for (size_t i = 0; i < set->savegames.size(); ++i)
+				fprintf(f, "  savegame -> %s (clone=%s)\n",
+						set->savegames[i].external.c_str(),
+						set->savegames[i].clone ? "yes" : "no");
+
+			if (valuefileFailures > 0)
+				fprintf(f, "\nWARNING: %d valuefile(s) could not be read; those patches will be\n"
+						   "skipped. Check that the mod's files sit on the same device as the XML.\n",
+						valuefileFailures);
+			else if (set->memories.empty() && set->savegames.empty())
+				fprintf(f, "\nNothing to apply. If you expected a mod here, check that an option\n"
+						   "above is set to something other than Disabled.\n");
+			else
+				fprintf(f, "\nThe patches above were handed to the boot sequence.\n");
+		}
+
+		fclose(f);
+		gprintf("Riivo: wrote boot log to %s\n", path.c_str());
+	}
 }

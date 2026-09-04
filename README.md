@@ -51,6 +51,22 @@ Settings are saved **per game**, so each game remembers its own mod choices.
 | `<file>` / `<folder>` replacement | Swap real game files for modded ones from your SD card (new levels, textures, audio) | 🛠️ Loader logic built & tested; the on-console read-hook still needs hardware testing |
 | `<folder>` add-new-files | Mods that add brand-new files | ⏳ Planned |
 
+## Did it work? (checking without a USB Gecko)
+
+Riivolution runs at the very end of the boot sequence, after the loader has already torn
+down the screen, so there is nothing to see on the TV. Every launch therefore writes a
+short report to:
+
+```
+<device>:/riivolution/usbloadergx_riivo.log
+```
+
+on the same device as the XML you selected. Pull the card, open that file, and it will
+tell you whether the XML parsed, whether it is actually meant for that game, which
+options were active, how many patches were enabled, and whether any `valuefile` blobs
+were missing. If the file isn't there at all, the loader never reached your XML — check
+that **Game Settings → Riivolution** is pointing at a file and not `OFF`.
+
 **How it works under the hood, briefly:** memory patches reuse the loader's existing
 "poke RAM before the game starts" machinery (the same idea as Ocarina cheats), so they
 need no custom cIOS. File replacement is the hard part — it requires intercepting the

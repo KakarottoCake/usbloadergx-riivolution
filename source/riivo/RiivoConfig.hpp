@@ -36,6 +36,16 @@ namespace Riivo
 	//! gprintf a human-readable dump of the parsed disc and the resolved set.
 	void DumpDisc(const Disc &disc);
 	void DumpResolved(const ResolvedPatchSet &set);
+
+	//! Write a plain-text summary of the Riivolution stage of boot to `path`.
+	//! The loader unmounts SD/USB long before the game starts and shows nothing
+	//! on screen at that point, so without a USB Gecko this file is the only way
+	//! to see whether the XML parsed, which options were active, and whether
+	//! every valuefile was found. `disc`/`set` may be NULL when parsing failed;
+	//! `parseError` is NULL when it succeeded.
+	void WriteLog(const std::string &path, const char *gameId, const std::string &xmlPath,
+				  const char *parseError, const Disc *disc, const ResolvedPatchSet *set,
+				  int valuefileFailures);
 }
 
 #endif

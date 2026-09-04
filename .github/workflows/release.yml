@@ -1,0 +1,95 @@
+name: Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Tag to create the release for (e.g. v0.2-riivo-test1)"
+        required: true
+      prerelease:
+        description: "Mark as a pre-release"
+        type: boolean
+        default: true
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: Build boot.dol
+    runs-on: ubuntu-latest
+    container: devkitpro/devkitppc:20250527
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: ${{ github.event.inputs.tag || github.ref }}
+
+      - name: Configure Git
+        run: git config --system --add safe.directory "$GITHUB_WORKSPACE"
+
+      - name: Compile USB Loader GX
+        run: make release -j$(nproc)
+
+      # SD card layout: unzip at the root of the SD card and the app lands in
+      # /apps/usbloader_gx, which is where the Homebrew Channel looks for it.
+      - name: Package
+        run: |
+          mkdir -p package/apps/usbloader_gx
+          cp boot.dol package/apps/usbloader_gx/
+          cp HBC/icon.png package/apps/usbloader_gx/
+          cp HBC/meta.xml package/apps/usbloader_gx/
+
+      - name: Upload build
+        uses: actions/upload-artifact@v4
+        with:
+          name: package
+          path: package
+
+      - name: Upload debug binary
+        uses: actions/upload-artifact@v4
+        with:
+          name: boot-elf
+          path: boot.elf
+
+  release:
+    name: Publish release
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.tag || github.ref }}
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: package
+          path: package
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: boot-elf
+          path: elf
+
+      - name: Zip
+        run: |
+          TAG="${{ github.event.inputs.tag || github.ref_name }}"
+          cd package && zip -r "../USBLoaderGX-Riivolution-${TAG}.zip" apps && cd ..
+          cp package/apps/usbloader_gx/boot.dol .
+          cp elf/boot.elf .
+
+      - name: Create release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.event.inputs.tag || github.ref_name }}
+          name: USB Loader GX Riivolution ${{ github.event.inputs.tag || github.ref_name }}
+          prerelease: ${{ github.event.inputs.prerelease != 'false' }}
+          generate_release_notes: false
+          body_path: .github/RELEASE_NOTES.md
+          files: |
+            USBLoaderGX-Riivolution-*.zip
+            boot.dol
+            boot.elf
