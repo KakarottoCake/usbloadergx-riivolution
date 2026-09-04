@@ -17,6 +17,9 @@
 #include "system/IosLoader.h"
 #include "gecko.h"
 
+//! Built once at startup by IosLoader::GetD2XInfo().
+extern std::vector<struct d2x> d2x_list;
+
 namespace Riivo
 {
 	// --------------------------------------------------------------------
@@ -75,6 +78,22 @@ namespace Riivo
 		out += "That is the cIOS this game was told to use, and the one the\n"
 			   "file-replacement read hook will have to patch.\n\n";
 
+		//! What the loader itself found at startup. GetD2XInfo() builds this with
+		//! ISFS up, so it is the authoritative answer to "which slots hold a d2x".
+		out += "d2x cIOS the loader detected at startup:\n";
+		if (d2x_list.empty())
+			out += "  (none - the loader found no d2x cIOS in any slot)\n";
+		for (size_t i = 0; i < d2x_list.size(); ++i)
+			Addf(out, "  slot %3d : d2x, base IOS%d%s\n",
+				 (int) d2x_list[i].slot, (int) d2x_list[i].base,
+				 d2x_list[i].slot == IOS_GetVersion() ? "   <== in use" : "");
+
+		out += "\nEvery slot that publishes a cIOS info block:\n";
+
+		//! GetIOSInfo reads the info block out of NAND, so ISFS has to be up -
+		//! GetD2XInfo() does exactly the same around its own loop. Without it
+		//! every slot silently returns NULL and the survey reports nothing.
+		ISFS_Initialize();
 		int found = 0;
 		for (s32 slot = 200; slot <= 254; ++slot)
 		{
@@ -94,8 +113,10 @@ namespace Riivo
 			++found;
 		}
 
+		ISFS_Deinitialize();
+
 		if (found == 0)
-			out += "  (no slot in 200-254 carries cIOS version info)\n";
+			out += "  (none - no slot in 200-254 carries a cIOS info block)\n";
 
 		out += "\nA slot with no line above either holds no title at all, or holds a cIOS\n"
 			   "that does not publish the d2x info block - a Hermes cIOS or a custom\n"
@@ -217,31 +238,91 @@ namespace Riivo
 		std::vector<std::string> created;
 		BuildRedirects(fst, *bootSet, bootDevice, &lister, redirects, &created);
 
-		Addf(out, "%u redirect(s) resolved against the disc:\n", (unsigned) redirects.size());
+		//! Size accounting. This is the question that decides whether plain
+		//! redirection can ever work for this mod: a replacement that is bigger
+		//! than the file it stands in for cannot just be read in place, because
+		//! the disc's file table still advertises the old, smaller length.
+		int missing = 0, fits = 0, grows = 0;
+		u32 maxDiscOffset = 0;
+		std::vector<size_t> growers;
 
-		int missing = 0;
 		for (size_t i = 0; i < redirects.size(); ++i)
+		{
+			const RedirectSpec &r = redirects[i];
+			if (r.discOffset > maxDiscOffset)
+				maxDiscOffset = r.discOffset;
+
+			u32 extSize = 0;
+			if (!ExternalFileSize(r.external, &extSize))
+			{
+				++missing;
+				continue;
+			}
+			if (extSize > r.discLength)
+			{
+				++grows;
+				growers.push_back(i);
+			}
+			else
+				++fits;
+		}
+
+		Addf(out, "external files seen : %u\n", (unsigned) (redirects.size() + created.size()));
+		Addf(out, "  matched on disc   : %u\n", (unsigned) redirects.size());
+		Addf(out, "  no disc entry     : %u\n", (unsigned) created.size());
+		Addf(out, "  metadata ignored  : %d  (macOS ._ twins, .DS_Store, Thumbs.db)\n\n",
+			 lister.skipped);
+
+		out += "Replacement size vs the file it replaces\n";
+		out += "---------------------------------------\n";
+		Addf(out, "  same size or smaller : %d\n", fits);
+		Addf(out, "  LARGER than original : %d\n", grows);
+		Addf(out, "  missing from card    : %d\n", missing);
+		Addf(out, "  highest disc offset  : 0x%08x\n\n", maxDiscOffset);
+
+		if (grows > 0)
+		{
+			out += "A replacement bigger than the original cannot simply be read in its\n"
+				   "place: the disc's file table still advertises the old length, so the\n"
+				   "game would only ever ask for that many bytes. Making these work needs\n"
+				   "the in-RAM file-table rebuild (Phase 4), not just read redirection.\n\n";
+			out += "biggest growers:\n";
+			for (size_t n = 0; n < growers.size() && n < 15; ++n)
+			{
+				const RedirectSpec &r = redirects[growers[n]];
+				u32 extSize = 0;
+				ExternalFileSize(r.external, &extSize);
+				Addf(out, "  disc %8u -> ext %8u  %s\n",
+					 (unsigned) r.discLength, (unsigned) extSize, r.external.c_str());
+			}
+			if (growers.size() > 15)
+				Addf(out, "  ... and %u more\n", (unsigned) (growers.size() - 15));
+			out += "\n";
+		}
+
+		out += "Sample of the redirects that would be applied:\n";
+		for (size_t i = 0; i < redirects.size() && i < 25; ++i)
 		{
 			const RedirectSpec &r = redirects[i];
 			u32 extSize = 0;
 			const bool have = ExternalFileSize(r.external, &extSize);
-			if (!have)
-				++missing;
-			Addf(out, "  disc 0x%08x +%-8u <- %s%s\n",
-				 r.discOffset, (unsigned) r.length, r.external.c_str(),
-				 have ? "" : "   [MISSING ON CARD]");
+			Addf(out, "  disc 0x%08x len %-8u <- %-8u %s%s\n",
+				 r.discOffset, (unsigned) r.discLength, (unsigned) extSize,
+				 r.external.c_str(), have ? "" : "   [MISSING ON CARD]");
 		}
+		if (redirects.size() > 25)
+			Addf(out, "  ... and %u more\n", (unsigned) (redirects.size() - 25));
 
 		if (!created.empty())
 		{
-			Addf(out, "\n%u external file(s) have no matching entry on the disc.\n",
+			Addf(out, "\n%u external file(s) have no entry on the disc at all - these are\n"
+					  "files the mod ADDS. Adding files needs the Phase 4 file-table\n"
+					  "rebuild, so they would be ignored by redirection alone:\n",
 				 (unsigned) created.size());
-			out += "Adding brand-new files needs an in-RAM FST rebuild (Phase 4), which is\n"
-				   "not written yet, so these would be ignored:\n";
-			for (size_t i = 0; i < created.size() && i < 20; ++i)
+			for (size_t i = 0; i < created.size() && i < 15; ++i)
 				Addf(out, "  %s\n", created[i].c_str());
-			if (created.size() > 20)
-				Addf(out, "  ... and %u more\n", (unsigned) (created.size() - 20));
+			if (created.size() > 15)
+				Addf(out, "  ... and %u more\n", (unsigned) (created.size() - 15));
 		}
 
 		if (missing > 0)
@@ -256,7 +337,7 @@ namespace Riivo
 				   "that would make the console fetch those ranges from the card at runtime.\n";
 
 		AppendLog(out);
-		gprintf("Riivo: dry run - %u redirect(s), %u new file(s), %d missing\n",
-				(unsigned) redirects.size(), (unsigned) created.size(), missing);
+		gprintf("Riivo: dry run - %u redirect(s), %u new, %d grow, %d missing\n",
+				(unsigned) redirects.size(), (unsigned) created.size(), grows, missing);
 	}
 }

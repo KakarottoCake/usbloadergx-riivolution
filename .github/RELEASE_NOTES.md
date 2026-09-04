@@ -55,6 +55,28 @@ next to the XML you selected. It records whether the XML parsed, whether it matc
 game you launched, which options were active, every patch that was enabled, and any
 `valuefile` that could not be read. Please attach that file to any bug report.
 
+## Changed in v0.5 - Phase 3 recon, second pass
+
+The v0.4 dry run worked: it read the game's real file table off the disc and resolved
+the mod against it. Two things it got wrong or left unanswered are fixed here.
+
+- **The cIOS survey reported nothing.** It read the info block straight out of NAND
+  without initialising ISFS first, so every slot silently came back empty. Fixed, and it
+  now also prints the d2x list the loader itself builds at startup, which is the
+  authoritative answer.
+- **macOS metadata files flooded the results.** A mod unpacked on a Mac carries a `._`
+  twin for every real file. Thousands of them were being enumerated and counted as
+  "files the mod adds". `._*`, `.DS_Store` and `Thumbs.db` are now skipped and counted
+  separately. (Deleting them from your card is still worth doing.)
+- **The report now answers the question that decides the design:** for every file the
+  mod replaces, is the replacement *bigger* than the original? A bigger file cannot just
+  be read in place, because the disc's file table still advertises the old length. The
+  log now counts those, lists the biggest, and separates files the mod *replaces* from
+  files it *adds*.
+
+Run it once more and send the log. That tells me whether read redirection alone can
+carry this mod, or whether the file-table rebuild is mandatory too.
+
 ## Changed in v0.4 - Phase 3 begins
 
 File replacement still does not work. What this build adds is the **loader half** of it,
