@@ -40,4 +40,8 @@ build_run test_scale "$SRC/riivo/RiivoFstBuild.cpp" "$SRC/riivo/RiivoFst.cpp"
 build_run test_pipeline "$SRC/riivo/RiivoFstBuild.cpp" "$SRC/riivo/RiivoFst.cpp" \
 	"$SRC/riivo/RiivoFile.cpp" "$SRC/riivo/RiivoConfig.cpp" "$SRC/xml/pugixml.cpp"
 
+# Where the rebuilt table gets written into the running game's memory. Mostly
+# a test that it REFUSES: a wrong address here overwrites the game.
+build_run test_fstinstall "$SRC/riivo/RiivoFstInstall.cpp"
+
 printf '\nall suites passed\n'

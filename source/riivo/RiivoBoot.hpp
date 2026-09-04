@@ -51,6 +51,14 @@ namespace Riivo
 	//! be applied. Call ONLY from the window described above.
 	//! Does not modify the boot in any way.
 	void PrepareFileRedirects();
+
+	//! Report where the rebuilt file table would be installed in the running
+	//! game's memory. This needs the boot-info block the apploader fills in, so
+	//! unlike everything above it must be called AFTER Apploader_Run - but still
+	//! inside BootPartition, because the log lives on a card that
+	//! ShutDownDevices() unmounts the moment BootPartition returns.
+	//! Reports only; installs nothing.
+	void ReportFstPlacement();
 }
 
 #endif

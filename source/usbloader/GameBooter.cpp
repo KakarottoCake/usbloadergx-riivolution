@@ -169,6 +169,12 @@ u32 GameBooter::BootPartition(char *dolpath, u8 videoselected, u8 alternatedol, 
 	if (ret < 0)
 		return 0;
 
+	//! The apploader has now filled in the boot-info block, so where a rebuilt
+	//! file table could live is finally answerable. Still inside BootPartition
+	//! on purpose: ShutDownDevices() takes the card away the moment this
+	//! returns, and the report is written to that card.
+	Riivo::ReportFstPlacement();
+
 	return (u32)p_entry;
 }
 

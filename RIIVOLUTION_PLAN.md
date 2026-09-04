@@ -149,6 +149,67 @@ Status: scoping draft. Source surveyed: `usbloadergx/` @ HEAD (shallow clone).
   is writing it into the game's memory (the apploader leaves the FST at `*0x80000038`)
   and pairing it with the IOS read hook that serves the relocated ranges.
 
+## The chosen design: the plaintext window
+
+Settled after reading the d2x source directly and confirming the details with a second
+model. It is far smaller than the "write a DI proxy" approach Riivolution itself used.
+
+**The observation.** In `plugin.c`, `IOCTL_DI_LOW_READ` already has two paths:
+
+```c
+if (DI_ChkMode(MODE_CRYPT))
+    ret = __DI_ReadUnencrypted(outbuf, len, offset);   /* -> Frag_Read, raw sectors */
+else
+    ret = DI_HandleCmd(inbuf, outbuf, size);           /* stock IOS: AES + H0-H3 */
+```
+
+`__DI_ReadUnencrypted` does **no decryption and no hash verification** — it is
+`__DI_CheckOffset` plus a fragment read. Both paths take the same 32-bit word offset,
+and `__DI_ReadUnencrypted` merely adds `config.offset[0]+config.offset[1]`.
+
+**So the change is a threshold, not a proxy:**
+
+1. `RiivoFstBuild` relocates every modded file into a region high above the real disc
+   data (start rounded to a 2 MB boundary above `OriginalExtent()`).
+2. The loader extends the fragment list so that region maps to the plaintext mod files
+   on the card, and registers it with the existing, supported `IOCTL_DI_FRAG_SET`.
+3. The rebuilt table is written into game RAM and `*0x80000038` repointed
+   (`RiivoFstInstall`), taking the space from the game's unclaimed heap — ~272 KB of
+   MEM1 measured on a normal layout.
+4. A ~2-instruction patch to the running plugin sends reads **at or above the region
+   start** down the raw path. Everything below is the real game, untouched and still
+   hash-verified exactly as before.
+
+**Why this is safe where it matters.** No cluster of real game data is ever modified, so
+no hash tree has to be rebuilt and no TMD has to be fakesigned. (Hash verification is
+real: `DVDLowRead` returns `0x20` on "Data failed to verify against H0", so an
+alternative design that re-encrypted modified clusters into a cache would have to
+rebuild H0→H1→H2→H3 and the TMD content hash. Avoided entirely.)
+
+**Details that constrain it:**
+- `__DI_CheckOffset` rejects reads past the disc-type ceiling. `__DI_CheckDisc()` sets
+  DVD9 if a read at word offset `0x47000000` succeeds, and `__Frag_Get` returns a sparse
+  zero block (success) for any offset inside `FragList.size` — so simply declaring a
+  large enough fragment list promotes the disc to DVD9 limits and buys the headroom.
+- A single read must never straddle the threshold, or it would mix decrypted and raw
+  bytes. Relocating the mod far above all real data makes this unreachable in practice,
+  since the game only ever reads within one file's extent.
+- `FRAG_MAX` is 20000 fragments for the whole virtual disc, shared with the game image.
+- Only supported entry points are used on the loader side; the sole unsanctioned act is
+  the in-RAM patch, which installs nothing and is gone on reboot.
+
+**The one thing that cannot be derived off-console.** IOS modules run at ARM *virtual*
+addresses (the DIP module at `0x20200000`) while the PPC sees only physical MEM2 at
+`0x90000000`. The Starlet's MMU decides that mapping, the PPC cannot read its
+translation base register, and the layout varies with the base IOS and d2x revision, so
+there is no constant to subtract. d2x also ships the plugin only as `DIPP.app` assembled
+inside the installer. Hence `RiivoIosProbe`: scan MEM2 for constants unique to the
+plugin (`0x7ED38000`/`0x46090000` from `dip.h` — note the stock DI module's table holds
+the *different* values `0x7ED40000`/`0x460A0000`, which is how the two are told apart),
+then dump the surrounding code to the card so the patch can be written against real
+instructions. All reads go through the uncached alias at `+0x40000000`, because the
+Broadway and the Starlet do not snoop each other's caches.
+
 ## 1. What the loader already does (the pieces we reuse)
 
 ### 1.1 The boot flow and the injection window
