@@ -7,6 +7,7 @@
 // the game reports as a bad disc. So the tests are mostly about refusing.
 #include <stdio.h>
 #include <string.h>
+#include <algorithm>
 #include "riivo/RiivoFragPlan.hpp"
 #include "riivo/RiivoDiPatch.hpp"
 
@@ -24,6 +25,11 @@ static const u64 DVD5_IMAGE = 4699979776ULL;
 static const u32 SECTOR = 512;
 
 //! Lay n files of `size` back to back from `start`, sector aligned.
+static bool ByOffset(const ModExtent &a, const ModExtent &b)
+{
+	return a.offset < b.offset;
+}
+
 static std::vector<ModExtent> Pack(u64 start, u32 size, int n, u32 sector)
 {
 	std::vector<ModExtent> v;
@@ -176,6 +182,28 @@ int main()
 		printf("   region at 0x%llx, %llu bytes spare below the ceiling\n",
 			   (unsigned long long) right.regionStart,
 			   (unsigned long long) right.ceilingSpare);
+	}
+
+	printf("8. a disc file claimed twice must not become two extents\n");
+	{
+		//! Newer SMBW carries 38 <folder> rules and some of them overlap, so
+		//! the same disc path is claimed more than once. Both claims resolve to
+		//! the same assigned offset, and emitting both produced two extents at
+		//! the same place - refused as "two files overlap". CollectPlaced now
+		//! keys on the disc path so only one survives; this pins down what the
+		//! planner does with the two shapes either side of that fix.
+		const u64 start = PlanRegionStart(DVD5_IMAGE, SECTOR);
+
+		std::vector<ModExtent> dup = Pack(start, 4096, 3, SECTOR);
+		dup.push_back(dup[1]);                       // the same file claimed twice
+		std::sort(dup.begin(), dup.end(), ByOffset);
+		ck(!PlanFragRegion(DVD5_IMAGE, SECTOR, 3, dup).ok,
+		   "a duplicated extent is still refused (the symptom)");
+
+		std::vector<ModExtent> once = Pack(start, 4096, 3, SECTOR);
+		FragPlan p = PlanFragRegion(DVD5_IMAGE, SECTOR, 3, once);
+		ck(p.ok, "the de-duplicated form is accepted (the fix)");
+		ck(p.files == 3, "and keeps one extent per disc file");
 	}
 
 	printf("\n%d checks, %d failure(s)\n", checks, failures);

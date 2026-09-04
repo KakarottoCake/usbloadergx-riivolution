@@ -63,6 +63,16 @@ next to the XML you selected. It records whether the XML parsed, whether it matc
 game you launched, which options were active, every patch that was enabled, and any
 `valuefile` that could not be read. Please attach that file to any bug report.
 
+## Changed in v1.3
+
+- Fixed: the fragment list was enlarged even when file replacement could not run, so the
+  game was booted differently from stock for no reason. It is now left untouched unless
+  the mod can actually be applied.
+- Fixed: a disc file claimed by two overlapping `<folder>` rules produced two entries at
+  the same place and the whole plan was refused with "two files overlap".
+- The log now says when the fragment list was deliberately left alone, and why.
+- 9 more automated checks - 2314 total, all passing.
+
 ## Changed in v1.2 - it warns you before launching, not after
 
 Two things the last test should not have had to discover from a log file.

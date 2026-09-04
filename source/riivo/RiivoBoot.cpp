@@ -7,6 +7,7 @@
 #include <malloc.h>
 #include <sys/stat.h>
 #include <algorithm>
+#include <map>
 #include <gccore.h>
 #include <ogcsys.h>
 
@@ -26,6 +27,7 @@
 #include "memory/mem2.h"
 #include "usbloader/wdvd.h"
 #include "system/IosLoader.h"
+#include "libs/libruntimeiospatch/runtimeiospatch.h"
 #include "gecko.h"
 
 //! Built once at startup by IosLoader::GetD2XInfo().
@@ -69,6 +71,10 @@ namespace Riivo
 	//! not, the memory patches have to be held back too.
 	static bool fileWorkWanted = false;
 	static bool fileWorkLive = false;
+
+	//! Set when PrepareFragList deliberately left the fragment list alone, so
+	//! the report can say that rather than blaming a missing list.
+	static bool fragListUntouched = false;
 
 	//! The game's id, needed to ask which partition it lives on.
 	static u8 bootGameId[8] = { 0 };
@@ -245,7 +251,16 @@ namespace Riivo
 							  std::vector<PlacedFile> &out)
 	{
 		out.clear();
-		out.reserve(redirects.size() + created.size());
+
+		//! Keyed by disc path, because the same disc file can legitimately be
+		//! claimed more than once: a mod with overlapping <folder> rules - Newer
+		//! SMBW has 38 of them - names some files twice. Both claims resolve to
+		//! the same assigned offset, so emitting both put two extents at the
+		//! same place and the whole plan was refused with "two files overlap".
+		//! Last one wins, matching how AddOrReplace resolved it when the table
+		//! was built, so the file that serves the read is the file the game's
+		//! table describes.
+		std::map<std::string, PlacedFile> byDisc;
 
 		for (size_t i = 0; i < redirects.size() + created.size(); ++i)
 		{
@@ -266,8 +281,13 @@ namespace Riivo
 			f.offset = off;
 			f.length = len;
 			f.external = ext;
-			out.push_back(f);
+			byDisc[disc] = f;
 		}
+
+		out.reserve(byDisc.size());
+		for (std::map<std::string, PlacedFile>::const_iterator it = byDisc.begin();
+			 it != byDisc.end(); ++it)
+			out.push_back(it->second);
 
 		std::sort(out.begin(), out.end(), ByPlacedOffset);
 	}
@@ -620,7 +640,18 @@ namespace Riivo
 		std::vector<ModExtent> extents;
 		std::vector<PlacedFile> placed;
 
-		if (!gameFrags)
+		if (fragListUntouched)
+		{
+			out += "  SKIPPED: the loader was not given hardware access (AHBPROT), so\n"
+				   "  the cIOS cannot be patched and file replacement is impossible on\n"
+				   "  this boot. The fragment list was therefore left exactly as it\n"
+				   "  was, and the game is being read precisely as stock USB Loader GX\n"
+				   "  reads it. Everything measured above is a dry run.\n\n"
+				   "  Launch USB Loader GX from the Homebrew Channel directly - not\n"
+				   "  from a forwarder channel, and not from anything that reloads IOS\n"
+				   "  on the way in - and this will run for real.\n\n";
+		}
+		else if (!gameFrags)
 		{
 			out += "  The loader did not build a fragment list for this game, so there\n"
 				   "  is no virtual disc to extend. That happens when the game is read\n"
@@ -723,6 +754,24 @@ namespace Riivo
 			return;
 		if (bootSet->files.empty() && bootSet->folders.empty())
 			return;
+
+		//! Everything below changes the fragment list the cIOS serves the game
+		//! through, and it happens here - in SetupDisc - long before the checks
+		//! in PrepareFileRedirects can say whether the mod is going to be
+		//! applied at all. There is no way to take it back afterwards: by then
+		//! the list has been handed over.
+		//!
+		//! So do not touch it unless file replacement can actually happen. The
+		//! one thing that can be tested this early is hardware access: without
+		//! AHBPROT the cIOS patch cannot be made, so the feature is impossible
+		//! no matter what else lines up, and the game should be booted exactly
+		//! as stock USB Loader GX would boot it.
+		if (!AHBPROT_DISABLED)
+		{
+			fragListUntouched = true;
+			gprintf("Riivo: no AHBPROT, leaving the fragment list alone\n");
+			return;
+		}
 
 		//! Keep the list alive: set_frag_list frees it the moment it has handed
 		//! it to the cIOS, and the mod's fragments cannot be worked out until
