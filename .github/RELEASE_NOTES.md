@@ -12,7 +12,7 @@ can keep your normal build alongside it in a different folder.
 
 1. Put the mod on your SD card the way its author describes (usually a `/riivolution`
    folder with the `.xml`, plus a folder of game files).
-2. Highlight the game → **Game Settings** → **Riivolution**.
+2. Click the game's cover → **Settings** → **Riivolution** (the first button).
 3. Press the top row to cycle through the XMLs found in `<device>:/riivolution`.
 4. Set each option below it to the choice you want, then press **Save**.
 5. Launch the game.
@@ -47,7 +47,12 @@ next to the XML you selected. It records whether the XML parsed, whether it matc
 game you launched, which options were active, every patch that was enabled, and any
 `valuefile` that could not be read. Please attach that file to any bug report.
 
-## Fixed since the previous commit
+## Changed in this build (v0.2)
+
+- **Riivolution is now the first button in Game Settings**, above Game Load, instead of
+  sitting after Ocarina. It only appears for Wii games.
+
+## Fixed in v0.1
 
 - **`<memory valuefile=...>` patches never worked.** The blob was opened at patch time,
   which is after the loader unmounts SD/USB, so every read failed silently. Valuefiles

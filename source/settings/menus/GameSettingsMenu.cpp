@@ -70,14 +70,16 @@ void GameSettingsMenu::SetupMainButtons()
 {
 	int pos = 0;
 
-	SetMainButton(pos++, tr( "Game Load" ), MainButtonImgData, MainButtonImgOverData);
-	SetMainButton(pos++, tr( "Ocarina" ), MainButtonImgData, MainButtonImgOverData);
-	//! Riivolution (Wii games only)
+	//! Riivolution (Wii games only). First in the list: it is the headline
+	//! feature of this fork, and it is a mod picker rather than a tweak, so it
+	//! does not belong tucked in among the per-game settings pages.
 	if(		DiscHeader->type == TYPE_GAME_WII_IMG
 		||	DiscHeader->type == TYPE_GAME_WII_DISC)
 	{
 		SetMainButton(pos++, tr( "Riivolution" ), MainButtonImgData, MainButtonImgOverData);
 	}
+	SetMainButton(pos++, tr( "Game Load" ), MainButtonImgData, MainButtonImgOverData);
+	SetMainButton(pos++, tr( "Ocarina" ), MainButtonImgData, MainButtonImgOverData);
 	SetMainButton(pos++, tr( "Categories" ), MainButtonImgData, MainButtonImgOverData);
 	if(		DiscHeader->type == TYPE_GAME_WII_IMG
 		||	DiscHeader->type == TYPE_GAME_WII_DISC
@@ -96,8 +98,21 @@ void GameSettingsMenu::CreateSettingsMenu(int menuNr)
 
 	int Idx = 0;
 
+	//! Riivolution (Wii games only) - gate must match SetupMainButtons so Idx
+	//! stays in sync. The && short-circuits, so Idx is not incremented for the
+	//! game types that never got a button.
+	if(		(DiscHeader->type == TYPE_GAME_WII_IMG
+		||	 DiscHeader->type == TYPE_GAME_WII_DISC)
+		&&	menuNr == Idx++)
+	{
+		HideMenu();
+		ResumeGui();
+		CurrentMenu = new RiivoSM(DiscHeader);
+		Append(CurrentMenu);
+	}
+
 	//! Game Load
-	if(menuNr == Idx++)
+	else if(menuNr == Idx++)
 	{
 		HideMenu();
 		ResumeGui();
@@ -120,17 +135,6 @@ void GameSettingsMenu::CreateSettingsMenu(int menuNr)
 		char ID[7];
 		snprintf(ID, sizeof(ID), "%s", (char *) DiscHeader->id);
 		CheatMenu(ID);
-	}
-
-	//! Riivolution (Wii games only) - gate must match SetupMainButtons so Idx stays in sync
-	else if(	(DiscHeader->type == TYPE_GAME_WII_IMG
-			||	 DiscHeader->type == TYPE_GAME_WII_DISC)
-			&&	menuNr == Idx++)
-	{
-		HideMenu();
-		ResumeGui();
-		CurrentMenu = new RiivoSM(DiscHeader);
-		Append(CurrentMenu);
 	}
 
 	//! Categories

@@ -33,7 +33,7 @@ original game backup is never modified.
 1. Copy the mod's files to your SD card (exactly as the mod author instructs — usually a
    `riivolution` folder plus a folder of game files).
 2. Open USB Loader GX and highlight your game.
-3. Open **Game Settings → Riivolution**.
+3. Open **Game Settings** — **Riivolution** is the first button in the list.
 4. Pick the mod's XML and toggle the options it offers (e.g. "Widescreen: On",
    "Character pack: B").
 5. Launch the game. That's it — the mod is live.
