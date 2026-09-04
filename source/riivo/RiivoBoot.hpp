@@ -38,9 +38,12 @@ namespace Riivo
 	//! `set` must outlive the boot; `logPath` may be empty to disable reporting.
 	//! `sectorSize` is the geometry of the drive the backup lives on; the mod
 	//! region has to be aligned to it because a fragment cannot start mid-sector.
+	//! `usbPort` is the USB port the backup is on, ignored in SD mode. The cIOS
+	//! serves the WHOLE fragment list from one drive, so the mod has to be on
+	//! that same drive and this is how that is checked.
 	void SetBootContext(const ResolvedPatchSet *set, const std::string &device,
 						const std::string &logPath, u32 sectorSize,
-						const u8 *gameId);
+						const u8 *gameId, int usbPort);
 
 	//! Append a block of text to the boot log set up by SetBootContext.
 	//! No-op when there is no log path or the device has already gone away.

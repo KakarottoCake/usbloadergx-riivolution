@@ -63,6 +63,20 @@ next to the XML you selected. It records whether the XML parsed, whether it matc
 game you launched, which options were active, every patch that was enabled, and any
 `valuefile` that could not be read. Please attach that file to any bug report.
 
+## Changed in v1.9
+
+- Fixed: the mod's files were located using the *game's* partition instead of their own,
+  so on a different drive or partition the console read the right sector numbers off the
+  wrong disk and got noise.
+- The mod and the game now have to be on the same drive, and this is checked and refused
+  before launch instead of failing silently.
+- The log now names the drive the game is read from, the drive the mod is on, and both
+  filesystems.
+- When the read-back check fails, the log now shows which sector the offset resolved to.
+- The cIOS dump is now taken around the patch site instead of 280 KB away from it.
+- The room available for a mod is smaller than v1.8 claimed: it is the gap between the end
+  of the backup image and the single-layer limit, about 14 MB on a full-size backup.
+
 ## Changed in v1.8
 
 - Fixed: the mod's own fragments were being used as the floor the mod had to clear, so

@@ -686,7 +686,7 @@ int GameBooter::BootGame(struct discHdr *gameHdr, const s8 useOcarina)
 		//! and is deliberately not passed along.
 		Riivo::SetBootContext(&riivoSet, riivoDevice, riivoLogPath,
 							  Settings.SDMode ? 512 : hdd_sector_size[usbport],
-							  gameHeader.id);
+							  gameHeader.id, usbport);
 		Riivo::ReportCios();
 	}
 
