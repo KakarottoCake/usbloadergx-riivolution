@@ -148,6 +148,36 @@ int main()
 		ck((p.regionEnd % sec) == 0, "region end aligned");
 	}
 
+	printf("7. the reservation must not be mistaken for the backup's own size\n");
+	{
+		//! The regression this pins down. PrepareFragList raises the fragment
+		//! list's declared size all the way to the read ceiling, so the cIOS
+		//! promotes the disc to dual-layer limits. Reading that field back
+		//! afterwards and calling it "the backup's size" made every game look
+		//! like it filled the address space, and every game was refused as
+		//! dual-layer - including single-layer ones like the tester's NSMBW.
+		const u64 reserved = RIIVO_READ_CEILING;   // what the field says AFTER reserving
+		const u64 real     = 4699979776ULL;        // what the backup actually declares
+
+		std::vector<ModExtent> mods =
+			Pack(PlanRegionStart(reserved, SECTOR), 4096, 4, SECTOR);
+		FragPlan wrong = PlanFragRegion(reserved, SECTOR, 3, mods);
+		ck(!wrong.ok, "the inflated figure refuses (this was the bug)");
+
+		//! With the real figure the same mod is placeable. These are the
+		//! tester's numbers: 1092 files, 658 MB of payload, 3 game fragments.
+		const u64 start = PlanRegionStart(real, SECTOR);
+		FragPlan right = PlanFragRegion(real, SECTOR,
+										3, Pack(start, 602753, 1092, SECTOR));
+		ck(right.ok, "the real figure accepts the tester's NSMBW mod");
+		ck(right.regionStart >= real, "region clears the backup");
+		ck(right.regionStart >= RIIVO_REGION_BYTES, "and clears the 4 GiB line");
+		ck(right.files == 1092, "all 1092 files placed");
+		printf("   region at 0x%llx, %llu bytes spare below the ceiling\n",
+			   (unsigned long long) right.regionStart,
+			   (unsigned long long) right.ceilingSpare);
+	}
+
 	printf("\n%d checks, %d failure(s)\n", checks, failures);
 	return failures ? 1 : 0;
 }

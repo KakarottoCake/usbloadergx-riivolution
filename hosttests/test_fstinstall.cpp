@@ -144,6 +144,41 @@ int main()
 			   p.reserved / 1024, p.heapLeft / (1024 * 1024));
 	}
 
+	printf("7. an apploader that leaves arena low at zero\n");
+	{
+		//! Straight off a tester's console: New Super Mario Bros. Wii (SMNE01)
+		//! with the Newer mod. The apploader filled in everything except arena
+		//! low, and treating that zero as "invalid" refused a placement that is
+		//! in fact completely safe - the table only moves DOWN from arena high,
+		//! into heap the game has not been handed yet.
+		ArenaInfo a;
+		a.arenaLo    = 0x00000000;
+		a.arenaHi    = 0x817f74c0;
+		a.fstAddr    = 0x817f74c0;
+		a.fstMaxSize = 35628;
+
+		FstPlacement p = PlaceFst(a, 62189, 32);
+		ck(p.ok, "the real NSMBW layout is accepted");
+		ck(!p.inPlace, "the table has to grow");
+		ck(p.fstAddr < a.arenaHi, "and it grew downwards");
+		ck(p.fstAddr >= MEM1_BASE, "still inside MEM1");
+		ck(p.newArenaHi == p.fstAddr, "arena high follows it down");
+		ck(a.arenaHi - p.newArenaHi < MAX_BLIND_DROP, "the drop stays within the blind cap");
+		printf("   table at %08x, %u bytes taken from the top of the heap\n",
+			   p.fstAddr, a.arenaHi - p.newArenaHi);
+
+		//! Without a floor there is no way to prove a big table is safe, so a
+		//! big one is still refused.
+		FstPlacement big = PlaceFst(a, 35628 + MAX_BLIND_DROP + 0x1000, 32);
+		ck(!big.ok, "a table needing more than the cap is refused");
+		ck(big.why.find("arena low") != std::string::npos, "and says arena low is why");
+
+		//! A known floor must still be honoured exactly as before.
+		ArenaInfo known = a;
+		known.arenaLo = 0x817f0000; // leaves far under 4 MB
+		ck(!PlaceFst(known, 62189, 32).ok, "a known but tiny heap is still refused");
+	}
+
 	printf("\n%d checks, %d failure(s)\n", checks, failures);
 	return failures ? 1 : 0;
 }

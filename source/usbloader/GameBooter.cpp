@@ -825,7 +825,13 @@ int GameBooter::BootGame(struct discHdr *gameHdr, const s8 useOcarina)
 	//! Riivolution memory patches (Phase 1). Applied after gamepatches() so the
 	//! loaded DOL is patched last (matching Dolphin's ordering). gamepatches() no
 	//! longer clears the DOL section list, so we scan it here then clear it below.
-	if (!riivoSet.memories.empty())
+	//! ...but only when the mod's files made it in. Riivolution memory patches
+	//! belong to the same mod as its <file>/<folder> entries and are written
+	//! assuming those files are on the disc. Applying them to a stock game
+	//! sends the patched code looking for assets that are not there, which is
+	//! an exit to the System Menu rather than a boot. If the file half was
+	//! refused for any reason, the game is left completely unmodified.
+	if (!riivoSet.memories.empty() && !Riivo::FileWorkIncomplete())
 		Riivo::ApplyMemoryPatches(riivoSet, riivoDevice);
 	ClearDOLList();
 

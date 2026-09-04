@@ -36,11 +36,16 @@ namespace Riivo
 		//! here usually means the apploader has not run yet.
 		if (info.fstAddr < MEM1_BASE || info.fstAddr >= MEM1_END)
 			return Refuse("the file table is not in MEM1 - has the apploader run?");
-		if (info.arenaLo < MEM1_BASE || info.arenaLo >= MEM1_END)
+		//! Zero means the apploader has not filled arena low in yet - common
+		//! enough that refusing on it would rule out games that are otherwise
+		//! perfectly placeable. Treat it as unknown and tighten up below.
+		const bool blindLo = (info.arenaLo == 0);
+
+		if (!blindLo && (info.arenaLo < MEM1_BASE || info.arenaLo >= MEM1_END))
 			return Refuse("arena low is outside MEM1");
 		if (info.arenaHi <= MEM1_BASE || info.arenaHi > MEM1_END)
 			return Refuse("arena high is outside MEM1");
-		if (info.arenaLo >= info.arenaHi)
+		if (!blindLo && info.arenaLo >= info.arenaHi)
 			return Refuse("the arena is empty or inverted");
 
 		//! Case 1: it fits in the room the apploader already set aside. Nothing
@@ -54,7 +59,9 @@ namespace Riivo
 			p.fstAddr = info.fstAddr;
 			p.newArenaHi = info.arenaHi;
 			p.reserved = 0;
-			p.heapLeft = info.arenaHi - info.arenaLo;
+			//! Nothing moved, so the heap is whatever it already was. With an
+			//! unknown floor there is no figure to report.
+			p.heapLeft = blindLo ? 0 : info.arenaHi - info.arenaLo;
 			return p;
 		}
 
@@ -79,12 +86,26 @@ namespace Riivo
 		//! has to give up the difference.
 		const u32 newArenaHi = addr < info.arenaHi ? addr : info.arenaHi;
 
-		if (newArenaHi <= info.arenaLo)
-			return Refuse("the rebuilt table would swallow the game's whole heap");
+		u32 heapLeft = 0;
+		if (blindLo)
+		{
+			//! No floor to measure against, so bound the move instead. The
+			//! table only ever takes memory from the top of the heap, which
+			//! the game has not been given yet, and a drop this small out of
+			//! MEM1's 24 MB cannot reach anything the apploader placed.
+			if (info.arenaHi - newArenaHi > MAX_BLIND_DROP)
+				return Refuse("the rebuilt table needs more than 1 MB and arena low "
+							  "is not set, so the heap cannot be checked");
+		}
+		else
+		{
+			if (newArenaHi <= info.arenaLo)
+				return Refuse("the rebuilt table would swallow the game's whole heap");
 
-		const u32 heapLeft = newArenaHi - info.arenaLo;
-		if (heapLeft < MIN_GAME_HEAP)
-			return Refuse("the rebuilt table would leave the game under 4 MB of heap");
+			heapLeft = newArenaHi - info.arenaLo;
+			if (heapLeft < MIN_GAME_HEAP)
+				return Refuse("the rebuilt table would leave the game under 4 MB of heap");
+		}
 
 		FstPlacement p;
 		p.ok = true;

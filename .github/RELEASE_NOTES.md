@@ -38,8 +38,17 @@ drive from the game, a filesystem whose layout can't be read, a dual-layer game,
 whose own data crosses the 4 GiB line — it stops and the game boots exactly as it would
 without Riivolution. The log says which check stopped it.
 
+If a mod replaces files and that could not be done, its `<memory>` patches are held back
+as well and the game boots completely unmodified. Those patches assume the mod's files are
+present; applying them on their own is what makes a total conversion exit to the System
+Menu instead of booting.
+
 This is new and has had little time on real hardware, so treat a working boot as good news
 rather than the expected outcome, and please send the log either way.
+
+**It needs AHBPROT**, which means launching from the Homebrew Channel directly - not from a
+forwarder channel or anything that reloads IOS on the way in. The log says whether it was
+granted.
 
 ## Checking what happened
 
@@ -53,6 +62,95 @@ shut the screen down. Instead, each launch writes a report to:
 next to the XML you selected. It records whether the XML parsed, whether it matches the
 game you launched, which options were active, every patch that was enabled, and any
 `valuefile` that could not be read. Please attach that file to any bug report.
+
+## Changed in v1.1 - three bugs found by the NSMBW test
+
+A test of Newer Super Mario Bros. Wii ended at the System Menu instead of booting.
+The log explained all of it, and it was three separate faults stacked on top of each
+other. All three are fixed.
+
+### 1. File replacement could never activate. On any game.
+
+This is the serious one, and it was self-inflicted in v1.0.
+
+To make room for the mod, the loader tells the cIOS the virtual disc is bigger than it
+really is - that is what promotes the disc to dual-layer read limits and creates the
+space above the backup. It does that by raising the fragment list's declared size to the
+read ceiling.
+
+The code that then works out *where* the mod can go read that same field back and took it
+for the backup's own size. So every game looked like it already filled the entire disc
+address space, and every game was refused with:
+
+```
+REFUSED: the backup already fills the disc address space -
+         dual-layer games cannot be patched this way
+```
+
+New Super Mario Bros. Wii is single-layer. Its data ends at 4.29 GB with plenty of room
+above it. The message was simply wrong, and it would have appeared on every single-layer
+game since v1.0 - including Galaxy 2.
+
+The backup's real size is now recorded *before* the reservation overwrites it. The log
+prints both figures so the two can never be confused again.
+
+### 2. A mod's memory patches are no longer applied without its files
+
+This is what actually caused the exit to the System Menu, and it is the more important
+fix of the two.
+
+Newer SMBW is a total conversion: 1092 files, 996 of which the disc has no entry for at
+all, plus 34 memory patches including a 2552-byte block. Those memory patches are written
+on the assumption that the mod's files are there. Fault 1 meant the files were refused -
+but the memory patches were applied anyway. The game was patched to go looking for assets
+that were not on the disc, and it bailed out to the System Menu.
+
+That broke the rule this whole thing is built on: **every failure must still boot the
+game.** It now holds:
+
+- If a mod replaces files and those files did not get installed, its memory patches are
+  skipped too, and the game boots completely unmodified.
+- A mod that only uses `<memory>` or `<savegame>` is unaffected - it never wanted files,
+  so nothing is held back.
+
+The log now ends with a **Memory patches** section saying `Applied` or `HELD BACK`, and why.
+
+### 3. Games whose apploader leaves arena low at zero
+
+The rebuilt table is placed using the four boot-info words the apploader fills in. NSMBW's
+apploader sets three of them and leaves arena low at `00000000`, letting the game's own
+startup fill it in later. The placement code treated that as a corrupt value and refused.
+
+A zero there means "not known yet", not "invalid". The table only ever moves *down* from
+arena high, into heap the game has not been handed, so it is placeable regardless - what
+is lost is the ability to check the game keeps 4 MB of heap. So with an unknown floor the
+move is capped at 1 MB instead, and anything larger is still refused rather than guessed
+at. On the real NSMBW layout the table needs 26 KB.
+
+### Also
+
+- Corrected log wording that still said file replacement was "unfinished" and listed work
+  as "still to build". Both have been done since v1.0; the text had not caught up and made
+  a working build look like a dry run.
+- 14 more automated checks, including the exact NSMBW numbers from the tester's log -
+  **2311 total, all passing**.
+
+### One thing that is not a bug: AHBPROT
+
+That test also reported:
+
+```
+AHBPROT is not open, so IOS memory is hidden from the loader
+```
+
+Without it the cIOS patch cannot be made, so file replacement will not switch on no matter
+what else is fixed. It is not something the loader can work around - the permission has to
+be granted at launch.
+
+**Launch it from the Homebrew Channel directly.** Not from a forwarder channel, and not
+from anything that reloads IOS on the way in - those drop the hardware access before the
+loader ever starts. The Homebrew Channel needs to be reasonably current (1.1.0 or newer)
+for it to be granted at all. The log says whether it was.
 
 ## Changed in v1.0.1
 
