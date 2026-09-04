@@ -26,6 +26,7 @@
 #include "SoundOperations/MusicPlayer.h"
 #include "riivo/RiivoParser.hpp"
 #include "riivo/RiivoConfig.hpp"
+#include "libs/libruntimeiospatch/runtimeiospatch.h"
 
 #define NONE		0
 #define LEFT		1
@@ -866,8 +867,14 @@ void GameWindow::BootGame(struct discHdr *header)
 
 			if (!riivoDisc.IsValidForGame(IDfull, 0, 0))
 				warning = tr( "The selected Riivolution XML is meant for a different game. Applying it will most likely crash." );
-			else if (!riivoSet.files.empty() || !riivoSet.folders.empty())
-				warning = tr( "This mod replaces files on the disc, which this build cannot do yet, so the game will most likely hang on a black screen. Launching anyway still writes a full report to the riivolution folder." );
+			//! File replacement needs to patch the running cIOS, and that needs
+			//! the hardware access the Homebrew Channel grants at launch. Losing
+			//! it is silent and unrecoverable - a forwarder channel, or anything
+			//! that reloads IOS on the way in, drops it before the loader starts.
+			//! Say so here rather than let the tester find it in the log after a
+			//! boot that quietly did nothing.
+			else if ((!riivoSet.files.empty() || !riivoSet.folders.empty()) && !AHBPROT_DISABLED)
+				warning = tr( "This mod replaces files, which needs hardware access this loader was not given. Launch USB Loader GX from the Homebrew Channel directly - not from a forwarder channel - or the mod's files will not be applied. The game will still boot unmodified." );
 			else if (riivoSet.IsEmpty())
 				warning = tr( "No Riivolution patches are enabled for this game - every option is set to Disabled." );
 		}

@@ -63,6 +63,41 @@ next to the XML you selected. It records whether the XML parsed, whether it matc
 game you launched, which options were active, every patch that was enabled, and any
 `valuefile` that could not be read. Please attach that file to any bug report.
 
+## Changed in v1.2 - it warns you before launching, not after
+
+Two things the last test should not have had to discover from a log file.
+
+### The warning before launch was still telling you it does not work
+
+Since v1.0, picking a mod that replaces files put up this, every time:
+
+> This mod replaces files on the disc, which this build cannot do yet, so the game will
+> most likely hang on a black screen.
+
+That was written for v0.3 and has been wrong since v1.0. Anyone testing a file-replacing
+mod was told, on the way in, that the thing they were testing could not work. Gone.
+
+### It now checks for hardware access while there is still a screen
+
+File replacement has to patch the running cIOS in memory, and that needs the hardware
+access (AHBPROT) that the Homebrew Channel grants at launch. Starting the loader from a
+forwarder channel — or anything that reloads IOS on the way in — drops it before the
+loader ever runs, and nothing can get it back afterwards.
+
+Until now that was only discoverable *after* the fact, buried in the log as
+`AHBPROT is not open`, following a boot that looked normal and quietly did nothing. It
+cost a full test round.
+
+Now, if the selected mod replaces files and that access is missing, you get a prompt
+before the game launches:
+
+> This mod replaces files, which needs hardware access this loader was not given. Launch
+> USB Loader GX from the Homebrew Channel directly — not from a forwarder channel — or the
+> mod's files will not be applied. The game will still boot unmodified.
+
+Continue or Cancel, same as the other pre-flight warnings. Mods that only use `<memory>`
+or `<savegame>` do not need it and are not warned about.
+
 ## Changed in v1.1 - three bugs found by the NSMBW test
 
 A test of Newer Super Mario Bros. Wii ended at the System Menu instead of booting.
