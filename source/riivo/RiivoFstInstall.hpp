@@ -44,6 +44,15 @@ namespace Riivo
 	//! is written - is far easier to diagnose than failing later.
 	static const u32 MIN_GAME_HEAP = 4 * 1024 * 1024;
 
+	//! Some apploaders leave arena low at zero and let the game's own startup
+	//! fill it in, so a zero there means "not known yet", not "invalid". The
+	//! table can still be placed - it only ever moves DOWN from arena high,
+	//! which is memory the game has not been handed - but MIN_GAME_HEAP cannot
+	//! be checked without knowing where the heap starts. In that case the drop
+	//! is capped instead: a table that wants more than this without a known
+	//! floor is refused rather than guessed at.
+	static const u32 MAX_BLIND_DROP = 1024 * 1024;
+
 	//! The four boot-info words, read straight out of low memory.
 	struct ArenaInfo
 	{

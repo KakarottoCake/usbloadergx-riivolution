@@ -417,10 +417,11 @@ namespace Riivo
 			fprintf(f, "---------------------------------\n");
 			fprintf(f, "memory   : %u\n", (unsigned) set->memories.size());
 			fprintf(f, "savegame : %u\n", (unsigned) set->savegames.size());
-			fprintf(f, "file     : %u  (NOT applied - file replacement is unfinished)\n",
-					(unsigned) set->files.size());
-			fprintf(f, "folder   : %u  (NOT applied - file replacement is unfinished)\n",
-					(unsigned) set->folders.size());
+			fprintf(f, "file     : %u\n", (unsigned) set->files.size());
+			fprintf(f, "folder   : %u\n", (unsigned) set->folders.size());
+			if (!set->files.empty() || !set->folders.empty())
+				fprintf(f, "  (whether these were applied is decided later - see the\n"
+						   "   file and folder replacement section further down)\n");
 
 			for (size_t i = 0; i < set->memories.size(); ++i)
 			{

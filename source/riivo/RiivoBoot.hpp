@@ -70,6 +70,13 @@ namespace Riivo
 	//! 4.7 GB to 8.5 GB). Must be called between get_frag_list and
 	//! set_frag_list; does nothing unless file/folder patches are active.
 	void PrepareFragList();
+
+	//! True when the selected options need the mod's files but those files did
+	//! not get installed. The memory patches must then be skipped: a mod that
+	//! replaces files writes them expecting the files to be present, and a
+	//! total conversion patched without its assets exits to the System Menu
+	//! rather than booting. Only meaningful after ReportFstPlacement has run.
+	bool FileWorkIncomplete();
 }
 
 #endif

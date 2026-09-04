@@ -51,6 +51,25 @@ namespace Riivo
 	//! Sector size of the drive the backup is on, from SetBootContext.
 	static u32 bootSectorSize = 512;
 
+	//! The backup's OWN declared size in sectors, captured before PrepareFragList
+	//! inflates it. This has to be kept separately: the inflation raises
+	//! frag_list->size all the way to the read ceiling so the cIOS promotes the
+	//! disc to dual-layer limits, and reading that field back afterwards would
+	//! say the backup fills the entire address space - which is exactly the
+	//! condition PlanFragRegion refuses as "dual-layer". Every game would be
+	//! refused, single-layer ones included.
+	static u32 origImageSectors = 0;
+
+	//! Did the selected options ask for file replacement, and did it actually
+	//! happen? A mod that replaces files writes its memory patches on the
+	//! assumption that those files are there. Applying the patches without the
+	//! files is not a partial success - for a total conversion it is a crash or
+	//! an exit to the System Menu, because the patched code goes looking for
+	//! assets the disc does not have. If the first is true and the second is
+	//! not, the memory patches have to be held back too.
+	static bool fileWorkWanted = false;
+	static bool fileWorkLive = false;
+
 	//! The game's id, needed to ask which partition it lives on.
 	static u8 bootGameId[8] = { 0 };
 
@@ -379,13 +398,16 @@ namespace Riivo
 		if (bootSet->files.empty() && bootSet->folders.empty())
 			return;
 
+		//! From here on the mod is one that needs its files. If they do not end
+		//! up installed, the memory patches must not be applied either.
+		fileWorkWanted = true;
+
 		std::string out;
-		out += "\n\nPhase 3 - file/folder replacement plan\n"
-			   "--------------------------------------\n"
-			   "Worked out against the real disc, then discarded. Nothing below is\n"
-			   "applied yet - this run is checking that the pieces line up on your\n"
-			   "console before anything is switched on. The note at the end says what\n"
-			   "is left.\n\n";
+		out += "\n\nFile and folder replacement\n"
+			   "---------------------------\n"
+			   "Worked out against the real disc. If every check below passes it is\n"
+			   "switched on at the end of this section; if any one fails, nothing is\n"
+			   "applied and the game boots untouched.\n\n";
 
 		u8 *fstData = 0;
 		u32 fstSize = 0, fstOffset = 0;
@@ -531,8 +553,13 @@ namespace Riivo
 		//! backup's own virtual disc, or the game's fragments would shadow the
 		//! mod's. PlanRegionStart takes the higher of the two.
 		const FragList *gameFrags = frag_list_get();
+		//! Use the size captured before the reservation, never gameFrags->size,
+		//! which by now reads back as the whole virtual disc. Fall back to the
+		//! live field only when no reservation was made.
+		const u32 imageSectors = origImageSectors ? origImageSectors
+												  : (gameFrags ? gameFrags->size : 0);
 		const u64 imageBytes = gameFrags
-							   ? (u64) gameFrags->size * bootSectorSize
+							   ? (u64) imageSectors * bootSectorSize
 							   : 0;
 		const u64 extent = builder.OriginalExtent();
 		const u64 region = PlanRegionStart(imageBytes, bootSectorSize);
@@ -602,7 +629,9 @@ namespace Riivo
 		else
 		{
 			Addf(out, "  backup declares    : %u sectors of %u bytes = %llu bytes\n",
-				 gameFrags->size, bootSectorSize, (unsigned long long) imageBytes);
+				 imageSectors, bootSectorSize, (unsigned long long) imageBytes);
+			Addf(out, "  reserved up to     : %u sectors (for the dual-layer probe)\n",
+				 gameFrags->size);
 			Addf(out, "  its fragments      : %u of %u\n",
 				 gameFrags->num, RIIVO_FRAG_MAX);
 
@@ -658,21 +687,20 @@ namespace Riivo
 			Activate(out, plan, placed, newFst, probe.patchSites[0]);
 		}
 
-		out += "\nWhat is left\n";
-		out += "------------\n";
+		out += "\nHow this works\n";
+		out += "--------------\n";
 		out += "The fragment list the loader gives the cIOS serves the RAW backup, which\n"
 			   "keeps the game partition encrypted exactly as it was pressed, and the IOS\n"
 			   "disc code decrypts whatever comes back. A fragment aimed at a plaintext\n"
 			   "file on the card would decrypt into noise - which is why this needs a\n"
 			   "change inside IOS rather than only in the loader.\n\n"
-			   "That change is now known, and it is four bytes: the read handler's test\n"
-			   "for 'is this image already decrypted' becomes a test for 'is this read at\n"
-			   "or above 4 GiB'. Mod files live above that line and are served raw from\n"
-			   "the fragment list, with no decryption and no hash check. Everything below\n"
-			   "the line is real game data and is read exactly as it always was.\n\n"
-			   "Still to build: extending the fragment list to cover the relocated files,\n"
-			   "and writing the rebuilt table into the game's memory. Both are measured\n"
-			   "above. Nothing is written to your console by this build.\n";
+			   "That change is four bytes: the read handler's test for 'is this image\n"
+			   "already decrypted' becomes a test for 'is this read at or above 4 GiB'.\n"
+			   "Mod files live above that line and are served raw from the fragment list,\n"
+			   "with no decryption and no hash check. Everything below the line is real\n"
+			   "game data and is read exactly as it always was.\n\n"
+			   "The patch is made in memory only. Nothing is installed on your console\n"
+			   "and nothing survives a reboot.\n";
 
 		AppendLog(out);
 		gprintf("Riivo: plan - %u redirect, %u new, %u entries, fst %u bytes\n",
@@ -683,6 +711,11 @@ namespace Riivo
 	// --------------------------------------------------------------------
 	// 3. Where the rebuilt table would go in the game's memory
 	// --------------------------------------------------------------------
+
+	bool FileWorkIncomplete()
+	{
+		return fileWorkWanted && !fileWorkLive;
+	}
 
 	void PrepareFragList()
 	{
@@ -695,6 +728,12 @@ namespace Riivo
 		//! it to the cIOS, and the mod's fragments cannot be worked out until
 		//! later, when the partition is open.
 		frag_list_retain(1);
+
+		//! Record what the backup says about itself BEFORE the reservation
+		//! below overwrites it. PrepareFileRedirects needs the real figure to
+		//! work out where the mod region can start.
+		const FragList *before = frag_list_get();
+		origImageSectors = before ? before->size : 0;
 
 		//! Declare a virtual disc big enough to reach the dual-layer probe point.
 		//! The cIOS decides the disc type by trying to read near the second
@@ -719,6 +758,20 @@ namespace Riivo
 		//! fall back to the planned size when nothing was switched on, so the
 		//! report still says where it would have gone.
 		const u32 want = pendingFstSize ? pendingFstSize : plannedFstSize;
+		//! Nothing was planned - the section above gave up before it got that
+		//! far. Still say what happens to the memory patches, because for a
+		//! file-replacing mod they are now being held back and the log would
+		//! otherwise stop without explaining why the game booted clean.
+		if (want == 0 && FileWorkIncomplete())
+		{
+			AppendLog("\n\nMemory patches\n"
+					  "--------------\n"
+					  "  HELD BACK. This mod replaces files, the plan above did not\n"
+					  "  complete, so the memory patches are skipped too. Applying\n"
+					  "  them without the mod's files is what makes a game exit to\n"
+					  "  the System Menu. The game boots completely unmodified.\n");
+			return;
+		}
 		if (want == 0)
 			return;
 
@@ -765,7 +818,10 @@ namespace Riivo
 		if (pendingFst && pendingFstSize && place.ok)
 		{
 			if (InstallFst(place, pendingFst, pendingFstSize))
+			{
+				fileWorkLive = true;
 				out += "\n  Installed. The game will read the mod's files.\n";
+			}
 			else
 				out += "\n  The table could not be written, so the game boots with its\n"
 					   "  own. The cIOS patch is harmless on its own.\n";
@@ -776,8 +832,28 @@ namespace Riivo
 				   "  installed. The game boots unmodified.\n";
 		}
 
+		//! Say plainly what this means for the rest of the boot. A mod whose
+		//! files did not make it must not get its memory patches either.
+		out += "\n\nMemory patches\n";
+		out += "--------------\n";
+		if (FileWorkIncomplete())
+		{
+			out += "  HELD BACK. This mod replaces files, and those files were not\n"
+				   "  installed, so its memory patches are being skipped as well.\n"
+				   "  They are written on the assumption that the mod's files are\n"
+				   "  present - applying them on their own is what makes a game exit\n"
+				   "  to the System Menu instead of booting. The game now boots\n"
+				   "  completely unmodified, which is the safe outcome.\n"
+				   "  Fix whatever the section above refused and they come back.\n";
+		}
+		else if (fileWorkWanted)
+			out += "  Applied, alongside the mod's files.\n";
+		else
+			out += "  Applied. This mod does not replace any files.\n";
+
 		AppendLog(out);
-		gprintf("Riivo: placement %s (%08x, %u bytes)\n",
-				place.ok ? "ok" : "refused", place.fstAddr, want);
+		gprintf("Riivo: placement %s (%08x, %u bytes), memory patches %s\n",
+				place.ok ? "ok" : "refused", place.fstAddr, want,
+				FileWorkIncomplete() ? "held back" : "applied");
 	}
 }
