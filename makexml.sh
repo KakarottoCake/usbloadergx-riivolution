@@ -33,9 +33,9 @@ rev_date=`date -u +%Y%m%d%H%M%S`
 cat <<EOF > ./HBC/meta.xml
 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <app version="1">
-	<name> USB Loader GX</name>
-	<coder>blackb0x</coder>
-	<version>4.0 r$rev_new</version>
+	<name> USB Loader GX Riivolution</name>
+	<coder>blackb0x, KakarottoCake</coder>
+	<version>4.0 r$rev_new-riivo</version>
 	<release_date>$rev_date</release_date>
 	<!-- to enable arguments change disabled_arguments to arguments -->
 	<disabled_arguments>
@@ -45,12 +45,14 @@ cat <<EOF > ./HBC/meta.xml
 		<arg>--sdmode=0</arg>
 	</disabled_arguments>
 	<ahb_access/>
-	<short_description>Load games from a USB or SD card</short_description>
+	<short_description>Load games with Riivolution mods applied on the fly</short_description>
 	<long_description>USB Loader GX allows you to install your games to a USB storage device or SD card. You can then boot your games faster, download and use cheats, or apply various patches.
 
-Home:
-https://github.com/wiidev/usbloadergx
-Support:
-https://gbatemp.net/threads/149922</long_description>
+This is an unofficial fork that adds native Riivolution mod support.
+
+Fork:
+https://github.com/KakarottoCake/usbloadergx-riivolution
+Upstream:
+https://github.com/wiidev/usbloadergx</long_description>
 </app>
 EOF

@@ -19,8 +19,16 @@
 
 namespace Riivo
 {
-	//! Apply every <memory> patch in `set`. `device` is the SD/USB mount prefix
-	//! (e.g. "sd:") used to resolve valuefile paths against each patch root.
+	//! Read every <memory valuefile=> into its patch's inline `value` and clear
+	//! the valuefile field. MUST be called while SD/USB is still mounted: the
+	//! loader shuts the devices down (ShutDownDevices) before the patch window,
+	//! so a valuefile opened at apply time would always fail. `device` is the
+	//! SD/USB mount prefix (e.g. "sd:") that valuefile paths resolve against,
+	//! together with each patch's root. Returns how many could NOT be read.
+	int PreloadValueFiles(ResolvedPatchSet &set, const std::string &device);
+
+	//! Apply every <memory> patch in `set`. `device` is only a fallback for
+	//! valuefile paths; PreloadValueFiles should already have inlined them.
 	//! Returns the number of patches successfully applied.
 	int ApplyMemoryPatches(const ResolvedPatchSet &set, const std::string &device);
 }

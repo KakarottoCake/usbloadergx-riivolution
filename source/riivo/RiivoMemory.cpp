@@ -13,6 +13,22 @@ namespace Riivo
 {
 	static const u32 PPC_BLR = 0x4E800020;
 
+	//! Reject patch targets that fall outside the console's usable RAM. A bad or
+	//! mismatched XML would otherwise scribble over whatever happens to live at
+	//! that address (including the loader itself) and hard-crash before the game
+	//! ever starts, with nothing on screen to explain why.
+	static bool ValidTarget(u32 addr, size_t len)
+	{
+		if (len == 0)
+			return false;
+		const u64 end = (u64) addr + (u64) len;
+		if (addr >= 0x80000000 && end <= 0x81800000) // MEM1
+			return true;
+		if (addr >= 0x90000000 && end <= 0x94000000) // MEM2
+			return true;
+		return false;
+	}
+
 	// --------------------------------------------------------------------
 	// File helpers (valuefile loading); JoinPath lives in RiivoConfig.
 	// --------------------------------------------------------------------
@@ -64,7 +80,16 @@ namespace Riivo
 		if (!ResolveBytes(m, device, value))
 			return false;
 
-		u8 *addr = (u8 *) (m.offset | 0x80000000);
+		const u32 target = m.offset | 0x80000000;
+		const size_t span = value.size() > m.original.size() ? value.size() : m.original.size();
+		if (!ValidTarget(target, span))
+		{
+			gprintf("Riivo mem: direct target 0x%08x (+%u) outside RAM, skipped\n",
+					target, (unsigned) span);
+			return false;
+		}
+
+		u8 *addr = (u8 *) target;
 
 		if (!m.original.empty() && memcmp(addr, &m.original[0], m.original.size()) != 0)
 		{
@@ -101,6 +126,14 @@ namespace Riivo
 			{
 				if (memcmp(dst + i, &m.original[0], plen) == 0)
 				{
+					//! `value` may be longer than the pattern it replaces; never
+					//! let a match near the end of a section overrun it.
+					if (i + (u32) value.size() > (u32) len)
+					{
+						gprintf("Riivo mem: search match at +%u would overrun the section, skipped\n",
+								(unsigned) i);
+						continue;
+					}
 					memcpy(dst + i, &value[0], value.size());
 					DCFlushRange(dst + i, value.size());
 					ICInvalidateRange(dst + i, value.size());
@@ -121,6 +154,12 @@ namespace Riivo
 
 		const u32 target = m.offset | 0x80000000;
 		const u32 plen = (u32) m.value.size();
+
+		if (!ValidTarget(target, 4))
+		{
+			gprintf("Riivo mem: ocarina branch target 0x%08x outside RAM, skipped\n", target);
+			return false;
+		}
 
 		int count = RiivoGetDOLCount();
 		for (int s = 0; s < count; ++s)
@@ -158,6 +197,33 @@ namespace Riivo
 	// --------------------------------------------------------------------
 	// Entry point
 	// --------------------------------------------------------------------
+
+	int PreloadValueFiles(ResolvedPatchSet &set, const std::string &device)
+	{
+		int failed = 0;
+		for (size_t i = 0; i < set.memories.size(); ++i)
+		{
+			ResolvedMemory &m = set.memories[i];
+			if (m.valuefile.empty())
+				continue;
+
+			const std::string path = JoinPath(device, m.root, m.valuefile);
+			std::vector<u8> bytes;
+			if (LoadFile(path, bytes) && !bytes.empty())
+			{
+				m.value.swap(bytes);
+				m.valuefile.clear(); // now inlined; no file access needed later
+				gprintf("Riivo mem: preloaded %u byte(s) from %s\n",
+						(unsigned) m.value.size(), path.c_str());
+			}
+			else
+			{
+				gprintf("Riivo mem: FAILED to preload valuefile %s\n", path.c_str());
+				++failed;
+			}
+		}
+		return failed;
+	}
 
 	int ApplyMemoryPatches(const ResolvedPatchSet &set, const std::string &device)
 	{
