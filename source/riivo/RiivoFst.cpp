@@ -74,8 +74,10 @@ namespace Riivo
 			{
 				FstFile f;
 				f.path = full;
-				u32 off = be32(e + 4);
-				f.offset = shifted ? (off << 2) : off;
+				const u32 off = be32(e + 4);
+				//! Widen before shifting - (off << 2) in u32 wraps past 1 GiB of
+				//! stored value, which a dual-layer disc exceeds.
+				f.offset = shifted ? ((u64) off << 2) : (u64) off;
 				f.length = be32(e + 8);
 				f.index = i;
 				files.push_back(f);

@@ -243,7 +243,7 @@ namespace Riivo
 		//! than the file it stands in for cannot just be read in place, because
 		//! the disc's file table still advertises the old, smaller length.
 		int missing = 0, fits = 0, grows = 0;
-		u32 maxDiscOffset = 0;
+		u64 maxDiscOffset = 0;
 		std::vector<size_t> growers;
 
 		for (size_t i = 0; i < redirects.size(); ++i)
@@ -278,7 +278,7 @@ namespace Riivo
 		Addf(out, "  same size or smaller : %d\n", fits);
 		Addf(out, "  LARGER than original : %d\n", grows);
 		Addf(out, "  missing from card    : %d\n", missing);
-		Addf(out, "  highest disc offset  : 0x%08x\n\n", maxDiscOffset);
+		Addf(out, "  highest disc offset  : 0x%010llx\n\n", (unsigned long long) maxDiscOffset);
 
 		if (grows > 0)
 		{
@@ -306,8 +306,8 @@ namespace Riivo
 			const RedirectSpec &r = redirects[i];
 			u32 extSize = 0;
 			const bool have = ExternalFileSize(r.external, &extSize);
-			Addf(out, "  disc 0x%08x len %-8u <- %-8u %s%s\n",
-				 r.discOffset, (unsigned) r.discLength, (unsigned) extSize,
+			Addf(out, "  disc 0x%010llx len %-8u <- %-8u %s%s\n",
+				 (unsigned long long) r.discOffset, (unsigned) r.discLength, (unsigned) extSize,
 				 r.external.c_str(), have ? "" : "   [MISSING ON CARD]");
 		}
 		if (redirects.size() > 25)

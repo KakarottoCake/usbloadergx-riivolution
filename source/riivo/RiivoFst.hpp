@@ -25,7 +25,10 @@ namespace Riivo
 	struct FstFile
 	{
 		std::string path; // full path, lower-cased, leading '/', e.g. "/stage/1-1.arc"
-		u32 offset;       // disc byte offset (already un-shifted)
+		//! Disc byte offset, un-shifted. 64-bit on purpose: the stored value is
+		//! offset>>2, so a dual-layer partition addresses well past 4 GiB and a
+		//! u32 would silently wrap. A single-layer disc already reaches 0xff72d4e0.
+		u64 offset;
 		u32 length;       // file size in bytes
 		u32 index;        // FST entry index (for patching the entry in place)
 	};

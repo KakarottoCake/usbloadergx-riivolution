@@ -21,7 +21,7 @@ namespace Riivo
 	//! One "read this disc range from that external file" mapping.
 	struct RedirectSpec
 	{
-		u32 discOffset;       // byte offset on the disc where the redirect starts
+		u64 discOffset;       // byte offset on the disc where the redirect starts
 		u32 length;           // bytes to redirect; 0 => "whole external file" (resolved at HW via stat)
 		u32 fileOffset;       // start offset within the external file
 		u32 discLength;       // size of the disc file being replaced, from the FST
