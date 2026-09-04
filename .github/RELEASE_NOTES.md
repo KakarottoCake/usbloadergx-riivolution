@@ -63,6 +63,14 @@ next to the XML you selected. It records whether the XML parsed, whether it matc
 game you launched, which options were active, every patch that was enabled, and any
 `valuefile` that could not be read. Please attach that file to any bug report.
 
+## Changed in v1.5
+
+- Fixed: "Could not tell which partition the game is on". The lookup ran after `SetupDisc`
+  had unmounted and remounted SD, which destroys the partition object it needs. It now
+  happens before the unmount.
+- The patch site was found and applied on the tester's console, so the remaining work is
+  the fragment list itself.
+
 ## Changed in v1.4
 
 - Fixed: the cIOS probe and the four-byte patch now run in `SetupDisc`, where hardware

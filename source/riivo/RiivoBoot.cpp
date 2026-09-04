@@ -93,6 +93,18 @@ namespace Riivo
 	static bool patchApplied = false;
 	static std::string patchWhy;
 
+	//! Which partition the game is on, looked up in SetupDisc for the same
+	//! reason as everything else here.
+	//!
+	//! WBFS_GetFsInfo goes through WbfsList, and SetupDisc unmounts SD around
+	//! set_frag_list - which destroys the Wbfs object for that partition, so
+	//! the VALID() test fails afterwards and the lookup returns -1 even though
+	//! the game is plainly still there. get_frag_list, a few lines earlier,
+	//! uses the identical lookup and succeeds. So ask before the unmount.
+	static bool bootFsKnown = false;
+	static u8 bootFsType = 0;
+	static u32 bootFsLba = 0;
+
 	//! The game's id, needed to ask which partition it lives on.
 	static u8 bootGameId[8] = { 0 };
 
@@ -350,9 +362,11 @@ namespace Riivo
 			return;
 		}
 
-		u8 fsType = 0;
-		u32 lba = 0;
-		if (WBFS_GetFsInfo(bootGameId, &fsType, &lba) < 0)
+		//! Looked up back in SetupDisc, before the SD unmount takes the
+		//! partition object away.
+		const u8 fsType = bootFsType;
+		const u32 lba = bootFsLba;
+		if (!bootFsKnown)
 		{
 			out += "  Could not tell which partition the game is on.\n";
 			return;
@@ -798,6 +812,12 @@ namespace Riivo
 		//! work out where the mod region can start.
 		const FragList *before = frag_list_get();
 		origImageSectors = before ? before->size : 0;
+
+		//! And which partition it is on, while the partition object still
+		//! exists - SetupDisc unmounts SD a few lines below.
+		bootFsKnown = (WBFS_GetFsInfo(bootGameId, &bootFsType, &bootFsLba) >= 0);
+		gprintf("Riivo: partition lookup %s (fs %u, lba %u)\n",
+				bootFsKnown ? "ok" : "FAILED", bootFsType, bootFsLba);
 
 		//! Declare a virtual disc big enough to reach the dual-layer probe point.
 		//! The cIOS decides the disc type by trying to read near the second
