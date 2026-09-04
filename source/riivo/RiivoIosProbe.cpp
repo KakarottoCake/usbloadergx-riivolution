@@ -8,6 +8,7 @@
 #include <ogcsys.h>
 
 #include "RiivoIosProbe.hpp"
+#include "RiivoDiPatch.hpp"
 #include "libs/libruntimeiospatch/runtimeiospatch.h"
 #include "gecko.h"
 
@@ -116,6 +117,29 @@ namespace Riivo
 		for (int i = 0; i < NPAT; ++i)
 			out.patterns.push_back(pats[i]);
 
+		//! Now the thing that actually matters: the read dispatch itself. The
+		//! pattern was taken from a local build of d2x-v11-beta3, so finding it
+		//! here proves the running cIOS is that build and the four-byte patch
+		//! will land where it is meant to.
+		//!
+		//! Thumb instructions are halfword-aligned, so step by 2. Compare the
+		//! first halfword before reading the rest - that rejects almost every
+		//! address without touching memory again.
+		{
+			const u16 first = ((u16) DI_READ_PATTERN[0] << 8) | DI_READ_PATTERN[1];
+			for (u32 addr = SCAN_FROM; addr + DI_READ_PATTERN_LEN < MEM2_END; addr += 2)
+			{
+				if (*(vu16 *) (addr + UNCACHED_BIAS) != first)
+					continue;
+				bool all = true;
+				for (u32 k = 2; k < DI_READ_PATTERN_LEN && all; ++k)
+					if (*(vu8 *) (addr + k + UNCACHED_BIAS) != DI_READ_PATTERN[k])
+						all = false;
+				if (all && out.patchSites.size() < MAX_HITS)
+					out.patchSites.push_back(addr);
+			}
+		}
+
 		//! DVD9_LENGTH is the best anchor: it is a 32-bit constant unique to the
 		//! read-limit check, which sits in the same function we need to patch.
 		//! Fall back to DVD5 if the compiler folded DVD9 differently.
@@ -194,6 +218,31 @@ namespace Riivo
 				 pat.name, pat.value, (unsigned) pat.hits.size(), pat.what);
 			for (size_t k = 0; k < pat.hits.size(); ++k)
 				Addf(out, "                 %08x\n", pat.hits[k]);
+		}
+
+		//! The headline result.
+		out += "\nThe read dispatch that has to be patched\n";
+		out += "---------------------------------------\n";
+		if (p.patchSites.size() == 1)
+		{
+			Addf(out, "  FOUND, exactly once, at %08x.\n\n", p.patchSites[0]);
+			out += "  That is the answer I was hoping for. The running cIOS is the same\n"
+				   "  d2x build the patch was worked out against, so the four bytes go\n"
+				   "  exactly where they are meant to. Nothing was written this time.\n";
+		}
+		else if (p.patchSites.empty())
+		{
+			out += "  NOT FOUND.\n\n"
+				   "  The patch was derived from d2x v11 beta3. Either this cIOS is a\n"
+				   "  different build, or its compiler laid the code out differently.\n"
+				   "  The dump below is what is needed to re-derive it.\n";
+		}
+		else
+		{
+			Addf(out, "  found %u times - ambiguous, so it must not be applied blind:\n",
+				 (unsigned) p.patchSites.size());
+			for (size_t i = 0; i < p.patchSites.size(); ++i)
+				Addf(out, "    %08x\n", p.patchSites[i]);
 		}
 
 		if (p.dumpSize)

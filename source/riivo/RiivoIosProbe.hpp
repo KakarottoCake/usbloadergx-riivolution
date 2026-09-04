@@ -55,6 +55,13 @@ namespace Riivo
 		                          // check that we are really seeing IOS and not
 		                          // a blank window because reads were refused
 		std::vector<IosPattern> patterns;
+
+		//! Where the read dispatch that has to be patched was found. Exactly one
+		//! hit is the healthy answer: none means this cIOS is not the d2x build
+		//! the patch was derived from, and more than one means the pattern is
+		//! not as distinctive as it looked and must not be applied blind.
+		std::vector<u32> patchSites;
+
 		u32 dumpBase;             // what got written to the card, 0 if nothing
 		u32 dumpSize;
 		std::string dumpPath;

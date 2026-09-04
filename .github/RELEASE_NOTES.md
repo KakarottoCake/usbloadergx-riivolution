@@ -55,6 +55,63 @@ next to the XML you selected. It records whether the XML parsed, whether it matc
 game you launched, which options were active, every patch that was enabled, and any
 `valuefile` that could not be read. Please attach that file to any bug report.
 
+## Changed in v0.8 - the patch, and it is four bytes
+
+I said I needed a photograph of your cIOS's memory before I could write the disc-read
+patch. I no longer do — I got the code a better way, and the patch is written.
+
+d2x doesn't ship its disc plugin as a file you can open, but it *does* build from source,
+and the release tag `d2x-v11-beta3` is exactly the cIOS in your slot 252. Building it
+locally with the ARM compiler and disassembling the result gives the real instructions:
+
+```
+ldr  r3, [r5, #0]     ; config.mode
+lsls r3, r3, #30      ; is this image already decrypted?
+bmi  .raw             ;   yes -> hand back raw bytes
+b    .decrypt         ;   no  -> decrypt and hash-check (normal path)
+```
+
+Changing the first two instructions turns "is this image already decrypted?" into
+**"is this read at or above 4 GiB?"**:
+
+```
+ldr  r3, [r0, #8]     ; the offset being read
+lsls r3, r3, #1       ; test bit 30
+```
+
+Mod files are relocated above the 4 GiB line, so they come back raw from your drive —
+which is right, because they're ordinary files sitting on your card. Everything below the
+line is real game data and is still decrypted and hash-checked exactly as before. Four
+bytes, in memory only, gone on reboot. Nothing is installed and no cIOS is modified.
+
+**This build checks that patch site exists on your console but does not write it.** The
+log will say `FOUND, exactly once` if the running cIOS matches what I built against.
+
+### What I still need
+
+Just the log, same as before:
+
+```
+<device>:/riivolution/usbloadergx_riivo.log
+```
+
+The `.bin` dump is still written, but it now only matters if the log says the patch site
+was *not* found — in which case that file is what I'd use to re-derive it.
+
+### One limitation worth knowing
+
+The threshold has to be a power of two — there's only room for two instructions, and an
+arbitrary comparison needs a constant loaded from memory that won't fit. That makes 4 GiB
+the only usable line: 2 GiB lands inside real game data, and the ceiling above is fixed by
+the disc format. So a game whose own data reaches past 4 GiB can't be done this way. Super
+Mario Galaxy 2's data ends at about 4.28 GB — under the line, with roughly 9 MB to spare.
+The log now prints that margin so it's checkable rather than assumed.
+
+### Still to build
+
+Extending the fragment list to cover the relocated files, and writing the rebuilt table
+into the game's memory. Both are already measured in the log.
+
 ## Changed in v0.7 - the last thing I need from your console
 
 **Please run your game once with the mod selected, then send me two files:**
