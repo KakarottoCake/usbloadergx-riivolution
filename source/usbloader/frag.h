@@ -41,6 +41,10 @@ int frag_remap(FragList *ff, FragList *log, FragList *phy);
 
 int get_frag_list_for_file(char *fname, u8 *id, const u8 wbfs_part_fs, const u32 lba_offset, const u32 sector_size);
 int get_frag_list(u8 *id);
+
+// The master list registered with the cIOS, or NULL if none was built.
+// Riivolution reads its size to work out where a mod region can start.
+const FragList *frag_list_get(void);
 int set_frag_list(u8 *id, bool sd_only);
 
 #ifdef __cplusplus

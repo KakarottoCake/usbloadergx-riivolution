@@ -27,6 +27,7 @@
 #ifndef RIIVO_BOOT_HPP_
 #define RIIVO_BOOT_HPP_
 
+#include <gctypes.h>
 #include <string>
 #include "RiivoTypes.hpp"
 
@@ -35,8 +36,10 @@ namespace Riivo
 	//! Hand the boot-time context to this module. Called from BootGame once the
 	//! selection has been resolved, while the devices are still mounted.
 	//! `set` must outlive the boot; `logPath` may be empty to disable reporting.
+	//! `sectorSize` is the geometry of the drive the backup lives on; the mod
+	//! region has to be aligned to it because a fragment cannot start mid-sector.
 	void SetBootContext(const ResolvedPatchSet *set, const std::string &device,
-						const std::string &logPath);
+						const std::string &logPath, u32 sectorSize);
 
 	//! Append a block of text to the boot log set up by SetBootContext.
 	//! No-op when there is no log path or the device has already gone away.
