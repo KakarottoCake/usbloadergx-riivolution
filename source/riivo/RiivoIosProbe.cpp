@@ -9,6 +9,7 @@
 
 #include "RiivoIosProbe.hpp"
 #include "RiivoDiPatch.hpp"
+#include "RiivoDiHook.hpp"
 #include "libs/libruntimeiospatch/runtimeiospatch.h"
 #include "gecko.h"
 
@@ -52,6 +53,7 @@ namespace Riivo
 	void ProbeIosPlugin(const std::string &dumpPath, IosProbe &out)
 	{
 		out = IosProbe();
+		out.attempted = true;
 		out.iosVersion  = (u32) IOS_GetVersion();
 		out.iosRevision = (u32) IOS_GetRevision();
 		out.ahbprot     = AHBPROT_DISABLED;
@@ -119,8 +121,8 @@ namespace Riivo
 
 		//! Now the thing that actually matters: the read dispatch itself. The
 		//! pattern was taken from a local build of d2x-v11-beta3, so finding it
-		//! here proves the running cIOS is that build and the four-byte patch
-		//! will land where it is meant to.
+		//! here proves the running cIOS is that build and the hook's dispatch
+		//! redirect will land where it is meant to.
 		//!
 		//! Thumb instructions are halfword-aligned, so step by 2. Compare the
 		//! first halfword before reading the rest - that rejects almost every
@@ -187,49 +189,51 @@ namespace Riivo
 		free(buf);
 	}
 
-	bool ApplyDiPatch(u32 site, std::string &why)
+	// The loader has no outstanding DI request here. Install the dormant RX
+	// helper first and redirect the dispatch only after verifying its bytes.
+	// PPC cache maintenance does not invalidate the Starlet I-cache; execution
+	// through LOW_READ must be tested on hardware before release.
+	static bool WriteCode(u32 address, const u8 *bytes, u32 size)
 	{
-		if (!AHBPROT_DISABLED)
-		{
+		DCInvalidateRange((void *)(address & ~31u), size + 64);
+		memcpy((void *)address, bytes, size);
+		DCFlushRange((void *)(address & ~31u), size + 64);
+		for (u32 i = 0; i < size; ++i)
+			if (*(vu8 *)(address + UNCACHED_BIAS + i) != bytes[i])
+				return false;
+		return true;
+	}
+
+	bool ApplyDiPatch(u32 site, u32 endWords, std::string &why)
+	{
+		if (!AHBPROT_DISABLED) {
 			why = "AHBPROT is closed, so IOS memory cannot be written";
 			return false;
 		}
-		if (site < MEM2_CACHED || site + DI_READ_PATTERN_LEN >= MEM2_END)
-		{
-			why = "the patch site is not in MEM2";
+		if (site < SCAN_FROM + DUMP_BEFORE || site >= MEM2_END - DUMP_AFTER) {
+			why = "the patch window is not in IOS MEM2";
 			return false;
 		}
-
-		//! Never write without confirming what is there first. The probe found
-		//! this address, but it costs one comparison to be certain nothing has
-		//! moved since, and the cost of being wrong is a console that hangs.
-		for (u32 k = 0; k < DI_READ_PATTERN_LEN; ++k)
-		{
-			if (*(vu8 *) (site + k + UNCACHED_BIAS) == DI_READ_PATTERN[k])
-				continue;
-			why = "the bytes at the patch site are not the ones expected";
+		const u32 base = (site - DUMP_BEFORE) & ~31u;
+		std::vector<u8> snapshot(DUMP_BEFORE + DUMP_AFTER + 32);
+		for (u32 i = 0; i < snapshot.size(); ++i)
+			snapshot[i] = *(vu8 *)(base + UNCACHED_BIAS + i);
+		DiHookPlan plan;
+		if (!BuildDiHook(&snapshot[0], snapshot.size(), base, site, endWords, plan, why))
+			return false;
+		const u8 *oldCode = &snapshot[plan.storage - base];
+		const u8 *oldBranch = &snapshot[plan.dispatch - base];
+		if (!WriteCode(plan.storage, &plan.code[0], plan.code.size()) ||
+			!WriteCode(plan.dispatch, &plan.branch[0], plan.branch.size())) {
+			const bool restoredBranch = WriteCode(plan.dispatch, oldBranch, plan.branch.size());
+			const bool restoredCode = WriteCode(plan.storage, oldCode, plan.code.size());
+			why = restoredBranch && restoredCode
+				? "IOS patch write failed; original bytes restored"
+				: "IOS patch rollback failed; restart the console before booting";
 			return false;
 		}
-
-		//! Write through the cached view and flush, which is what every other
-		//! runtime IOS patch in this loader does (libruntimeiospatch's
-		//! apply_patch), then read back uncached to confirm it landed.
-		u8 *dst = (u8 *) site;
-		for (u32 k = 0; k < DI_READ_REPLACE_LEN; ++k)
-			dst[k] = DI_READ_REPLACE[k];
-
-		DCFlushRange((void *) (site & ~31u), DI_READ_REPLACE_LEN + 64);
-		ICInvalidateRange((void *) (site & ~31u), DI_READ_REPLACE_LEN + 64);
-
-		for (u32 k = 0; k < DI_READ_REPLACE_LEN; ++k)
-		{
-			if (*(vu8 *) (site + k + UNCACHED_BIAS) == DI_READ_REPLACE[k])
-				continue;
-			why = "the patch did not stick - the write was refused";
-			return false;
-		}
-
-		gprintf("Riivo: DI read patch applied at %08x\n", site);
+		gprintf("Riivo: LOW_READ hook at %08x, RX helper %08x, limit %08x words\n",
+				 site, plan.storage, endWords);
 		return true;
 	}
 
@@ -238,6 +242,10 @@ namespace Riivo
 		std::string out;
 		out += "\n\ncIOS plugin probe\n-----------------\n";
 
+		if (!p.attempted) {
+			out += "Not attempted: setup was refused before the IOS probe.\n";
+			return out;
+		}
 		if (!p.ahbprot)
 		{
 			out += "AHBPROT is not open, so IOS memory is hidden from the loader and\n"
@@ -277,9 +285,8 @@ namespace Riivo
 		if (p.patchSites.size() == 1)
 		{
 			Addf(out, "  FOUND, exactly once, at %08x.\n\n", p.patchSites[0]);
-			out += "  That is the answer I was hoping for. The running cIOS is the same\n"
-				   "  d2x build the patch was worked out against, so the four bytes go\n"
-				   "  exactly where they are meant to. Nothing was written this time.\n";
+			out += "  Dispatch candidate found. The extended hook separately verifies\n"
+				   "  its calling convention and executable helper before writing.\n";
 		}
 		else if (p.patchSites.empty())
 		{

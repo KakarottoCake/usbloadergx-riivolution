@@ -23,6 +23,7 @@ namespace Riivo
 		FragList *master;
 		u32 base;      // the file's first sector on the virtual disc
 		u32 lba;       // partition start, for drivers that report relative sectors
+		u32 next, limit;
 		int error;
 	};
 
@@ -35,7 +36,16 @@ namespace Riivo
 		//! frag_append merges with the previous entry when both the offset and
 		//! the sector run on contiguously, so a file stored in one piece costs
 		//! one entry however many runs the driver reports it in.
+		// A zero-count callback is the driver's file-size marker, not data.
+		if (!count) return 0;
+		if (offset >= ctx->limit) return 0; // allocation slack past EOF
+		if (offset != ctx->next || !sector ||
+			(u64)sector + ctx->lba + count > 0x100000000ULL ||
+			(u64)ctx->base + offset + count > 0xffffffffULL)
+			return ctx->error = -501; // holes, overlaps, or truncated LBA
+		if (count > ctx->limit - offset) count = ctx->limit - offset;
 		int ret = frag_append(ctx->master, ctx->base + offset, sector + ctx->lba, count);
+		if (!ret) ctx->next = offset + count;
 		if (ret)
 			ctx->error = ret;
 		return ret;
@@ -73,6 +83,8 @@ namespace Riivo
 			ctx.master = master;
 			ctx.base = (u32) (f.offset / sectorSize);
 			ctx.lba = lba;
+			ctx.next = 0;
+			ctx.limit = (u32)(((u64)f.length + sectorSize - 1) / sectorSize);
 			ctx.error = 0;
 
 			int ret;
@@ -93,7 +105,7 @@ namespace Riivo
 					return false;
 			}
 
-			if (ret || ctx.error)
+			if (ret || ctx.error || ctx.next != ctx.limit)
 			{
 				//! Running out of table entries is fatal for the whole plan;
 				//! one unreadable file is not, but it does mean that file will
@@ -125,58 +137,41 @@ namespace Riivo
 		return true;
 	}
 
-	bool VerifyModFragment(u64 discOffset, const std::string &file, std::string &why)
+	bool VerifyModFragment(u64 discOffset, u32 length, const std::string &file, std::string &why)
 	{
-		static const u32 CHECK = 64;
-
 		FILE *f = fopen(file.c_str(), "rb");
-		if (!f)
-		{
-			why = "could not reopen " + file;
+		if (!f) { why = "could not reopen " + file; return false; }
+		if (!length || fseek(f, 0, SEEK_END) || (u64)ftell(f) != length) {
+			fclose(f);
+			why = "mod file size changed after placement: " + file;
 			return false;
 		}
-		u8 want[CHECK];
-		const size_t got = fread(want, 1, CHECK, f);
+		u8 want[32] = {};
+		u8 have[32] ATTRIBUTE_ALIGN(32);
+		const u32 samples[] = { 0, (length - 1) & ~31u };
+		bool ok = true;
+		for (u32 i = 0; i < 2 && ok; ++i) {
+			const u32 offset = samples[i];
+			const u32 n = length - offset < 32 ? length - offset : 32;
+			if (fseek(f, offset, SEEK_SET) || fread(want, 1, n, f) != n) {
+				why = "could not sample " + file;
+				ok = false;
+				break;
+			}
+			memset(have, 0, sizeof(have));
+			// LOW_READ, not UNENCREAD: prove the installed dispatch as well
+			// as the device, LBA mapping and final file sector.
+			const s32 ret = WDVD_Read(have, sizeof(have), discOffset + offset);
+			if (ret != 0 || memcmp(have, want, n)) {
+				char message[112];
+				snprintf(message, sizeof(message),
+					"LOW_READ check failed at 0x%010llx (return %d): ",
+					(unsigned long long)(discOffset + offset), (int)ret);
+				why = std::string(message) + file;
+				ok = false;
+			}
+		}
 		fclose(f);
-		if (got == 0)
-		{
-			why = "read nothing from " + file;
-			return false;
-		}
-
-		//! Go back through the cIOS the way the game will: an unencrypted read
-		//! resolves through the fragment list without decrypting, which is the
-		//! path the patched dispatch sends the mod region down.
-		u8 *have = (u8 *) memalign(32, 32 + CHECK);
-		if (!have)
-		{
-			why = "out of memory for the check";
-			return false;
-		}
-		memset(have, 0, CHECK);
-
-		const s32 ret = WDVD_UnencryptedRead(have, CHECK, discOffset);
-		const bool same = (ret >= 0) && (memcmp(have, want, got) == 0);
-
-		if (ret < 0)
-		{
-			char buf[96];
-			snprintf(buf, sizeof(buf), "the cIOS refused a read at 0x%010llx (%d)",
-					 (unsigned long long) discOffset, (int) ret);
-			why = buf;
-		}
-		else if (!same)
-		{
-			char buf[128];
-			snprintf(buf, sizeof(buf),
-					 "read back %02x%02x%02x%02x at 0x%010llx, expected %02x%02x%02x%02x",
-					 have[0], have[1], have[2], have[3],
-					 (unsigned long long) discOffset,
-					 want[0], want[1], want[2], want[3]);
-			why = buf;
-		}
-
-		free(have);
-		return same;
+		return ok;
 	}
 }

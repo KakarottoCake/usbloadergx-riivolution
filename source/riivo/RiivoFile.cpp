@@ -246,7 +246,7 @@ namespace Riivo
 		//! Overlapping <folder> rules name the same disc file more than once.
 		//! Keep the last, which is the one AddOrReplace keeps when the table is
 		//! rebuilt, then sort so the placement is identical on every boot.
-		std::sort(out.begin(), out.end(), ByCandidateDisc);
+		std::stable_sort(out.begin(), out.end(), ByCandidateDisc);
 		std::vector<ModCandidate> unique;
 		unique.reserve(out.size());
 		for (size_t i = 0; i < out.size(); ++i)
