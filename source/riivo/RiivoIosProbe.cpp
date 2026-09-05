@@ -28,8 +28,13 @@ namespace Riivo
 	//! Skip the bottom of MEM2: that is where the loader's own heap lives, and
 	//! our own copy of the fragment list sits there. It does NOT keep our own
 	//! image out - the image sits high in MEM2, past this skip, which is how
-	//! the scan once matched our own pattern copy. That is handled instead by
-	//! the single pattern definition plus the loader window below.
+	//! the scan once matched our own pattern copy.
+	//!
+	//! What keeps it out now is the arena bound: IsOurs treats everything at or
+	//! below SYS_GetArena2Hi() as the PPC's, and IOS owns what is above. The
+	//! +-1 MB window around our own pattern copy is only a fallback for a dead
+	//! arena call - on the console it measured, the pattern sits in MEM1 and
+	//! that window does not touch the scanned range at all.
 	static const u32 SCAN_FROM = MEM2_CACHED + 0x00C00000;
 
 	//! Dump window around a module pair: 32 KB before, 96 KB after. Sized so
@@ -144,6 +149,30 @@ namespace Riivo
 		return out;
 	}
 
+	//! Log label for what anchored a window.
+	static const char *AnchorKindName(DiAnchorKind kind)
+	{
+		if (kind == ANCHOR_FRAG)
+			return "fragment code";
+		if (kind == ANCHOR_STOCK)
+			return "stock DI";
+		return "d2x plugin";
+	}
+
+	//! One ModuleDumpWindow for an anchor address, appended to the pending list.
+	static void AddPendingWindow(std::vector<DumpWindow> &pending,
+								 u32 anchor, DiAnchorKind kind)
+	{
+		u32 base, size;
+		ModuleDumpWindow(anchor, SCAN_FROM, MEM2_END, &base, &size);
+		DumpWindow w;
+		w.base = base;
+		w.size = size;
+		w.anchor = anchor;
+		w.kind = kind;
+		pending.push_back(w);
+	}
+
 	void ProbeIosPlugin(const std::string &dumpPath, IosProbe &out)
 	{
 		out = IosProbe();
@@ -181,13 +210,13 @@ namespace Riivo
 		pats[2].value = PROBE_THUNK;
 		pats[3].name  = "FRAG_MAX";
 		pats[3].what  = "20000, the fragment list's maxnum";
-		pats[3].value = 0x00004E20;
+		pats[3].value = PROBE_MAXFRAG;
 		pats[4].name  = "stock DVD9";
 		pats[4].what  = "stock DI module's ceiling - locates the ORIGINAL module";
-		pats[4].value = 0x7ED40000;
+		pats[4].value = PROBE_STOCK_DVD9;
 		pats[5].name  = "stock DVD5";
 		pats[5].what  = "stock DI module's ceiling, same table";
-		pats[5].value = 0x460A0000;
+		pats[5].value = PROBE_STOCK_DVD5;
 
 		//! One pass over MEM2 checking all of them, rather than one pass each.
 		//! Every read goes through the uncached alias: the Broadway and the
@@ -221,44 +250,83 @@ namespace Riivo
 		out.arena2Hi = (u32) SYS_GetArena2Hi();
 
 		//! Group the ceiling hits into module candidates. The dispatch is
-		//! only searched for inside a surviving candidate's window: the old
-		//! whole-MEM2 search matched our own .rodata copy and the hook went
-		//! into our own image.
-		std::vector<u32> dvd5Hits, thunkHits;
+		//! only searched for inside a surviving d2x candidate's window: the
+		//! old whole-MEM2 search matched our own .rodata copy and the hook
+		//! went into our own image. The read path lives in other modules,
+		//! so their anchors below are evidence for dumps, never patch targets.
+		std::vector<u32> dvd5Hits, thunkHits, maxfragHits, stock9Hits, stock5Hits;
 		for (size_t i = 0; i < out.patterns.size(); ++i)
 		{
 			if (out.patterns[i].value == PROBE_DVD5)
 				dvd5Hits = out.patterns[i].hits;
 			else if (out.patterns[i].value == PROBE_THUNK)
 				thunkHits = out.patterns[i].hits;
+			else if (out.patterns[i].value == PROBE_MAXFRAG)
+				maxfragHits = out.patterns[i].hits;
+			else if (out.patterns[i].value == PROBE_STOCK_DVD9)
+				stock9Hits = out.patterns[i].hits;
+			else if (out.patterns[i].value == PROBE_STOCK_DVD5)
+				stock5Hits = out.patterns[i].hits;
 		}
-		ClassifyModules(dvd5Hits, thunkHits, out.selfAddr,
+		ClassifyModules(dvd5Hits, thunkHits, out.arena2Hi, out.selfAddr,
 						SCAN_FROM, MEM2_END, ReadWordUncached, 0, out.modules);
+		ClassifyFragAnchors(maxfragHits, out.arena2Hi, out.selfAddr,
+							SCAN_FROM, out.fragAnchors);
+		ClassifyStockAnchors(stock9Hits, stock5Hits, out.arena2Hi, out.selfAddr,
+							 SCAN_FROM, out.stockAnchors);
 
-		//! Survivors: not ours, with a hook marker before the pair. Zero or
-		//! several means no patching - the log and the dumps below say why.
+		//! Survivors: d2x pairs that are not ours, with a hook marker before
+		//! the pair. Zero or several means no patching - the log says why.
 		std::vector<u32> candidates;
 		for (size_t i = 0; i < out.modules.size(); ++i)
 		{
 			if (!out.modules[i].ours && out.modules[i].thunkAddr != 0)
 				candidates.push_back(out.modules[i].pairAddr);
 		}
-		const bool multi = candidates.size() > 1;
+
+		//! One dump window per anchor that is not ours, whatever kind found
+		//! it. Overlapping windows merge below, so nearby anchors never write
+		//! the same bytes twice.
+		std::vector<DumpWindow> pending;
 		for (size_t i = 0; i < candidates.size(); ++i)
+			AddPendingWindow(pending, candidates[i], ANCHOR_D2X);
+		for (size_t i = 0; i < out.fragAnchors.size(); ++i)
 		{
-			//! The dispatch the hook needs lives somewhere near the pair -
-			//! the dump window is the search window, so a site found here is
-			//! always inside the bytes we bring home.
-			u32 base, size;
-			ModuleDumpWindow(candidates[i], SCAN_FROM, MEM2_END, &base, &size);
-			SearchPatternWindow(base, base + size,
-								out.selfLo, out.selfHi, out.patchSites);
+			if (!out.fragAnchors[i].ours)
+				AddPendingWindow(pending, out.fragAnchors[i].addr, ANCHOR_FRAG);
+		}
+		for (size_t i = 0; i < out.stockAnchors.size(); ++i)
+		{
+			if (!out.stockAnchors[i].ours)
+				AddPendingWindow(pending, out.stockAnchors[i].addr, ANCHOR_STOCK);
+		}
+		std::vector<DumpWindow> merged;
+		u32 skipped = 0;
+		MergeDumpWindows(pending, merged, &skipped);
+		out.dumpsSkipped = skipped;
+
+		//! The dispatch the hook needs lives somewhere near a d2x pair - the
+		//! dump window is the search window, so a site found here is always
+		//! inside the bytes we bring home. Windows anchored on other modules
+		//! are not searched.
+		const bool multi = merged.size() > 1;
+		for (size_t i = 0; i < merged.size(); ++i)
+		{
+			bool hasD2x = false;
+			for (size_t k = 0; k < candidates.size() && !hasD2x; ++k)
+				hasD2x = candidates[k] >= merged[i].base
+					  && candidates[k] < merged[i].base + merged[i].size;
+			if (hasD2x)
+				SearchPatternWindow(merged[i].base, merged[i].base + merged[i].size,
+									out.selfLo, out.selfHi, out.patchSites);
 			IosProbe::DiDump dump;
 			dump.base = 0;
 			dump.size = 0;
 			dump.fallback = false;
-			if (WriteModuleDump(base, size,
-								DumpPathFor(dumpPath, candidates[i], multi),
+			dump.anchor = merged[i].anchor;
+			dump.kind = merged[i].kind;
+			if (WriteModuleDump(merged[i].base, merged[i].size,
+								DumpPathFor(dumpPath, merged[i].anchor, multi),
 								out.iosVersion, out.iosRevision, dump))
 				out.dumps.push_back(dump);
 		}
@@ -279,7 +347,8 @@ namespace Riivo
 				const std::vector<u32> &h = out.patterns[i].hits;
 				ceilingHits.insert(ceilingHits.end(), h.begin(), h.end());
 			}
-			const u32 anchor = FallbackAnchor(out.modules, ceilingHits, out.selfAddr);
+			const u32 anchor = FallbackAnchor(out.modules, ceilingHits,
+											  out.arena2Hi, out.selfAddr, SCAN_FROM);
 			if (anchor)
 			{
 				u32 base, size;
@@ -288,6 +357,8 @@ namespace Riivo
 				dump.base = 0;
 				dump.size = 0;
 				dump.fallback = true;
+				dump.anchor = anchor;
+				dump.kind = ANCHOR_D2X;
 				if (WriteModuleDump(base, size, dumpPath,
 									out.iosVersion, out.iosRevision, dump))
 					out.dumps.push_back(dump);
@@ -367,7 +438,11 @@ namespace Riivo
 			 p.scanFrom, p.scanTo, p.words, p.nonZero);
 		Addf(out, "pattern   : own copy at %08x, loader window %08x..%08x\n",
 			 p.selfAddr, p.selfLo, p.selfHi);
-		Addf(out, "arena2    : lo %08x hi %08x\n", p.arena2Lo, p.arena2Hi);
+		if (p.arena2Hi > p.scanFrom)
+			Addf(out, "arena2    : lo %08x hi %08x\n", p.arena2Lo, p.arena2Hi);
+		else
+			Addf(out, "arena2    : lo %08x hi %08x (unusable - ours decided by loader window)\n",
+				 p.arena2Lo, p.arena2Hi);
 
 		//! If almost everything read back as zero we were not actually seeing
 		//! IOS, and every "0 hits" below means nothing.
@@ -407,6 +482,33 @@ namespace Riivo
 			else
 				Addf(out, "  %08x  module candidate, hook marker at %08x\n",
 					 m.pairAddr, m.thunkAddr);
+		}
+
+		//! Read-path anchors. Ours entries are logged and never dumped; the
+		//! dumps section below says what each kept one became.
+		out += "Fragment-code anchors (MAX_FRAG pairs)\n";
+		out += "--------------------------------------\n";
+		if (p.fragAnchors.empty())
+			out += "  none found\n";
+		for (size_t i = 0; i < p.fragAnchors.size(); ++i)
+		{
+			if (p.fragAnchors[i].ours)
+				Addf(out, "  %08x  ours (loader image - excluded)\n",
+					 p.fragAnchors[i].addr);
+			else
+				Addf(out, "  %08x  kept\n", p.fragAnchors[i].addr);
+		}
+		out += "Stock-DI anchors (read-limit table)\n";
+		out += "-----------------------------------\n";
+		if (p.stockAnchors.empty())
+			out += "  none found\n";
+		for (size_t i = 0; i < p.stockAnchors.size(); ++i)
+		{
+			if (p.stockAnchors[i].ours)
+				Addf(out, "  %08x  ours (loader image - excluded)\n",
+					 p.stockAnchors[i].addr);
+			else
+				Addf(out, "  %08x  kept\n", p.stockAnchors[i].addr);
 		}
 
 		//! The headline result. Sites are only searched for inside module
@@ -451,11 +553,16 @@ namespace Riivo
 			{
 				Addf(out, "\nWrote %u bytes of the surrounding code from %08x to:\n  %s\n",
 					 p.dumps[i].size, p.dumps[i].base, p.dumps[i].path.c_str());
+				Addf(out, "  %s window anchored at %08x\n",
+					 AnchorKindName(p.dumps[i].kind), p.dumps[i].anchor);
 				if (p.dumps[i].fallback)
 					out += "  FALLBACK: no candidate passed the checks above, so this\n"
 						   "  window was taken on the strongest ceiling hit outside our\n"
 						   "  own image. It was not searched for a dispatch.\n";
 			}
+			if (p.dumpsSkipped)
+				Addf(out, "  %u further window(s) skipped (cap of %u)\n",
+					 p.dumpsSkipped, PROBE_MAX_DUMPS);
 			out += "That file is the missing input. With it the read hook can be written\n"
 				   "against the real instructions instead of guessed at. Please send it\n"
 				   "along with this log.\n";

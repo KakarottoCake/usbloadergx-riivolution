@@ -64,6 +64,13 @@ next to the XML you selected. It records whether the XML parsed, whether it matc
 game you launched, which options were active, every patch that was enabled, and any
 `valuefile` that could not be read. Please attach that file to any bug report.
 
+## Changed in v2.5
+
+- The console now dumps the fragment-code and stock-DI windows the read path lives in.
+- Loader-owned addresses are excluded by the arena bound instead of the pattern window.
+- Overlapping dump windows are merged and capped at six, each labelled by its anchor.
+- 137,827 automated checks, all passing.
+
 ## Changed in v2.4
 
 - Fixed: the console scan matched our own copy of the search pattern and mistook it for the cIOS.
