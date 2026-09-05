@@ -18,10 +18,18 @@ Any C++ compiler will do (`g++` on PATH). Two shims in `shim/` stand in for
 | `test_fstbuild` | `RiivoFstBuild`: round-tripping an untouched table, replacing a file with a bigger one, adding files into directories that do not exist yet, directory subtree-end indices staying consistent after an insertion, malformed and hostile tables, 64-bit offsets past the 4 GiB line | 49 |
 | `test_scale` | the same rebuilder against a realistic 3920-file table — growth, timing, and that every relocated range is aligned and non-overlapping | 2159 |
 | `test_pipeline` | the seam `RiivoBoot::PrepareFileRedirects` walks on console: disc FST → `BuildRedirects` → `FstBuilder` → rebuilt table, including case-insensitive matching between a mod folder and the disc | 24 |
-| `test_fragplan` | `PlanFragRegion`: where the mod region can sit on the virtual disc — clear of the backup's own fragments, above the patch's 4 GiB threshold, below the cIOS read ceiling, and within the 20000-fragment table | 28 |
+| `test_fragplan` | Synthetic 6–8 GiB LOW_READ window, unchanged raw-disc geometry, DVD9 refusal and fragment budget | 72 |
 | `test_fstinstall` | `PlaceFst`: where the rebuilt table goes in the running game's memory, how much heap that costs, and — mostly — every case where it must refuse rather than guess | 37 |
 
 ## Why the seam test exists
+
+Additional post-loader suites:
+
+| suite | covers | checks |
+|---|---|---|
+| `test_fstwalk` | Independent flat-FST lookup, corrupted subtree bounds, zero-length files, 306 new directories and 4,148 paths | 8324 |
+| `test_readverify` | Single 128 KiB calls, within-file boundary reads, EOF padding, accumulated failures and malformed geometry | 38 |
+| `test_patchguard` | Gecko/Syati overlap, full trampoline spans, half-open ranges and suppressed/reset state | 12 |
 
 The first two suites each cover one module. What they cannot catch is the two disagreeing
 about what a disc path looks like — `BuildRedirects` produces lower-cased paths from the
@@ -31,6 +39,7 @@ diverged, nothing would crash; the plan would just quietly report that nothing m
 
 ## What is deliberately not covered
 
-The IOS-side disc-read hook is ARM code that runs inside a running cIOS. It cannot be
-compiled or executed here, and it is specific to the d2x revision it patches, so it is a
-hardware milestone rather than something to cover with a test. See `RIIVOLUTION_PLAN.md`.
+The hook suite assembles the Thumb source and checks the embedded bytes and relocation
+profiles. This does not execute IOS or exercise real USB/SD transfers. The large-read
+suite uses callbacks on the host; the same verifier calls LOW_READ on the console.
+See [POSTLOADER_TESTING.md](../POSTLOADER_TESTING.md) for the paired hardware run.

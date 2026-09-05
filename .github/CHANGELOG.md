@@ -3,6 +3,36 @@
 Full history for the Riivolution fork. The GitHub release body carries only the
 current version's bullets; everything older lives here.
 
+## Changed in v2.8
+
+v2.7 proved the loader's half works: all 2088 mod files read back correctly at 6 GiB
+with the disc still single-layer, which the stock reader cannot serve, so the hook is
+installed and working. The console still came up black. This build closes the three
+things that were never tested.
+
+- Large-read verification. Every previous check was 32 bytes at each end of a file.
+  The game reads whole archives. Full 128 KiB-chunk verification now runs over the 16
+  largest files and every internally fragmented file, plus an explicit read across each
+  internal fragment boundary. Each request is logged and flushed to disk before IOS is
+  called, so a hang leaves its offset, length and filename as the last line.
+- Independent FST walk. The finished table is parsed by a reader that shares nothing
+  with the builder, and every placed path is resolved from the root and checked against
+  its expected offset and length. The install is refused if the walk disagrees.
+- Loader-patch collision guard. `<memory>` patch ranges are registered before any of
+  the loader's own patchers run. The Gecko code handler is skipped entirely when the
+  mod owns `80001000..80003000` - the Spectral mod puts a 2308-byte loader at
+  `80001800` and branches into it - and the width and 480p trampolines are range-checked
+  before writing. A conflict that only appears once a search patch resolves refuses the
+  launch rather than running with a half-overwritten handler.
+- `<memory valuefile=>` patches are measured off the file at configure time, while the
+  card is still mounted, so they are protected like inline ones.
+- The log records the loader's resolved patch settings and the effective handler policy.
+- IOS dumps are opt-in via `riivolution/dumpios.txt`. They are written before the patch
+  and never showed it; the write is already byte-verified against an uncached read-back.
+- The hand-over section no longer claims the loader is finished at that point. Device
+  shutdown, loader patches, mod memory patches and the jump all follow it.
+- 146,232 automated checks, all passing (was 137,854).
+
 ## Changed in v2.7
 
 Diagnostic build. The v2.6 log showed the whole file pipeline working on hardware -

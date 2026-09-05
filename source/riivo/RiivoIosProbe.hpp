@@ -105,17 +105,18 @@ namespace Riivo
 
 		//! Windows cut by the dump cap. Printed so a silent drop is impossible.
 		u32 dumpsSkipped;
+		bool dumpsEnabled;
 
 		IosProbe()
 			: attempted(false), ahbprot(false), iosVersion(0), iosRevision(0), scanFrom(0), scanTo(0),
 			  words(0), nonZero(0), selfAddr(0), selfLo(0), selfHi(0),
-			  arena2Lo(0), arena2Hi(0), dumpsSkipped(0) {}
+			  arena2Lo(0), arena2Hi(0), dumpsSkipped(0), dumpsEnabled(false) {}
 	};
 
-	//! Scan MEM2 for the plugin's fingerprints and, if one is found, write a
-	//! window of the surrounding code to `dumpPath`. Appends a report to the
+	//! Scan MEM2 for the plugin's fingerprints. Only when writeDumps is true,
+	//! write diagnostic windows to `dumpPath`. Appends a report to the
 	//! boot log. Safe to call on any console: read-only with respect to IOS.
-	void ProbeIosPlugin(const std::string &dumpPath, IosProbe &out);
+	void ProbeIosPlugin(const std::string &dumpPath, IosProbe &out, bool writeDumps = false);
 
 	//! Human-readable rendering of a probe result, for the boot log.
 	std::string DescribeProbe(const IosProbe &p);
@@ -129,7 +130,7 @@ namespace Riivo
 	//! Applying this to a game whose file table has NOT been rebuilt is
 	//! harmless: it only changes what happens to reads inside the synthetic
 	//! window, and an unmodified game never makes one.
-	bool ApplyDiPatch(u32 site, u32 endWords, std::string &why);
+	bool ApplyDiPatch(u32 site, u32 endWords, std::string &why, u32 *storage = 0);
 }
 
 #endif

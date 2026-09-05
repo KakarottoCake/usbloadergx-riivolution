@@ -177,10 +177,11 @@ namespace Riivo
 		pending.push_back(w);
 	}
 
-	void ProbeIosPlugin(const std::string &dumpPath, IosProbe &out)
+	void ProbeIosPlugin(const std::string &dumpPath, IosProbe &out, bool writeDumps)
 	{
 		out = IosProbe();
 		out.attempted = true;
+		out.dumpsEnabled = writeDumps;
 		out.iosVersion  = (u32) IOS_GetVersion();
 		out.iosRevision = (u32) IOS_GetRevision();
 		out.ahbprot     = AHBPROT_DISABLED;
@@ -327,7 +328,7 @@ namespace Riivo
 			dump.fallback = false;
 			dump.anchor = merged[i].anchor;
 			dump.kind = merged[i].kind;
-			if (WriteModuleDump(merged[i].base, merged[i].size,
+			if (writeDumps && WriteModuleDump(merged[i].base, merged[i].size,
 								DumpPathFor(dumpPath, merged[i].anchor, multi),
 								out.iosVersion, out.iosRevision, dump))
 				out.dumps.push_back(dump);
@@ -338,7 +339,7 @@ namespace Riivo
 		//! and a diagnostic round that brings home no bytes cannot be paid
 		//! for twice. It is not searched for a dispatch, so it cannot be
 		//! patched blind - the log marks it as a fallback.
-		if (out.dumps.empty())
+		if (writeDumps && out.dumps.empty())
 		{
 			std::vector<u32> ceilingHits;
 			for (size_t i = 0; i < out.patterns.size(); ++i)
@@ -383,8 +384,9 @@ namespace Riivo
 		return true;
 	}
 
-	bool ApplyDiPatch(u32 site, u32 endWords, std::string &why)
+	bool ApplyDiPatch(u32 site, u32 endWords, std::string &why, u32 *storage)
 	{
+		if (storage) *storage = 0;
 		if (!AHBPROT_DISABLED) {
 			why = "AHBPROT is closed, so IOS memory cannot be written";
 			return false;
@@ -413,6 +415,7 @@ namespace Riivo
 		}
 		gprintf("Riivo: LOW_READ hook at %08x, RX helper %08x, limit %08x words\n",
 				 site, plan.storage, endWords);
+		if (storage) *storage = plan.storage;
 		return true;
 	}
 
@@ -566,15 +569,12 @@ namespace Riivo
 			if (p.dumpsSkipped)
 				Addf(out, "  %u further window(s) skipped (cap of %u)\n",
 					 p.dumpsSkipped, PROBE_MAX_DUMPS);
-			out += "That file is the missing input. With it the read hook can be written\n"
-				   "against the real instructions instead of guessed at. Please send it\n"
-				   "along with this log.\n";
+			out += "Diagnostic dumps are pre-patch; they do not show the installed hook.\n";
 		}
 		else
 		{
-			out += "\nNo ceiling constant was found outside our own image, so nothing\n"
-				   "was dumped. Either this cIOS is not a d2x, or its read-limit\n"
-				   "check is built differently.\n";
+			out += p.dumpsEnabled ? "\nDiagnostic dump requested but no dump was written.\n"
+				: "\nIOS dumps disabled (opt in with riivolution/dumpios.txt).\n";
 		}
 
 		return out;

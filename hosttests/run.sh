@@ -86,4 +86,8 @@ fi
 # classification, no console needed; the header is all this suite compiles.
 build_run test_probeself
 
+build_run test_fstwalk "$SRC/riivo/RiivoFstWalk.cpp" "$SRC/riivo/RiivoFstBuild.cpp"
+build_run test_readverify "$SRC/riivo/RiivoReadVerify.cpp"
+build_run test_patchguard "$SRC/riivo/RiivoPatchGuard.cpp" "$SRC/riivo/RiivoConfig.cpp"
+
 printf '\nall suites passed\n'

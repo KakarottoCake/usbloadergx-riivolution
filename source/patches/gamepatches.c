@@ -14,6 +14,7 @@
 #include "settings/SettingsEnums.h"
 #include "version.h"
 #include "kirbypatch.h"
+#include "riivo/RiivoPatchGuard.h"
 
 /* GCC 11 false positives */
 #if __GNUC__ > 10
@@ -304,6 +305,14 @@ void patch_width(u8 *addr, u32 len)
                     u8 reg_a = (addr_start[-0x6F] >> 5);
                     u8 reg_b = (addr_start[-0x43] >> 5);
 
+                    if (RiivoPatchConflict((u32)(addr_start - 0x41), 1) ||
+                        RiivoPatchConflict((u32)(addr_start - 0x70), 4) ||
+                        RiivoPatchConflict((u32)patch, 20))
+                    {
+                        gprintf("Skipped width trampoline: overlaps Riivolution memory\n");
+                        return;
+                    }
+
                     // Patch to the framebuffer resolution
                     addr_start[-0x41] = 0x04;
 
@@ -524,6 +533,13 @@ void PatchFix480p()
     else
         return;
 
+    // Check both the branch and the entire trampoline, including its return.
+    if (RiivoPatchConflict((u32)offset, 4) || RiivoPatchConflict((u32)patch, 12))
+    {
+        gprintf("Skipped 480p fix: Riivolution owns branch %08x or trampoline %08x\n",
+                (u32)offset, (u32)patch);
+        return;
+    }
     memcpy((void *)patch, patch_ptr, 8);
 
     *(u32 *)offset = 0x48000000 + (((u32)patch - (u32)offset) & 0x3ffffff);
