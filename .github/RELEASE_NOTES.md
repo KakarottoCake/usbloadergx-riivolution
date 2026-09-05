@@ -64,6 +64,15 @@ next to the XML you selected. It records whether the XML parsed, whether it matc
 game you launched, which options were active, every patch that was enabled, and any
 `valuefile` that could not be read. Please attach that file to any bug report.
 
+## Changed in v2.2
+
+- When mod files cannot be mapped, the log now lists every failing file (up to 16 shown,
+  plus a count of any beyond), each with its size and its expected vs reported sectors.
+- When fewer sectors are reported than a file needs, the log now records whether the
+  missing bytes still read back, distinguishing a short file on the card from driver
+  under-reporting.
+- The game/mod drive and filesystem lines now print when mapping is refused too.
+
 ## Changed in v2.1
 
 - When a mod file cannot be mapped, the log now says why, and gives the file's size, the
@@ -95,7 +104,7 @@ game you launched, which options were active, every patch that was enabled, and 
   gap that reads as zeros.
 - The fragment list is put back exactly as it was whenever setup is abandoned part-way.
 - Dual-layer games are still refused.
-- 137,586 automated checks, all passing.
+- 137,686 automated checks, all passing.
 
 ## Changed in v1.9
 

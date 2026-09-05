@@ -42,6 +42,23 @@ namespace Riivo
 		std::string external; // where it really is, e.g. "usb1:/Spectral/x.arc"
 	};
 
+	//! One failing file and its numbers. Collected for every failure up to
+	//! FRAG_FAIL_LIST_MAX; `failed` in the stats remains the total.
+	struct FragFailEntry
+	{
+		std::string path;
+		int code;       // a FragFailCode below
+		u32 length;     // stat size in bytes
+		u32 limit;      // sectors expected: ceil(length / sectorSize)
+		u32 next;       // sectors the driver actually covered
+		int driverRet;  // what _X_get_fragments returned
+		int probe;      // SHORT verdict: -1 unprobed, 0 short on the card,
+						// 1 driver under-reported the file
+	};
+
+	//! How many failing files the log names before falling back to a count.
+	static const u32 FRAG_FAIL_LIST_MAX = 16;
+
 	struct FragBuildStats
 	{
 		u32 files;         // placed successfully
@@ -64,13 +81,21 @@ namespace Riivo
 		u32 failCbSector;
 		u32 failCbCount;
 		u32 failSectorSize; // drive sector size the limit was computed with
+		int failProbe;     // SHORT verdict: -1 unprobed, 0 short on the card,
+						   // 1 driver under-reported the file
 		std::string failPath;
+
+		//! Every failing file, bounded: the first FRAG_FAIL_LIST_MAX in file
+		//! order, so the log names the files to re-copy instead of only the
+		//! first. `failed` above remains the total; the difference is the
+		//! count beyond the list.
+		std::vector<FragFailEntry> failList;
 
 		FragBuildStats()
 			: files(0), failed(0), fragsBefore(0), fragsAfter(0), sizeBefore(0),
 			  sizeAfter(0), failCode(0), failLength(0), failLimit(0), failNext(0),
 			  failDriverRet(0), failCbOffset(0), failCbSector(0), failCbCount(0),
-			  failSectorSize(0) {}
+			  failSectorSize(0), failProbe(-1) {}
 	};
 
 	//! Distinct refusal reasons. The callback used to collapse four of these
@@ -89,6 +114,10 @@ namespace Riivo
 
 	//! One log-ready line describing the first failure, or empty when none.
 	std::string DescribeFragFailure(const FragBuildStats &stats);
+
+	//! Every collected failure as log-ready lines, plus a trailing count when
+	//! the total runs past FRAG_FAIL_LIST_MAX. Empty when nothing failed.
+	std::string DescribeFragFailList(const FragBuildStats &stats);
 
 	//! Append every file in `files` to the master fragment list. `files` must be
 	//! in ascending offset order - PlanFragRegion checks that. `fsType` is a
