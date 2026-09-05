@@ -826,13 +826,43 @@ namespace Riivo
 		std::vector<ModExtent> extents;
 		std::vector<PlacedFile> placed;
 
+		//! Which drive everything is on. The cIOS serves the whole list from
+		//! one device, so a mismatch here reads the mod's sector numbers off
+		//! the game's disk and hands the game noise - a successful read of
+		//! the wrong bytes, which is the hardest kind of failure to see.
+		//! Printed before the branch below so refusal logs name them too.
+		if (modDev.drive >= 0)
+		{
+			Addf(out, "  game read from     : %s%s\n",
+				 listFromSd ? "SD card" : "USB drive",
+				 listFromSd ? "" : (bootUsbPort == 1 ? " (port 1)" : " (port 0)"));
+			Addf(out, "  mod files on       : %s  (%s, starts at sector %u)\n",
+				 bootDevice.c_str(),
+				 modDev.fsType == PART_FS_FAT ? "FAT"
+				 : modDev.fsType == PART_FS_NTFS ? "NTFS"
+				 : modDev.fsType == PART_FS_EXT ? "ext"
+				 : modDev.fsType == PART_FS_WBFS ? "raw WBFS" : "unknown",
+				 modDev.lbaStart);
+			Addf(out, "  game partition     : %s, starts at sector %u\n",
+				 bootFsType == PART_FS_FAT ? "FAT"
+				 : bootFsType == PART_FS_NTFS ? "NTFS"
+				 : bootFsType == PART_FS_EXT ? "ext"
+				 : bootFsType == PART_FS_WBFS ? "raw WBFS" : "unknown",
+				 bootFsLba);
+		}
+		else
+			out += "  drives               : not resolved on this boot\n";
+
 		if (fragListUntouched && !fragRefusal.empty())
 		{
 			Addf(out, "  FRAGMENTS NOT REGISTERED: %s\n", fragRefusal.c_str());
 			if (fragStats.failed)
+			{
 				Addf(out, "  files mapped         : %u of %u (%u failed)\n",
 					 fragStats.files, fragStats.files + fragStats.failed,
 					 fragStats.failed);
+				out += DescribeFragFailList(fragStats);
+			}
 			out += "  The fragment list was left exactly as it was and\n"
 				   "  the game is being read precisely as stock USB Loader GX reads\n"
 				   "  it. Everything measured above is a dry run.\n\n";
@@ -874,27 +904,6 @@ namespace Riivo
 				 fragStats.fragsBefore ? fragStats.fragsBefore : gameFrags->num,
 				 RIIVO_FRAG_MAX);
 
-			//! Which drive everything is on. The cIOS serves the whole list from
-			//! one device, so a mismatch here reads the mod's sector numbers off
-			//! the game's disk and hands the game noise - a successful read of
-			//! the wrong bytes, which is the hardest kind of failure to see.
-			Addf(out, "  game read from     : %s%s\n",
-				 listFromSd ? "SD card" : "USB drive",
-				 listFromSd ? "" : (bootUsbPort == 1 ? " (port 1)" : " (port 0)"));
-			Addf(out, "  mod files on       : %s  (%s, starts at sector %u)\n",
-				 bootDevice.c_str(),
-				 modDev.fsType == PART_FS_FAT ? "FAT"
-				 : modDev.fsType == PART_FS_NTFS ? "NTFS"
-				 : modDev.fsType == PART_FS_EXT ? "ext"
-				 : modDev.fsType == PART_FS_WBFS ? "raw WBFS" : "unknown",
-				 modDev.lbaStart);
-			Addf(out, "  game partition     : %s, starts at sector %u\n",
-				 bootFsType == PART_FS_FAT ? "FAT"
-				 : bootFsType == PART_FS_NTFS ? "NTFS"
-				 : bootFsType == PART_FS_EXT ? "ext"
-				 : bootFsType == PART_FS_WBFS ? "raw WBFS" : "unknown",
-				 bootFsLba);
-
 			//! Report how the fragments actually went in, back in SetupDisc.
 			if (fragsRegistered)
 			{
@@ -909,9 +918,12 @@ namespace Riivo
 					 fragStats.firstFailure.empty() ? "the mod's files could not be located"
 													: fragStats.firstFailure.c_str());
 				if (fragStats.failed)
+				{
 					Addf(out, "  files mapped         : %u of %u (%u failed)\n",
 						 fragStats.files, fragStats.files + fragStats.failed,
 						 fragStats.failed);
+					out += DescribeFragFailList(fragStats);
+				}
 			}
 
 			//! Every modded entry must have been given an offset in SetupDisc.

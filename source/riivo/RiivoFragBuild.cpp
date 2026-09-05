@@ -4,6 +4,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <malloc.h>
+#include <limits.h>
 
 #include "RiivoFragBuild.hpp"
 #include "usbloader/wbfs.h"
@@ -34,6 +35,64 @@ namespace Riivo
 	static const int REBASE_ZERO_SECTOR = -502;
 	static const int REBASE_SECTOR_OVERFLOW = -503; // sector+lba+count past 4G
 	static const int REBASE_DISC_OVERFLOW = -504;   // base+offset+count past 4G
+
+	//! Reads one byte at `covered*sectorSize` through normal file I/O.
+	//! Returns 1 when it reads back (the file has data past what the driver
+	//! reported: our problem), 0 when it does not (the file is genuinely
+	//! short on the card: re-copy it), -1 when the file cannot be opened.
+	//! The caller only asks this when covered < ceil(length / sectorSize),
+	//! so the probed byte is always inside the claimed size.
+	static int ProbeShortFile(const std::string &path, u32 covered, u32 sectorSize)
+	{
+		FILE *f = fopen(path.c_str(), "rb");
+		if (!f)
+			return -1;
+		const u64 at = (u64) covered * sectorSize;
+		u8 b = 0;
+		//! Stays -1 unless the seek itself worked. Seeking past the end of a
+		//! file succeeds and the read returns nothing, so a seek that FAILS is
+		//! something else entirely - and reporting that as "short on the card"
+		//! would send the tester off re-copying a file on no evidence.
+		int verdict = -1;
+		if (at <= (u64) LONG_MAX && fseek(f, (long) at, SEEK_SET) == 0)
+			verdict = (fread(&b, 1, 1, f) == 1) ? 1 : 0;
+		fclose(f);
+		return verdict;
+	}
+
+	//! Tester-actionable tail for a SHORT failure, or empty when unprobed.
+	static std::string ShortVerdict(int probe, u32 length, u32 covered, u32 sectorSize)
+	{
+		if (probe == 1)
+			return "; the missing bytes read back fine, so the filesystem driver "
+				   "under-reported this file";
+		if (probe == 0)
+		{
+			char buf[96];
+			const u64 missing = (u64) length - (u64) covered * sectorSize;
+			snprintf(buf, sizeof(buf), "; the drive cannot supply the last %llu "
+					 "bytes of this file - re-copy it",
+					 (unsigned long long) missing);
+			return buf;
+		}
+		return std::string();
+	}
+
+	static const char *FailReason(int code)
+	{
+		switch (code)
+		{
+			case FRAG_FAIL_DRIVER: return "the filesystem driver refused the file";
+			case FRAG_FAIL_GAP: return "a hole or overlap in the reported runs";
+			case FRAG_FAIL_ZERO_SECTOR: return "the driver reported sector 0";
+			case FRAG_FAIL_SECTOR_OVERFLOW: return "a drive sector number past 4G";
+			case FRAG_FAIL_DISC_OVERFLOW: return "a virtual-disc sector past 4G";
+			case FRAG_FAIL_SHORT: return "the runs covered fewer sectors than the file needs";
+			case FRAG_FAIL_TABLE_FULL: return "the cIOS fragment table filled up";
+			default: break;
+		}
+		return "unknown mapping error";
+	}
 
 	static int RebaseAppend(void *data, u32 offset, u32 sector, u32 count)
 	{
@@ -146,6 +205,43 @@ namespace Riivo
 					return false;
 				}
 				++stats.failed;
+				int code;
+				if (ret)
+					code = FRAG_FAIL_DRIVER;
+				else if (ctx.error == REBASE_GAP)
+					code = FRAG_FAIL_GAP;
+				else if (ctx.error == REBASE_ZERO_SECTOR)
+					code = FRAG_FAIL_ZERO_SECTOR;
+				else if (ctx.error == REBASE_SECTOR_OVERFLOW)
+					code = FRAG_FAIL_SECTOR_OVERFLOW;
+				else if (ctx.error == REBASE_DISC_OVERFLOW)
+					code = FRAG_FAIL_DISC_OVERFLOW;
+				else
+					code = FRAG_FAIL_SHORT;
+				//! Prove whose fault a shortfall is: a byte that reads back
+				//! means the driver under-reported the file, one that does not
+				//! means the file is short on the card.
+				//!
+				//! Only for failures the log will actually name. Each probe is
+				//! another open and seek on the card, and a mod can fail in the
+				//! thousands - probing all of them would stall the boot for tens
+				//! of seconds behind a black screen for numbers nothing prints.
+				const bool listed = stats.failList.size() < FRAG_FAIL_LIST_MAX;
+				int probe = -1;
+				if (listed && code == FRAG_FAIL_SHORT)
+					probe = ProbeShortFile(f.external, ctx.next, sectorSize);
+				if (listed)
+				{
+					FragFailEntry e;
+					e.path = f.external;
+					e.code = code;
+					e.length = f.length;
+					e.limit = ctx.limit;
+					e.next = ctx.next;
+					e.driverRet = ret;
+					e.probe = probe;
+					stats.failList.push_back(e);
+				}
 				if (stats.firstFailure.empty())
 				{
 					//! Keep the numbers, not just the path: one failed file and
@@ -161,18 +257,8 @@ namespace Riivo
 					stats.failCbSector = ctx.badSector;
 					stats.failCbCount = ctx.badCount;
 					stats.failSectorSize = sectorSize;
-					if (ret)
-						stats.failCode = FRAG_FAIL_DRIVER;
-					else if (ctx.error == REBASE_GAP)
-						stats.failCode = FRAG_FAIL_GAP;
-					else if (ctx.error == REBASE_ZERO_SECTOR)
-						stats.failCode = FRAG_FAIL_ZERO_SECTOR;
-					else if (ctx.error == REBASE_SECTOR_OVERFLOW)
-						stats.failCode = FRAG_FAIL_SECTOR_OVERFLOW;
-					else if (ctx.error == REBASE_DISC_OVERFLOW)
-						stats.failCode = FRAG_FAIL_DISC_OVERFLOW;
-					else
-						stats.failCode = FRAG_FAIL_SHORT;
+					stats.failCode = code;
+					stats.failProbe = probe;
 					stats.firstFailure = DescribeFragFailure(stats);
 				}
 				continue;
@@ -198,27 +284,62 @@ namespace Riivo
 	{
 		if (stats.failCode == FRAG_FAIL_NONE || stats.failPath.empty())
 			return std::string();
-		const char *reason = "unknown mapping error";
-		switch (stats.failCode)
-		{
-			case FRAG_FAIL_DRIVER: reason = "the filesystem driver refused the file"; break;
-			case FRAG_FAIL_GAP: reason = "a hole or overlap in the reported runs"; break;
-			case FRAG_FAIL_ZERO_SECTOR: reason = "the driver reported sector 0"; break;
-			case FRAG_FAIL_SECTOR_OVERFLOW: reason = "a drive sector number past 4G"; break;
-			case FRAG_FAIL_DISC_OVERFLOW: reason = "a virtual-disc sector past 4G"; break;
-			case FRAG_FAIL_SHORT: reason = "the runs covered fewer sectors than the file needs"; break;
-			case FRAG_FAIL_TABLE_FULL: reason = "the cIOS fragment table filled up"; break;
-			default: break;
-		}
-		char buf[384];
+		char buf[480];
 		snprintf(buf, sizeof(buf),
 			"could not map %s: %s (code %d, driver returned %d, file %u bytes, "
 			"expected %u sectors of %u, driver covered %u, failing run at "
-			"offset %u sector %u count %u)",
-			stats.failPath.c_str(), reason, stats.failCode, stats.failDriverRet,
+			"offset %u sector %u count %u%s)",
+			stats.failPath.c_str(), FailReason(stats.failCode),
+			stats.failCode, stats.failDriverRet,
 			stats.failLength, stats.failLimit, stats.failSectorSize, stats.failNext,
-			stats.failCbOffset, stats.failCbSector, stats.failCbCount);
+			stats.failCbOffset, stats.failCbSector, stats.failCbCount,
+			stats.failCode == FRAG_FAIL_SHORT
+				? ShortVerdict(stats.failProbe, stats.failLength,
+							   stats.failNext, stats.failSectorSize).c_str()
+				: "");
 		return buf;
+	}
+
+	//! One collected failure on a single log line.
+	static std::string DescribeFragFailEntry(const FragFailEntry &e, u32 sectorSize)
+	{
+		char buf[512];
+		if (e.code == FRAG_FAIL_SHORT)
+			snprintf(buf, sizeof(buf), "%s: %s (file %u bytes, expected %u "
+					 "sectors, covered %u%s)",
+					 e.path.c_str(), FailReason(e.code), e.length, e.limit, e.next,
+					 ShortVerdict(e.probe, e.length, e.next, sectorSize).c_str());
+		else
+			snprintf(buf, sizeof(buf), "%s: %s (code %d, driver returned %d, "
+					 "file %u bytes)",
+					 e.path.c_str(), FailReason(e.code),
+					 e.code, e.driverRet, e.length);
+		return buf;
+	}
+
+	std::string DescribeFragFailList(const FragBuildStats &stats)
+	{
+		std::string out;
+		if (stats.failList.empty())
+			return out;
+		char head[64];
+		snprintf(head, sizeof(head), "  mapping failures   : %u file(s)\n",
+				 (unsigned) stats.failed);
+		out += head;
+		for (size_t i = 0; i < stats.failList.size(); ++i)
+		{
+			out += "    ";
+			out += DescribeFragFailEntry(stats.failList[i], stats.failSectorSize);
+			out += "\n";
+		}
+		if (stats.failed > stats.failList.size())
+		{
+			char tail[64];
+			snprintf(tail, sizeof(tail), "    ... and %u more\n",
+					 (unsigned) (stats.failed - stats.failList.size()));
+			out += tail;
+		}
+		return out;
 	}
 
 	bool VerifyModFragment(u64 discOffset, u32 length, const std::string &file, std::string &why)
