@@ -22,11 +22,12 @@ untouched.
 Every launch writes a report next to the XML you picked —
 `<device>:/riivolution/usbloadergx_riivo.log`. Please attach it to any report.
 
-## Changed in v2.6
+## Changed in v2.7
 
-- Fixed: the read hook is re-derived against the tester's actual cIOS; the old pattern never matched it.
-- The redirect now calls the frag-mode reader with the console's register contract.
-- Fragment-code anchors are logged, not dumped; the read path lives in DIPP.
+- Every mod file is now read back off the disc, not a sample of them.
+- Read-back failures are listed together instead of stopping at the first.
+- The log records the game's entry point and arena bounds at hand-over.
+- Create `<device>:/riivolution/nomempatch.txt` to install the files without the `<memory>` patches.
 - 137,854 automated checks, all passing.
 
 Older versions: [CHANGELOG.md](CHANGELOG.md)

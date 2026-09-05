@@ -3,6 +3,28 @@
 Full history for the Riivolution fork. The GitHub release body carries only the
 current version's bullets; everything older lives here.
 
+## Changed in v2.7
+
+Diagnostic build. The v2.6 log showed the whole file pipeline working on hardware -
+hook applied, 2091 fragments registered, layer checks preserved, patches applied -
+and the console still came up black. This build narrows what is left.
+
+- Read-back stride dropped to 1: all 2088 placed files are checked, not 67 of them.
+- Read-back failures accumulate and are reported together (first 24 named, plus a
+  count), instead of aborting on the first one. One hardware round now names every
+  bad file rather than one.
+- New final log section, `Handing over to the game`, recording the apploader's entry
+  point and `SYS_GetArenaLo/Hi` immediately before control leaves the loader. This is
+  the last line the log can ever carry: `ShutDownDevices()` unmounts the card the
+  moment `BootPartition` returns.
+- A marker file, `<device>:/riivolution/nomempatch.txt`, installs the mod's files but
+  skips its `<memory>` patches. That halfway state is one the file/patch interlock
+  normally forbids; it exists so a fault in the files or the rebuilt table can be
+  told apart from one in the 503 memory patches. The marker is read in
+  `SetBootContext`, while the card is still mounted.
+- 137,854 automated checks, all passing (unchanged: these are runtime diagnostics,
+  not new pure logic).
+
 ## Changed in v2.6
 
 - Fixed: the read hook is re-derived against the tester's actual cIOS; the old pattern never matched it.
