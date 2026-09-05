@@ -480,15 +480,33 @@ namespace Riivo
 			 fragStats.fragsBefore, fragStats.fragsAfter, RIIVO_FRAG_MAX);
 
 		std::string why;
-		for (size_t i = 0; i < placed.size(); ++i) {
+		size_t verified = 0;
+		//! The mapping itself was already proved per file when the fragments
+		//! were built: every file's runs covered exactly its length. The
+		//! read-back proves the shared path - drive, LBA base, installed
+		//! dispatch - so above a few hundred files a stride sample plus both
+		//! endpoints is enough. Each check is two disc reads on a black screen.
+		const size_t stride = placed.size() <= 256 ? 1 : placed.size() / 64;
+		for (size_t i = 0; i < placed.size(); i += stride) {
 			if (!VerifyModFragment(placed[i].offset, placed[i].length, placed[i].external, why)) {
 				Addf(out, "  Read-back failed: %s\n", why.c_str());
 				out += "  Rebuilt FST and dependent memory patches are withheld.\n";
 				return;
 			}
+			++verified;
 		}
-		Addf(out, "  LOW_READ checks      : first/last bytes of %u files passed\n",
-			 (unsigned)placed.size());
+		if (stride > 1 && (placed.size() - 1) % stride != 0)
+		{
+			const PlacedFile &last = placed.back();
+			if (!VerifyModFragment(last.offset, last.length, last.external, why)) {
+				Addf(out, "  Read-back failed: %s\n", why.c_str());
+				out += "  Rebuilt FST and dependent memory patches are withheld.\n";
+				return;
+			}
+			++verified;
+		}
+		Addf(out, "  LOW_READ checks      : first/last bytes of %u of %u files passed\n",
+			 (unsigned)verified, (unsigned)placed.size());
 		u8 check[32] ATTRIBUTE_ALIGN(32);
 		// These must remain errors on a DVD5 image despite readable mod data.
 		// LOW_READ, not UNENCREAD: the raw path serves any mapped fragment
@@ -810,10 +828,14 @@ namespace Riivo
 
 		if (fragListUntouched && !fragRefusal.empty())
 		{
-			Addf(out, "  SKIPPED: %s. The fragment list was left exactly as it was and\n"
-					  "  the game is being read precisely as stock USB Loader GX reads\n"
-					  "  it. Everything measured above is a dry run.\n\n",
-				 fragRefusal.c_str());
+			Addf(out, "  FRAGMENTS NOT REGISTERED: %s\n", fragRefusal.c_str());
+			if (fragStats.failed)
+				Addf(out, "  files mapped         : %u of %u (%u failed)\n",
+					 fragStats.files, fragStats.files + fragStats.failed,
+					 fragStats.failed);
+			out += "  The fragment list was left exactly as it was and\n"
+				   "  the game is being read precisely as stock USB Loader GX reads\n"
+				   "  it. Everything measured above is a dry run.\n\n";
 		}
 		else if (fragListUntouched)
 		{
@@ -886,6 +908,10 @@ namespace Riivo
 				Addf(out, "  FRAGMENTS NOT REGISTERED: %s\n",
 					 fragStats.firstFailure.empty() ? "the mod's files could not be located"
 													: fragStats.firstFailure.c_str());
+				if (fragStats.failed)
+					Addf(out, "  files mapped         : %u of %u (%u failed)\n",
+						 fragStats.files, fragStats.files + fragStats.failed,
+						 fragStats.failed);
 			}
 
 			//! Every modded entry must have been given an offset in SetupDisc.
@@ -1113,7 +1139,15 @@ namespace Riivo
 		for (size_t i = 0; i < cand.size(); ++i)
 		{
 			if (cand[i].size == 0)
+			{
+				//! Empty files need no fragments, but they still need a
+				//! placement: the rebuilt table holds an entry for them, and
+				//! LayoutFrom refuses entries with none. They share the cursor
+				//! without advancing it; a zero-length read never touches it.
+				cursor = (cursor + align - 1) & ~((u64) align - 1);
+				modOffsets[cand[i].disc] = cursor;
 				continue;
+			}
 			cursor = (cursor + align - 1) & ~((u64) align - 1);
 			PlacedFile pf;
 			pf.offset = cursor;
@@ -1294,8 +1328,18 @@ namespace Riivo
 			Addf(out, "  would go at  : %08x  (extended downwards)\n", place.fstAddr);
 			Addf(out, "  arena high   : %08x -> %08x\n", arena.arenaHi, place.newArenaHi);
 			Addf(out, "  taken from the game's heap : %u KB\n", place.reserved / 1024);
-			Addf(out, "  heap the game still has    : %u MB\n",
-				 place.heapLeft / (1024 * 1024));
+			if (place.heapLeft)
+				Addf(out, "  heap the game still has    : %u MB\n",
+					 place.heapLeft / (1024 * 1024));
+			else
+			{
+				//! Arena low was never set, so there is no floor to measure
+				//! the heap against. The cap actually enforced in that case
+				//! is the blind-drop limit; print how much of it this takes.
+				Addf(out, "  heap the game still has    : unknown (arena low not set)\n");
+				Addf(out, "  blind-drop cap used        : %u of %u KB\n",
+					 place.reserved / 1024, MAX_BLIND_DROP / 1024);
+			}
 		}
 
 		//! This is the step that actually points the game at the mod. It only

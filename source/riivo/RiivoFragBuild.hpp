@@ -50,12 +50,45 @@ namespace Riivo
 		u32 fragsAfter;
 		u32 sizeBefore;    // declared virtual disc, in sectors
 		u32 sizeAfter;
-		std::string firstFailure;
+		std::string firstFailure; // full sentence, with the numbers (never a bare path)
+
+		//! Why the first file failed, and the numbers that prove it. One log
+		//! line cannot distinguish a file-specific oddity from a systematic
+		//! arithmetic error, so every refusal carries these.
+		int failCode;      // a FragFailCode below, 0 when nothing failed
+		u32 failLength;    // stat size of the failed file, in bytes
+		u32 failLimit;     // sectors expected from it: ceil(length / sectorSize)
+		u32 failNext;      // sectors the driver actually covered
+		int failDriverRet; // what _X_get_fragments returned for it
+		u32 failCbOffset;  // callback args that fired the error, if any
+		u32 failCbSector;
+		u32 failCbCount;
+		u32 failSectorSize; // drive sector size the limit was computed with
+		std::string failPath;
 
 		FragBuildStats()
 			: files(0), failed(0), fragsBefore(0), fragsAfter(0), sizeBefore(0),
-			  sizeAfter(0) {}
+			  sizeAfter(0), failCode(0), failLength(0), failLimit(0), failNext(0),
+			  failDriverRet(0), failCbOffset(0), failCbSector(0), failCbCount(0),
+			  failSectorSize(0) {}
 	};
+
+	//! Distinct refusal reasons. The callback used to collapse four of these
+	//! into one code, which made 1 failed file and 800 look identical.
+	enum FragFailCode
+	{
+		FRAG_FAIL_NONE = 0,
+		FRAG_FAIL_DRIVER = 1,      // the filesystem driver returned non-zero
+		FRAG_FAIL_GAP = 2,         // a hole or overlap in the reported runs
+		FRAG_FAIL_ZERO_SECTOR = 3, // the driver reported sector 0
+		FRAG_FAIL_SECTOR_OVERFLOW = 4, // drive sector number does not fit 32 bits
+		FRAG_FAIL_DISC_OVERFLOW = 5,   // virtual-disc sector number does not fit 32 bits
+		FRAG_FAIL_SHORT = 6,       // runs covered fewer sectors than the file needs
+		FRAG_FAIL_TABLE_FULL = 7   // the cIOS fragment table filled up (fatal)
+	};
+
+	//! One log-ready line describing the first failure, or empty when none.
+	std::string DescribeFragFailure(const FragBuildStats &stats);
 
 	//! Append every file in `files` to the master fragment list. `files` must be
 	//! in ascending offset order - PlanFragRegion checks that. `fsType` is a
