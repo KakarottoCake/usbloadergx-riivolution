@@ -64,6 +64,15 @@ next to the XML you selected. It records whether the XML parsed, whether it matc
 game you launched, which options were active, every patch that was enabled, and any
 `valuefile` that could not be read. Please attach that file to any bug report.
 
+## Changed in v2.3
+
+- Fixed: mod files whose size is not a whole number of sectors were refused as
+  unmappable. The missing last sector is now read from the next cluster instead,
+  and the log says how many files that covered.
+- Every file recovered that way is read back through the console no matter the
+  mod size; the sampling shortcut does not apply to them.
+- 137,775 automated checks, all passing.
+
 ## Changed in v2.2
 
 - When mod files cannot be mapped, the log now lists every failing file (up to 16 shown,

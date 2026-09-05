@@ -48,6 +48,11 @@ build_run test_fstinstall "$SRC/riivo/RiivoFstInstall.cpp"
 # clears the read ceiling and the fragment table.
 build_run test_fragplan "$SRC/riivo/RiivoFragPlan.cpp"
 
+# Tail-cluster recovery: the FAT driver under-reports files whose data ends
+# inside a cluster's first sector. Needs the frag-list and driver shims, which
+# test_fragtail.cpp provides itself.
+build_run test_fragtail "$SRC/riivo/RiivoFragBuild.cpp"
+
 build_run test_dihook "$SRC/riivo/RiivoDiHook.cpp"
 
 printf '\nall suites passed\n'
