@@ -64,6 +64,19 @@ next to the XML you selected. It records whether the XML parsed, whether it matc
 game you launched, which options were active, every patch that was enabled, and any
 `valuefile` that could not be read. Please attach that file to any bug report.
 
+## Changed in v2.1
+
+- When a mod file cannot be mapped, the log now says why, and gives the file's size, the
+  sectors expected of it, the sectors the drive actually reported, and the run that failed.
+- The log now says how many of the mod's files were mapped and how many failed, not just
+  the first one that did.
+- Fixed: the refusal line printed a bare file path in the middle of a sentence.
+- Fixed: an empty file in a mod made the rebuilt file table refuse itself.
+- The heap readout no longer prints "0 MB" when the game leaves arena low unset; it says so
+  and shows how much of the 1 MB allowance the table used.
+- Mods over 256 files now read back a sample plus both ends instead of every file, which
+  removes a long black screen before launch.
+
 ## Changed in v2.0
 
 - The four-byte patch is replaced by a small routine installed in memory, which routes only

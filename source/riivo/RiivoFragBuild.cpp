@@ -24,8 +24,16 @@ namespace Riivo
 		u32 base;      // the file's first sector on the virtual disc
 		u32 lba;       // partition start, for drivers that report relative sectors
 		u32 next, limit;
-		int error;
+		int error;     // 0, -500 (table full), or -501..-504 below
+		u32 badOffset, badSector, badCount; // args that fired the error
 	};
+
+	//! Distinct refusal codes. These used to collapse into a single -501,
+	//! which made a hole, a zero sector and an overflow indistinguishable.
+	static const int REBASE_GAP = -501;      // offset != next
+	static const int REBASE_ZERO_SECTOR = -502;
+	static const int REBASE_SECTOR_OVERFLOW = -503; // sector+lba+count past 4G
+	static const int REBASE_DISC_OVERFLOW = -504;   // base+offset+count past 4G
 
 	static int RebaseAppend(void *data, u32 offset, u32 sector, u32 count)
 	{
@@ -39,10 +47,26 @@ namespace Riivo
 		// A zero-count callback is the driver's file-size marker, not data.
 		if (!count) return 0;
 		if (offset >= ctx->limit) return 0; // allocation slack past EOF
-		if (offset != ctx->next || !sector ||
-			(u64)sector + ctx->lba + count > 0x100000000ULL ||
-			(u64)ctx->base + offset + count > 0xffffffffULL)
-			return ctx->error = -501; // holes, overlaps, or truncated LBA
+		if (offset != ctx->next)
+		{
+			ctx->badOffset = offset; ctx->badSector = sector; ctx->badCount = count;
+			return ctx->error = REBASE_GAP;
+		}
+		if (!sector)
+		{
+			ctx->badOffset = offset; ctx->badSector = sector; ctx->badCount = count;
+			return ctx->error = REBASE_ZERO_SECTOR;
+		}
+		if ((u64)sector + ctx->lba + count > 0x100000000ULL)
+		{
+			ctx->badOffset = offset; ctx->badSector = sector; ctx->badCount = count;
+			return ctx->error = REBASE_SECTOR_OVERFLOW;
+		}
+		if ((u64)ctx->base + offset + count > 0xffffffffULL)
+		{
+			ctx->badOffset = offset; ctx->badSector = sector; ctx->badCount = count;
+			return ctx->error = REBASE_DISC_OVERFLOW;
+		}
 		if (count > ctx->limit - offset) count = ctx->limit - offset;
 		int ret = frag_append(ctx->master, ctx->base + offset, sector + ctx->lba, count);
 		if (!ret) ctx->next = offset + count;
@@ -86,6 +110,7 @@ namespace Riivo
 			ctx.next = 0;
 			ctx.limit = (u32)(((u64)f.length + sectorSize - 1) / sectorSize);
 			ctx.error = 0;
+			ctx.badOffset = ctx.badSector = ctx.badCount = 0;
 
 			int ret;
 			switch (fsType)
@@ -113,11 +138,43 @@ namespace Riivo
 				if (ctx.error == -500)
 				{
 					stats.firstFailure = "the cIOS fragment table filled up";
+					stats.failCode = FRAG_FAIL_TABLE_FULL;
+					stats.failPath = f.external;
+					stats.failLength = f.length;
+					stats.failDriverRet = ret;
+					stats.failSectorSize = sectorSize;
 					return false;
 				}
 				++stats.failed;
 				if (stats.firstFailure.empty())
-					stats.firstFailure = f.external;
+				{
+					//! Keep the numbers, not just the path: one failed file and
+					//! eight hundred look identical without them, and they are
+					//! the difference between a file-specific oddity and a
+					//! systematic arithmetic error.
+					stats.failPath = f.external;
+					stats.failLength = f.length;
+					stats.failLimit = ctx.limit;
+					stats.failNext = ctx.next;
+					stats.failDriverRet = ret;
+					stats.failCbOffset = ctx.badOffset;
+					stats.failCbSector = ctx.badSector;
+					stats.failCbCount = ctx.badCount;
+					stats.failSectorSize = sectorSize;
+					if (ret)
+						stats.failCode = FRAG_FAIL_DRIVER;
+					else if (ctx.error == REBASE_GAP)
+						stats.failCode = FRAG_FAIL_GAP;
+					else if (ctx.error == REBASE_ZERO_SECTOR)
+						stats.failCode = FRAG_FAIL_ZERO_SECTOR;
+					else if (ctx.error == REBASE_SECTOR_OVERFLOW)
+						stats.failCode = FRAG_FAIL_SECTOR_OVERFLOW;
+					else if (ctx.error == REBASE_DISC_OVERFLOW)
+						stats.failCode = FRAG_FAIL_DISC_OVERFLOW;
+					else
+						stats.failCode = FRAG_FAIL_SHORT;
+					stats.firstFailure = DescribeFragFailure(stats);
+				}
 				continue;
 			}
 
@@ -135,6 +192,33 @@ namespace Riivo
 		}
 
 		return true;
+	}
+
+	std::string DescribeFragFailure(const FragBuildStats &stats)
+	{
+		if (stats.failCode == FRAG_FAIL_NONE || stats.failPath.empty())
+			return std::string();
+		const char *reason = "unknown mapping error";
+		switch (stats.failCode)
+		{
+			case FRAG_FAIL_DRIVER: reason = "the filesystem driver refused the file"; break;
+			case FRAG_FAIL_GAP: reason = "a hole or overlap in the reported runs"; break;
+			case FRAG_FAIL_ZERO_SECTOR: reason = "the driver reported sector 0"; break;
+			case FRAG_FAIL_SECTOR_OVERFLOW: reason = "a drive sector number past 4G"; break;
+			case FRAG_FAIL_DISC_OVERFLOW: reason = "a virtual-disc sector past 4G"; break;
+			case FRAG_FAIL_SHORT: reason = "the runs covered fewer sectors than the file needs"; break;
+			case FRAG_FAIL_TABLE_FULL: reason = "the cIOS fragment table filled up"; break;
+			default: break;
+		}
+		char buf[384];
+		snprintf(buf, sizeof(buf),
+			"could not map %s: %s (code %d, driver returned %d, file %u bytes, "
+			"expected %u sectors of %u, driver covered %u, failing run at "
+			"offset %u sector %u count %u)",
+			stats.failPath.c_str(), reason, stats.failCode, stats.failDriverRet,
+			stats.failLength, stats.failLimit, stats.failSectorSize, stats.failNext,
+			stats.failCbOffset, stats.failCbSector, stats.failCbCount);
+		return buf;
 	}
 
 	bool VerifyModFragment(u64 discOffset, u32 length, const std::string &file, std::string &why)
