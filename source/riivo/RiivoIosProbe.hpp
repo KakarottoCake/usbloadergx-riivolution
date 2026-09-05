@@ -11,11 +11,12 @@
  *
  * Writing those instructions needs the plugin's actual compiled code, and the
  * code is not derivable from here:
- *   - IOS modules run at ARM virtual addresses (the DIP module sits at
- *     0x20200000) while the PPC only sees physical MEM2 at 0x90000000. The
- *     Starlet's MMU tables decide the mapping, the PPC cannot read its
- *     translation base register, and the layout shifts with the base IOS and
- *     the d2x revision. There is no constant to subtract.
+ *   - The d2x plugin (DIPP) runs at MEM2 physical addresses: its literal pool
+ *     holds 0x13802340 where the PPC sees 0x93802340, so the Starlet-to-PPC
+ *     offset for this module is the constant 0x80000000. An older comment here
+ *     claimed ARM virtual addresses near 0x20200000 with no constant to
+ *     subtract; the dump disproved that for DIPP. Other IOS modules may still
+ *     map differently, so every new address range gets verified, not assumed.
  *   - d2x does not ship the plugin as a separate binary; it exists as DIPP.app
  *     inside the installer, assembled at install time.
  * So the universal technique - the one libruntimeiospatch, Priiloader and every
@@ -78,6 +79,11 @@ namespace Riivo
 		//! Every ceiling-pair cluster found, with its classification.
 		std::vector<DiModule> modules;
 
+		//! Fragment-code and stock-DI anchors found, with classification.
+		//! Ours entries are kept for the log and never dumped.
+		std::vector<DiAnchor> fragAnchors;
+		std::vector<DiAnchor> stockAnchors;
+
 		//! One dumped module window per surviving candidate, in ascending
 		//! address order. Empty when no module window was identified.
 		struct DiDump
@@ -89,13 +95,19 @@ namespace Riivo
 			//! was taken anyway, so the round still comes home with bytes. A
 			//! fallback is never searched for a dispatch.
 			bool fallback;
+			//! The anchor the window was taken around, and what found it.
+			u32 anchor;
+			DiAnchorKind kind;
 		};
 		std::vector<DiDump> dumps;
+
+		//! Windows cut by the dump cap. Printed so a silent drop is impossible.
+		u32 dumpsSkipped;
 
 		IosProbe()
 			: attempted(false), ahbprot(false), iosVersion(0), iosRevision(0), scanFrom(0), scanTo(0),
 			  words(0), nonZero(0), selfAddr(0), selfLo(0), selfHi(0),
-			  arena2Lo(0), arena2Hi(0) {}
+			  arena2Lo(0), arena2Hi(0), dumpsSkipped(0) {}
 	};
 
 	//! Scan MEM2 for the plugin's fingerprints and, if one is found, write a
