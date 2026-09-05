@@ -11,11 +11,21 @@ static const u64 RIIVO_REGION_BYTES = 0x180000000ULL;
 static const u64 RIIVO_REGION_LIMIT = 0x200000000ULL;
 // Discovery only. BuildDiHook verifies the surrounding functions and ABI too.
 //
+// The pattern is split: a 3-halfword head, an uncompared branch, and a
+// 3-halfword tail at +8. The branch is position-dependent (it differs between
+// d2x builds for identical logic) and must never be compared - the old
+// contiguous 14-byte pattern missed this console on every halfword for the
+// same reason its halves match Thumb noise in isolation.
+//
 // Single definition on purpose: this array used to be `static const` here,
 // so every TU that included this header carried its own .rodata copy and the
 // MEM2 scan matched our own image. It is defined once in RiivoDiHook.cpp;
 // ProbeIosPlugin additionally skips matches near that address at runtime.
-extern const u8 DI_READ_PATTERN[];
-extern const u32 DI_READ_PATTERN_LEN;
+extern const u8 DI_READ_HEAD[];
+extern const u32 DI_READ_HEAD_LEN;   // 6
+extern const u32 DI_READ_TAIL_OFF;   // 8
+extern const u8 DI_READ_TAIL[];
+extern const u32 DI_READ_TAIL_LEN;   // 6
+extern const u32 DI_READ_SPAN;       // 14: head + gap + tail, for scan bounds
 }
 #endif

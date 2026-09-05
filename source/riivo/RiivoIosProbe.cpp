@@ -77,17 +77,21 @@ namespace Riivo
 	{
 		//! Thumb instructions are halfword-aligned, so step by 2. Compare the
 		//! first halfword before reading the rest - that rejects almost every
-		//! address without touching memory again.
-		const u16 first = ((u16) DI_READ_PATTERN[0] << 8) | DI_READ_PATTERN[1];
-		for (u32 addr = winLo; addr + DI_READ_PATTERN_LEN < winHi; addr += 2)
+		//! address without touching memory again. The branch at +6 is skipped:
+		//! it is position-dependent and must not be compared.
+		const u16 first = ((u16) DI_READ_HEAD[0] << 8) | DI_READ_HEAD[1];
+		for (u32 addr = winLo; addr + DI_READ_SPAN < winHi; addr += 2)
 		{
-			if (addr < selfHi && addr + DI_READ_PATTERN_LEN > selfLo)
+			if (addr < selfHi && addr + DI_READ_SPAN > selfLo)
 				continue;
 			if (*(vu16 *) (addr + UNCACHED_BIAS) != first)
 				continue;
 			bool all = true;
-			for (u32 k = 2; k < DI_READ_PATTERN_LEN && all; ++k)
-				if (*(vu8 *) (addr + k + UNCACHED_BIAS) != DI_READ_PATTERN[k])
+			for (u32 k = 2; k < DI_READ_HEAD_LEN && all; ++k)
+				if (*(vu8 *) (addr + k + UNCACHED_BIAS) != DI_READ_HEAD[k])
+					all = false;
+			for (u32 k = 0; k < DI_READ_TAIL_LEN && all; ++k)
+				if (*(vu8 *) (addr + DI_READ_TAIL_OFF + k + UNCACHED_BIAS) != DI_READ_TAIL[k])
 					all = false;
 			if (all && patchSites.size() < MAX_HITS)
 				patchSites.push_back(addr);
@@ -244,7 +248,7 @@ namespace Riivo
 
 		//! Runtime identity, logged unconditionally: our own pattern copy and
 		//! the MEM2 arena bounds, so every address below can be placed.
-		out.selfAddr = (u32) &DI_READ_PATTERN[0];
+		out.selfAddr = (u32) &DI_READ_HEAD[0];
 		LoaderWindow(out.selfAddr, &out.selfLo, &out.selfHi);
 		out.arena2Lo = (u32) SYS_GetArena2Lo();
 		out.arena2Hi = (u32) SYS_GetArena2Hi();
@@ -286,15 +290,13 @@ namespace Riivo
 
 		//! One dump window per anchor that is not ours, whatever kind found
 		//! it. Overlapping windows merge below, so nearby anchors never write
-		//! the same bytes twice.
+		//! the same bytes twice. Fragment anchors are logged below but never
+		//! dumped: MAX_FRAG proximity fires on non-fragment modules (it found
+		//! OH1 once), and the read path lives in DIPP, so there is no
+		//! fragment module to photograph.
 		std::vector<DumpWindow> pending;
 		for (size_t i = 0; i < candidates.size(); ++i)
 			AddPendingWindow(pending, candidates[i], ANCHOR_D2X);
-		for (size_t i = 0; i < out.fragAnchors.size(); ++i)
-		{
-			if (!out.fragAnchors[i].ours)
-				AddPendingWindow(pending, out.fragAnchors[i].addr, ANCHOR_FRAG);
-		}
 		for (size_t i = 0; i < out.stockAnchors.size(); ++i)
 		{
 			if (!out.stockAnchors[i].ours)
@@ -484,8 +486,9 @@ namespace Riivo
 					 m.pairAddr, m.thunkAddr);
 		}
 
-		//! Read-path anchors. Ours entries are logged and never dumped; the
-		//! dumps section below says what each kept one became.
+		//! Read-path anchors. Ours entries are logged and never dumped; kept
+		//! stock anchors became dump windows in the section below. Fragment
+		//! anchors are logged only, never dumped (see above).
 		out += "Fragment-code anchors (MAX_FRAG pairs)\n";
 		out += "--------------------------------------\n";
 		if (p.fragAnchors.empty())
@@ -496,7 +499,7 @@ namespace Riivo
 				Addf(out, "  %08x  ours (loader image - excluded)\n",
 					 p.fragAnchors[i].addr);
 			else
-				Addf(out, "  %08x  kept\n", p.fragAnchors[i].addr);
+				Addf(out, "  %08x  noted\n", p.fragAnchors[i].addr);
 		}
 		out += "Stock-DI anchors (read-limit table)\n";
 		out += "-----------------------------------\n";

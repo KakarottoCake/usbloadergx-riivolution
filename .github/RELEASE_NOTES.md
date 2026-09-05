@@ -22,11 +22,11 @@ untouched.
 Every launch writes a report next to the XML you picked —
 `<device>:/riivolution/usbloadergx_riivo.log`. Please attach it to any report.
 
-## Changed in v2.5
+## Changed in v2.6
 
-- The console now dumps the fragment-code and stock-DI windows the read path lives in.
-- Loader-owned addresses are excluded by the arena bound instead of the pattern window.
-- Overlapping dump windows are merged and capped at six, each labelled by its anchor.
-- 137,827 automated checks, all passing.
+- Fixed: the read hook is re-derived against the tester's actual cIOS; the old pattern never matched it.
+- The redirect now calls the frag-mode reader with the console's register contract.
+- Fragment-code anchors are logged, not dumped; the read path lives in DIPP.
+- 137,854 automated checks, all passing.
 
 Older versions: [CHANGELOG.md](CHANGELOG.md)

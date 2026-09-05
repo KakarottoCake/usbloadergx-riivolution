@@ -19,5 +19,6 @@ bool BuildDiHook(const u8 *image, u32 size, u32 base, u32 site,
                  u32 endWords, DiHookPlan &plan, std::string &why);
 bool EncodeThumbCall(u32 from, u32 to, u8 *out);
 bool DecodeThumbCall(u32 from, const u8 *in, u32 &to);
+bool DecodeThumbBranch(u32 from, u16 insn, u32 &to);
 }
 #endif
