@@ -80,6 +80,17 @@ namespace Riivo
 	//! total conversion patched without its assets exits to the System Menu
 	//! rather than booting. Only meaningful after ReportFstPlacement has run.
 	bool FileWorkIncomplete();
+
+	//! True when a marker file next to the XML asked for the mod's files to
+	//! be installed WITHOUT its <memory> patches. That halfway state is one
+	//! the interlock above normally forbids; it exists so a fault in the
+	//! files or the rebuilt table can be told apart from one in the patches.
+	bool MemoryPatchesSuppressed();
+
+	//! Log the entry point and arena bounds immediately before the game is
+	//! given control. Must be called inside BootPartition, for the same
+	//! reason as ReportFstPlacement: after it returns the card is gone.
+	void ReportLaunch(u32 entry);
 }
 
 #endif

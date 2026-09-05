@@ -175,6 +175,12 @@ u32 GameBooter::BootPartition(char *dolpath, u8 videoselected, u8 alternatedol, 
 	//! returns, and the report is written to that card.
 	Riivo::ReportFstPlacement();
 
+	//! The last line the log can ever carry. Everything after this point
+	//! runs with the card unmounted, so a boot that dies later leaves no
+	//! trace at all - which makes "the log ends here" a fact worth stating
+	//! explicitly rather than something the reader has to infer.
+	Riivo::ReportLaunch((u32)p_entry);
+
 	return (u32)p_entry;
 }
 
@@ -834,7 +840,10 @@ int GameBooter::BootGame(struct discHdr *gameHdr, const s8 useOcarina)
 	//! sends the patched code looking for assets that are not there, which is
 	//! an exit to the System Menu rather than a boot. If the file half was
 	//! refused for any reason, the game is left completely unmodified.
-	if (!riivoSet.memories.empty() && !Riivo::FileWorkIncomplete())
+	//! MemoryPatchesSuppressed() is the deliberate diagnostic exception:
+	//! files installed, patches skipped, on the tester's explicit request.
+	if (!riivoSet.memories.empty() && !Riivo::FileWorkIncomplete()
+		&& !Riivo::MemoryPatchesSuppressed())
 		Riivo::ApplyMemoryPatches(riivoSet, riivoDevice);
 	ClearDOLList();
 

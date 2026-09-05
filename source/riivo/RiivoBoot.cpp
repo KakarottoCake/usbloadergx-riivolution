@@ -147,6 +147,15 @@ namespace Riivo
 	static ModDevice modDev;
 	static bool listFromSd = false;
 
+	//! Set when the tester drops a marker file next to the XML. The file half
+	//! of a mod and its <memory> patches are normally all-or-nothing, because
+	//! patches without files exit to the System Menu. This deliberately runs
+	//! the other half alone - files installed, patches skipped - so a boot
+	//! that fails with both can be told apart from one that fails with only
+	//! the files. Diagnostic, and off unless the marker exists.
+	static bool memPatchSuppressed = false;
+	static std::string memPatchMarker;
+
 	void SetBootContext(const ResolvedPatchSet *set, const std::string &device,
 						const std::string &logPath, u32 sectorSize,
 						const u8 *gameId, int usbPort)
@@ -159,6 +168,26 @@ namespace Riivo
 		memset(bootGameId, 0, sizeof(bootGameId));
 		if (gameId)
 			memcpy(bootGameId, gameId, 6);
+
+		//! Read the marker now, while the card is still mounted: by the time
+		//! the patches would be applied, ShutDownDevices has taken it away.
+		memPatchSuppressed = false;
+		memPatchMarker.clear();
+		if (!device.empty())
+		{
+			memPatchMarker = device + "/riivolution/nomempatch.txt";
+			FILE *m = fopen(memPatchMarker.c_str(), "rb");
+			if (m)
+			{
+				memPatchSuppressed = true;
+				fclose(m);
+			}
+		}
+	}
+
+	bool MemoryPatchesSuppressed()
+	{
+		return memPatchSuppressed;
 	}
 
 	//! Put the fragment list back the way the loader handed it over, after the
@@ -481,17 +510,30 @@ namespace Riivo
 
 		std::string why;
 		size_t verified = 0;
-		//! The mapping itself was already proved per file when the fragments
-		//! were built: every file's runs covered exactly its length. The
-		//! read-back proves the shared path - drive, LBA base, installed
-		//! dispatch - so above a few hundred files a stride sample plus both
-		//! endpoints is enough. Each check is two disc reads on a black screen.
-		const size_t stride = placed.size() <= 256 ? 1 : placed.size() / 64;
+
+		//! Failures are COLLECTED, not thrown at the first one. Every round on
+		//! hardware costs a day, and aborting on file 1 of 2088 spends that day
+		//! learning one name when the same reads could have named all of them.
+		//! Whether the boot is refused does not change - one failure still
+		//! withholds the table - only how much the log knows when it happens.
+		size_t failed = 0;
+		std::string failures;
+		static const size_t MAX_NAMED = 24;
+
+		//! Every file, not a sample. The stride below was the right trade while
+		//! the shared path - drive, LBA base, installed dispatch - was what was
+		//! in doubt: one sample proves that for all of them. It has now been
+		//! proved on hardware, and the largest remaining unknown is the two
+		//! thousand files nobody has ever read back. On a total conversion one
+		//! wrong file is a hang, and a hang tells us nothing about which file.
+		//! Two disc reads each, on a screen that is already black.
+		const size_t stride = 1;
 		for (size_t i = 0; i < placed.size(); i += stride) {
 			if (!VerifyModFragment(placed[i].offset, placed[i].length, placed[i].external, why)) {
-				Addf(out, "  Read-back failed: %s\n", why.c_str());
-				out += "  Rebuilt FST and dependent memory patches are withheld.\n";
-				return;
+				if (failed < MAX_NAMED)
+					Addf(failures, "    %s\n", why.c_str());
+				++failed;
+				continue;
 			}
 			++verified;
 		}
@@ -499,18 +541,18 @@ namespace Riivo
 		{
 			const PlacedFile &last = placed.back();
 			if (!VerifyModFragment(last.offset, last.length, last.external, why)) {
-				Addf(out, "  Read-back failed: %s\n", why.c_str());
-				out += "  Rebuilt FST and dependent memory patches are withheld.\n";
-				return;
+				if (failed < MAX_NAMED)
+					Addf(failures, "    %s\n", why.c_str());
+				++failed;
 			}
-			++verified;
+			else ++verified;
 		}
 		size_t extendedVerified = 0;
 		//! Files rescued by tail-cluster recovery are verified
 		//! unconditionally, exempt from the stride: the appended sector is a
 		//! contiguity guess only the read-back can prove. Skips the ones the
 		//! sample above already covered, so nothing is checked twice. A
-		//! failure here refuses exactly like any other read-back failure -
+		//! failure here counts exactly like any other read-back failure -
 		//! the fallback is the behaviour without recovery, never a boot with
 		//! wrong bytes. The count below is every rescued file, whichever of
 		//! the two loops actually read it back.
@@ -534,9 +576,9 @@ namespace Riivo
 			if (idx % stride == 0 || idx == placed.size() - 1)
 				continue; // the sample above already read this one back
 			if (!VerifyModFragment(placed[idx].offset, placed[idx].length, placed[idx].external, why)) {
-				Addf(out, "  Read-back failed: %s\n", why.c_str());
-				out += "  Rebuilt FST and dependent memory patches are withheld.\n";
-				return;
+				if (failed < MAX_NAMED)
+					Addf(failures, "    %s\n", why.c_str());
+				++failed;
 			}
 		}
 		Addf(out, "  LOW_READ checks      : first/last bytes of %u of %u files passed\n",
@@ -544,6 +586,15 @@ namespace Riivo
 		if (extendedVerified)
 			Addf(out, "  tail recovery        : %u extended file(s) verified unconditionally\n",
 				 (unsigned)extendedVerified);
+		if (failed)
+		{
+			Addf(out, "  Read-back FAILED for %u file(s):\n", (unsigned)failed);
+			out += failures;
+			if (failed > MAX_NAMED)
+				Addf(out, "    ... and %u more\n", (unsigned)(failed - MAX_NAMED));
+			out += "  Rebuilt FST and dependent memory patches are withheld.\n";
+			return;
+		}
 		u8 check[32] ATTRIBUTE_ALIGN(32);
 		// These must remain errors on a DVD5 image despite readable mod data.
 		// LOW_READ, not UNENCREAD: the raw path serves any mapped fragment
@@ -1429,6 +1480,15 @@ namespace Riivo
 				   "  completely unmodified, which is the safe outcome.\n"
 				   "  Fix whatever the section above refused and they come back.\n";
 		}
+		else if (memPatchSuppressed)
+		{
+			Addf(out, "  SUPPRESSED by %s\n", memPatchMarker.c_str());
+			out += "  The mod's files ARE installed; only its <memory> patches\n"
+				   "  were skipped, deliberately. This is the halfway state the\n"
+				   "  interlock normally forbids, and it exists to tell a fault in\n"
+				   "  the files or the rebuilt table apart from one in the patches.\n"
+				   "  Delete that file to boot the mod properly.\n";
+		}
 		else if (fileWorkWanted)
 			out += "  Applied, alongside the mod's files.\n";
 		else
@@ -1438,5 +1498,28 @@ namespace Riivo
 		gprintf("Riivo: placement %s (%08x, %u bytes), memory patches %s\n",
 				place.ok ? "ok" : "refused", place.fstAddr, want,
 				FileWorkIncomplete() ? "held back" : "applied");
+	}
+
+	//! The last thing written while the card is still mounted. A black screen
+	//! after this point says the game was handed control and did not come
+	//! back, which is a different fault from anything above; without the
+	//! entry point and the arena the log cannot tell those apart.
+	void ReportLaunch(u32 entry)
+	{
+		std::string out;
+		out += "\n\nHanding over to the game\n";
+		out += "------------------------\n";
+		Addf(out, "  entry point  : %08x\n", entry);
+		Addf(out, "  arena low    : %08x\n", (u32) SYS_GetArenaLo());
+		Addf(out, "  arena high   : %08x\n", (u32) SYS_GetArenaHi());
+		if (!entry)
+			out += "  No entry point: the apploader never produced one, so nothing\n"
+				   "  below this line ever ran.\n";
+		else
+			out += "  Everything the loader does is finished. If the screen stays\n"
+				   "  black from here, the fault is in the game's own execution -\n"
+				   "  the mod's code, the rebuilt table it reads, or the files it\n"
+				   "  asks for - not in the setup logged above.\n";
+		AppendLog(out);
 	}
 }
