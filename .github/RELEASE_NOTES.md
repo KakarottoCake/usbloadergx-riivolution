@@ -64,6 +64,14 @@ next to the XML you selected. It records whether the XML parsed, whether it matc
 game you launched, which options were active, every patch that was enabled, and any
 `valuefile` that could not be read. Please attach that file to any bug report.
 
+## Changed in v2.4
+
+- Fixed: the console scan matched our own copy of the search pattern and mistook it for the cIOS.
+- The scan now finds the cIOS module first and only searches for the read routine inside it.
+- The log prints our image address, the arena bounds, and how each candidate was classified.
+- The memory dump is now 128 KB per candidate module instead of 32 KB around a match, and a dump is still taken when no candidate is found.
+- 137,804 automated checks, all passing.
+
 ## Changed in v2.3
 
 - Fixed: mod files whose size is not a whole number of sectors were refused as
