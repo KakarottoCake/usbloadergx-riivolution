@@ -6,8 +6,10 @@
 #include <string.h>
 #include <gccore.h>
 #include <ogcsys.h>
+#include <ogc/system.h>
 
 #include "RiivoIosProbe.hpp"
+#include "RiivoProbeClassify.hpp"
 #include "RiivoDiPatch.hpp"
 #include "RiivoDiHook.hpp"
 #include "libs/libruntimeiospatch/runtimeiospatch.h"
@@ -24,13 +26,18 @@ namespace Riivo
 	static const u32 UNCACHED_BIAS = 0x40000000;
 
 	//! Skip the bottom of MEM2: that is where the loader's own heap lives, and
-	//! our own copy of the fragment list and of these very constants sits there.
-	//! IOS modules live high. Starting at 12 MB keeps our own data out of the
-	//! results without risking the region the plugin could be in.
+	//! our own copy of the fragment list sits there. It does NOT keep our own
+	//! image out - the image sits high in MEM2, past this skip, which is how
+	//! the scan once matched our own pattern copy. That is handled instead by
+	//! the single pattern definition plus the loader window below.
 	static const u32 SCAN_FROM = MEM2_CACHED + 0x00C00000;
 
-	static const u32 DUMP_BEFORE = 0x2000; // 8 KB before the hit
-	static const u32 DUMP_AFTER  = 0x6000; // 24 KB after it
+	//! Dump window around a module pair: 32 KB before, 96 KB after. Sized so
+	//! the dispatch the hook needs is likely inside whether the compiler put
+	//! the literal pool near the handler or far from it. ApplyDiPatch reuses
+	//! the same window for its verification snapshot.
+	static const u32 DUMP_BEFORE = PROBE_DUMP_BEFORE;
+	static const u32 DUMP_AFTER  = PROBE_DUMP_AFTER;
 
 	static const size_t MAX_HITS = 24;
 
@@ -48,6 +55,93 @@ namespace Riivo
 	static inline u32 ReadUncached(u32 cachedAddr)
 	{
 		return *(vu32 *) (cachedAddr + UNCACHED_BIAS);
+	}
+
+	//! Word reader for the classifier, through the uncached alias.
+	static u32 ReadWordUncached(u32 addr, void *ctx)
+	{
+		(void) ctx;
+		return ReadUncached(addr);
+	}
+
+	//! Search the dispatch pattern inside [winLo, winHi), skipping anything
+	//! that overlaps our own image window. Appends to patchSites, bounded by
+	//! MAX_HITS.
+	static void SearchPatternWindow(u32 winLo, u32 winHi, u32 selfLo, u32 selfHi,
+									std::vector<u32> &patchSites)
+	{
+		//! Thumb instructions are halfword-aligned, so step by 2. Compare the
+		//! first halfword before reading the rest - that rejects almost every
+		//! address without touching memory again.
+		const u16 first = ((u16) DI_READ_PATTERN[0] << 8) | DI_READ_PATTERN[1];
+		for (u32 addr = winLo; addr + DI_READ_PATTERN_LEN < winHi; addr += 2)
+		{
+			if (addr < selfHi && addr + DI_READ_PATTERN_LEN > selfLo)
+				continue;
+			if (*(vu16 *) (addr + UNCACHED_BIAS) != first)
+				continue;
+			bool all = true;
+			for (u32 k = 2; k < DI_READ_PATTERN_LEN && all; ++k)
+				if (*(vu8 *) (addr + k + UNCACHED_BIAS) != DI_READ_PATTERN[k])
+					all = false;
+			if (all && patchSites.size() < MAX_HITS)
+				patchSites.push_back(addr);
+		}
+	}
+
+	//! Write one module window to the card with the usual self-describing
+	//! header. Returns false when nothing was written.
+	static bool WriteModuleDump(u32 base, u32 size, const std::string &path,
+								u32 iosVersion, u32 iosRevision,
+								IosProbe::DiDump &dump)
+	{
+		if (!size)
+			return false;
+		//! Copy through the uncached alias for the same reason as the scan.
+		u8 *buf = (u8 *) malloc(size);
+		if (!buf)
+			return false;
+		for (u32 i = 0; i < size; i += 4)
+			*(u32 *) (buf + i) = ReadUncached(base + i);
+
+		bool ok = false;
+		FILE *f = fopen(path.c_str(), "wb");
+		if (f)
+		{
+			//! A tiny header so the dump is self-describing: I need to know what
+			//! address these bytes came from to disassemble them usefully.
+			char hdr[64];
+			int n = snprintf(hdr, sizeof(hdr), "RIIVODIP1%08x%08x%08x%08x",
+							 (unsigned) base, (unsigned) size,
+							 (unsigned) iosVersion, (unsigned) iosRevision);
+			fwrite(hdr, 1, n, f);
+			fwrite(buf, 1, size, f);
+			fclose(f);
+			dump.base = base;
+			dump.size = size;
+			dump.path = path;
+			ok = true;
+		}
+		free(buf);
+		return ok;
+	}
+
+	//! Dump path for one module window. A single candidate keeps the historic
+	//! name; several get the pair address in the filename so they cannot
+	//! overwrite each other.
+	static std::string DumpPathFor(const std::string &basePath, u32 pairAddr, bool multi)
+	{
+		if (!multi)
+			return basePath;
+		std::string out = basePath;
+		const std::string ext = ".bin";
+		if (out.size() > ext.size()
+			&& out.compare(out.size() - ext.size(), ext.size(), ext) == 0)
+			out.erase(out.size() - ext.size());
+		char suffix[16];
+		snprintf(suffix, sizeof(suffix), "_%08x.bin", (unsigned) pairAddr);
+		out += suffix;
+		return out;
 	}
 
 	void ProbeIosPlugin(const std::string &dumpPath, IosProbe &out)
@@ -78,13 +172,13 @@ namespace Riivo
 		IosPattern pats[NPAT];
 		pats[0].name  = "d2x DVD9";
 		pats[0].what  = "d2x dual-layer ceiling, in __DI_CheckOffset's literal pool";
-		pats[0].value = 0x7ED38000;
+		pats[0].value = PROBE_DVD9;
 		pats[1].name  = "d2x DVD5";
 		pats[1].what  = "d2x single-layer ceiling, same function";
-		pats[1].value = 0x46090000;
+		pats[1].value = PROBE_DVD5;
 		pats[2].name  = "DIP thunk";
 		pats[2].what  = "LDR r3,[PC,#0] + BX r3, written over the stock DI module";
-		pats[2].value = 0x4B004718;
+		pats[2].value = PROBE_THUNK;
 		pats[3].name  = "FRAG_MAX";
 		pats[3].what  = "20000, the fragment list's maxnum";
 		pats[3].value = 0x00004E20;
@@ -119,74 +213,86 @@ namespace Riivo
 		for (int i = 0; i < NPAT; ++i)
 			out.patterns.push_back(pats[i]);
 
-		//! Now the thing that actually matters: the read dispatch itself. The
-		//! pattern was taken from a local build of d2x-v11-beta3, so finding it
-		//! here proves the running cIOS is that build and the hook's dispatch
-		//! redirect will land where it is meant to.
-		//!
-		//! Thumb instructions are halfword-aligned, so step by 2. Compare the
-		//! first halfword before reading the rest - that rejects almost every
-		//! address without touching memory again.
+		//! Runtime identity, logged unconditionally: our own pattern copy and
+		//! the MEM2 arena bounds, so every address below can be placed.
+		out.selfAddr = (u32) &DI_READ_PATTERN[0];
+		LoaderWindow(out.selfAddr, &out.selfLo, &out.selfHi);
+		out.arena2Lo = (u32) SYS_GetArena2Lo();
+		out.arena2Hi = (u32) SYS_GetArena2Hi();
+
+		//! Group the ceiling hits into module candidates. The dispatch is
+		//! only searched for inside a surviving candidate's window: the old
+		//! whole-MEM2 search matched our own .rodata copy and the hook went
+		//! into our own image.
+		std::vector<u32> dvd5Hits, thunkHits;
+		for (size_t i = 0; i < out.patterns.size(); ++i)
 		{
-			const u16 first = ((u16) DI_READ_PATTERN[0] << 8) | DI_READ_PATTERN[1];
-			for (u32 addr = SCAN_FROM; addr + DI_READ_PATTERN_LEN < MEM2_END; addr += 2)
+			if (out.patterns[i].value == PROBE_DVD5)
+				dvd5Hits = out.patterns[i].hits;
+			else if (out.patterns[i].value == PROBE_THUNK)
+				thunkHits = out.patterns[i].hits;
+		}
+		ClassifyModules(dvd5Hits, thunkHits, out.selfAddr,
+						SCAN_FROM, MEM2_END, ReadWordUncached, 0, out.modules);
+
+		//! Survivors: not ours, with a hook marker before the pair. Zero or
+		//! several means no patching - the log and the dumps below say why.
+		std::vector<u32> candidates;
+		for (size_t i = 0; i < out.modules.size(); ++i)
+		{
+			if (!out.modules[i].ours && out.modules[i].thunkAddr != 0)
+				candidates.push_back(out.modules[i].pairAddr);
+		}
+		const bool multi = candidates.size() > 1;
+		for (size_t i = 0; i < candidates.size(); ++i)
+		{
+			//! The dispatch the hook needs lives somewhere near the pair -
+			//! the dump window is the search window, so a site found here is
+			//! always inside the bytes we bring home.
+			u32 base, size;
+			ModuleDumpWindow(candidates[i], SCAN_FROM, MEM2_END, &base, &size);
+			SearchPatternWindow(base, base + size,
+								out.selfLo, out.selfHi, out.patchSites);
+			IosProbe::DiDump dump;
+			dump.base = 0;
+			dump.size = 0;
+			dump.fallback = false;
+			if (WriteModuleDump(base, size,
+								DumpPathFor(dumpPath, candidates[i], multi),
+								out.iosVersion, out.iosRevision, dump))
+				out.dumps.push_back(dump);
+		}
+
+		//! Nothing survived: dump the most promising ceiling hit outside our
+		//! own image anyway. The classification rules come from one console,
+		//! and a diagnostic round that brings home no bytes cannot be paid
+		//! for twice. It is not searched for a dispatch, so it cannot be
+		//! patched blind - the log marks it as a fallback.
+		if (out.dumps.empty())
+		{
+			std::vector<u32> ceilingHits;
+			for (size_t i = 0; i < out.patterns.size(); ++i)
 			{
-				if (*(vu16 *) (addr + UNCACHED_BIAS) != first)
+				if (out.patterns[i].value != PROBE_DVD5
+					&& out.patterns[i].value != PROBE_DVD9)
 					continue;
-				bool all = true;
-				for (u32 k = 2; k < DI_READ_PATTERN_LEN && all; ++k)
-					if (*(vu8 *) (addr + k + UNCACHED_BIAS) != DI_READ_PATTERN[k])
-						all = false;
-				if (all && out.patchSites.size() < MAX_HITS)
-					out.patchSites.push_back(addr);
+				const std::vector<u32> &h = out.patterns[i].hits;
+				ceilingHits.insert(ceilingHits.end(), h.begin(), h.end());
+			}
+			const u32 anchor = FallbackAnchor(out.modules, ceilingHits, out.selfAddr);
+			if (anchor)
+			{
+				u32 base, size;
+				ModuleDumpWindow(anchor, SCAN_FROM, MEM2_END, &base, &size);
+				IosProbe::DiDump dump;
+				dump.base = 0;
+				dump.size = 0;
+				dump.fallback = true;
+				if (WriteModuleDump(base, size, dumpPath,
+									out.iosVersion, out.iosRevision, dump))
+					out.dumps.push_back(dump);
 			}
 		}
-
-		//! Anchor the dump on the dispatch we actually patch, when it was found.
-		//! Anchoring on DVD9_LENGTH instead put the dump 280 KB away from the
-		//! patch site on a real console - the constant lives in
-		//! __DI_CheckOffset's literal pool, which the linker placed nowhere near
-		//! the LOW_READ handler. A dump that does not contain the instructions
-		//! in question is useless.
-		u32 anchor = 0;
-		if (!out.patchSites.empty())
-			anchor = out.patchSites[0];
-		else if (!out.patterns[0].hits.empty())
-			anchor = out.patterns[0].hits[0];
-		else if (!out.patterns[1].hits.empty())
-			anchor = out.patterns[1].hits[0];
-		if (!anchor)
-			return;
-
-		u32 base = anchor > SCAN_FROM + DUMP_BEFORE ? anchor - DUMP_BEFORE : SCAN_FROM;
-		u32 size = DUMP_BEFORE + DUMP_AFTER;
-		if (base + size > MEM2_END)
-			size = MEM2_END - base;
-
-		//! Copy through the uncached alias for the same reason as the scan.
-		u8 *buf = (u8 *) malloc(size);
-		if (!buf)
-			return;
-		for (u32 i = 0; i < size; i += 4)
-			*(u32 *) (buf + i) = ReadUncached(base + i);
-
-		FILE *f = fopen(dumpPath.c_str(), "wb");
-		if (f)
-		{
-			//! A tiny header so the dump is self-describing: I need to know what
-			//! address these bytes came from to disassemble them usefully.
-			char hdr[64];
-			int n = snprintf(hdr, sizeof(hdr), "RIIVODIP1%08x%08x%08x%08x",
-							 (unsigned) base, (unsigned) size,
-							 (unsigned) out.iosVersion, (unsigned) out.iosRevision);
-			fwrite(hdr, 1, n, f);
-			fwrite(buf, 1, size, f);
-			fclose(f);
-			out.dumpBase = base;
-			out.dumpSize = size;
-			out.dumpPath = dumpPath;
-		}
-		free(buf);
 	}
 
 	// The loader has no outstanding DI request here. Install the dormant RX
@@ -259,6 +365,9 @@ namespace Riivo
 		Addf(out, "running   : IOS%u (rev %u)\n", p.iosVersion, p.iosRevision);
 		Addf(out, "scanned   : %08x .. %08x  (%u words, %u non-zero)\n",
 			 p.scanFrom, p.scanTo, p.words, p.nonZero);
+		Addf(out, "pattern   : own copy at %08x, loader window %08x..%08x\n",
+			 p.selfAddr, p.selfLo, p.selfHi);
+		Addf(out, "arena2    : lo %08x hi %08x\n", p.arena2Lo, p.arena2Hi);
 
 		//! If almost everything read back as zero we were not actually seeing
 		//! IOS, and every "0 hits" below means nothing.
@@ -278,8 +387,30 @@ namespace Riivo
 			for (size_t k = 0; k < pat.hits.size(); ++k)
 				Addf(out, "                 %08x\n", pat.hits[k]);
 		}
+		out += "\n";
 
-		//! The headline result.
+		//! Every ceiling pair, and why it was kept or thrown away. Adjacency
+		//! alone does not discriminate - our own image holds adjacent pairs
+		//! too - so the verdict names the address range and the hook marker.
+		out += "Candidate DI modules (ceiling pair + nearby hook marker)\n";
+		out += "--------------------------------------------------------\n";
+		if (p.modules.empty())
+			out += "  none found\n";
+		for (size_t i = 0; i < p.modules.size(); ++i)
+		{
+			const DiModule &m = p.modules[i];
+			if (m.ours)
+				Addf(out, "  %08x  ours (loader image - excluded)\n", m.pairAddr);
+			else if (!m.thunkAddr)
+				Addf(out, "  %08x  no hook marker within 512 bytes - not a module\n",
+					 m.pairAddr);
+			else
+				Addf(out, "  %08x  module candidate, hook marker at %08x\n",
+					 m.pairAddr, m.thunkAddr);
+		}
+
+		//! The headline result. Sites are only searched for inside module
+		//! windows, so our own image can no longer contribute one.
 		out += "\nThe read dispatch that has to be patched\n";
 		out += "---------------------------------------\n";
 		if (p.patchSites.size() == 1)
@@ -290,10 +421,21 @@ namespace Riivo
 		}
 		else if (p.patchSites.empty())
 		{
-			out += "  NOT FOUND.\n\n"
-				   "  The patch was derived from d2x v11 beta3. Either this cIOS is a\n"
-				   "  different build, or its compiler laid the code out differently.\n"
-				   "  The dump below is what is needed to re-derive it.\n";
+			size_t candidates = 0;
+			for (size_t i = 0; i < p.modules.size(); ++i)
+			{
+				if (!p.modules[i].ours && p.modules[i].thunkAddr != 0)
+					++candidates;
+			}
+			if (!candidates)
+				out += "  NOT FOUND. No DI module window was identified above, so\n"
+					   "  there was nowhere to search. Either this cIOS is not a\n"
+					   "  d2x, or its read-limit check is built differently.\n";
+			else
+				out += "  NOT FOUND inside the module window(s). The running cIOS\n"
+					   "  lays out the read routine differently from the d2x build\n"
+					   "  the patch was derived from. The dump below is what is\n"
+					   "  needed to re-derive it.\n";
 		}
 		else
 		{
@@ -303,18 +445,26 @@ namespace Riivo
 				Addf(out, "    %08x\n", p.patchSites[i]);
 		}
 
-		if (p.dumpSize)
+		if (!p.dumps.empty())
 		{
-			Addf(out, "\nWrote %u bytes of the surrounding code from %08x to:\n  %s\n",
-				 p.dumpSize, p.dumpBase, p.dumpPath.c_str());
+			for (size_t i = 0; i < p.dumps.size(); ++i)
+			{
+				Addf(out, "\nWrote %u bytes of the surrounding code from %08x to:\n  %s\n",
+					 p.dumps[i].size, p.dumps[i].base, p.dumps[i].path.c_str());
+				if (p.dumps[i].fallback)
+					out += "  FALLBACK: no candidate passed the checks above, so this\n"
+						   "  window was taken on the strongest ceiling hit outside our\n"
+						   "  own image. It was not searched for a dispatch.\n";
+			}
 			out += "That file is the missing input. With it the read hook can be written\n"
 				   "against the real instructions instead of guessed at. Please send it\n"
 				   "along with this log.\n";
 		}
 		else
 		{
-			out += "\nNo anchor constant was found, so nothing was dumped. Either this\n"
-				   "cIOS is not a d2x, or its read-limit check is built differently.\n";
+			out += "\nNo ceiling constant was found outside our own image, so nothing\n"
+				   "was dumped. Either this cIOS is not a d2x, or its read-limit\n"
+				   "check is built differently.\n";
 		}
 
 		return out;

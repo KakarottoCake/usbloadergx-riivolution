@@ -55,4 +55,8 @@ build_run test_fragtail "$SRC/riivo/RiivoFragBuild.cpp"
 
 build_run test_dihook "$SRC/riivo/RiivoDiHook.cpp"
 
+# Probe self-exclusion: the MEM2 scan matched our own image. Pure address
+# classification, no console needed; the header is all this suite compiles.
+build_run test_probeself
+
 printf '\nall suites passed\n'

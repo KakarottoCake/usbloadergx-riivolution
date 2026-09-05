@@ -3,6 +3,11 @@
 #include <string.h>
 
 namespace Riivo {
+// Single definition for the whole loader; see RiivoDiPatch.hpp.
+const u8 DI_READ_PATTERN[] = {
+    0x68,0x2B,0x07,0x9B,0xD4,0x00,0xE7,0x40,0x68,0x82,0x68,0x41,0x00,0x38
+};
+const u32 DI_READ_PATTERN_LEN = sizeof(DI_READ_PATTERN);
 static u16 Read16(const u8 *p) { return (u16(p[0]) << 8) | p[1]; }
 static void Write16(u8 *p, u16 n) { p[0] = n >> 8; p[1] = n; }
 static u32 Read32(const u8 *p) { return (u32(Read16(p)) << 16) | Read16(p + 2); }

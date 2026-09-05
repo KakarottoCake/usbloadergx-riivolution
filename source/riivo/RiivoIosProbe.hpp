@@ -32,6 +32,7 @@
 #include <gctypes.h>
 #include <string>
 #include <vector>
+#include "RiivoProbeClassify.hpp"
 
 namespace Riivo
 {
@@ -61,15 +62,40 @@ namespace Riivo
 		//! hit is the healthy answer: none means this cIOS is not the d2x build
 		//! the patch was derived from, and more than one means the pattern is
 		//! not as distinctive as it looked and must not be applied blind.
+		//! The dispatch is only searched for inside module windows below, so
+		//! our own image can no longer contribute a hit.
 		std::vector<u32> patchSites;
 
-		u32 dumpBase;             // what got written to the card, 0 if nothing
-		u32 dumpSize;
-		std::string dumpPath;
+		//! Our own pattern copy as seen at runtime, and the loader window
+		//! around it that matches were excluded from. Printed unconditionally
+		//! so the next log can never again mistake our rodata for IOS.
+		u32 selfAddr;
+		u32 selfLo, selfHi;
+
+		//! MEM2 arena bounds at probe time, for placing every address above.
+		u32 arena2Lo, arena2Hi;
+
+		//! Every ceiling-pair cluster found, with its classification.
+		std::vector<DiModule> modules;
+
+		//! One dumped module window per surviving candidate, in ascending
+		//! address order. Empty when no module window was identified.
+		struct DiDump
+		{
+			u32 base;
+			u32 size;
+			std::string path;
+			//! True when no candidate survived classification and this window
+			//! was taken anyway, so the round still comes home with bytes. A
+			//! fallback is never searched for a dispatch.
+			bool fallback;
+		};
+		std::vector<DiDump> dumps;
 
 		IosProbe()
 			: attempted(false), ahbprot(false), iosVersion(0), iosRevision(0), scanFrom(0), scanTo(0),
-			  words(0), nonZero(0), dumpBase(0), dumpSize(0) {}
+			  words(0), nonZero(0), selfAddr(0), selfLo(0), selfHi(0),
+			  arena2Lo(0), arena2Hi(0) {}
 	};
 
 	//! Scan MEM2 for the plugin's fingerprints and, if one is found, write a

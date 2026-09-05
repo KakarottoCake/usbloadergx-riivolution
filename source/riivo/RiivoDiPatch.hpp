@@ -10,9 +10,12 @@ static const u32 RIIVO_REGION_WORDS = 0x60000000;
 static const u64 RIIVO_REGION_BYTES = 0x180000000ULL;
 static const u64 RIIVO_REGION_LIMIT = 0x200000000ULL;
 // Discovery only. BuildDiHook verifies the surrounding functions and ABI too.
-static const u8 DI_READ_PATTERN[] = {
-    0x68,0x2B,0x07,0x9B,0xD4,0x00,0xE7,0x40,0x68,0x82,0x68,0x41,0x00,0x38
-};
-static const u32 DI_READ_PATTERN_LEN = sizeof(DI_READ_PATTERN);
+//
+// Single definition on purpose: this array used to be `static const` here,
+// so every TU that included this header carried its own .rodata copy and the
+// MEM2 scan matched our own image. It is defined once in RiivoDiHook.cpp;
+// ProbeIosPlugin additionally skips matches near that address at runtime.
+extern const u8 DI_READ_PATTERN[];
+extern const u32 DI_READ_PATTERN_LEN;
 }
 #endif
