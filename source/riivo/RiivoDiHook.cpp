@@ -3,11 +3,15 @@
 #include <string.h>
 
 namespace Riivo {
-// Single definition for the whole loader; see RiivoDiPatch.hpp.
-const u8 DI_READ_PATTERN[] = {
-    0x68,0x2B,0x07,0x9B,0xD4,0x00,0xE7,0x40,0x68,0x82,0x68,0x41,0x00,0x38
-};
-const u32 DI_READ_PATTERN_LEN = sizeof(DI_READ_PATTERN);
+// Discovery pattern, single definition for the whole loader. Bytes taken
+// from the tester's console (dipp-93800a1c.asm); the branch at +6 is
+// deliberately absent - it is position-dependent and never compared.
+const u8 DI_READ_HEAD[] = { 0x68,0x23,0x07,0x9A,0xD4,0x00 };
+const u32 DI_READ_HEAD_LEN = sizeof(DI_READ_HEAD);
+const u32 DI_READ_TAIL_OFF = 8;
+const u8 DI_READ_TAIL[] = { 0x68,0x41,0x68,0x82,0x1C,0x38 };
+const u32 DI_READ_TAIL_LEN = sizeof(DI_READ_TAIL);
+const u32 DI_READ_SPAN = 14; // head + gap + tail, for scan bounds
 static u16 Read16(const u8 *p) { return (u16(p[0]) << 8) | p[1]; }
 static void Write16(u8 *p, u16 n) { p[0] = n >> 8; p[1] = n; }
 static u32 Read32(const u8 *p) { return (u32(Read16(p)) << 16) | Read16(p + 2); }
@@ -57,82 +61,206 @@ struct Snapshot {
     }
 };
 
+bool DecodeThumbBranch(u32 from, u16 insn, u32 &to) {
+    if ((insn & 0xF800) != 0xE000 || (from & 1)) return false;
+    s32 delta = (s32)(insn & 0x7FF);
+    if (delta & 0x400) delta -= 0x800;
+    delta <<= 1;
+    const s64 target = s64(from) + 4 + delta;
+    if (target < 0 || target > 0xffffffffLL) return false;
+    to = u32(target);
+    return true;
+}
+
+// Read the word a `ldr rt,[pc,#imm]` at `insn` points at. The immediate is
+// decoded, never matched: pool placement moves between builds.
+static bool ReadLiteralAt(const Snapshot &s, u32 insn, u32 &word) {
+    const u8 *p = s.at(insn, 2);
+    if (!p) return false;
+    const u16 h = Read16(p);
+    if ((h & 0xF800) != 0x4800) return false;
+    const u32 lit = ((insn + 4) & ~3u) + ((h & 0xFF) * 4);
+    const u8 *w = s.at(lit, 4);
+    if (!w) return false;
+    word = Read32(w);
+    return true;
+}
+
+// Match `ldr rt,[pc,#imm]` for a specific register, any offset.
+static bool MatchPCLoad(const Snapshot &s, u32 insn, u8 reg) {
+    const u8 *p = s.at(insn, 2);
+    if (!p) return false;
+    const u16 h = Read16(p);
+    return (h & 0xF800) == 0x4800 && ((h >> 8) & 7) == reg;
+}
+
 bool BuildDiHook(const u8 *image, u32 size, u32 base, u32 site,
                  u32 endWords, DiHookPlan &plan, std::string &why) {
     plan = DiHookPlan();
     why = "unsupported d2x LOW_READ layout; no IOS code changed";
     if (!image || endWords <= RIIVO_REGION_WORDS || endWords > 0x80000000u) return false;
     const Snapshot s = { image, size, base };
-    const u8 *dispatch = s.at(site, 20);
-    if (!dispatch || memcmp(dispatch, DI_READ_PATTERN, DI_READ_PATTERN_LEN) ||
-        !s.match(site + 18, "0004E7DB") || site < 0x1a2) return false;
-    // Verify the stack frame and r5/r6/r7 assignments used by redirect.S.
-    const u32 entry = site - 0x1a2;
-    if (!s.match(entry, "6803B5F74DAB0006000F0E1B9200")) return false;
-    const u32 stock = site - 0x176;
-    if (!s.match(stock, "9A0000390030")) return false;
-    u32 raw = 0, frag = 0, dvd = 0, handle = 0;
-    if (!s.call(site + 14, raw) || !s.call(stock + 6, handle)) return false;
-
-    // A fully checked function body, apart from relocatable BL immediates and
-    // its configuration pointer. Constants and all control flow must match.
-    const std::vector<u8> rawExpected = Hex(
-        "B5704C1368632B01D0092B02D1094B11429AD3064B1020A002006123BD704B0FE7F6"
-        "68A368E5195B189A682306DCD502F7FFFF0AE7F2075CD502F000FB19E7ED07DBD502"
-        "F7FFFC4CE7E8F7FFFCABE7E51383D1E47ED380000005210046090000");
-    const u8 *r = s.at(raw, rawExpected.size());
-    if (!r || (raw & 3)) return false;
-    for (u32 i = 0; i < rawExpected.size(); ++i) {
-        if ((i >= 0x30 && i < 0x34) || (i >= 0x3a && i < 0x3e) ||
-            (i >= 0x44 && i < 0x48) || (i >= 0x4a && i < 0x4e) ||
-            (i >= 0x50 && i < 0x54)) continue;
-        if (r[i] != rawExpected[i]) return false;
+    // Split discovery pattern: 3-halfword head, position-dependent branch
+    // skipped, 3-halfword tail at +8. Every halfword of the old contiguous
+    // pattern differs on this build, while its halves match Thumb noise in
+    // isolation - anchor on the head, skip the branch, verify the tail.
+    const u8 *dispatch = s.at(site, DI_READ_HEAD_LEN);
+    if (!dispatch || memcmp(dispatch, DI_READ_HEAD, DI_READ_HEAD_LEN)) {
+        why = "LOW_READ handler head not found; no IOS code changed";
+        return false;
     }
-    const u8 *config = s.at(((entry + 8) & ~3u) + 0xab * 4, 4);
-    if (!config || Read32(config) != Read32(r + 0x50)) return false;
-    u32 unused;
-    if (!s.call(raw + 0x30, frag) || !s.call(raw + 0x44, dvd) ||
-        !s.call(raw + 0x3a, unused) || !s.call(raw + 0x4a, unused) ||
-        !s.match(frag, "B5F00017B085000A0005000CAB030001")) return false;
-
-    why = "unsupported d2x DVD-ROM helper; no IOS code changed";
-    // Reuse an actual RX function, never presumed padding or RW fragment data.
-    // This entry is unreachable in MODE_FRAG; keep a failing DVD-ROM stub at
-    // its original address in case the mode is subsequently changed.
-    const std::vector<u8> dvdExpected = Hex(
-        "B5F02400B0870A53002790059104920393009B04429FD3020020B007BDF09B049A03"
-        "1BDD9B002600025B429AD9011AD3009E9B05228019DB0112002900189302F000F87E"
-        "2800D0012E00D0262280197301124293D9001B954B182080681B2120010047989001"
-        "2800D02421809A000109F7FFFF781E04D1059B0198021999002AF001F84A4B0E9801"
-        "681B47989A0019AB0ADB18D3197F9300E7BB23FF000503DB4298D900001D9A009802"
-        "0029F7FFFF5A0004E7EB24164264E7E846C01383D1D81383D1DC");
-    const u8 *d = s.at(dvd, dvdExpected.size());
-    if (!d || (dvd & 3)) return false;
-    for (u32 i = 0; i < 0xbc; ++i) {
-        if ((i >= 0x40 && i < 0x44) || (i >= 0x70 && i < 0x74) ||
-            (i >= 0x80 && i < 0x84) || (i >= 0xac && i < 0xb0)) continue;
-        if (d[i] != dvdExpected[i]) return false;
+    const u8 *tail = s.at(site + DI_READ_TAIL_OFF, DI_READ_TAIL_LEN);
+    if (!tail || memcmp(tail, DI_READ_TAIL, DI_READ_TAIL_LEN)) {
+        why = "LOW_READ handler tail not found; no IOS code changed";
+        return false;
     }
-    for (u32 i = 0; i < 4; ++i) {
-        const u32 offsets[] = { 0x40, 0x70, 0x80, 0xac };
-        if (!s.call(dvd + offsets[i], unused)) return false;
+    // LOW_READ case in the dispatcher switch: cmp #0x71, beq +0, then the
+    // branch this hook replaces. Decoding it (rather than trusting an
+    // offset) proves the write site really calls this handler.
+    if (!s.match(site - 0x176, "2B71D000")) {
+        why = "LOW_READ switch case not found; no IOS code changed";
+        return false;
+    }
+    {
+        const u8 *b = s.at(site - 0x170, 2);
+        u32 target = 0;
+        if (!b || !DecodeThumbBranch(site - 0x170, Read16(b), target) || target != site) {
+            why = "switch case does not branch to the handler; no IOS code changed";
+            return false;
+        }
+    }
+    // Dispatcher entry: twelve immediate-free halfwords of frame setup, then
+    // the config load. The pool offset moves between builds, so the load is
+    // matched by shape (any offset) and its word is compared, not copied.
+    const u32 entry = site - 0x1A8;
+    if (!s.match(entry, "B5F0B08378031C061C0F9200")) {
+        why = "dispatcher entry not found; no IOS code changed";
+        return false;
+    }
+    u32 cfgA = 0;
+    if (!MatchPCLoad(s, entry + 12, 4) || !ReadLiteralAt(s, entry + 12, cfgA) || !cfgA) {
+        why = "dispatcher config pointer not found; no IOS code changed";
+        return false;
+    }
+    // Read worker: the handler's BL target. Head has one pc-relative load
+    // (any offset); it must point at the same config struct the dispatcher
+    // uses, or this is not the worker.
+    u32 raw = 0;
+    {
+        const u8 *b = s.at(site + 0xE, 4);
+        if (!b || !DecodeThumbCall(site + 0xE, b, raw) || !s.at(raw, 8)) {
+            why = "read worker call not found; no IOS code changed";
+            return false;
+        }
+    }
+    if (!s.match(raw, "B538") || !MatchPCLoad(s, raw + 2, 3) ||
+        !s.match(raw + 4, "685B2B01")) {
+        why = "read worker head not found; no IOS code changed";
+        return false;
+    }
+    u32 cfgB = 0;
+    if (!ReadLiteralAt(s, raw + 2, cfgB) || !cfgB || cfgB != cfgA) {
+        why = "worker config pointer does not match; no IOS code changed";
+        return false;
+    }
+    // Frag reader: the first BL in the worker head. A build that lays the
+    // worker out differently decodes to something whose head will not match
+    // below, which is a refusal, not a wrong call target.
+    u32 frag = 0;
+    {
+        bool found = false;
+        for (u32 a = raw; a + 4 <= raw + 0x60; a += 2) {
+            const u8 *p = s.at(a, 4);
+            u32 t = 0;
+            if (!p) break;
+            if (DecodeThumbCall(a, p, t) && s.at(t, 8)) {
+                frag = t;
+                found = true;
+                break;
+            }
+        }
+        if (!found) {
+            why = "frag reader call not found; no IOS code changed";
+            return false;
+        }
+    }
+    if (!s.match(frag, "B5F0B0851C069100")) {
+        why = "frag reader head not found; no IOS code changed";
+        return false;
+    }
+    // Epilogue: the dispatcher's return sequence. Located by decoding the
+    // handler's own branch to it, then verified byte for byte - the redirect
+    // jumps here with the result in r5.
+    //! Derived from the branch, never assumed from a fixed offset. A constant
+    //! here is one the host fixture can happily agree with while the console
+    //! disagrees: on the measured module the epilogue is at site + 0x27E, and
+    //! a hardcoded site + 0x17E lands on 687368B29300 - a refusal on hardware
+    //! that no self-consistent test could have caught.
+    u32 epi = 0;
+    {
+        const u8 *b = s.at(site + 0x14, 2);
+        if (!b || !DecodeThumbBranch(site + 0x14, Read16(b), epi)) {
+            why = "handler return branch does not decode; no IOS code changed";
+            return false;
+        }
+    }
+    if (!s.match(epi, "B0031C28BDF0")) {
+        why = "dispatcher return not found; no IOS code changed";
+        return false;
+    }
+    // Storage: the bit0 reader below the worker. Called exactly once in the
+    // snapshot, from the worker - unreachable while MODE_FRAG is set, which
+    // it is from fragment registration on. The entry becomes the failing
+    // stub; the LOW_READ case calls entry + 8.
+    const u32 store = site - 0x984;
+    if (!s.match(store, "B5F0") || !s.match(store + 4, "92050A57")) {
+        why = "hook storage head not found; no IOS code changed";
+        return false;
+    }
+    {
+        const u8 *h = s.at(store + 2, 2);
+        if (!h || (Read16(h) & 0xFF80) != 0xB080) {
+            why = "hook storage frame not found; no IOS code changed";
+            return false;
+        }
+    }
+    {
+        u32 callers = 0;
+        for (u32 a = base; ; a += 2) {
+            const u8 *p = s.at(a, 4);
+            if (!p) break;
+            u32 t = 0;
+            if (DecodeThumbCall(a, p, t) && t == store) ++callers;
+        }
+        if (callers != 1) {
+            why = "hook storage has callers; no IOS code changed";
+            return false;
+        }
     }
     // Bytes assembled from ios/redirect.S, ARMv5TE big-endian Thumb-1.
+    // Patch offsets mirror the redirect_* labels: frag call, limit word,
+    // epilogue word. The host test reassembles redirect.S and checks this.
+    static const u32 FRAG_OFF = 0x36;
+    static const u32 LIMIT_OFF = 0x60;
+    static const u32 EPI_OFF = 0x64;
+    static const u32 STORAGE_SIZE = 0xC4; // 0x24c..0x316 minus the 8-byte stub
     plan.code = Hex(
-        "20A00200477046C0B51068B223C005DB429AD31D4B19429AD2291A9B009B68714299"
-        "D8249B024299D821231F4219D11E00384218D11B682B24104223D01768AB68EC4323"
-        "D113F7FFFFFE2800D111BD10682B079BD405003000399A02F7FFFFFEBD10687168B2"
-        "0038F7FFFFFEBD104B04E0004B04612B20A00200BD10000000000005210000031100");
-    plan.storage = dvd;
+        "20A00200477046C0B5D9688223C005DB429AD3164B12429AD218"
+        "1A9B009B68414299D81368232510422BD00F68A368E5195B18D2"
+        "0038F7FFFFFE2800D1080005E00ABCD9B0016823079A47704B06"
+        "E0004B06612325A0022DBCD9B0014B0147180000000000000000"
+        "0005210000031100");
+    plan.storage = store;
     plan.dispatch = site;
-    plan.branch.resize(6);
-    if (!EncodeThumbCall(dvd + 0x46, frag, &plan.code[0x46]) ||
-        !EncodeThumbCall(dvd + 0x5c, handle, &plan.code[0x5c]) ||
-        !EncodeThumbCall(dvd + 0x68, raw, &plan.code[0x68]) ||
-        !EncodeThumbCall(site, dvd + 8, &plan.branch[0])) return false;
-    Write32(&plan.code[0x7c], endWords);
-    // After the call, jump to the existing mov r4,r0 / DI return sequence.
-    Write16(&plan.branch[4], 0xe005); // site+4 -> site+18
+    plan.branch.resize(4);
+    if ((u32)plan.code.size() > STORAGE_SIZE ||
+        !EncodeThumbCall(site, store + 8, &plan.branch[0]) ||
+        !EncodeThumbCall(store + FRAG_OFF, frag, &plan.code[FRAG_OFF])) return false;
+    Write32(&plan.code[LIMIT_OFF], endWords);
+    //! The routine reaches the epilogue with `ldr r3, <word>` + `bx r3`, and
+    //! bx takes the target state from bit 0. Written even, the core switches
+    //! to ARM and runs the Thumb epilogue as ARM instructions.
+    Write32(&plan.code[EPI_OFF], epi | 1u);
     why.clear();
     return true;
 }

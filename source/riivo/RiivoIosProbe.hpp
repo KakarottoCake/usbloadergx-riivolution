@@ -80,7 +80,9 @@ namespace Riivo
 		std::vector<DiModule> modules;
 
 		//! Fragment-code and stock-DI anchors found, with classification.
-		//! Ours entries are kept for the log and never dumped.
+		//! Fragment anchors are logged only, never dumped: MAX_FRAG proximity
+		//! fires on non-fragment modules too, and the read path lives in DIPP.
+		//! Ours entries are kept for the log either way.
 		std::vector<DiAnchor> fragAnchors;
 		std::vector<DiAnchor> stockAnchors;
 

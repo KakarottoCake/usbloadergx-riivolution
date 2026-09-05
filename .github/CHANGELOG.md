@@ -3,6 +3,13 @@
 Full history for the Riivolution fork. The GitHub release body carries only the
 current version's bullets; everything older lives here.
 
+## Changed in v2.6
+
+- Fixed: the read hook is re-derived against the tester's actual cIOS; the old pattern never matched it.
+- The redirect now calls the frag-mode reader with the console's register contract.
+- Fragment-code anchors are logged, not dumped; the read path lives in DIPP.
+- 137,854 automated checks, all passing.
+
 ## Changed in v2.5
 
 - The console now dumps the fragment-code and stock-DI windows the read path lives in.
