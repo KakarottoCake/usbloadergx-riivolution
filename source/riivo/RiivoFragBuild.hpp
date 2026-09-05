@@ -91,6 +91,16 @@ namespace Riivo
 		//! count beyond the list.
 		std::vector<FragFailEntry> failList;
 
+		//! Files rescued by tail-cluster recovery, named by the disc offset
+		//! they were placed at. An offset and not an index into the vector
+		//! passed in: the caller's read-back walks a placement list rebuilt
+		//! independently of that one, and an index that quietly pointed at
+		//! the wrong file would skip the very check this list exists to
+		//! force. Offsets are unique, and both lists carry them.
+		//! The appended sector is a contiguity guess, so the caller must read
+		//! every one of these back unconditionally - exempt from any sampling.
+		std::vector<u64> extended;
+
 		FragBuildStats()
 			: files(0), failed(0), fragsBefore(0), fragsAfter(0), sizeBefore(0),
 			  sizeAfter(0), failCode(0), failLength(0), failLimit(0), failNext(0),

@@ -505,8 +505,45 @@ namespace Riivo
 			}
 			++verified;
 		}
+		size_t extendedVerified = 0;
+		//! Files rescued by tail-cluster recovery are verified
+		//! unconditionally, exempt from the stride: the appended sector is a
+		//! contiguity guess only the read-back can prove. Skips the ones the
+		//! sample above already covered, so nothing is checked twice. A
+		//! failure here refuses exactly like any other read-back failure -
+		//! the fallback is the behaviour without recovery, never a boot with
+		//! wrong bytes. The count below is every rescued file, whichever of
+		//! the two loops actually read it back.
+		for (size_t k = 0; k < fragStats.extended.size(); ++k)
+		{
+			//! Matched by offset, walking the list rather than trusting the
+			//! two vectors to have been built with the same membership. A
+			//! recovered file that cannot be found here is a contradiction,
+			//! and refusing is the only honest answer to it.
+			size_t idx = placed.size();
+			for (size_t j = 0; j < placed.size(); ++j)
+				if (placed[j].offset == fragStats.extended[k]) { idx = j; break; }
+			if (idx == placed.size())
+			{
+				out += "  A file rescued from an under-reported tail cluster is not\n"
+					   "  in the placement list, so it cannot be read back.\n";
+				out += "  Rebuilt FST and dependent memory patches are withheld.\n";
+				return;
+			}
+			++extendedVerified;
+			if (idx % stride == 0 || idx == placed.size() - 1)
+				continue; // the sample above already read this one back
+			if (!VerifyModFragment(placed[idx].offset, placed[idx].length, placed[idx].external, why)) {
+				Addf(out, "  Read-back failed: %s\n", why.c_str());
+				out += "  Rebuilt FST and dependent memory patches are withheld.\n";
+				return;
+			}
+		}
 		Addf(out, "  LOW_READ checks      : first/last bytes of %u of %u files passed\n",
 			 (unsigned)verified, (unsigned)placed.size());
+		if (extendedVerified)
+			Addf(out, "  tail recovery        : %u extended file(s) verified unconditionally\n",
+				 (unsigned)extendedVerified);
 		u8 check[32] ATTRIBUTE_ALIGN(32);
 		// These must remain errors on a DVD5 image despite readable mod data.
 		// LOW_READ, not UNENCREAD: the raw path serves any mapped fragment
@@ -909,6 +946,9 @@ namespace Riivo
 			{
 				Addf(out, "  mod fragments      : %u file(s) located, %u fragment(s) total\n",
 					 fragStats.files, fragStats.fragsAfter);
+				if (!fragStats.extended.empty())
+					Addf(out, "  tail recovery      : %u file(s) recovered from an under-reported tail cluster\n",
+						 (unsigned) fragStats.extended.size());
 				if (fragStats.failed)
 					Addf(out, "  could not locate   : %u file(s)\n", fragStats.failed);
 			}

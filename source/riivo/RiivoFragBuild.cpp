@@ -27,6 +27,7 @@ namespace Riivo
 		u32 next, limit;
 		int error;     // 0, -500 (table full), or -501..-504 below
 		u32 badOffset, badSector, badCount; // args that fired the error
+		u32 lastSector, lastCount; // post-lba sectors of the last appended run
 	};
 
 	//! Distinct refusal codes. These used to collapse into a single -501,
@@ -128,7 +129,12 @@ namespace Riivo
 		}
 		if (count > ctx->limit - offset) count = ctx->limit - offset;
 		int ret = frag_append(ctx->master, ctx->base + offset, sector + ctx->lba, count);
-		if (!ret) ctx->next = offset + count;
+		if (!ret)
+		{
+			ctx->next = offset + count;
+			ctx->lastSector = sector + ctx->lba;
+			ctx->lastCount = count;
+		}
 		if (ret)
 			ctx->error = ret;
 		return ret;
@@ -170,6 +176,7 @@ namespace Riivo
 			ctx.limit = (u32)(((u64)f.length + sectorSize - 1) / sectorSize);
 			ctx.error = 0;
 			ctx.badOffset = ctx.badSector = ctx.badCount = 0;
+			ctx.lastSector = ctx.lastCount = 0;
 
 			int ret;
 			switch (fsType)
@@ -187,6 +194,33 @@ namespace Riivo
 					stats.firstFailure = "the mod is on a filesystem whose layout "
 										 "cannot be read (a .wbfs partition?)";
 					return false;
+			}
+
+			//! Tail-cluster recovery. The vendored FAT driver reports whole
+			//! clusters against a floor bound, so a file whose data ends
+			//! inside the first sector of a cluster comes back exactly one
+			//! sector short. That sector is the head of the next cluster in
+			//! the chain, which the driver never names - but when the
+			//! shortfall is exactly one sector it is the sector right after
+			//! the last one mapped. Append that guess contiguously (it merges
+			//! into the existing entry, costing no table slot); the read-back
+			//! proves it, and anything else is still refused below.
+			if (!ret && !ctx.error && ctx.next && ctx.limit - ctx.next == 1
+				&& (u64) ctx.lastSector + ctx.lastCount + 1 <= 0x100000000ULL
+				&& (u64) ctx.base + ctx.next + 1 <= 0xffffffffULL)
+			{
+				const int aret = frag_append(master, ctx.base + ctx.next,
+											 ctx.lastSector + ctx.lastCount, 1);
+				if (!aret)
+				{
+					ctx.next = ctx.limit;
+					stats.extended.push_back(f.offset);
+				}
+				else
+					//! Only a full table can refuse a contiguous append, and
+					//! that is fatal for the whole plan - say so, rather than
+					//! letting it fall through and read as a short file.
+					ctx.error = aret;
 			}
 
 			if (ret || ctx.error || ctx.next != ctx.limit)
