@@ -46,6 +46,7 @@ namespace Riivo
 
 	struct IosProbe
 	{
+		bool attempted;
 		bool ahbprot;             // could we see IOS memory at all
 		u32 iosVersion;
 		u32 iosRevision;
@@ -67,7 +68,7 @@ namespace Riivo
 		std::string dumpPath;
 
 		IosProbe()
-			: ahbprot(false), iosVersion(0), iosRevision(0), scanFrom(0), scanTo(0),
+			: attempted(false), ahbprot(false), iosVersion(0), iosRevision(0), scanFrom(0), scanTo(0),
 			  words(0), nonZero(0), dumpBase(0), dumpSize(0) {}
 	};
 
@@ -79,15 +80,16 @@ namespace Riivo
 	//! Human-readable rendering of a probe result, for the boot log.
 	std::string DescribeProbe(const IosProbe &p);
 
-	//! Write the four bytes at `site`, which must be a patch site the probe
-	//! found. Verifies the bytes are the ones expected before writing and reads
-	//! them back afterwards, so a half-applied patch is reported rather than
-	//! left in place. Returns false and fills `why` on any mismatch.
+	//! Install the LOW_READ hook at `site`, which must be a patch site the
+	//! probe found. Verifies the dispatch, its calling convention and the
+	//! executable helper before writing, and rolls both writes back if either
+	//! fails to stick, so a half-applied hook is reported rather than left in
+	//! place. Returns false and fills `why` on any mismatch.
 	//!
 	//! Applying this to a game whose file table has NOT been rebuilt is
-	//! harmless: it only changes what happens to reads at or above 4 GiB, and
-	//! an unmodified game never makes one.
-	bool ApplyDiPatch(u32 site, std::string &why);
+	//! harmless: it only changes what happens to reads inside the synthetic
+	//! window, and an unmodified game never makes one.
+	bool ApplyDiPatch(u32 site, u32 endWords, std::string &why);
 }
 
 #endif

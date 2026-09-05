@@ -13,24 +13,21 @@
  * Three constraints decide where the region can go, and all three are checked
  * here rather than discovered on the console:
  *
- *  1. It must start at or above 4 GiB, because that is the only threshold the
- *     four-byte read patch can express (see RiivoDiPatch.hpp).
+ *  1. It must live inside the synthetic LOW_READ window the hook tests
+ *     (see RiivoDiPatch.hpp): word offsets 0x60000000-0x80000000, i.e. bytes
+ *     6-8 GiB. That span is above the DVD layer probes and anything a
+ *     single-layer backup maps, below signed-word wrap, and inside d2x's
+ *     fragment seek index. Only LOW_READ in this window is diverted to the
+ *     mod's fragments; every other read keeps the stock decrypt/hash path,
+ *     so layer detection and the anti-piracy reads behave exactly as stock.
  *  2. It must start at or above the end of the backup's own virtual disc, or
  *     the game's fragments would shadow the mod's - a lookup returns the first
  *     fragment covering an offset, and the game's come first in the table.
- *  3. It must end below the SINGLE-layer read limit the cIOS enforces
- *     (0x46090000 words). Past that every read is refused outright unless the
- *     cIOS has decided the disc is dual-layer - and making it decide that
- *     about a single-layer game is not an option. The game's own anti-piracy
- *     check reads one sector just past the single-layer end and requires it to
- *     FAIL; promote the disc and that read succeeds, which is the definition
- *     of a copy as far as the game is concerned.
+ *  3. It must end inside the window, which caps a mod at just under 2 GiB.
  *
- * Constraint 2 is what rules out dual-layer games: their backup already fills
- * the address space up to the ceiling, leaving nowhere to put anything. That is
- * a real limitation of this approach, not an oversight. Constraint 3 caps how
- * big a mod can be: roughly 385 MB above the 4 GiB line, less whatever the
- * game's own data reaches past it.
+ * Dual-layer images are refused outright: their payload addresses can overlap
+ * the synthetic window, so routing by address range cannot tell mod from game.
+ * That is a real limitation of this approach, not an oversight.
  *
  * The offset the cIOS ends up using is the same one the game asked for -
  * __DI_ReadUnencrypted adds config.offset[0]+config.offset[1], and both are

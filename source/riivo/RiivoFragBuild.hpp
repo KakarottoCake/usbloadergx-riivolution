@@ -70,7 +70,7 @@ namespace Riivo
 	//! check they match the file on the card. This proves the whole chain -
 	//! placement, sector lookup, re-basing, registration - in one go, before
 	//! anything irreversible is done. Returns false and fills `why` otherwise.
-	bool VerifyModFragment(u64 discOffset, const std::string &file, std::string &why);
+	bool VerifyModFragment(u64 discOffset, u32 length, const std::string &file, std::string &why);
 }
 
 #endif

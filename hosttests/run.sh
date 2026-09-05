@@ -48,4 +48,6 @@ build_run test_fstinstall "$SRC/riivo/RiivoFstInstall.cpp"
 # clears the read ceiling and the fragment table.
 build_run test_fragplan "$SRC/riivo/RiivoFragPlan.cpp"
 
+build_run test_dihook "$SRC/riivo/RiivoDiHook.cpp"
+
 printf '\nall suites passed\n'

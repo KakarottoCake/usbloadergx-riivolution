@@ -85,7 +85,7 @@ namespace Riivo
 	//! mod's were appended to the same list.
 	static u64 origMappedEnd = 0;
 
-	//! The cIOS probe and the four-byte patch, both done in SetupDisc rather
+	//! The cIOS probe and the LOW_READ hook, both done in SetupDisc rather
 	//! than later with everything else.
 	//!
 	//! Measured on a tester's console: AHBPROT is open when SetupDisc runs and
@@ -94,10 +94,11 @@ namespace Riivo
 	//! between the two, the privileged work has to happen while the access is
 	//! still there, so it is done here and the result carried forward.
 	//!
-	//! Applying the patch before the rest of the plan is known is safe, and is
+	//! Applying the hook before the rest of the plan is known is safe, and is
 	//! the same reasoning that already let it be applied before the table was
-	//! installed: on its own it only changes how reads at or above 4 GiB are
-	//! served, and a game whose file table was never rebuilt does not make any.
+	//! installed: on its own it only changes how reads inside the synthetic
+	//! window are served, and a game whose file table was never rebuilt does
+	//! not make any.
 	static IosProbe bootProbe;
 	static bool patchApplied = false;
 	static std::string patchWhy;
@@ -158,6 +159,27 @@ namespace Riivo
 		memset(bootGameId, 0, sizeof(bootGameId));
 		if (gameId)
 			memcpy(bootGameId, gameId, 6);
+	}
+
+	//! Put the fragment list back the way the loader handed it over, after the
+	//! mod's entries have already been appended to it.
+	//!
+	//! `num` alone is not enough: frag_append merges a new entry into the
+	//! previous one when both run on contiguously, so the last original
+	//! fragment may have had its count extended. It is saved and restored
+	//! whole. The size field is restored too, because frag_append rewrites it
+	//! on every call.
+	//!
+	//! Only reached when something has already gone wrong, which is exactly
+	//! when the list is most likely to be missing - hence the null check.
+	static void RestoreFragList(u32 originalNum, const Fragment &originalLast)
+	{
+		FragList *fl = frag_list_mutable();
+		if (!fl || !originalNum)
+			return;
+		fl->num = originalNum;
+		fl->frag[originalNum - 1] = originalLast;
+		fl->size = origImageSectors;
 	}
 
 	//! Ask DeviceHandler which drive a mount prefix ("sd:", "usb1:") names, and
@@ -429,8 +451,8 @@ namespace Riivo
 	//!   - a half-built fragment list is simply never registered;
 	//!   - the extended list, if registered, is a superset of the game's own, so
 	//!     every read below the mod region is byte-for-byte what it was;
-	//!   - the four-byte patch alone changes nothing, because an unmodified file
-	//!     table never sends the game above the 4 GiB line;
+	//!   - the hook alone changes nothing, because an unmodified file
+	//!     table never sends the game into the synthetic window;
 	//!   - the rebuilt table is stashed for installation ONLY once the patch is
 	//!     in, so the game is never pointed at a region nothing serves.
 	static void Activate(std::string &out, const FragPlan &plan,
@@ -457,50 +479,39 @@ namespace Riivo
 		Addf(out, "  fragments            : %u -> %u of %u, registered in SetupDisc\n",
 			 fragStats.fragsBefore, fragStats.fragsAfter, RIIVO_FRAG_MAX);
 
-		//! Prove the whole chain before touching any code: read the first mod
-		//! file back through the cIOS at the offset the game will ask for.
 		std::string why;
-		if (!VerifyModFragment(placed[0].offset, placed[0].external, why))
-		{
-			Addf(out, "  The read-back check failed: %s\n", why.c_str());
-
-			//! A read that SUCCEEDS with the wrong bytes means the fragment
-			//! pointed somewhere real but wrong, so print the mapping itself:
-			//! the disc offset asked for, the sector it resolves to, and what
-			//! the game's own first fragment looks like for comparison. That is
-			//! enough to tell a wrong drive from a wrong partition base.
-			const FragList *fl = frag_list_get();
-			if (fl)
-			{
-				const u32 want = (u32) (placed[0].offset / bootSectorSize);
-				for (u32 i = 0; i < fl->num; ++i)
-				{
-					if (fl->frag[i].offset <= want
-						&& fl->frag[i].offset + fl->frag[i].count > want)
-					{
-						Addf(out, "  that offset maps to  : sector %u on the %s "
-								  "(fragment %u of %u)\n",
-							 fl->frag[i].sector + (want - fl->frag[i].offset),
-							 listFromSd ? "SD card" : "USB drive", i, fl->num);
-						break;
-					}
-				}
-				if (fl->num)
-					Addf(out, "  the game's first is  : disc sector %u -> drive "
-							  "sector %u, %u sector(s)\n",
-						 fl->frag[0].offset, fl->frag[0].sector, fl->frag[0].count);
-				Addf(out, "  mod file             : %s\n", placed[0].external.c_str());
+		for (size_t i = 0; i < placed.size(); ++i) {
+			if (!VerifyModFragment(placed[i].offset, placed[i].length, placed[i].external, why)) {
+				Addf(out, "  Read-back failed: %s\n", why.c_str());
+				out += "  Rebuilt FST and dependent memory patches are withheld.\n";
+				return;
 			}
-
-			out += "  Nothing was patched. The game boots unmodified.\n";
+		}
+		Addf(out, "  LOW_READ checks      : first/last bytes of %u files passed\n",
+			 (unsigned)placed.size());
+		u8 check[32] ATTRIBUTE_ALIGN(32);
+		// These must remain errors on a DVD5 image despite readable mod data.
+		// LOW_READ, not UNENCREAD: the raw path serves any mapped fragment
+		// past the declared size by design (that is how the mod itself is
+		// read), so only the hooked dispatch can prove the layer checks
+		// survived. A promoted disc would answer these instead of refusing.
+		const u64 probes[] = { 0x460a0000ULL * 4, RIIVO_DVD9_PROBE_BYTES };
+		for (u32 i = 0; i < sizeof(probes)/sizeof(probes[0]); ++i) {
+			if (WDVD_Read(check, sizeof(check), probes[i]) == 0) {
+				Addf(out, "  Unexpected LOW_READ success at 0x%010llx; FST withheld\n",
+					 (unsigned long long)probes[i]);
+				return;
+			}
+		}
+		if (WDVD_Read(check, sizeof(check), modRegionEnd) == 0) {
+			out += "  LOW_READ past mod end succeeded; FST withheld.\n";
 			return;
 		}
-		Addf(out, "  read-back check      : passed at 0x%010llx\n",
-			 (unsigned long long) placed[0].offset);
+		out += "  layer/end-range checks : expected failures preserved\n";
 
 		//! The patch itself went in back in SetupDisc; this only records that it
 		//! is in place before the table that depends on it is installed.
-		Addf(out, "  cIOS read patch      : already applied at %08x\n",
+		Addf(out, "  cIOS read hook       : already applied at %08x\n",
 			 bootProbe.patchSites[0]);
 
 		//! Last: hold on to the rebuilt table. Installing it is what actually
@@ -688,8 +699,8 @@ namespace Riivo
 				++rejected;
 		}
 
-		//! The mod region has to clear two floors: the 4 GiB threshold the
-		//! four-byte read patch tests (RiivoDiPatch.hpp), and the end of the
+		//! The mod region has to clear two floors: the synthetic LOW_READ
+		//! window the hook tests (RiivoDiPatch.hpp), and the end of the
 		//! backup's own virtual disc, or the game's fragments would shadow the
 		//! mod's. PlanRegionStart takes the higher of the two.
 		const FragList *gameFrags = frag_list_get();
@@ -729,10 +740,10 @@ namespace Riivo
 		const u64 extent = builder.OriginalExtent();
 		const u64 region = PlanRegionStart(gameDataEnd, bootSectorSize);
 
-		//! The routing boundary is fixed at 4 GiB by the patch, not by wherever
-		//! the region happens to start. Testing against `region` would pass a
-		//! disc whose own data sits between 4 GiB and the region, and every one
-		//! of those reads would be sent down the raw path and come back
+		//! The routing boundary is the synthetic window's start, not wherever
+		//! the region happens to begin. Testing against `region` would pass a
+		//! disc whose own data reaches into the window, and every one of those
+		//! reads would be served raw from the fragment list and come back
 		//! undecrypted.
 		const bool extentFits = extent < RIIVO_REGION_BYTES;
 		//! Align to the drive's own sectors, never to less: a fragment cannot
@@ -766,22 +777,18 @@ namespace Riivo
 			 st.fstSize, fstSize, (int) st.fstSize - (int) fstSize);
 		Addf(out, "  disc data ends at  : 0x%010llx  (%s)\n",
 			 (unsigned long long) extent,
-			 extentFits ? "below the 4 GiB line, good"
-						: "AT OR ABOVE 4 GiB - THIS GAME CANNOT BE PATCHED THIS WAY");
+			 extentFits ? "below synthetic LOW_READ window"
+						: "OVERLAPS SYNTHETIC WINDOW - REFUSED");
 		Addf(out, "  mod relocated to   : 0x%010llx .. 0x%010llx\n",
 			 (unsigned long long) region, (unsigned long long) st.highestOffset);
 		Addf(out, "  headroom below     : %llu bytes spare before the line\n",
 			 (unsigned long long) (extentFits ? region - extent : 0));
 		Addf(out, "  mod payload        : %llu bytes\n", (unsigned long long) modBytes);
 
-		//! d2x refuses reads past the disc-type limit (dip.h). Those constants are
-		//! word offsets, hence the <<2 here.
-		const u64 dvd5 = 0x46090000ULL << 2;
-		const u64 dvd9 = 0x7ED38000ULL << 2;
-		Addf(out, "  DVD5 read ceiling  : 0x%010llx  %s\n", (unsigned long long) dvd5,
-			 st.highestOffset <= dvd5 ? "(fits)" : "(EXCEEDED)");
-		Addf(out, "  DVD9 read ceiling  : 0x%010llx  %s\n", (unsigned long long) dvd9,
-			 st.highestOffset <= dvd9 ? "(fits)" : "(EXCEEDED)");
+		Addf(out, "  raw DVD5 ceiling   : 0x%010llx (unchanged; does not limit mod LOW_READ)\n",
+			 (unsigned long long) RIIVO_DVD5_CEILING);
+		Addf(out, "  LOW_READ mod limit : 0x%010llx (2 GiB window)\n",
+			 (unsigned long long) RIIVO_REGION_LIMIT);
 
 		//! FRAG_MAX in the cIOS is 20000 fragments for the whole virtual disc,
 		//! shared with the game image itself. A contiguous external file costs one
@@ -923,10 +930,10 @@ namespace Riivo
 		//! that is the last point where the access to do them is guaranteed.
 		out += DescribeProbe(bootProbe);
 		if (patchApplied)
-			Addf(out, "\n  The cIOS read patch was applied early, at %08x.\n",
+			Addf(out, "\n  The cIOS read hook was applied early, at %08x.\n",
 				 bootProbe.patchSites[0]);
 		else if (!patchWhy.empty())
-			Addf(out, "\n  The cIOS read patch was NOT applied: %s\n", patchWhy.c_str());
+			Addf(out, "\n  The cIOS read hook was NOT applied: %s\n", patchWhy.c_str());
 
 		// ------------------------------------------------------------------
 		// Switch it on, but only if every single check above came back clean.
@@ -947,18 +954,10 @@ namespace Riivo
 
 		out += "\nHow this works\n";
 		out += "--------------\n";
-		out += "The fragment list the loader gives the cIOS serves the RAW backup, which\n"
-			   "keeps the game partition encrypted exactly as it was pressed, and the IOS\n"
-			   "disc code decrypts whatever comes back. A fragment aimed at a plaintext\n"
-			   "file on the card would decrypt into noise - which is why this needs a\n"
-			   "change inside IOS rather than only in the loader.\n\n"
-			   "That change is four bytes: the read handler's test for 'is this image\n"
-			   "already decrypted' becomes a test for 'is this read at or above 4 GiB'.\n"
-			   "Mod files live above that line and are served raw from the fragment list,\n"
-			   "with no decryption and no hash check. Everything below the line is real\n"
-			   "game data and is read exactly as it always was.\n\n"
-			   "The patch is made in memory only. Nothing is installed on your console\n"
-			   "and nothing survives a reboot.\n";
+		out += "Original reads retain the stock decrypt/hash path. Only LOW_READ in\n"
+			   "the registered synthetic window reads plaintext mod fragments.\n"
+			   "Raw-read limits and the declared image size are unchanged.\n"
+			   "The hook is RAM-only and disappears on IOS reload or reboot.\n";
 
 		AppendLog(out);
 		gprintf("Riivo: plan - %u redirect, %u new, %u entries, fst %u bytes\n",
@@ -990,7 +989,7 @@ namespace Riivo
 		//!
 		//! So do not touch it unless file replacement can actually happen. The
 		//! one thing that can be tested this early is hardware access: without
-		//! AHBPROT the cIOS patch cannot be made, so the feature is impossible
+		//! AHBPROT the cIOS hook cannot be installed, so the feature is impossible
 		//! no matter what else lines up, and the game should be booted exactly
 		//! as stock USB Loader GX would boot it.
 		if (!AHBPROT_DISABLED)
@@ -1009,7 +1008,14 @@ namespace Riivo
 		//! below overwrites it. PrepareFileRedirects needs the real figure to
 		//! work out where the mod region can start.
 		const FragList *before = frag_list_get();
-		origImageSectors = before ? before->size : 0;
+		if (!before || !before->num || before->num > RIIVO_FRAG_MAX) {
+			fragRefusal = "no valid base-image fragment list";
+			fragListUntouched = true;
+			return;
+		}
+		origImageSectors = before->size;
+		const u32 originalNum = before->num;
+		const Fragment originalLast = before->frag[originalNum - 1];
 
 		//! And which partition it is on, while the partition object still
 		//! exists - SetupDisc unmounts SD a few lines below.
@@ -1088,7 +1094,7 @@ namespace Riivo
 		u64 gameEnd = 0;
 		for (u32 i = 0; i < before->num; ++i)
 		{
-			const u64 e = (u64) (before->frag[i].offset + before->frag[i].count) * sector;
+			const u64 e = ((u64) before->frag[i].offset + before->frag[i].count) * sector;
 			if (e > gameEnd)
 				gameEnd = e;
 		}
@@ -1120,31 +1126,21 @@ namespace Riivo
 		modRegionStart = regionStart;
 		modRegionEnd = cursor;
 
-		//! Everything the mod uses has to fit under the SINGLE-layer ceiling.
-		//!
-		//! __DI_CheckOffset refuses any read at or past DVD5_LENGTH while the
-		//! cIOS believes the disc is single-layer, and that belief is exactly
-		//! what a game's anti-piracy check tests: the SDK reads one sector just
-		//! past the end of the disc and expects it to FAIL with 0x00052100. The
-		//! only way to place a mod above that line is to make the cIOS promote
-		//! the disc to dual-layer, and promoting a single-layer game hands that
-		//! check a successful read instead - which is precisely how it decides
-		//! it is running from a copy. So the line is not negotiable, and a mod
-		//! that does not fit under it is refused here rather than on the
-		//! console.
-		if (modRegionEnd > RIIVO_DVD5_CEILING)
-		{
-			fragRefusal = "mod needs more room than the disc has below the "
-						  "single-layer read limit";
-			gprintf("Riivo: mod ends at 0x%010llx, above the DVD5 ceiling "
-					"0x%010llx - refusing\n",
-					(unsigned long long) modRegionEnd,
-					(unsigned long long) RIIVO_DVD5_CEILING);
+		// Validate before touching either the list or IOS. The declared RAW
+		// size and mapped RAW extent both have to describe a DVD5 image.
+		std::vector<ModExtent> extents;
+		ToExtents(placed, extents);
+		const u64 declaredBytes = (u64) origImageSectors * sector;
+		const FragPlan earlyPlan = PlanFragRegion(
+			std::max(gameEnd, declaredBytes), sector, originalNum, extents);
+		if (!earlyPlan.ok) {
+			fragRefusal = earlyPlan.why;
 			modOffsets.clear();
 			modRegionStart = modRegionEnd = 0;
 			fragListUntouched = true;
 			return;
 		}
+		modRegionEnd = earlyPlan.regionEnd;
 
 		//! What the backup says its own virtual disc is, captured before any of
 		//! this. frag_append rewrites the field on every call, so it has to be
@@ -1204,6 +1200,13 @@ namespace Riivo
 			}
 		}
 
+		if (!fragsRegistered) {
+			RestoreFragList(originalNum, originalLast);
+			fragRefusal = fragStats.firstFailure;
+			fragListUntouched = true;
+			return;
+		}
+
 		//! Find the cIOS read handler and patch it now, while the access to do
 		//! it still exists. The card is mounted at this point - SetupDisc
 		//! unmounts it a few lines further on - so the dump can be written too.
@@ -1213,8 +1216,8 @@ namespace Riivo
 
 		if (bootProbe.patchSites.size() == 1)
 		{
-			patchApplied = ApplyDiPatch(bootProbe.patchSites[0], patchWhy);
-			gprintf("Riivo: early cIOS patch at %08x: %s\n",
+			patchApplied = ApplyDiPatch(bootProbe.patchSites[0], (u32)(modRegionEnd >> 2), patchWhy);
+			gprintf("Riivo: early cIOS hook at %08x: %s\n",
 					bootProbe.patchSites[0],
 					patchApplied ? "applied" : patchWhy.c_str());
 		}
@@ -1223,6 +1226,13 @@ namespace Riivo
 			patchWhy = bootProbe.patchSites.empty()
 					   ? "the patch site was not found in the running cIOS"
 					   : "the patch site was found more than once, which is not expected";
+		}
+		if (!patchApplied) {
+			RestoreFragList(originalNum, originalLast);
+			fragsRegistered = false;
+			modOffsets.clear();
+			fragRefusal = patchWhy;
+			fragListUntouched = true;
 		}
 	}
 
@@ -1289,7 +1299,7 @@ namespace Riivo
 		}
 
 		//! This is the step that actually points the game at the mod. It only
-		//! runs when the fragment list, the read-back check and the cIOS patch
+		//! runs when the fragment list, the read-back check and the cIOS hook
 		//! all succeeded earlier - otherwise pendingFst was never filled in, and
 		//! the game boots with its own table exactly as it always did.
 		if (pendingFst && pendingFstSize && place.ok)
@@ -1301,7 +1311,7 @@ namespace Riivo
 			}
 			else
 				out += "\n  The table could not be written, so the game boots with its\n"
-					   "  own. The cIOS patch is harmless on its own.\n";
+					   "  own. The cIOS hook is harmless on its own.\n";
 		}
 		else if (pendingFst)
 		{

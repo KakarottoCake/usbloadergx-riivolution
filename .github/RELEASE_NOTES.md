@@ -30,13 +30,14 @@ Choices are stored per game, so each game remembers its own mod setup.
 
 File replacement is switched on from v1.0. When every check passes, the mod's files are
 added to the table the console reads the game through, the file table is rebuilt so the
-game knows about them, and a four-byte change in memory makes the console serve them.
+game knows about them, and a small routine placed in memory makes the console serve them.
 
-It checks itself before committing: it reads the first mod file back *through the console*
-and compares it with the file on your card. If anything is off — the mod on a different
-drive from the game, a filesystem whose layout can't be read, a dual-layer game, a game
-whose own data crosses the 4 GiB line — it stops and the game boots exactly as it would
-without Riivolution. The log says which check stopped it.
+It checks itself before committing: it reads the first and last bytes of *every* mod file
+back through the console and compares them with the files on your card, then confirms that
+the reads a game uses to tell a disc from a copy still fail exactly as they should. If
+anything is off — the mod on a different drive from the game, a filesystem whose layout
+can't be read, a dual-layer game, a cIOS the routine doesn't recognise — it stops and the
+game boots exactly as it would without Riivolution. The log says which check stopped it.
 
 If a mod replaces files and that could not be done, its `<memory>` patches are held back
 as well and the game boots completely unmodified. Those patches assume the mod's files are
@@ -62,6 +63,26 @@ shut the screen down. Instead, each launch writes a report to:
 next to the XML you selected. It records whether the XML parsed, whether it matches the
 game you launched, which options were active, every patch that was enabled, and any
 `valuefile` that could not be read. Please attach that file to any bug report.
+
+## Changed in v2.0
+
+- The four-byte patch is replaced by a small routine installed in memory, which routes only
+  reads inside its own address window to the mod and leaves every other read on the stock
+  path.
+- Mods can now be up to 2 GB. The previous limit was about 14 MB.
+- A game whose own data crosses the 4 GiB line is no longer refused.
+- The routine verifies the surrounding cIOS code, its calling convention and its own
+  scratch space before writing anything, and rolls both writes back if either does not
+  stick.
+- Every mod file is now read back through the console, first and last bytes, instead of
+  only the first file.
+- After installation the loader confirms that the reads a game uses to tell a disc from a
+  copy still fail, and refuses to continue if any of them succeeds.
+- A mod file that is only partly locatable on the card is now refused instead of leaving a
+  gap that reads as zeros.
+- The fragment list is put back exactly as it was whenever setup is abandoned part-way.
+- Dual-layer games are still refused.
+- 137,586 automated checks, all passing.
 
 ## Changed in v1.9
 
