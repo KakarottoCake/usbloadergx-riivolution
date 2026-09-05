@@ -5,6 +5,7 @@
 #include <string.h>
 #include <gccore.h>
 #include "RiivoMemory.hpp"
+#include "RiivoPatchGuard.hpp"
 #include "RiivoConfig.hpp"
 #include "patches/gamepatches.h"
 #include "gecko.h"
@@ -98,6 +99,7 @@ namespace Riivo
 		}
 
 		memcpy(addr, &value[0], value.size());
+		ProtectAppliedPatch(target, value.size());
 		DCFlushRange(addr, value.size());
 		ICInvalidateRange(addr, value.size());
 		gprintf("Riivo mem: direct wrote %u byte(s) @ %p\n", (unsigned) value.size(), addr);
@@ -135,6 +137,7 @@ namespace Riivo
 						continue;
 					}
 					memcpy(dst + i, &value[0], value.size());
+					ProtectAppliedPatch((u32)(dst + i), value.size());
 					DCFlushRange(dst + i, value.size());
 					ICInvalidateRange(dst + i, value.size());
 					gprintf("Riivo mem: search matched @ %p, wrote %u byte(s)\n",
@@ -180,6 +183,7 @@ namespace Riivo
 						u32 blrAddr = (u32) (dst + j); // final load address == runtime address
 						u32 branch = ((target - blrAddr) & 0x03FFFFFC) | 0x48000000;
 						*(u32 *) (dst + j) = branch;
+						ProtectAppliedPatch(blrAddr, 4);
 						DCFlushRange(dst + j, 4);
 						ICInvalidateRange(dst + j, 4);
 						gprintf("Riivo mem: ocarina hooked blr @ 0x%08x -> 0x%08x\n", blrAddr, target);

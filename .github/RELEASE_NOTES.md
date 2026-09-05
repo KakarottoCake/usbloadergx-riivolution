@@ -22,12 +22,13 @@ untouched.
 Every launch writes a report next to the XML you picked —
 `<device>:/riivolution/usbloadergx_riivo.log`. Please attach it to any report.
 
-## Changed in v2.7
+## Changed in v2.8
 
-- Every mod file is now read back off the disc, not a sample of them.
-- Read-back failures are listed together instead of stopping at the first.
-- The log records the game's entry point and arena bounds at hand-over.
-- Create `<device>:/riivolution/nomempatch.txt` to install the files without the `<memory>` patches.
-- 137,854 automated checks, all passing.
+- Mod files are now verified with full 128 KiB reads and reads across every fragment boundary, not 32 bytes per file.
+- The rebuilt file table is walked independently and every path resolved before it is installed.
+- The Gecko code handler and the width/480p trampolines stand down when the mod owns the memory they write.
+- The log records the loader's own patch settings and the handler policy actually used.
+- IOS dumps are off unless `riivolution/dumpios.txt` exists.
+- 146,232 automated checks, all passing.
 
 Older versions: [CHANGELOG.md](CHANGELOG.md)

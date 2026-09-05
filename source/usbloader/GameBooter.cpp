@@ -49,6 +49,7 @@
 #include "riivo/RiivoParser.hpp"
 #include "riivo/RiivoConfig.hpp"
 #include "riivo/RiivoMemory.hpp"
+#include "riivo/RiivoPatchGuard.hpp"
 #include "riivo/RiivoSave.hpp"
 #include "riivo/RiivoBoot.hpp"
 #include "banner/OpeningBNR.hpp"
@@ -647,7 +648,9 @@ int GameBooter::BootGame(struct discHdr *gameHdr, const s8 useOcarina)
 	//! reading the XML, loading <memory valuefile=> blobs, writing the boot log -
 	//! must be done up front.
 	Riivo::ResolvedPatchSet riivoSet;
+	bool riivoSkipCodeHandler = false;
 	std::string riivoDevice; // SD/USB mount prefix, e.g. "sd:"
+	Riivo::ConfigurePatchProtection(riivoSet, riivoDevice, false);
 	if (game_cfg->RiivoPath.size() > 0)
 	{
 		char riivoId[7];
@@ -694,6 +697,19 @@ int GameBooter::BootGame(struct discHdr *gameHdr, const s8 useOcarina)
 							  Settings.SDMode ? 512 : hdd_sector_size[usbport],
 							  gameHeader.id, usbport);
 		Riivo::ReportCios();
+		char choices[512];
+		snprintf(choices, sizeof(choices),
+			"\nLoader patch settings (resolved, before boot)\n"
+			"  Hooktype=%u Ocarina=%u debugger=%u pause=%u\n"
+			"  video=%u video-DOL=%u aspect=%u deflicker=%u VI=%u width=%u 480p=%u\n"
+			"  language=%u country=%u private-server=%u return-to=%08x SD-mode=%u\n",
+			(unsigned)Hooktype, (unsigned)ocarinaChoice, (unsigned)WiirdDebugger,
+			(unsigned)Settings.WiirdDebuggerPause, (unsigned)videoChoice,
+			(unsigned)videoPatchDolChoice, (unsigned)aspectChoice, (unsigned)deflicker,
+			(unsigned)viChoice, (unsigned)videoWidth, (unsigned)patchFix480pChoice,
+			(unsigned)languageChoice, (unsigned)countrystrings, (unsigned)PrivServChoice,
+			(unsigned)returnToChoice, (unsigned)Settings.SDMode);
+		Riivo::AppendLog(choices);
 	}
 
 	//! Riivolution <savegame> redirect (Phase 2): point the NAND-emu base at the
@@ -777,6 +793,29 @@ int GameBooter::BootGame(struct discHdr *gameHdr, const s8 useOcarina)
 	{
 		gprintf("Game Boot\n");
 		AppEntrypoint = BootPartition(Settings.dolpath, videoChoice, alternatedol, alternatedoloffset, gameHeader);
+		// Resolve handler policy while the log is still writable, but only
+		// protect memory patches that this boot will actually attempt.
+		const bool riivoMemoryActive = !riivoSet.memories.empty() &&
+			!Riivo::FileWorkIncomplete() && !Riivo::MemoryPatchesSuppressed();
+		Riivo::ConfigurePatchProtection(riivoSet, riivoDevice, riivoMemoryActive);
+		const u8 requestedHook = Hooktype;
+		riivoSkipCodeHandler = RiivoPatchConflict(0x80001000, 0x2000) != 0;
+		if (riivoSkipCodeHandler)
+			Hooktype = 0; // also prevents gamepatches hooks and the handler entry jump
+		if (!riivoSet.IsEmpty()) {
+			char policy[384];
+			snprintf(policy, sizeof(policy),
+				"\nFinal patch policy (before device shutdown)\n"
+				"  memory patches=%s; Hooktype requested=%u effective=%u\n"
+				"  Gecko handler=%s\n"
+				"  width/480p trampolines are range-checked before writing.\n"
+				"  Final patch execution and entry jump are still pending.\n",
+				riivoMemoryActive ? "enabled" : "withheld/suppressed", (unsigned)requestedHook,
+				(unsigned)Hooktype, riivoSkipCodeHandler
+					? "disabled: mod owns 80001000..80003000"
+					: Hooktype ? "enabled" : "off");
+			Riivo::AppendLog(policy);
+		}
 		// Reading of game is done we can close devices now
 		ShutDownDevices(usbport);
 	}
@@ -848,7 +887,19 @@ int GameBooter::BootGame(struct discHdr *gameHdr, const s8 useOcarina)
 	ClearDOLList();
 
 	//! Load Code handler if needed
-	load_handler(Hooktype, WiirdDebugger, Settings.WiirdDebuggerPause);
+	// A dynamically resolved search patch could discover a late conflict.
+	// Hooks may already exist at this point; do not launch with a missing or
+	// overwritten handler. Direct low-memory blobs were handled before patching.
+	if (Hooktype && RiivoPatchConflict(0x80001000, 0x2000)) {
+		gprintf("Riivo: late code-handler collision; launch refused\n");
+		Sys_BackToLoader();
+		return -1;
+	}
+	if (RiivoPatchConflict(0x80001000, 0x2000))
+		riivoSkipCodeHandler = true;
+	// load_handler(0) can still copy a previously loaded code list.
+	if (!riivoSkipCodeHandler)
+		load_handler(Hooktype, WiirdDebugger, Settings.WiirdDebuggerPause);
 
 	//! Apply the 480p fix (enabled by default).
 	//! This needs to be done after the call to gamepatches(), after loading any code handler.

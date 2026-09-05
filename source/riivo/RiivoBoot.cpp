@@ -16,6 +16,8 @@
 #include "RiivoFst.hpp"
 #include "RiivoFile.hpp"
 #include "RiivoFstBuild.hpp"
+#include "RiivoFstWalk.hpp"
+#include "RiivoReadVerify.hpp"
 #include "RiivoFstInstall.hpp"
 #include "RiivoIosProbe.hpp"
 #include "RiivoDiPatch.hpp"
@@ -101,6 +103,7 @@ namespace Riivo
 	//! not make any.
 	static IosProbe bootProbe;
 	static bool patchApplied = false;
+	static u32 patchStorage = 0;
 	static std::string patchWhy;
 
 	//! Which partition the game is on, looked up in SetupDisc for the same
@@ -473,6 +476,47 @@ namespace Riivo
 	static u8 *pendingFst = 0;
 	static u32 pendingFstSize = 0;
 
+	struct ReadVerifyContext {
+		FILE *file;
+		std::string path;
+		ReadVerifyContext() : file(0) {}
+		~ReadVerifyContext() { if (file) fclose(file); }
+	};
+	static s32 ReadLargeDisc(void *, void *buffer, u32 length, u64 offset) {
+		return WDVD_Read(buffer, length, offset);
+	}
+	static int CompareLargeFile(void *opaque, const char *path, u64 offset,
+								const void *data, u32 length) {
+		ReadVerifyContext &ctx = *(ReadVerifyContext *)opaque;
+		if (ctx.path != path || !ctx.file) {
+			if (ctx.file) fclose(ctx.file);
+			ctx.path = path;
+			ctx.file = fopen(path, "rb");
+		}
+		if (!ctx.file || offset > 0x7fffffffULL || fseek(ctx.file, (long)offset, SEEK_SET))
+			return -1;
+		u8 expected[4096];
+		for (u32 at = 0; at < length; ) {
+			const u32 count = std::min((u32)sizeof(expected), length - at);
+			if (fread(expected, 1, count, ctx.file) != count) return -1;
+			if (memcmp(expected, (const u8 *)data + at, count)) return 1;
+			at += count;
+		}
+		return 0;
+	}
+	static void LogPendingRead(void *, const char *path, u64 fileOffset,
+							   u64 discOffset, u32 length, ReadVerifyKind kind) {
+		std::string line;
+		Addf(line, "  pending %s LOW_READ disc=%010llx file=%llu bytes=%u: ",
+			kind == READ_VERIFY_FRAGMENT_BOUNDARY ? "boundary" : "large",
+			(unsigned long long)discOffset, (unsigned long long)fileOffset, length);
+		line += path;
+		line += "\n";
+		// AppendLog flushes and closes before IOS is called. A hang leaves
+		// the exact request here, instead of losing the entire test report.
+		AppendLog(line);
+	}
+
 	//! Register the extended fragment list, prove it reads back correctly, and
 	//! only then touch the cIOS. Ordered so that every failure leaves the console
 	//! in a state that still boots the game unmodified:
@@ -595,6 +639,52 @@ namespace Riivo
 			out += "  Rebuilt FST and dependent memory patches are withheld.\n";
 			return;
 		}
+		const FragList *retained = frag_list_get();
+		void *scratch = MEM2_alloc(READ_VERIFY_CHUNK);
+		if (!retained || !scratch) {
+			if (scratch) MEM2_free(scratch);
+			out += "  Large-read verification unavailable; FST withheld.\n";
+			return;
+		}
+		out += "\nLarge-read verification (128 KiB maximum single request)\n";
+		AppendLog(out);
+		out.clear();
+		ReadVerifyCallbacks callbacks;
+		ReadVerifyContext context;
+		callbacks.context = &context;
+		callbacks.readDisc = ReadLargeDisc;
+		callbacks.compareFile = CompareLargeFile;
+		callbacks.pendingRead = LogPendingRead;
+		ReadVerifyStats readStats;
+		const bool largeOK = VerifyLargeReads(placed, *retained, bootSectorSize,
+			scratch, READ_VERIFY_CHUNK, callbacks, readStats);
+		MEM2_free(scratch);
+		Addf(out, "  full files selected=%u internal-multifragment files=%u\n",
+			 readStats.fullFiles, readStats.multiFragmentFiles);
+		Addf(out, "  full calls=%u boundary calls=%u bytes compared=%llu largest successful call=%u\n",
+			 readStats.fullReads, readStats.boundaryReads,
+			 (unsigned long long)readStats.totalBytes, readStats.largestRead);
+		Addf(out, "  failed files=%u failed calls=%u\n", readStats.failedFiles, readStats.failedReads);
+		for (size_t i = 0; i < readStats.failureDetails.size(); ++i) {
+			const ReadVerifyStats::FailureDetail &failure = readStats.failureDetails[i];
+			Addf(out, "    disc=%010llx file=%llu request=%u read=%d ",
+				 (unsigned long long)failure.discOffset,
+				 (unsigned long long)failure.fileOffset, failure.requestLength,
+				 (int)failure.readResult);
+			if (failure.compareResult == READ_VERIFY_COMPARE_NOT_RUN)
+				out += "compare=not-run: ";
+			else
+				Addf(out, "compare=%d (-1=file I/O, 1=mismatch): ", failure.compareResult);
+			out += failure.path + "\n";
+		}
+		if (readStats.failedFiles > readStats.failureFiles.size())
+			Addf(out, "    ... and %u more\n", readStats.failedFiles - (u32)readStats.failureFiles.size());
+		if (!largeOK) {
+			if (!readStats.fatal.empty()) out += "  " + readStats.fatal + "\n";
+			out += "  Large-read verification failed; FST withheld.\n";
+			return;
+		}
+		out += "  Large-read verification passed. Larger single calls remain untested.\n";
 		u8 check[32] ATTRIBUTE_ALIGN(32);
 		// These must remain errors on a DVD5 image despite readable mod data.
 		// LOW_READ, not UNENCREAD: the raw path serves any mapped fragment
@@ -782,6 +872,7 @@ namespace Riivo
 		fstData = 0;
 
 		u32 planned = 0, rejected = 0;
+		std::map<std::string, u32> expectedModSizes;
 		bool isNew = false;
 		for (size_t i = 0; i < redirects.size(); ++i)
 		{
@@ -789,7 +880,10 @@ namespace Riivo
 			if (!ExternalFileSize(redirects[i].external, &extSize))
 				continue;
 			if (builder.AddOrReplace(redirects[i].disc, extSize, &isNew))
+			{
 				++planned;
+				expectedModSizes[NormaliseDiscPath(redirects[i].disc)] = extSize;
+			}
 			else
 				++rejected;
 		}
@@ -800,7 +894,10 @@ namespace Riivo
 				continue;
 			modBytes += extSize;
 			if (builder.AddOrReplace(created[i].disc, extSize, &isNew))
+			{
 				++planned;
+				expectedModSizes[NormaliseDiscPath(created[i].disc)] = extSize;
+			}
 			else
 				++rejected;
 		}
@@ -871,6 +968,32 @@ namespace Riivo
 
 		std::vector<u8> newFst;
 		builder.Serialize(newFst, true);
+		// Expectations come from the original disc and external-file sizes,
+		// not from reparsing the builder's result with the builder itself.
+		std::vector<FstWalkExpectation> expectedFst;
+		for (size_t i = 0; i < fst.FileCount(); ++i) {
+			const FstFile &original = fst.FileAt(i);
+			if (expectedModSizes.find(original.path) == expectedModSizes.end())
+				expectedFst.push_back(FstWalkExpectation(original.path, original.offset, original.length));
+		}
+		bool expectedComplete = true;
+		for (std::map<std::string, u32>::const_iterator it = expectedModSizes.begin();
+			 it != expectedModSizes.end(); ++it) {
+			std::map<std::string, u64>::const_iterator offset = modOffsets.find(it->first);
+			if (offset == modOffsets.end()) { expectedComplete = false; continue; }
+			expectedFst.push_back(FstWalkExpectation(it->first, offset->second, it->second));
+		}
+		FstWalk gameWalk;
+		std::string walkError;
+		const bool fstWalkOK = expectedComplete && !newFst.empty() &&
+			gameWalk.Open(&newFst[0], newFst.size(), true, &walkError) &&
+			gameWalk.Check(expectedFst, &walkError);
+		if (fstWalkOK)
+			Addf(out, "  independent FST walk: %u paths passed (includes unchanged and empty files)\n",
+				 (unsigned)expectedFst.size());
+		else
+			Addf(out, "  independent FST walk: REFUSED: %s\n",
+				 expectedComplete ? walkError.c_str() : "a mod path has no registered placement");
 		const FstBuildStats &st = builder.Stats();
 		plannedFstSize = st.fstSize;
 
@@ -1059,8 +1182,8 @@ namespace Riivo
 		//! that is the last point where the access to do them is guaranteed.
 		out += DescribeProbe(bootProbe);
 		if (patchApplied)
-			Addf(out, "\n  The cIOS read hook was applied early, at %08x.\n",
-				 bootProbe.patchSites[0]);
+			Addf(out, "\n  Hook site %08x, storage %08x; every written byte matched uncached read-back.\n",
+				 bootProbe.patchSites[0], patchStorage);
 		else if (!patchWhy.empty())
 			Addf(out, "\n  The cIOS read hook was NOT applied: %s\n", patchWhy.c_str());
 
@@ -1070,7 +1193,7 @@ namespace Riivo
 		out += "\nSwitching it on\n";
 		out += "---------------\n";
 
-		if (!(extentFits && plan.ok && gameFrags && patchApplied
+		if (!(fstWalkOK && extentFits && plan.ok && gameFrags && patchApplied
 			  && fragsRegistered && unplaced == 0))
 		{
 			out += "  Not attempted - one of the checks above did not pass. The game\n"
@@ -1349,11 +1472,14 @@ namespace Riivo
 		//! unmounts it a few lines further on - so the dump can be written too.
 		const std::string dumpPath = bootDevice + "/riivolution/usbloadergx_riivo_"
 									 + (const char *) bootGameId + "_dip.bin";
-		ProbeIosPlugin(dumpPath, bootProbe);
+		FILE *dumpMarker = fopen((bootDevice + "/riivolution/dumpios.txt").c_str(), "rb");
+		const bool writeDumps = dumpMarker != 0;
+		if (dumpMarker) fclose(dumpMarker);
+		ProbeIosPlugin(dumpPath, bootProbe, writeDumps);
 
 		if (bootProbe.patchSites.size() == 1)
 		{
-			patchApplied = ApplyDiPatch(bootProbe.patchSites[0], (u32)(modRegionEnd >> 2), patchWhy);
+			patchApplied = ApplyDiPatch(bootProbe.patchSites[0], (u32)(modRegionEnd >> 2), patchWhy, &patchStorage);
 			gprintf("Riivo: early cIOS hook at %08x: %s\n",
 					bootProbe.patchSites[0],
 					patchApplied ? "applied" : patchWhy.c_str());
@@ -1490,9 +1616,9 @@ namespace Riivo
 				   "  Delete that file to boot the mod properly.\n";
 		}
 		else if (fileWorkWanted)
-			out += "  Applied, alongside the mod's files.\n";
+			out += "  Scheduled after device shutdown, alongside the mod's installed files.\n";
 		else
-			out += "  Applied. This mod does not replace any files.\n";
+			out += "  Scheduled after device shutdown. This mod does not replace any files.\n";
 
 		AppendLog(out);
 		gprintf("Riivo: placement %s (%08x, %u bytes), memory patches %s\n",
@@ -1507,7 +1633,7 @@ namespace Riivo
 	void ReportLaunch(u32 entry)
 	{
 		std::string out;
-		out += "\n\nHanding over to the game\n";
+		out += "\n\nApploader completed; final patching and jump pending\n";
 		out += "------------------------\n";
 		Addf(out, "  entry point  : %08x\n", entry);
 		Addf(out, "  arena low    : %08x\n", (u32) SYS_GetArenaLo());
@@ -1516,10 +1642,9 @@ namespace Riivo
 			out += "  No entry point: the apploader never produced one, so nothing\n"
 				   "  below this line ever ran.\n";
 		else
-			out += "  Everything the loader does is finished. If the screen stays\n"
-				   "  black from here, the fault is in the game's own execution -\n"
-				   "  the mod's code, the rebuilt table it reads, or the files it\n"
-				   "  asks for - not in the setup logged above.\n";
+			out += "  This entry point was returned by the apploader. Device shutdown,\n"
+				   "  loader patches, mod memory patches and the actual jump follow.\n"
+				   "  This log cannot prove those later operations completed.\n";
 		AppendLog(out);
 	}
 }
