@@ -8,6 +8,7 @@
 
 #ifndef RIIVO_HOST_TEST
 #include "RiivoNetSock.h"
+#include "network/networkops.h"
 #endif
 
 namespace Riivo
@@ -107,6 +108,16 @@ namespace Riivo
 		if (!ParseCollector(spec, host, port))
 		{
 			gprintf("Riivo net: collector spec is not addr:port, ignored\n");
+			g_dead = true;
+			return;
+		}
+
+		//! The network thread is started at menu entry. If it has not come
+		//! up there is nothing to wait for here, and waiting is exactly what
+		//! a diagnostic aid must never do.
+		if (!IsNetworkInit())
+		{
+			gprintf("Riivo net: network is not up, log streaming off\n");
 			g_dead = true;
 			return;
 		}

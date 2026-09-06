@@ -5,7 +5,6 @@
 #include <string.h>
 
 #include "RiivoNetSock.h"
-#include "network/networkops.h"
 
 int RiivoSockOpen(const char *dottedQuad, unsigned short port)
 {
@@ -15,10 +14,9 @@ int RiivoSockOpen(const char *dottedQuad, unsigned short port)
 	if (!dottedQuad || !*dottedQuad || port == 0)
 		return -1;
 
-	/* The network thread starts at menu entry. If it has not come up there is
-	   nothing to wait for, and waiting is what a diagnostic aid must not do. */
-	if (!IsNetworkInit())
-		return -2;
+	/* Whether the network is up is decided by the caller: IsNetworkInit is
+	   declared in a C++ header (default arguments, bool), so it cannot be
+	   reached from here. This file is sockets and nothing else. */
 
 	sock = net_socket(AF_INET, SOCK_STREAM, IPPROTO_IP);
 	if (sock < 0)
