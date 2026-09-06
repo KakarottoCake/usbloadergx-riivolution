@@ -52,6 +52,7 @@
 #include "riivo/RiivoPatchGuard.hpp"
 #include "riivo/RiivoSave.hpp"
 #include "riivo/RiivoBoot.hpp"
+#include "riivo/RiivoNet.hpp"
 #include "banner/OpeningBNR.hpp"
 #include "wad/nandtitle.h"
 #include "menu/menus.h"
@@ -872,6 +873,8 @@ int GameBooter::BootGame(struct discHdr *gameHdr, const s8 useOcarina)
 			}
 		}
 		// Reading of game is done we can close devices now
+		//! Last chance to get the queued log out: the socket dies with IOS.
+		Riivo::CloseCollector();
 		ShutDownDevices(usbport);
 	}
 	else
