@@ -91,6 +91,11 @@ namespace Riivo
 
 	//! Concrete DirLister backed by opendir/readdir (real SD/USB filesystem).
 	//! Returns file paths relative to the listed directory.
+	//! Drop the memoised directory listings. Called once per boot: the card
+	//! can be swapped between launches, and a stale listing would place
+	//! files that are no longer there.
+	void ClearDirListCache();
+
 	struct FsDirLister : public DirLister
 	{
 		FsDirLister() : skipped(0) {}
