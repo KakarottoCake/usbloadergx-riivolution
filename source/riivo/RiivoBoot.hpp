@@ -90,6 +90,12 @@ namespace Riivo
 	//! Log the entry point and arena bounds immediately before the game is
 	//! given control. Must be called inside BootPartition, for the same
 	//! reason as ReportFstPlacement: after it returns the card is gone.
+	//! Record one boot step in the log, immediately. The steps between
+	//! PrepareFragList and PrepareFileRedirects belong to the loader, not
+	//! to us, but they sit in the same unlogged window and a console that
+	//! stops in one of them looks exactly like one that stopped in ours.
+	void LogBootStep(const char *what);
+
 	void ReportLaunch(u32 entry);
 }
 

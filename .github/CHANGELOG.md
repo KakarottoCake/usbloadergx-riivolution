@@ -3,6 +3,28 @@
 Full history for the Riivolution fork. The GitHub release body carries only the
 current version's bullets; everything older lives here.
 
+## Changed in v3.0
+
+Starshine GLE on IOS252 stopped after the "Loader patch settings" block and left a
+black screen. Nothing between `SetupDisc` and the first report in
+`PrepareFileRedirects` wrote anything, so a mod that spends minutes enumerating
+files, one that exhausts the heap, and one that genuinely hangs all produced the
+same truncated log. There was no way to tell them apart after the fact.
+
+- `LogStep` writes one line per completed boot step, flushed immediately, with the
+  free MEM2 figure beside it. If the log stops inside that section, the step after
+  the last line is the one that did not finish.
+- Steps cover the fragment list being retained, the partition lookup, the mod
+  device, file listing, placement, fragment mapping, the handover to the cIOS,
+  `Disc_Open` and the partition open.
+- `ListModFiles` takes an optional progress callback and reports each `<folder>`
+  rule as it starts listing it, with the running file count. A rule that resolves
+  somewhere unintended and a rule that is merely slow look identical from outside;
+  this names the rule and shows whether the count is still climbing.
+- The loader's own steps between `PrepareFragList` and `PrepareFileRedirects` are
+  logged through `Riivo::LogBootStep`, after the card is remounted so the append
+  has somewhere to go.
+
 ## Changed in v2.9
 
 A second console, running d2x v11 beta1 instead of beta3, found the dispatch

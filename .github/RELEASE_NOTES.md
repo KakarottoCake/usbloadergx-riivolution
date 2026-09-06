@@ -25,10 +25,10 @@ untouched.
 Every launch writes a report next to the XML you picked —
 `<device>:/riivolution/usbloadergx_riivo.log`. Please attach it to any report.
 
-## Changed in v2.9
+## Changed in v3.0
 
-- The read hook finds its storage by walking the cIOS's own code instead of a fixed offset, so it works on d2x builds other than the one it was written against.
-- A refused hook now writes the IOS dump by itself; `dumpios.txt` is only needed to force one otherwise.
+- The log now records each boot step as it completes, with free memory, so a boot that stops before the file report says where it stopped.
+- Each `<folder>` rule is logged as it is listed, with a running file count.
 - 146,237 automated checks, all passing.
 
 Older versions: [CHANGELOG.md](CHANGELOG.md)

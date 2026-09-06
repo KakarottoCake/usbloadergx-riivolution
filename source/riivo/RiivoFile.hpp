@@ -73,8 +73,17 @@ namespace Riivo
 	//! helpers precisely so the two cannot disagree about where a file goes.
 	//!
 	//! Sorted by disc path, so the placement is the same on every boot.
+	//! Called once per <folder> rule, just before it is listed, with the
+	//! number of files gathered so far. A total conversion can spend minutes
+	//! in here, and a rule that resolves somewhere unintended - the drive
+	//! root, say - looks identical from outside: both are a black screen.
+	//! Reporting per rule names the one that stalled, and the running total
+	//! makes a runaway obvious while it is still running.
+	typedef void (*ListProgressFn)(void *ctx, const std::string &dir, u32 soFar);
+
 	void ListModFiles(const ResolvedPatchSet &set, const std::string &device,
-					  DirLister *lister, std::vector<ModCandidate> &out);
+					  DirLister *lister, std::vector<ModCandidate> &out,
+					  ListProgressFn progress = 0, void *ctx = 0);
 
 	//! Lower-case a disc path and strip empty components, giving the exact key
 	//! FstBuilder::LayoutFrom expects.

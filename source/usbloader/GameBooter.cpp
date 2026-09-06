@@ -149,7 +149,11 @@ u32 GameBooter::BootPartition(char *dolpath, u8 videoselected, u8 alternatedol, 
 	/* Open specified partition */
 	ret = WDVD_OpenPartition(offset, NULL);
 	if (ret < 0)
+	{
+		Riivo::LogBootStep("game partition open FAILED");
 		return 0;
+	}
+	Riivo::LogBootStep("game partition opened");
 
 	//! Riivolution file redirection (Phase 3). This is the only window that
 	//! works: the partition is open so the FST can be read off the disc, and
@@ -276,11 +280,15 @@ int GameBooter::SetupDisc(struct discHdr &gameHeader)
 			return ret;
 		gprintf("%s set to game\n", Settings.SDMode ? "SD" : "USB");
 		DeviceHandler::Instance()->MountSD();
+		//! Logged only once the card is back: the append would have had
+		//! nowhere to go while SD was unmounted.
+		Riivo::LogBootStep("fragment list handed to the cIOS");
 	}
 
 	gprintf("Disc_Open()...");
 	ret = Disc_Open(false);
 	gprintf("%d\n", ret);
+	Riivo::LogBootStep(ret < 0 ? "disc open FAILED" : "disc opened");
 
 	return ret;
 }

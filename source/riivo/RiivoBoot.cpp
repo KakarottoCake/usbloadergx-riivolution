@@ -281,6 +281,36 @@ namespace Riivo
 		out += buf;
 	}
 
+	//! One line per completed step, written the moment it completes.
+	//! Everything between SetupDisc and the first report in
+	//! PrepareFileRedirects used to be silent, so a mod big enough to spend
+	//! minutes listing files - or one that ran the heap out - left a log that
+	//! stopped dead after the settings block and a console showing nothing.
+	//! Those two cannot be told apart after the fact, which cost a whole test
+	//! round. A step costs one line and names the phase that did not finish;
+	//! the free-heap figure beside it catches exhaustion directly.
+	static bool stepHeaderWritten = false;
+	static void LogStep(const char *fmt, ...)
+	{
+		std::string out;
+		if (!stepHeaderWritten)
+		{
+			out += "\n\nBoot progress\n-------------\n"
+				   "Written as each step completes. If the log stops inside this\n"
+				   "section, the step after the last line is the one that did not\n"
+				   "finish - it was still running when the console stopped.\n\n";
+			stepHeaderWritten = true;
+		}
+		char buf[256];
+		va_list args;
+		va_start(args, fmt);
+		vsnprintf(buf, sizeof(buf), fmt, args);
+		va_end(args);
+		Addf(out, "  %-52s MEM2 free %u KB\n", buf,
+			 (unsigned) (MEM2_freesize() / 1024));
+		AppendLog(out);
+	}
+
 	// --------------------------------------------------------------------
 	// 1. cIOS survey
 	// --------------------------------------------------------------------
@@ -1226,6 +1256,21 @@ namespace Riivo
 		return fileWorkWanted && !fileWorkLive;
 	}
 
+	//! One line per <folder> rule. The path is trimmed to the tail because
+	//! a full external path is mostly the device and mod root repeated.
+	static void LogListProgress(void *, const std::string &dir, u32 soFar)
+	{
+		const size_t cut = dir.size() > 44 ? dir.size() - 44 : 0;
+		LogStep("  listing %s%s (%u so far)", cut ? "..." : "",
+				dir.c_str() + cut, soFar);
+	}
+
+	void LogBootStep(const char *what)
+	{
+		if (what)
+			LogStep("%s", what);
+	}
+
 	void PrepareFragList()
 	{
 		if (!bootSet)
@@ -1255,6 +1300,7 @@ namespace Riivo
 		//! it to the cIOS, and the mod's fragments cannot be worked out until
 		//! later, when the partition is open.
 		frag_list_retain(1);
+		LogStep("fragment list retained");
 
 		//! Record what the backup says about itself BEFORE the reservation
 		//! below overwrites it. PrepareFileRedirects needs the real figure to
@@ -1274,6 +1320,8 @@ namespace Riivo
 		bootFsKnown = (WBFS_GetFsInfo(bootGameId, &bootFsType, &bootFsLba) >= 0);
 		gprintf("Riivo: partition lookup %s (fs %u, lba %u)\n",
 				bootFsKnown ? "ok" : "FAILED", bootFsType, bootFsLba);
+		LogStep("game partition identified (fs %u, lba %u)",
+				(unsigned) bootFsType, (unsigned) bootFsLba);
 
 		//! The cIOS reads the WHOLE fragment list from one drive: set_frag_list
 		//! passes Settings.SDMode as its device and every fragment, the game's
@@ -1328,10 +1376,16 @@ namespace Riivo
 		//! table cannot be read until afterwards, so the table is made to agree
 		//! with this placement rather than the other way round.
 		std::vector<ModCandidate> cand;
+		//! Reads every directory the mod's rules name. On a total conversion
+		//! that is thousands of entries off FAT, and it is the slowest thing
+		//! in the whole boot - so say so before starting, not after.
+		LogStep("listing the mod's files (reads the card)");
 		{
 			FsDirLister lister;
-			ListModFiles(*bootSet, bootDevice, &lister, cand);
+			ListModFiles(*bootSet, bootDevice, &lister, cand,
+						 LogListProgress, 0);
 		}
+		LogStep("mod files listed: %u found", (unsigned) cand.size());
 		if (cand.empty())
 		{
 			fragListUntouched = true;
@@ -1385,6 +1439,9 @@ namespace Riivo
 		}
 		modRegionStart = regionStart;
 		modRegionEnd = cursor;
+		LogStep("placement computed: %u file(s), %llu bytes",
+				(unsigned) placed.size(),
+				(unsigned long long) (cursor - regionStart));
 
 		// Validate before touching either the list or IOS. The declared RAW
 		// size and mapped RAW extent both have to describe a DVD5 image.
@@ -1413,6 +1470,9 @@ namespace Riivo
 		//! The MOD's filesystem and starting sector, not the game's. They are
 		//! usually the same partition, but nothing guarantees it, and using the
 		//! game's would silently point the fragments at the wrong place.
+		//! Opens every placed file and walks its cluster chain. The other
+		//! long phase, and the other one worth naming before it starts.
+		LogStep("mapping fragments for %u file(s)", (unsigned) placed.size());
 		if (!AppendModFragments(placed, sector, (u8) modDev.fsType,
 								modDev.lbaStart, fragStats))
 		{
@@ -1435,6 +1495,10 @@ namespace Riivo
 			gprintf("Riivo: %u mod fragment(s) appended, %u total\n",
 					fragStats.files, fragStats.fragsAfter);
 		}
+		LogStep(fragsRegistered
+				? "fragments mapped: %u file(s), %u fragment(s)"
+				: "fragment mapping FAILED after %u file(s), %u fragment(s)",
+				fragStats.files, fragStats.fragsAfter);
 
 		//! Put the declared size back, LAST. frag_append ends with
 		//!     ff->size = offset + count;
