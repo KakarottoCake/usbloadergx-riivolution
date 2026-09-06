@@ -34,6 +34,7 @@
 #include <string>
 #include <vector>
 #include "RiivoProbeClassify.hpp"
+#include "RiivoModuleInstall.hpp"
 
 namespace Riivo
 {
@@ -143,6 +144,39 @@ namespace Riivo
 	//! harmless: it only changes what happens to reads inside the synthetic
 	//! window, and an unmodified game never makes one.
 	bool ApplyDiPatch(u32 site, u32 endWords, std::string &why, u32 *storage = 0);
+
+	//! What the on-demand install ended up doing, for the boot log. A refusal
+	//! fills `why` and changes nothing.
+	struct OnDemandInstall
+	{
+		bool ok;
+		u32 moduleAddr;    //!< where the module was written (PPC view)
+		u32 modulePhys;    //!< the same, as Starlet addresses it
+		u32 moduleEntry;
+		u32 params;
+		u32 storage;       //!< the hook body inside the plugin
+		u32 readA, readB, config;   //!< the storage routines it was given
+		std::string why;
+
+		OnDemandInstall()
+			: ok(false), moduleAddr(0), modulePhys(0), moduleEntry(0),
+			  params(0), storage(0), readA(0), readB(0), config(0) {}
+	};
+
+	//! The on-demand path: find the cIOS storage routines, place the module in
+	//! `moduleAt` (which must already be reserved out of the game's MEM2 - see
+	//! RiivoMem2Reserve), and point the LOW_READ hook at it.
+	//!
+	//! Order is deliberate. The module is written and its bss cleared BEFORE
+	//! the hook is redirected, so the branch is never live against a module
+	//! that is not there yet; and the hook is rolled back if either of its two
+	//! writes fails to stick, exactly as ApplyDiPatch does. The module itself
+	//! needs no rollback - nothing reaches it until the hook is redirected.
+	//!
+	//! `params` supplies the table and the partition; the storage routines and
+	//! the device config are discovered here and written back into it.
+	bool ApplyDiPatchOnDemand(u32 site, u32 moduleAt, ModuleParams params,
+							  OnDemandInstall &out);
 }
 
 #endif

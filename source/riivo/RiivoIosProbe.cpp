@@ -12,6 +12,8 @@
 #include "RiivoProbeClassify.hpp"
 #include "RiivoDiPatch.hpp"
 #include "RiivoDiHook.hpp"
+#include "RiivoStorageProbe.hpp"
+#include "RiivoModuleInstall.hpp"
 #include "libs/libruntimeiospatch/runtimeiospatch.h"
 #include "gecko.h"
 
@@ -402,6 +404,114 @@ namespace Riivo
 		for (u32 i = 0; i < size; ++i)
 			if (*(vu8 *)(address + UNCACHED_BIAS + i) != bytes[i])
 				return false;
+		return true;
+	}
+
+	//! Clear the module's bss and prove it cleared. The module's statics have
+	//! to start zero - g_params.state in particular decides whether init has
+	//! already run - and nothing on the console zeroes this memory for us.
+	static bool ClearMem(u32 address, u32 size)
+	{
+		if (!size)
+			return true;
+		DCInvalidateRange((void *) (address & ~31u), size + 64);
+		memset((void *) address, 0, size);
+		DCFlushRange((void *) (address & ~31u), size + 64);
+		for (u32 i = 0; i < size; ++i)
+			if (*(vu8 *) (address + UNCACHED_BIAS + i) != 0)
+				return false;
+		return true;
+	}
+
+	bool ApplyDiPatchOnDemand(u32 site, u32 moduleAt, ModuleParams params,
+							  OnDemandInstall &out)
+	{
+		out = OnDemandInstall();
+
+		if (!AHBPROT_DISABLED) {
+			out.why = "AHBPROT is closed, so IOS memory cannot be written";
+			return false;
+		}
+		if (site < SCAN_FROM + DUMP_BEFORE || site >= MEM2_END - DUMP_AFTER) {
+			out.why = "the patch window is not in IOS MEM2";
+			return false;
+		}
+
+		//! The same window ApplyDiPatch takes: 128 KB around the site, which
+		//! is the whole plugin. The storage routines live well away from the
+		//! handler, so a narrower snapshot would not reach them.
+		const u32 base = (site - DUMP_BEFORE) & ~31u;
+		std::vector<u8> snapshot(DUMP_BEFORE + DUMP_AFTER + 32);
+		for (u32 i = 0; i < snapshot.size(); ++i)
+			snapshot[i] = *(vu8 *) (base + UNCACHED_BIAS + i);
+
+		//! 1. The routines that actually read sectors.
+		StoragePlan sp;
+		if (!BuildStoragePlan(&snapshot[0], snapshot.size(), base, sp, out.why))
+			return false;
+		params.readA = sp.readA;
+		params.readB = sp.readB;
+		params.config = sp.config;
+		//! Overrides whatever the caller guessed: the address is only
+		//! knowable from the running plugin, and zero here is tolerated by
+		//! the module (it skips the call).
+		params.sync = sp.sync;
+		out.readA = sp.readA;
+		out.readB = sp.readB;
+		out.config = sp.config;
+
+		//! 2. The module, relocated to where it will actually sit.
+		ModulePlan mp;
+		if (!BuildModuleImage(moduleAt, params, mp, out.why))
+			return false;
+
+		//! 3. The hook that calls it. Built BEFORE anything is written, so a
+		//! plugin this code cannot hook costs no writes at all.
+		DiHookPlan hp;
+		if (!BuildDiHookOnDemand(&snapshot[0], snapshot.size(), base, site,
+								 mp.entry, hp, out.why))
+			return false;
+
+		//! 4. The module first. Nothing reaches it until step 5 redirects the
+		//! dispatch, so there is no window where the hook can call a module
+		//! that is not there - and no rollback is needed for this write.
+		if (!WriteCode(mp.addr, &mp.image[0], mp.image.size())) {
+			out.why = "module write did not stick; no IOS code changed";
+			return false;
+		}
+		if (!ClearMem(mp.addr + mp.codeLen, mp.bssLen)) {
+			out.why = "module bss did not clear; no IOS code changed";
+			return false;
+		}
+
+		//! 5. Now the hook, with the same rollback ApplyDiPatch uses.
+		const u8 *oldCode = &snapshot[hp.storage - base];
+		const u8 *oldBranch = &snapshot[hp.dispatch - base];
+		if (!WriteCode(hp.storage, &hp.code[0], hp.code.size()) ||
+			!WriteCode(hp.dispatch, &hp.branch[0], hp.branch.size())) {
+			const bool restoredBranch = WriteCode(hp.dispatch, oldBranch,
+												  hp.branch.size());
+			const bool restoredCode = WriteCode(hp.storage, oldCode,
+												hp.code.size());
+			out.why = restoredBranch && restoredCode
+				? "IOS patch write failed; original bytes restored"
+				: "IOS patch rollback failed; restart the console before booting";
+			return false;
+		}
+
+		out.ok = true;
+		out.moduleAddr = mp.addr;
+		out.modulePhys = mp.physAddr;
+		out.moduleEntry = mp.entry;
+		out.params = mp.params;
+		out.storage = hp.storage;
+		gprintf("Riivo: on-demand module at %08x (phys %08x), entry %08x, "
+				"hook %08x, readA %08x readB %08x cfg %08x\n",
+				mp.addr, mp.physAddr, mp.entry, hp.storage,
+				sp.readA, sp.readB, sp.config);
+		if (!sp.sync)
+			gprintf("Riivo: os_sync_after_write not found; the module will "
+					"skip it and the PPC may read stale bytes\n");
 		return true;
 	}
 

@@ -227,6 +227,68 @@ int main(int argc,char **argv) {
                "block-range word assembled");
         }
     }
+    // ---- the on-demand hook ----------------------------------------------
+    {
+        const u32 kModule=0x93600000;   // where the loader placed the module
+        DiHookPlan q; std::string qw;
+        ck(BuildDiHookOnDemand(&v[0],v.size(),kBase,kSite,kModule,q,qw),
+           "on-demand hook builds");
+        ck(qw.empty(),"no reason given on success");
+        ck(q.storage==p.storage,"same storage site as the shipped hook");
+        ck(q.dispatch==p.dispatch,"same dispatch site");
+        ck(q.branch==p.branch,"same branch bytes - both enter at storage+8");
+        ck(q.code.size()==0x50,"on-demand routine is 80 bytes");
+
+        // The call must reach the module, and the epilogue must carry the
+        // Thumb bit or the core runs the epilogue as ARM.
+        u32 t=0;
+        ck(DecodeThumbCall(q.storage+0x1A,&q.code[0x1A],t),"module call decodes");
+        ck(t==kModule,"and lands on the module entry");
+        const u32 epi=(u32(q.code[0x48])<<24)|(u32(q.code[0x49])<<16)|
+                      (u32(q.code[0x4A])<<8)|q.code[0x4B];
+        ck(epi&1,"epilogue keeps the Thumb bit");
+        ck(epi==((u32(p.code[0x64])<<24)|(u32(p.code[0x65])<<16)|
+                 (u32(p.code[0x66])<<8)|p.code[0x67]),
+           "same epilogue the shipped hook resolved");
+
+        DiHookPlan r; std::string rw;
+        ck(!BuildDiHookOnDemand(&v[0],v.size(),kSite,kSite,kModule,r,rw),
+           "refuses a bad base, exactly as the shipped hook does");
+        ck(!BuildDiHookOnDemand(&v[0],v.size(),kBase,kSite,kModule|1,r,rw),
+           "refuses an odd module entry");
+        ck(!BuildDiHookOnDemand(&v[0],v.size(),kBase,kSite,0,r,rw),
+           "refuses a null module entry");
+        ck(!rw.empty(),"and says why");
+        // Too far for a Thumb BL: +-4 MB from the call site.
+        ck(!BuildDiHookOnDemand(&v[0],v.size(),kBase,kSite,0x90000000,r,rw),
+           "refuses a module out of BL range");
+    }
+
+    if(argc>2) {
+        std::ifstream f2(argv[2],std::ios::binary);
+        std::vector<u8> blob((std::istreambuf_iterator<char>(f2)),
+                             std::istreambuf_iterator<char>());
+        DiHookPlan q; std::string qw;
+        BuildDiHookOnDemand(&v[0],v.size(),kBase,kSite,0x93B00000,q,qw);
+        ck(blob.size()==q.code.size(),"on-demand assembled size matches embedded");
+        if(blob.size()==q.code.size()) {
+            bool same=true;
+            for(u32 i=0;i<blob.size();++i) {
+                if((i>=0x1A&&i<0x1E)||(i>=0x48&&i<0x4C)) continue;  // patch sites
+                if(blob[i]!=q.code[i]) {
+                    char m[72];
+                    snprintf(m,sizeof(m),"on-demand round-trip mismatch at 0x%x",i);
+                    ck(false,m); same=false; break;
+                }
+            }
+            if(same) ck(true,"on-demand round-trip bytes match");
+            ck(blob[0x48]==0&&blob[0x49]==0&&blob[0x4A]==0&&blob[0x4B]==0,
+               "on-demand epilogue word unpatched");
+            ck(blob[0x4C]==0x00&&blob[0x4D]==0x03&&blob[0x4E]==0x11&&blob[0x4F]==0x00,
+               "unrecovered-read word assembled");
+        }
+    }
+
     printf("%d checks, %d failures\n",checks,failures);
     return failures?1:0;
 }
