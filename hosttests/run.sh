@@ -102,4 +102,9 @@ build_run test_memcheck "$SRC/riivo/RiivoMemory.cpp" "$SRC/riivo/RiivoPatchGuard
 # itself with a note if the address space is not available.
 build_run test_memapply "$SRC/riivo/RiivoMemory.cpp" "$SRC/riivo/RiivoPatchGuard.cpp" "$SRC/riivo/RiivoConfig.cpp"
 
+# The collector address as typed into a file on the card. The socket half
+# needs a console; this is the half that fails quietly, by sending a boot
+# log somewhere unintended or opening nothing without saying why.
+build_run test_netlog -DRIIVO_HOST_TEST "$SRC/riivo/RiivoNet.cpp"
+
 printf '\nall suites passed\n'

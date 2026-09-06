@@ -39,6 +39,36 @@ ordering cases. A test that cannot fail proves nothing.
 - Skips itself with a note where the address space cannot be reserved.
 - 146,330 automated checks, all passing.
 
+### Boot log streaming
+
+The log on the card is only readable after the fact, and the failures worth
+diagnosing are the ones with no after: the console sits black and the card has
+to be pulled to learn anything. A line already sent survives that, so the last
+one received names the phase that stalled.
+
+AppendLog is the single choke point every report already passes through, so the
+stream is one hook there: written to the card first, sent second, never instead.
+The address comes from riivolution/collector.txt on the card - a build with no
+such file never opens a socket, and nothing is stored in the binary.
+
+Plaintext TCP on purpose. The HTTPS path exists for covers and needs wolfSSL,
+SNI and a 2 KB request buffer; a TLS handshake per line would cost more than the
+phases being measured. Nothing secret is sent.
+
+The socket calls live in a C file. <network.h> and the bundled portlibs headers
+both define socklen_t and sockaddr_storage; C accepts the identical typedef
+twice and C++ rejects the file outright, which is why every other socket user
+here is C. Verified by control: untouched upstream https.c fails locally with
+the same three errors, so the pinned container builds both or neither.
+
+It can never delay a boot it only watches: no listener means one failed connect
+and permanent silence, and a write failure drops the socket rather than retrying.
+
+- Boot log streams line by line to a listener named in riivolution/collector.txt.
+- Closed before device shutdown, so what is queued leaves while IOS still exists.
+- test_netlog: 23 checks on the address parsing, the half that fails quietly.
+- 146,353 automated checks, all passing.
+
 ## Changed in v3.10
 
 A memory patch that half-applied was the worst failure this fork could produce:

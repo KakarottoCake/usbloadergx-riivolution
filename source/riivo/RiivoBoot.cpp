@@ -14,6 +14,7 @@
 #include <ogc/lwp_watchdog.h>
 
 #include "RiivoBoot.hpp"
+#include "RiivoNet.hpp"
 #include "RiivoConfig.hpp"
 #include "RiivoFst.hpp"
 #include "RiivoFile.hpp"
@@ -252,6 +253,20 @@ namespace Riivo
 				fclose(w);
 			}
 		}
+		//! Optional: "addr:port" of a listener on the LAN. Absent for
+		//! everyone who is not debugging, and then no socket is opened.
+		if (!device.empty())
+		{
+			FILE *c = fopen((device + "/riivolution/collector.txt").c_str(), "rb");
+			if (c)
+			{
+				char spec[64] = {0};
+				const size_t rd = fread(spec, 1, sizeof(spec) - 1, c);
+				fclose(c);
+				spec[rd] = 0;
+				OpenCollector(spec);
+			}
+		}
 		memPatchMarker.clear();
 		if (!device.empty())
 		{
@@ -350,6 +365,10 @@ namespace Riivo
 		}
 		fwrite(text.data(), 1, text.size(), f);
 		fclose(f);
+		//! Same text to the listener, if one was configured. Sent after the
+		//! card write, never instead of it: the file is the record, this is
+		//! only the copy that survives a boot that never finishes.
+		SendCollector(text);
 	}
 
 	//! Small printf-into-std::string helper; the reports are short.
