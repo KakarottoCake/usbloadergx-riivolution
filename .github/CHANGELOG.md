@@ -3,6 +3,37 @@
 Full history for the Riivolution fork. The GitHub release body carries only the
 current version's bullets; everything older lives here.
 
+## Changed in v3.10
+
+A memory patch that half-applied was the worst failure this fork could produce:
+the game crashed, the devices were already shut down, and the log said nothing,
+so a run cost a hardware round and returned no information. The patches are now
+checked as a set before any of them is written.
+
+PreflightMemoryPatches runs the same checks as the apply path, in the same order,
+read-only, while the loaded DOL is in RAM and the log is still writable. Every
+skip lands in the persistent log with expected-versus-actual bytes. If any check
+fails hard - no value bytes, a bad target - the whole set is held back, because a
+partially applied set is what crashes without a log. Soft mismatches (original
+bytes, an absent pattern) still skip individually.
+
+The consequence of a hold-back is recorded while the log can still be written,
+not at the point the decision takes effect: a held-back set with the mod's files
+installed is a files-only boot, NOT an unmodified one, and the log now says which
+of the two happened rather than leaving a clean boot to be misread as no mod.
+
+Two re-reads verify the writes survived. The post-apply one runs immediately; the
+pre-jump one runs last, after the code handler, 480p, Wiimmfi and the file-table
+install have all written game RAM. Both are diagnostic only - nothing that late
+can repair a byte, and refusing the jump would strand the tester with less than a
+boot attempt gives - so the game always launches and mismatches go to USB Gecko.
+
+- Preflight pass over the whole memory set before anything is written.
+- Hard failures hold the set back; the log names the resulting boot.
+- Post-apply and pre-jump re-reads, diagnostic only, never blocking the launch.
+- Release notes now name the log file per game, as the loader actually writes it.
+- 146,284 automated checks, all passing.
+
 ## Changed in v3.9
 
 Pressing Play on a file-replacing mod while the game is set to anything other

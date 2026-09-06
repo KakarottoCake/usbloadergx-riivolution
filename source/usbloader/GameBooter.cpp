@@ -668,6 +668,8 @@ int GameBooter::BootGame(struct discHdr *gameHdr, const s8 useOcarina)
 	//! reading the XML, loading <memory valuefile=> blobs, writing the boot log -
 	//! must be done up front.
 	Riivo::ResolvedPatchSet riivoSet;
+	std::vector<Riivo::MemOutcome> riivoMemPre, riivoMemApp;
+	bool riivoMemAttempted = false;
 	bool riivoSkipCodeHandler = false;
 	std::string riivoDevice; // SD/USB mount prefix, e.g. "sd:"
 	Riivo::ConfigurePatchProtection(riivoSet, riivoDevice, false);
@@ -716,7 +718,7 @@ int GameBooter::BootGame(struct discHdr *gameHdr, const s8 useOcarina)
 		Riivo::SetBootContext(&riivoSet, riivoDevice, riivoLogPath,
 							  Settings.SDMode ? 512 : hdd_sector_size[usbport],
 							  gameHeader.id, usbport);
-		Riivo::ReportCios();
+		Riivo::ReportCios(!riivoSet.files.empty() || !riivoSet.folders.empty());
 		char choices[512];
 		snprintf(choices, sizeof(choices),
 			"\nLoader patch settings (resolved, before boot)\n"
@@ -823,18 +825,51 @@ int GameBooter::BootGame(struct discHdr *gameHdr, const s8 useOcarina)
 		if (riivoSkipCodeHandler)
 			Hooktype = 0; // also prevents gamepatches hooks and the handler entry jump
 		if (!riivoSet.IsEmpty()) {
-			char policy[384];
+			char policy[640];
 			snprintf(policy, sizeof(policy),
 				"\nFinal patch policy (before device shutdown)\n"
 				"  memory patches=%s; Hooktype requested=%u effective=%u\n"
 				"  Gecko handler=%s\n"
 				"  width/480p trampolines are range-checked before writing.\n"
+				"  Post-apply and pre-jump re-reads are diagnostic-only: they name\n"
+				"  bytes that changed under the patches, but the game always\n"
+				"  launches. Devices are shut down by then, so mismatches reach\n"
+				"  USB Gecko only; the preflight table above is the persistent\n"
+				"  record of what should be in RAM.\n"
 				"  Final patch execution and entry jump are still pending.\n",
 				riivoMemoryActive ? "enabled" : "withheld/suppressed", (unsigned)requestedHook,
 				(unsigned)Hooktype, riivoSkipCodeHandler
 					? "disabled: mod owns 80001000..80003000"
 					: Hooktype ? "enabled" : "off");
 			Riivo::AppendLog(policy);
+		}
+
+		//! Riivolution memory-patch preflight. The loaded DOL is in RAM and
+		//! the log is still writable; after ShutDownDevices only gprintf
+		//! remains. Same checks as the apply path, in the same order,
+		//! read-only - so every skip lands in the persistent log with
+		//! expected-versus-actual bytes. Skipped on a failed load (nothing
+		//! trustworthy to check against).
+		if (AppEntrypoint != 0 && !riivoSet.memories.empty())
+		{
+			Riivo::PreflightMemoryPatches(riivoSet, riivoMemPre);
+			Riivo::AppendLog(Riivo::DescribeMemPreflight(riivoMemPre));
+			//! The hold-back decision below runs after device shutdown, where
+			//! the persistent log is unreachable - so its consequence is
+			//! recorded here, while the log is still writable. A held-back set
+			//! with the mod's files installed is a files-only boot, NOT an
+			//! unmodified one; without file mods it is unmodified. The other
+			//! two hold-back causes (files refused, tester suppression) have
+			//! their own persistent sections above and need no line here.
+			const int riivoMemHard = Riivo::MemPreflightHardFails(riivoMemPre);
+			if (riivoMemHard > 0 && !Riivo::FileWorkIncomplete()
+				&& !Riivo::MemoryPatchesSuppressed())
+			{
+				if (Riivo::FileWorkLive())
+					Riivo::AppendLog("Riivo mem: consequence: whole set held back; the mod's files ARE installed, so the game boots files-only, NOT unmodified.\n");
+				else
+					Riivo::AppendLog("Riivo mem: consequence: whole set held back; this mod replaces no files, so the game boots unmodified.\n");
+			}
 		}
 		// Reading of game is done we can close devices now
 		ShutDownDevices(usbport);
@@ -901,9 +936,38 @@ int GameBooter::BootGame(struct discHdr *gameHdr, const s8 useOcarina)
 	//! refused for any reason, the game is left completely unmodified.
 	//! MemoryPatchesSuppressed() is the deliberate diagnostic exception:
 	//! files installed, patches skipped, on the tester's explicit request.
+	//! A failed preflight holds back the whole set for the same reason: a
+	//! hard failure means the setup is broken (no value bytes, bad target),
+	//! and a partially applied set is what crashes without a log. Soft
+	//! mismatches (original bytes, patterns) skip individually; the preflight
+	//! table already names each one with expected-versus-actual bytes.
 	if (!riivoSet.memories.empty() && !Riivo::FileWorkIncomplete()
-		&& !Riivo::MemoryPatchesSuppressed())
-		Riivo::ApplyMemoryPatches(riivoSet, riivoDevice);
+		&& !Riivo::MemoryPatchesSuppressed() && Riivo::MemPreflightHardFails(riivoMemPre) == 0)
+	{
+		riivoMemAttempted = true;
+		int riivoMemApplied = Riivo::ApplyMemoryPatches(riivoSet, riivoDevice, riivoMemApp);
+		gprintf("%s", Riivo::DescribeMemApplySummary(riivoMemPre, riivoMemApp, riivoMemApplied).c_str());
+		//! Diagnostic-only: a mismatch names bytes that changed under the
+		//! patches, but nothing this late can repair them and refusing the
+		//! jump would strand the tester with less than a boot attempt gives.
+		//! Always launches; see the policy block before device shutdown.
+		const int riivoMemPostMismatches =
+			Riivo::VerifyAppliedPatches(riivoSet, riivoMemApp, "post-apply");
+		if (riivoMemPostMismatches > 0)
+			gprintf("Riivo mem: [post-apply] %d write(s) changed under the patches; launching anyway (diagnostic only)\n",
+					riivoMemPostMismatches);
+	}
+	else if (!riivoSet.memories.empty() && Riivo::MemPreflightHardFails(riivoMemPre) > 0)
+	{
+		const int riivoMemHard = Riivo::MemPreflightHardFails(riivoMemPre);
+		if (!Riivo::FileWorkIncomplete() && !Riivo::MemoryPatchesSuppressed()
+			&& Riivo::FileWorkLive())
+			gprintf("Riivo mem: HELD BACK %d hard preflight failure(s); file mods ARE installed, memory patches skipped (files-only boot, NOT unmodified)\n",
+					riivoMemHard);
+		else
+			gprintf("Riivo mem: HELD BACK %d hard preflight failure(s); game boots without memory patches\n",
+					riivoMemHard);
+	}
 	ClearDOLList();
 
 	//! Load Code handler if needed
@@ -959,6 +1023,20 @@ int GameBooter::BootGame(struct discHdr *gameHdr, const s8 useOcarina)
 	//! earlier lets malloc hand the same memory out again and overwrite it,
 	//! which verifies clean at install time and then black-screens.
 	Riivo::InstallPendingFst();
+
+	//! Pre-jump integrity re-read: everything above (code handler, 480p,
+	//! Wiimmfi, the file-table install) writes game RAM after the memory
+	//! patches went in. Pure reads, no allocation, no devices - safe anywhere
+	//! before the jump. Diagnostic-only like the post-apply one: a mismatch
+	//! says what overwrote the patches, and the game still launches.
+	if (riivoMemAttempted)
+	{
+		const int riivoMemPreJumpMismatches =
+			Riivo::VerifyAppliedPatches(riivoSet, riivoMemApp, "pre-jump");
+		if (riivoMemPreJumpMismatches > 0)
+			gprintf("Riivo mem: [pre-jump] %d write(s) changed since apply (handler/480p/Wiimmfi/FST install ran after); launching anyway (diagnostic only)\n",
+					riivoMemPreJumpMismatches);
+	}
 
 	gprintf("Jumping to game entrypoint: 0x%08x.\n", AppEntrypoint);
 	return Disc_JumpToEntrypoint(Hooktype, WDMMenu::GetDolParameter());

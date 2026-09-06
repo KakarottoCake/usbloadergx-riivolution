@@ -4,6 +4,7 @@
 #include <stdio.h>
 #include <stdarg.h>
 #include <string.h>
+#include <strings.h>
 #include <malloc.h>
 #include <sys/stat.h>
 #include <algorithm>
@@ -435,7 +436,7 @@ namespace Riivo
 	// 1. cIOS survey
 	// --------------------------------------------------------------------
 
-	void ReportCios()
+	void ReportCios(bool filesWanted)
 	{
 		std::string out;
 		out += "\n\ncIOS survey\n-----------\n";
@@ -461,6 +462,10 @@ namespace Riivo
 		//! every slot silently returns NULL and the survey reports nothing.
 		ISFS_Initialize();
 		int found = 0;
+		const s32 effSlot = IOS_GetVersion();
+		bool effHasInfo = false;
+		u32 effVersion = 0;
+		char effName[0x11] = {0}, effVers[0x11] = {0};
 		for (s32 slot = 200; slot <= 254; ++slot)
 		{
 			iosinfo_t *info = IosLoader::GetIOSInfo(slot);
@@ -474,7 +479,14 @@ namespace Riivo
 
 			Addf(out, "  slot %3d : %-8s v%-3u base IOS%-3u  %s%s\n",
 				 (int) slot, name, (unsigned) info->version, (unsigned) info->baseios, vers,
-				 slot == IOS_GetVersion() ? "   <== in use" : "");
+				 slot == effSlot ? "   <== in use" : "");
+			if (slot == effSlot)
+			{
+				effHasInfo = true;
+				effVersion = info->version;
+				memcpy(effName, name, sizeof(effName));
+				memcpy(effVers, vers, sizeof(effVers));
+			}
 			free(info);
 			++found;
 		}
@@ -487,6 +499,33 @@ namespace Riivo
 		out += "\nA slot with no line above either holds no title at all, or holds a cIOS\n"
 			   "that does not publish the d2x info block - a Hermes cIOS or a custom\n"
 			   "build, say. Those are the ones the read hook may not recognise.\n";
+
+		//! The verdict the Play-click check cannot give: on AUTO the boot
+		//! resolver picks the running slot from the disc's requested base, so
+		//! only here - after the reload into it - is the effective slot known.
+		//! Same predicate as GameWindow's RiivoInfoIsBeta3 (name, numeric v11,
+		//! beta3 string); keep the two in agreement.
+		if (filesWanted)
+		{
+			const bool beta3 = effHasInfo && effVersion == 11
+				&& strncasecmp(effName, "d2x", 3) == 0
+				&& strncasecmp(effVers, "beta3", 5) == 0;
+			out += "\nEffective slot verdict (the cIOS above marked in use runs the game):\n";
+			if (beta3)
+				Addf(out, "  slot %d IS d2x v11 beta3 - file replacement supported.\n",
+					 (int) effSlot);
+			else
+			{
+				Addf(out, "  slot %d is NOT d2x v11 beta3", (int) effSlot);
+				if (effHasInfo)
+					Addf(out, " (found %s v%u %s)", effName,
+						 (unsigned) effVersion, effVers);
+				else
+					out += " (no info block in that slot)";
+				out += " - the mod's files cannot be served; the boot continues\n"
+					   "  without them.\n";
+			}
+		}
 
 		AppendLog(out);
 		gprintf("Riivo: cIOS survey written (%d slot(s) with info)\n", found);
@@ -1419,6 +1458,11 @@ namespace Riivo
 	bool FileWorkIncomplete()
 	{
 		return fileWorkWanted && !fileWorkLive;
+	}
+
+	bool FileWorkLive()
+	{
+		return fileWorkLive;
 	}
 
 

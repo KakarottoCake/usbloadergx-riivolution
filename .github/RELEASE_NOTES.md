@@ -23,12 +23,13 @@ attempted from v1.0: if any check fails, nothing is applied and the game boots
 untouched.
 
 Every launch writes a report next to the XML you picked —
-`<device>:/riivolution/usbloadergx_riivo.log`. Please attach it to any report.
+`<device>:/riivolution/usbloadergx_riivo_<GAMEID>.log`. Please attach it to any report.
 
-## Changed in v3.9
+## Changed in v3.10
 
-- Starting a file-replacing mod while the game is set to anything other than d2x v11 beta3 now shows a warning naming the game's IOS slot.
-- Continuing past the warning boots the game unmodified.
-- 146,270 automated checks, all passing.
+- Memory patches are now checked before any are applied, and the log names every skipped patch with the bytes it expected and the bytes it found.
+- A hard preflight failure holds the whole set back; the log states whether the game then boots with the mod's files only, or completely unmodified.
+- Patched bytes are re-read after the patches go in and again just before the game starts; anything that changed is reported over USB Gecko.
+- 146,284 automated checks, all passing.
 
 Older versions: [CHANGELOG.md](CHANGELOG.md)
