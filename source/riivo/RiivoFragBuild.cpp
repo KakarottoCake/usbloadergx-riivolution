@@ -141,7 +141,8 @@ namespace Riivo
 	}
 
 	bool AppendModFragments(const std::vector<PlacedFile> &files, u32 sectorSize,
-							u8 fsType, u32 lbaOffset, FragBuildStats &stats)
+							u8 fsType, u32 lbaOffset, FragBuildStats &stats,
+							FragProgressFn progress, void *ctx)
 	{
 		stats = FragBuildStats();
 
@@ -166,6 +167,8 @@ namespace Riivo
 
 		for (size_t i = 0; i < files.size(); ++i)
 		{
+			if (progress)
+				progress(ctx, (u32) i, (u32) files.size());
 			const PlacedFile &f = files[i];
 
 			RebaseCtx ctx;

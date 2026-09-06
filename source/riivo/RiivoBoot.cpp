@@ -28,6 +28,8 @@
 #include "settings/CSettings.h"
 #include "Controls/DeviceHandler.hpp"
 #include "memory/mem2.h"
+#include "prompts/ProgressWindow.h"
+#include "language/gettext.h"
 #include "usbloader/wdvd.h"
 #include "system/IosLoader.h"
 #include "libs/libruntimeiospatch/runtimeiospatch.h"
@@ -311,6 +313,43 @@ namespace Riivo
 		AppendLog(out);
 	}
 
+	//! The loader's own progress window, driven across the two phases that
+	//! can take minutes on a large mod. The GUI threads are still running
+	//! at this point - ExitGUIThreads() fires only on Wii U - so this is
+	//! the same machinery the rest of the loader already uses here.
+	//!
+	//! RAII because PrepareFragList has a dozen early returns, and a window
+	//! left standing would sit on top of the game for the rest of the boot.
+	struct ProgressGuard
+	{
+		static ProgressGuard *active;
+		bool on;
+		ProgressGuard() : on(false) { active = this; }
+		~ProgressGuard()
+		{
+			if (on)
+				ProgressStop();
+			active = 0;
+		}
+		void Step(const char *msg)
+		{
+			if (on)
+				ShowProgress(msg, 0, 0);
+			else
+			{
+				StartProgress(tr("Riivolution"),
+							  tr("Preparing the mod's files"), msg, false, true);
+				on = true;
+			}
+		}
+		void Set(u32 done, u32 total)
+		{
+			if (on && total)
+				ShowProgress((s64) done, (s64) total);
+		}
+	};
+	ProgressGuard *ProgressGuard::active = 0;
+
 	// --------------------------------------------------------------------
 	// 1. cIOS survey
 	// --------------------------------------------------------------------
@@ -568,6 +607,11 @@ namespace Riivo
 			return;
 		}
 
+		//! Reads every placed file back through the hook. On a large mod
+		//! that is minutes of card traffic with nothing else on screen.
+		ProgressGuard progress;
+		progress.Step(tr("Checking the mod's files"));
+
 		//! The fragments went in back in SetupDisc, inside the list the loader
 		//! handed over with set_frag_list. Nothing is registered here: d2x
 		//! blocks IOCTL_DI_FRAG_SET once a title is running, and the game
@@ -676,6 +720,7 @@ namespace Riivo
 			out += "  Large-read verification unavailable; FST withheld.\n";
 			return;
 		}
+		progress.Step(tr("Verifying large reads"));
 		out += "\nLarge-read verification (128 KiB maximum single request)\n";
 		AppendLog(out);
 		out.clear();
@@ -1256,6 +1301,18 @@ namespace Riivo
 		return fileWorkWanted && !fileWorkLive;
 	}
 
+
+	//! How far through the <folder> rules the listing is. The rules are the
+	//! only unit available before a rule has been read - the file count
+	//! inside one is not known until it comes back.
+	static u32 folderRulesDone = 0, folderRulesTotal = 0;
+
+	static void FragProgress(void *, u32 done, u32 total)
+	{
+		if (ProgressGuard::active)
+			ProgressGuard::active->Set(done, total);
+	}
+
 	//! One line per <folder> rule. The path is trimmed to the tail because
 	//! a full external path is mostly the device and mod root repeated.
 	static void LogListProgress(void *, const std::string &dir, u32 soFar)
@@ -1263,6 +1320,8 @@ namespace Riivo
 		const size_t cut = dir.size() > 44 ? dir.size() - 44 : 0;
 		LogStep("  listing %s%s (%u so far)", cut ? "..." : "",
 				dir.c_str() + cut, soFar);
+		if (ProgressGuard::active)
+			ProgressGuard::active->Set(folderRulesDone++, folderRulesTotal);
 	}
 
 	void LogBootStep(const char *what)
@@ -1376,6 +1435,10 @@ namespace Riivo
 		//! table cannot be read until afterwards, so the table is made to agree
 		//! with this placement rather than the other way round.
 		std::vector<ModCandidate> cand;
+		ProgressGuard progress;
+		folderRulesDone = 0;
+		folderRulesTotal = (u32) bootSet->folders.size();
+		progress.Step(tr("Reading the mod's folders"));
 		//! Reads every directory the mod's rules name. On a total conversion
 		//! that is thousands of entries off FAT, and it is the slowest thing
 		//! in the whole boot - so say so before starting, not after.
@@ -1473,8 +1536,9 @@ namespace Riivo
 		//! Opens every placed file and walks its cluster chain. The other
 		//! long phase, and the other one worth naming before it starts.
 		LogStep("mapping fragments for %u file(s)", (unsigned) placed.size());
+		progress.Step(tr("Mapping the mod's files"));
 		if (!AppendModFragments(placed, sector, (u8) modDev.fsType,
-								modDev.lbaStart, fragStats))
+								modDev.lbaStart, fragStats, FragProgress, 0))
 		{
 			gprintf("Riivo: fragment build failed: %s\n", fragStats.firstFailure.c_str());
 			modOffsets.clear();

@@ -135,8 +135,13 @@ namespace Riivo
 	//! partition the game and the mod share.
 	//! Returns false if the list could not be completed, in which case it has
 	//! been left partially extended and must not be registered.
+	//! Called once per file as its cluster chain is walked. Thousands of
+	//! files on a total conversion, and every one of them is a card read.
+	typedef void (*FragProgressFn)(void *ctx, u32 done, u32 total);
+
 	bool AppendModFragments(const std::vector<PlacedFile> &files, u32 sectorSize,
-							u8 fsType, u32 lbaOffset, FragBuildStats &stats);
+							u8 fsType, u32 lbaOffset, FragBuildStats &stats,
+							FragProgressFn progress = 0, void *ctx = 0);
 
 	//! Read the first bytes of `file` back THROUGH the cIOS at `discOffset` and
 	//! check they match the file on the card. This proves the whole chain -

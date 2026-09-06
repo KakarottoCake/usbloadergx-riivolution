@@ -3,6 +3,21 @@
 Full history for the Riivolution fork. The GitHub release body carries only the
 current version's bullets; everything older lives here.
 
+## Changed in v3.1
+
+The step log from v3.0 says afterwards where a boot stopped; it does nothing for
+the person sitting in front of a black screen wondering whether to power off. The
+GUI threads are still running through all of this - `ExitGUIThreads()` fires only
+on Wii U - so the loader's own progress window was available the whole time.
+
+- `ProgressGuard` drives `StartProgress`/`ShowProgress`/`ProgressStop` across the
+  four slow phases: reading the mod's folders, mapping its files, checking them
+  back through the hook, and verifying large reads. RAII, because
+  `PrepareFragList` has a dozen early returns and a window left standing would
+  sit on top of the game.
+- `ListModFiles` fills the bar per `<folder>` rule; `AppendModFragments` takes a
+  progress callback and fills it per file.
+
 ## Changed in v3.0
 
 Starshine GLE on IOS252 stopped after the "Loader patch settings" block and left a
