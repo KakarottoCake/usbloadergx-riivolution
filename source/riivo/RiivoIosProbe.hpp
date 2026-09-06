@@ -103,6 +103,11 @@ namespace Riivo
 		};
 		std::vector<DiDump> dumps;
 
+		//! The merged windows the probe settled on, kept whether or not they
+		//! were written. A hook refusal writes them after the fact, so a build
+		//! this code cannot read comes home with its bytes in the same round.
+		std::vector<DumpWindow> windows;
+
 		//! Windows cut by the dump cap. Printed so a silent drop is impossible.
 		u32 dumpsSkipped;
 		bool dumpsEnabled;
@@ -117,6 +122,13 @@ namespace Riivo
 	//! write diagnostic windows to `dumpPath`. Appends a report to the
 	//! boot log. Safe to call on any console: read-only with respect to IOS.
 	void ProbeIosPlugin(const std::string &dumpPath, IosProbe &out, bool writeDumps = false);
+
+	//! Write the windows `out` already chose to `dumpPath`, and fall back to
+	//! the most promising ceiling hit when none survived classification.
+	//! Called by the probe when dumps are asked for, and again by the boot
+	//! path when the hook refuses - a refusal is the one moment the bytes
+	//! are worth having, and by then the probe has already run.
+	void WriteProbeDumps(IosProbe &out, const std::string &dumpPath);
 
 	//! Human-readable rendering of a probe result, for the boot log.
 	std::string DescribeProbe(const IosProbe &p);

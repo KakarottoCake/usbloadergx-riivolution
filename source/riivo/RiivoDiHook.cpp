@@ -208,19 +208,32 @@ bool BuildDiHook(const u8 *image, u32 size, u32 base, u32 site,
         why = "dispatcher return not found; no IOS code changed";
         return false;
     }
-    // Storage: the bit0 reader below the worker. Called exactly once in the
-    // snapshot, from the worker - unreachable while MODE_FRAG is set, which
-    // it is from fragment registration on. The entry becomes the failing
+    // Storage: the bit0 reader the worker dispatches to. Called exactly once
+    // in the snapshot, from the worker - unreachable while MODE_FRAG is set,
+    // which it is from fragment registration on. The entry becomes the failing
     // stub; the LOW_READ case calls entry + 8.
-    const u32 store = site - 0x984;
-    if (!s.match(store, "B5F0") || !s.match(store + 4, "92050A57")) {
-        why = "hook storage head not found; no IOS code changed";
-        return false;
-    }
+    //! Found by walking the worker's own calls, never by a delta from the
+    //! site. `site - 0x984` held on d2x v11 beta3 and lands on unrelated bytes
+    //! on beta1, whose plugin sits 0x20 lower - a refusal on hardware that no
+    //! self-consistent fixture can catch, and the same mistake the epilogue
+    //! above already had to be cured of.
+    u32 store = 0;
     {
-        const u8 *h = s.at(store + 2, 2);
-        if (!h || (Read16(h) & 0xFF80) != 0xB080) {
-            why = "hook storage frame not found; no IOS code changed";
+        u32 found = 0;
+        for (u32 a = raw; a + 4 <= raw + 0x80; a += 2) {
+            const u8 *p = s.at(a, 4);
+            u32 t = 0;
+            if (!p) break;
+            if (!DecodeThumbCall(a, p, t) || t == frag || t == store) continue;
+            if (!s.match(t, "B5F0") || !s.match(t + 4, "92050A57")) continue;
+            const u8 *h = s.at(t + 2, 2);
+            if (!h || (Read16(h) & 0xFF80) != 0xB080) continue;
+            store = t;
+            ++found;
+        }
+        if (found != 1) {
+            why = found ? "hook storage is ambiguous; no IOS code changed"
+                        : "hook storage head not found; no IOS code changed";
             return false;
         }
     }
