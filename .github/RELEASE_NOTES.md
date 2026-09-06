@@ -25,12 +25,10 @@ untouched.
 Every launch writes a report next to the XML you picked —
 `<device>:/riivolution/usbloadergx_riivo.log`. Please attach it to any report.
 
-## Changed in v3.8
+## Changed in v3.9
 
-- Much faster to start a modded game. Each mod folder is now read off the card once instead of twice, and the per-file read-back check samples up to 128 files instead of reading all of them.
-- Every step in the log carries how long the boot had been running when it finished.
-- If preparing the mod takes longer than five minutes, the loader gives up and boots the game unmodified.
-- `riivolution/verify.txt` restores the full per-file check and the whole-mod read-back.
-- 146,237 automated checks, all passing.
+- Starting a file-replacing mod while the game is set to anything other than d2x v11 beta3 now shows a warning naming the game's IOS slot.
+- Continuing past the warning boots the game unmodified.
+- 146,270 automated checks, all passing.
 
 Older versions: [CHANGELOG.md](CHANGELOG.md)
