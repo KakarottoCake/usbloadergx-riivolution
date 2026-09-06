@@ -25,11 +25,11 @@ untouched.
 Every launch writes a report next to the XML you picked —
 `<device>:/riivolution/usbloadergx_riivo.log`. Please attach it to any report.
 
-## Changed in v3.1
+## Changed in v3.2
 
-- A progress bar now covers the slow parts of a Riivolution boot instead of a black screen: reading the mod's folders, mapping its files, checking them, and verifying large reads.
-- The log records each boot step as it completes, with free memory, so a boot that stops before the file report says where it stopped.
-- Each `<folder>` rule is logged as it is listed, with a running file count.
+- The rebuilt file table is written into the game's memory as the very last step before the game starts, instead of just after the apploader runs.
+- The screen turns white immediately before the game is started. If it stays white, the loader finished its work and the game itself did not start. If it stays black, the loader did not get that far. Please say which you saw.
+- A progress bar covers the slow parts of a Riivolution boot; the log records each boot step as it completes.
 - 146,237 automated checks, all passing.
 
 Older versions: [CHANGELOG.md](CHANGELOG.md)
