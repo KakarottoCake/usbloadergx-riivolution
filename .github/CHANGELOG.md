@@ -3,6 +3,26 @@
 Full history for the Riivolution fork. The GitHub release body carries only the
 current version's bullets; everything older lives here.
 
+## Changed in v3.5
+
+The Riivolution page offered every XML on the card for every game - a Galaxy
+disc cycled past Newer SMBW - because `ScanXmlFiles` matched on the `.xml`
+extension and nothing else. `IsValidForGame` existed but was only used to LABEL
+an already-chosen file as "other game".
+
+- `ScanXmlFiles` parses each candidate and keeps only those whose `<id>` names
+  this game. The check has to read the file: the game id is inside it, not in
+  the name.
+- Each kept XML carries its device and the mod's own name (the first `<section>`
+  with one), gathered during the scan so drawing never re-reads the card.
+- Layout. `GuiOptionBrowser` runs here with `staticValues=true`, which pins every
+  value to `optionValLen` - 100px - while a row whose value is exactly one space
+  gets its NAME drawn at `fullWidth`. So the two strings worth reading, the mod
+  name and the path, are now full-width name rows, and the values that remain
+  are short enough to fit: ON/OFF/None, and SD or USB 1.
+- `HeaderRows()` is the single source for how many rows sit above the `<option>`
+  rows, so the click handler and both builders cannot disagree.
+
 ## Changed in v3.4
 
 v2.9 listed SuperMarioGravity_Demo and booted it end to end. Since then two

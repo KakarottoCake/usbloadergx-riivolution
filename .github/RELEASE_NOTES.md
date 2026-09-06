@@ -25,12 +25,13 @@ untouched.
 Every launch writes a report next to the XML you picked —
 `<device>:/riivolution/usbloadergx_riivo.log`. Please attach it to any report.
 
-## Changed in v3.4
+## Changed in v3.5
 
-- The progress bar and the per-`<folder>` log lines are now off unless you create `riivolution/loadingbar.txt`. They were the only two things added since v2.9 that run during the file listing, which is where two consoles stopped.
-- If the cIOS will not accept the enlarged fragment list, the game's own list is put back and the game boots unmodified instead of exiting to the Homebrew Channel.
-- The rebuilt file table is written into the game's memory as the very last step before the game starts.
-- The screen turns white immediately before the game is started.
+- The Riivolution page only lists mods for the game you are on. Mods for other games no longer appear.
+- The mod's name and its full path each get their own full-width line instead of being cut off in the narrow right-hand column.
+- A new line says whether the mod is on SD or USB.
+- The progress bar and the per-`<folder>` log lines are off unless you create `riivolution/loadingbar.txt`.
+- If the cIOS will not accept the enlarged fragment list, the game boots unmodified instead of exiting to the Homebrew Channel.
 - 146,237 automated checks, all passing.
 
 Older versions: [CHANGELOG.md](CHANGELOG.md)

@@ -30,6 +30,40 @@ static bool HasXmlExt(const char *name)
 	return dot && strcasecmp(dot, ".xml") == 0;
 }
 
+//! "usb1:/riivolution/Foo.xml" -> "USB drive 1"; "sd:/..." -> "SD card".
+//! Which drive the mod is on is not a detail: the cIOS serves every fragment
+//! from one device, so a mod on the other drive is refused at boot. Saying it
+//! here is cheaper than finding out from a failed launch.
+static std::string DeviceLabel(const std::string &path)
+{
+	size_t colon = path.find(':');
+	if (colon == std::string::npos)
+		return "";
+	const std::string dev = path.substr(0, colon);
+	//! Kept short on purpose: in this browser a value is clipped at 100px
+	//! (optionValLen), so "USB drive 1" would arrive as "USB dri...".
+	if (dev == "sd")
+		return tr( "SD" );
+	if (dev.size() > 3 && strncmp(dev.c_str(), "usb", 3) == 0)
+	{
+		char buf[32];
+		snprintf(buf, sizeof(buf), "%s %s", tr( "USB" ), dev.c_str() + 3);
+		return buf;
+	}
+	return dev;
+}
+
+//! The mod's own name for itself - the first <section> that has one. Riivolution
+//! XMLs carry no title, and a file name is often just the game's initials, so
+//! this is the closest thing to something a person recognises.
+static std::string ModLabel(const Riivo::Disc &d, const std::string &path)
+{
+	for (size_t s = 0; s < d.sections.size(); ++s)
+		if (!d.sections[s].name.empty())
+			return d.sections[s].name;
+	return BaseName(path);
+}
+
 RiivoSM::RiivoSM(struct discHdr *hdr)
 	: SettingsMenu(tr("Riivolution"), &GuiOptions, MENU_NONE),
 	  Header(hdr), discLoaded(false)
@@ -75,6 +109,10 @@ RiivoSM::~RiivoSM()
 void RiivoSM::ScanXmlFiles()
 {
 	xmlFiles.clear();
+
+	char id[7];
+	snprintf(id, sizeof(id), "%.6s", (const char *) Header->id);
+
 	for (size_t d = 0; d < sizeof(RiivoDevices) / sizeof(RiivoDevices[0]); ++d)
 	{
 		char dirpath[64];
@@ -90,7 +128,27 @@ void RiivoSM::ScanXmlFiles()
 			std::string full = dirpath;
 			full += "/";
 			full += ent->d_name;
-			xmlFiles.push_back(full);
+
+			//! Read it now and keep it only if it names this game. The <id>
+			//! is inside the file, so there is no way to tell from the name -
+			//! which is why every mod on the card used to be offered for every
+			//! game, and cycling through a Galaxy disc's options walked past
+			//! patches for titles it has nothing to do with.
+			Riivo::Disc probe;
+			std::string err;
+			if (!Riivo::ParseFile(full.c_str(), probe, &err))
+			{
+				gprintf("Riivo: %s did not parse: %s\n", full.c_str(), err.c_str());
+				continue;
+			}
+			if (!probe.IsValidForGame(id, 0, 0))
+				continue;
+
+			XmlChoice choice;
+			choice.path = full;
+			choice.device = DeviceLabel(full);
+			choice.label = ModLabel(probe, full);
+			xmlFiles.push_back(choice);
 		}
 		closedir(dir);
 	}
@@ -133,12 +191,31 @@ void RiivoSM::StoreSelection()
 		GameConfig.RiivoConfig.clear();
 }
 
+int RiivoSM::HeaderRows() const
+{
+	return GameConfig.RiivoPath.empty() ? 1 : 4;
+}
+
 void RiivoSM::SetOptionNames()
 {
 	int Idx = 0;
 
 	//! Row 0: the XML selector.
 	Options->SetName(Idx++, "%s", tr( "Riivolution XML" ));
+
+	if (!GameConfig.RiivoPath.empty())
+	{
+		//! The mod's name and its path each get a row to themselves. As values
+		//! they were crushed into the right-hand column, which this browser
+		//! clips at 100px (optionValLen) - useless for the two strings you
+		//! actually need to read back. A row whose value is a single space has
+		//! its NAME drawn across the full width, so both go in the name.
+		Options->SetName(Idx++, "%s", discLoaded
+						 ? ModLabel(disc, GameConfig.RiivoPath).c_str()
+						 : BaseName(GameConfig.RiivoPath));
+		Options->SetName(Idx++, "%s", GameConfig.RiivoPath.c_str());
+		Options->SetName(Idx++, "%s", tr( "Mod is on" ));
+	}
 
 	//! One row per option (section-flattened).
 	for (size_t i = 0; i < flatOptions.size(); ++i)
@@ -149,20 +226,30 @@ void RiivoSM::SetOptionValues()
 {
 	int Idx = 0;
 
-	//! Row 0: selected XML file name, or why there isn't one.
+	//! Row 0: short by necessity - a value wider than 100px is clipped, so the
+	//! readable strings live in the full-width rows below instead.
 	if (GameConfig.RiivoPath.empty())
 		Options->SetValue(Idx++, "%s", xmlFiles.empty()
-						  ? tr( "None found" ) : tr( "OFF" ));
+						  ? tr( "None" ) : tr( "OFF" ));
 	else if (!discLoaded)
-		Options->SetValue(Idx++, "%s (%s)", BaseName(GameConfig.RiivoPath), tr( "parse error" ));
+		Options->SetValue(Idx++, "%s", tr( "Parse error" ));
 	else
 	{
 		char id[7];
 		snprintf(id, sizeof(id), "%.6s", (const char *) Header->id);
-		if (!disc.IsValidForGame(id, 0, 0))
-			Options->SetValue(Idx++, "%s (%s)", BaseName(GameConfig.RiivoPath), tr( "other game" ));
-		else
-			Options->SetValue(Idx++, "%s", BaseName(GameConfig.RiivoPath));
+		//! "Other game" is reachable only from a selection saved before the
+		//! scan filtered by game, or from a card changed underneath it.
+		Options->SetValue(Idx++, "%s", disc.IsValidForGame(id, 0, 0)
+						  ? tr( "ON" ) : tr( "Other game" ));
+	}
+
+	if (!GameConfig.RiivoPath.empty())
+	{
+		//! Exactly one space each: that is what earns the two rows above the
+		//! full width for their names.
+		Options->SetValue(Idx++, " ");
+		Options->SetValue(Idx++, " ");
+		Options->SetValue(Idx++, "%s", DeviceLabel(GameConfig.RiivoPath).c_str());
 	}
 
 	//! Option rows: current choice name, or Disabled.
@@ -176,6 +263,7 @@ void RiivoSM::SetOptionValues()
 			Options->SetValue(Idx++, "%s", opt->choices[sel - 1].name.c_str());
 	}
 }
+
 
 int RiivoSM::GetMenuInternal()
 {
@@ -200,14 +288,15 @@ int RiivoSM::GetMenuInternal()
 		// Find the current index in the cycle (-1 == OFF).
 		int current = -1;
 		for (size_t i = 0; i < xmlFiles.size(); ++i)
-			if (xmlFiles[i] == GameConfig.RiivoPath)
+			if (xmlFiles[i].path == GameConfig.RiivoPath)
 			{
 				current = (int) i;
 				break;
 			}
 
 		int next = current + 1; // -1(OFF)->0, last->size (== OFF)
-		std::string newPath = (next >= (int) xmlFiles.size()) ? std::string() : xmlFiles[next];
+		std::string newPath = (next >= (int) xmlFiles.size())
+							  ? std::string() : xmlFiles[next].path;
 
 		if (newPath != GameConfig.RiivoPath)
 		{
@@ -221,8 +310,13 @@ int RiivoSM::GetMenuInternal()
 		return MENU_NONE;
 	}
 
+	//! The path and device rows are there to be read, not clicked.
+	const int head = HeaderRows();
+	if (ret < head)
+		return MENU_NONE;
+
 	//! Option rows: cycle the choice, wrapping through Disabled (0).
-	int optIdx = ret - 1;
+	int optIdx = ret - head;
 	if (optIdx >= 0 && optIdx < (int) flatOptions.size())
 	{
 		Riivo::Option *opt = flatOptions[optIdx];
