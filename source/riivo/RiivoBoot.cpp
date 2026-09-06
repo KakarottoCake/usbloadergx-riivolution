@@ -160,6 +160,9 @@ namespace Riivo
 	//! the files. Diagnostic, and off unless the marker exists.
 	static bool memPatchSuppressed = false;
 	static std::string memPatchMarker;
+	//! Set by riivolution/loadingbar.txt; see SetBootContext.
+	static bool verboseListing = false;
+
 
 	void SetBootContext(const ResolvedPatchSet *set, const std::string &device,
 						const std::string &logPath, u32 sectorSize,
@@ -177,6 +180,23 @@ namespace Riivo
 		//! Read the marker now, while the card is still mounted: by the time
 		//! the patches would be applied, ShutDownDevices has taken it away.
 		memPatchSuppressed = false;
+		//! The progress window and the per-folder log lines are the two
+		//! things that run INSIDE the file-listing loop, and they are the
+		//! only things in that phase that did not exist in v2.9 - the last
+		//! build known to list this mod and boot it. Two consoles have since
+		//! stopped mid-listing, so both are off unless asked for. On, they
+		//! give a moving bar and a line per <folder> rule; off, the phase is
+		//! as quiet as it used to be and only its start and end are recorded.
+		verboseListing = false;
+		if (!device.empty())
+		{
+			FILE *v = fopen((device + "/riivolution/loadingbar.txt").c_str(), "rb");
+			if (v)
+			{
+				verboseListing = true;
+				fclose(v);
+			}
+		}
 		memPatchMarker.clear();
 		if (!device.empty())
 		{
@@ -628,7 +648,8 @@ namespace Riivo
 		//! Reads every placed file back through the hook. On a large mod
 		//! that is minutes of card traffic with nothing else on screen.
 		ProgressGuard progress;
-		progress.Step(tr("Checking the mod's files"));
+		if (verboseListing)
+			progress.Step(tr("Checking the mod's files"));
 
 		//! The fragments went in back in SetupDisc, inside the list the loader
 		//! handed over with set_frag_list. Nothing is registered here: d2x
@@ -738,7 +759,8 @@ namespace Riivo
 			out += "  Large-read verification unavailable; FST withheld.\n";
 			return;
 		}
-		progress.Step(tr("Verifying large reads"));
+		if (verboseListing)
+			progress.Step(tr("Verifying large reads"));
 		out += "\nLarge-read verification (128 KiB maximum single request)\n";
 		AppendLog(out);
 		out.clear();
@@ -1492,9 +1514,12 @@ namespace Riivo
 		//! with this placement rather than the other way round.
 		std::vector<ModCandidate> cand;
 		ProgressGuard progress;
-		folderRulesDone = 0;
-		folderRulesTotal = (u32) bootSet->folders.size();
-		progress.Step(tr("Reading the mod's folders"));
+		if (verboseListing)
+		{
+			folderRulesDone = 0;
+			folderRulesTotal = (u32) bootSet->folders.size();
+			progress.Step(tr("Reading the mod's folders"));
+		}
 		//! Reads every directory the mod's rules name. On a total conversion
 		//! that is thousands of entries off FAT, and it is the slowest thing
 		//! in the whole boot - so say so before starting, not after.
@@ -1502,7 +1527,7 @@ namespace Riivo
 		{
 			FsDirLister lister;
 			ListModFiles(*bootSet, bootDevice, &lister, cand,
-						 LogListProgress, 0);
+						 verboseListing ? LogListProgress : 0, 0);
 		}
 		LogStep("mod files listed: %u found", (unsigned) cand.size());
 		if (cand.empty())
@@ -1592,9 +1617,11 @@ namespace Riivo
 		//! Opens every placed file and walks its cluster chain. The other
 		//! long phase, and the other one worth naming before it starts.
 		LogStep("mapping fragments for %u file(s)", (unsigned) placed.size());
-		progress.Step(tr("Mapping the mod's files"));
+		if (verboseListing)
+			progress.Step(tr("Mapping the mod's files"));
 		if (!AppendModFragments(placed, sector, (u8) modDev.fsType,
-								modDev.lbaStart, fragStats, FragProgress, 0))
+								modDev.lbaStart, fragStats,
+								verboseListing ? FragProgress : 0, 0))
 		{
 			gprintf("Riivo: fragment build failed: %s\n", fragStats.firstFailure.c_str());
 			modOffsets.clear();

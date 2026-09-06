@@ -25,11 +25,12 @@ untouched.
 Every launch writes a report next to the XML you picked —
 `<device>:/riivolution/usbloadergx_riivo.log`. Please attach it to any report.
 
-## Changed in v3.3
+## Changed in v3.4
 
-- If the cIOS will not accept the enlarged fragment list, the game's own list is put back and the game boots unmodified. Before this, that one failure exited the loader to the Homebrew Channel.
+- The progress bar and the per-`<folder>` log lines are now off unless you create `riivolution/loadingbar.txt`. They were the only two things added since v2.9 that run during the file listing, which is where two consoles stopped.
+- If the cIOS will not accept the enlarged fragment list, the game's own list is put back and the game boots unmodified instead of exiting to the Homebrew Channel.
 - The rebuilt file table is written into the game's memory as the very last step before the game starts.
-- The screen turns white immediately before the game is started. If it stays white, the loader finished and the game itself did not start. If it stays black, the loader did not get that far.
+- The screen turns white immediately before the game is started.
 - 146,237 automated checks, all passing.
 
 Older versions: [CHANGELOG.md](CHANGELOG.md)
