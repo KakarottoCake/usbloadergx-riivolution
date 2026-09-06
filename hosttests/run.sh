@@ -174,4 +174,20 @@ build_run test_ondemand "$SRC/riivo/RiivoOnDemand.cpp" 	"$SRC/riivo/RiivoModuleI
 # log somewhere unintended or opening nothing without saying why.
 build_run test_netlog -DRIIVO_HOST_TEST "$SRC/riivo/RiivoNet.cpp"
 
+# Gate B contract: the versioned v1 manifest plus the shared address-model
+# range checks. Independent LE decode, refusals, crc integrity, and the
+# partition-range verdicts. Needs only the manifest TU.
+build_run test_manifest "$SRC/riivo/RiivoManifest.cpp"
+
+# WP1 fixtures: revision/disc filters with unknown-axis skipping, multi-XML
+# merge precedence, skipped patch-ref accounting, selection round-trip.
+# Needs RiivoConfig only (no pugixml: discs are built programmatically).
+build_run test_resolvemerge "$SRC/riivo/RiivoConfig.cpp"
+
+# WP2 fixtures: redirect specs (sub-ranges, whole-file, resize clamp) to v1
+# manifest extents, chained into BuildManifestV1 + ValidateManifestV1.
+# Needs the file planner plus the manifest, config, FST and pugixml, mirroring
+# test_pipeline's link set.
+build_run test_manifest_extents "$SRC/riivo/RiivoFile.cpp" "$SRC/riivo/RiivoManifest.cpp" "$SRC/riivo/RiivoConfig.cpp" "$SRC/riivo/RiivoFst.cpp" "$SRC/xml/pugixml.cpp"
+
 printf '\nall suites passed\n'

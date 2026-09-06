@@ -124,6 +124,15 @@ namespace Riivo
 		std::vector<std::string> regions;                  // region <type> values
 	};
 
+	//! Pass as discNumber/revision when the caller does not know the value
+	//! (boot path before the partition is open). A negative value skips that
+	//! check instead of comparing against disc 0 / revision 0, which would
+	//! falsely refuse multi-disc or version-filtered XMLs. WP6 wires the real
+	//! values at the call sites; until then callers keep passing 0,0 with
+	//! unchanged behavior.
+	static const int RIIVO_DISC_UNKNOWN = -1;
+	static const int RIIVO_REVISION_UNKNOWN = -1;
+
 	//! <wiidisc> - the whole parsed document.
 	struct Disc
 	{
@@ -135,6 +144,7 @@ namespace Riivo
 		std::string xmlPath;                // where it was loaded from
 
 		//! Mirror of Dolphin's Disc::IsValidForGame. gameId must be >= 6 chars.
+		//! Negative discNumber/revision (RIIVO_*_UNKNOWN) skips that check.
 		bool IsValidForGame(const char *gameId, int discNumber, int revision) const;
 
 		//! Find a <patch> by id, or NULL.

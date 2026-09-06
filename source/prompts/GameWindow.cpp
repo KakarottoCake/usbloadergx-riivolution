@@ -928,7 +928,7 @@ void GameWindow::BootGame(struct discHdr *header)
 			Riivo::ResolvedPatchSet riivoSet;
 			Riivo::Resolve(riivoDisc, IDfull, riivoSet);
 
-			if (!riivoDisc.IsValidForGame(IDfull, 0, 0))
+			if (!riivoDisc.IsValidForGame(IDfull, Riivo::RIIVO_DISC_UNKNOWN, Riivo::RIIVO_REVISION_UNKNOWN))
 				warning = tr( "The selected Riivolution XML is meant for a different game. Applying it will most likely crash." );
 			//! File replacement needs to patch the running cIOS, and that needs
 			//! the hardware access the Homebrew Channel grants at launch. Losing

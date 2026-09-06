@@ -687,13 +687,14 @@ int GameBooter::BootGame(struct discHdr *gameHdr, const s8 useOcarina)
 		Riivo::Disc riivoDisc;
 		std::string riivoErr;
 		int riivoValuefileFails = 0;
+		Riivo::ResolveStats riivoResolveStats;
 		bool riivoParsed = Riivo::ParseFile(game_cfg->RiivoPath.c_str(), riivoDisc, &riivoErr);
 		if (riivoParsed)
 		{
-			gprintf("Riivo: XML valid for game: %d\n", riivoDisc.IsValidForGame(riivoId, 0, 0));
-			if (game_cfg->RiivoConfig.size() > 0)
-				Riivo::ApplySelection(riivoDisc, game_cfg->RiivoConfig);
-			Riivo::Resolve(riivoDisc, riivoId, riivoSet);
+		gprintf("Riivo: XML valid for game: %d\n", riivoDisc.IsValidForGame(riivoId, Riivo::RIIVO_DISC_UNKNOWN, Riivo::RIIVO_REVISION_UNKNOWN));
+		if (game_cfg->RiivoConfig.size() > 0)
+			Riivo::ApplySelection(riivoDisc, game_cfg->RiivoConfig);
+		Riivo::ResolveWithStats(riivoDisc, riivoId, riivoSet, riivoResolveStats);
 			//! Inline every valuefile before the devices go away.
 			riivoValuefileFails = Riivo::PreloadValueFiles(riivoSet, riivoDevice);
 			Riivo::DumpDisc(riivoDisc);
@@ -711,7 +712,9 @@ int GameBooter::BootGame(struct discHdr *gameHdr, const s8 useOcarina)
 		Riivo::WriteLog(riivoLogPath, riivoId,
 						game_cfg->RiivoPath, riivoParsed ? NULL : riivoErr.c_str(),
 						riivoParsed ? &riivoDisc : NULL, riivoParsed ? &riivoSet : NULL,
-						riivoValuefileFails);
+						riivoValuefileFails,
+						Riivo::RIIVO_DISC_UNKNOWN, Riivo::RIIVO_REVISION_UNKNOWN,
+						riivoResolveStats.skippedPatchRefs);
 
 		//! Hand the resolved set to the Phase 3 code, which runs later on, deep
 		//! inside BootPartition. riivoSet outlives this scope; riivoDisc does not,

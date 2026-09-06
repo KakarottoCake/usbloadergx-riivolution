@@ -33,11 +33,12 @@ on. Without that file nothing changes and the build behaves exactly like v3.10.
 It has never run on a console. Expect it to fail; the log and a USB Gecko trace are the
 point of it. Leave the file off for normal use.
 
-## Changed in v3.11
+## Changed in v3.12
 
-- New on-demand mode: the mod's files are opened by path from inside IOS when the game asks for them.
-- On-demand skips the pre-boot fragment mapping entirely.
-- Directory enumeration no longer stats every file a second time.
-- 146,642 automated checks, all passing.
+- Versioned runtime manifest and address model shared by the loader and IOS sides.
+- Multiple XML files can be merged, with later files winning patch id clashes.
+- Partial file replacements and resize=false clamps carry through to the manifest.
+- Misspelled patch ids and version-filtered XMLs report correctly in the boot log.
+- 146,741 automated checks, all passing.
 
 Older versions: [CHANGELOG.md](CHANGELOG.md)
