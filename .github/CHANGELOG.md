@@ -3,6 +3,24 @@
 Full history for the Riivolution fork. The GitHub release body carries only the
 current version's bullets; everything older lives here.
 
+## Changed in v3.4
+
+v2.9 listed SuperMarioGravity_Demo and booted it end to end. Since then two
+consoles have stopped partway through that same listing phase and returned to
+the Homebrew Channel. Exactly two things were added that run inside that loop:
+the per-`<folder>` log lines (v3.0) and the progress window (v3.1). The progress
+window is not a passive indicator - it builds a GUI dialog on a second thread,
+calls `HaltGui`/`ResumeGui`, sets `mainWindow` to STATE_DISABLED, and
+`ProgressStop` spins on `LWP_ThreadIsSuspended` - all while the main thread is
+inside libfat enumerating thousands of files.
+
+- `verboseListing`, set by `riivolution/loadingbar.txt`, gates both. Off by
+  default the listing phase is as quiet as it was in v2.9 and only its start and
+  end are logged; the phase-boundary steps sit outside the loop and are
+  unaffected.
+- This is a bisect, not a diagnosis: one build, two launches, and the answer is
+  whichever way round it fails.
+
 ## Changed in v3.3
 
 Two testers' consoles returned to the Homebrew Channel instead of booting. Both
