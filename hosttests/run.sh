@@ -96,4 +96,10 @@ build_run test_patchguard "$SRC/riivo/RiivoPatchGuard.cpp" "$SRC/riivo/RiivoConf
 # absolute-address paths are exercised by PPC compile, not here.
 build_run test_memcheck "$SRC/riivo/RiivoMemory.cpp" "$SRC/riivo/RiivoPatchGuard.cpp" "$SRC/riivo/RiivoConfig.cpp"
 
+# The same patcher, writing for real. A 64-bit host can reserve the console
+# addresses the patches target, so CommitWrite and VerifyAppliedPatches run
+# unmodified: bytes land, and a byte changed underneath is reported. Skips
+# itself with a note if the address space is not available.
+build_run test_memapply "$SRC/riivo/RiivoMemory.cpp" "$SRC/riivo/RiivoPatchGuard.cpp" "$SRC/riivo/RiivoConfig.cpp"
+
 printf '\nall suites passed\n'
