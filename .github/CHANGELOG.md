@@ -3,6 +3,24 @@
 Full history for the Riivolution fork. The GitHub release body carries only the
 current version's bullets; everything older lives here.
 
+## Changed in v3.7
+
+Each run has been reaching a later step than the one before it - "game partition
+opened", then "matched: 687 replacement(s), 2115 addition(s)". That is the shape
+of work that is progressing slowly, not work that is wedged, and the only reason
+it was ever in doubt is that nothing measured time.
+
+- `LogStep` stamps each line with milliseconds since the first step. The clock
+  starts at the first step and resets in `SetBootContext`.
+- `RIIVO_TIME_BUDGET_MS` (five minutes) bounds the file half. `RiivoDeadlinePassed()`
+  is checked where bailing out is free - after the listing, before anything has
+  been changed - and again at the activation gate. Over budget, the fragment list
+  is left alone and the game boots unmodified.
+- The budget is a safety net, not a performance policy. Code that is stuck cannot
+  notice it is stuck, but code that checks a deadline at a phase boundary can, and
+  a mod too big to finish inside it is better off booting unmodified than leaving
+  someone staring at a black screen with no way to tell.
+
 ## Changed in v3.6
 
 With the progress window off, Starshine listed all 2802 files, mapped 2789 of
