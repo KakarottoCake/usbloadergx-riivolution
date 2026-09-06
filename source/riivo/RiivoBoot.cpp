@@ -229,6 +229,7 @@ namespace Riivo
 		//! as quiet as it used to be and only its start and end are recorded.
 		verboseListing = false;
 		deepVerify = false;
+		ClearDirListCache();
 		bootClockStart = 0;
 		deadlinePassed = false;
 		stepHeaderWritten = false;
@@ -732,14 +733,18 @@ namespace Riivo
 		std::string failures;
 		static const size_t MAX_NAMED = 24;
 
-		//! Every file, not a sample. The stride below was the right trade while
-		//! the shared path - drive, LBA base, installed dispatch - was what was
-		//! in doubt: one sample proves that for all of them. It has now been
-		//! proved on hardware, and the largest remaining unknown is the two
-		//! thousand files nobody has ever read back. On a total conversion one
-		//! wrong file is a hang, and a hang tells us nothing about which file.
-		//! Two disc reads each, on a screen that is already black.
-		const size_t stride = 1;
+		//! Sampled by default. Every file was the right trade while a hang told
+		//! us nothing about which file - but 2789 files is 5578 disc reads on a
+		//! screen that is already black, and that cost is why a tester never got
+		//! far enough to report anything at all. What this check exists to catch
+		//! is systematic: the wrong drive, the wrong LBA base, a dispatch that
+		//! did not take. All of those miss every file, so any sample finds them.
+		//! The first and last file are always read, tail-recovered files are read
+		//! unconditionally below, and riivolution/verify.txt restores every file
+		//! for when one specific file is in doubt.
+		static const size_t MAX_SAMPLED = 128;
+		const size_t stride = (deepVerify || placed.size() <= MAX_SAMPLED)
+							  ? 1 : (placed.size() + MAX_SAMPLED - 1) / MAX_SAMPLED;
 		for (size_t i = 0; i < placed.size(); i += stride) {
 			if (!VerifyModFragment(placed[i].offset, placed[i].length, placed[i].external, why)) {
 				if (failed < MAX_NAMED)

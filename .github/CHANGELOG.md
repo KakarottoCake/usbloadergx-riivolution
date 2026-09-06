@@ -3,6 +3,33 @@
 Full history for the Riivolution fork. The GitHub release body carries only the
 current version's bullets; everything older lives here.
 
+## Changed in v3.8
+
+Startup cost is not a bug in this design, it is the design. Riivolution's
+dipmodule opens mod files by path on demand inside IOS, so it starts instantly
+and pays per read. This fork relocates every mod file into a synthetic disc
+region, which means enumerating every file, walking each one's FAT cluster
+chain, building the fragment table and rebuilding the file table before the game
+can start - all of it scaling with the size of the mod. On a 2802-file, 178 MB
+total conversion that is minutes, and a tester never got far enough to report
+anything else.
+
+The design stays - it is what lets this work on stock d2x with no custom IOS,
+and keeps the loader's cheats, aspect and 480p - but the duplicated work goes.
+
+- `FsDirLister::List` memoises by (directory, recursive). Every `<folder>` rule
+  was listed twice per boot with identical arguments, once by `ListModFiles` for
+  placement and once by `BuildRedirects` for matching, each an opendir plus a
+  stat per entry. Cleared in `SetBootContext`, because the card can be swapped
+  between launches.
+- The per-file first/last read-back samples up to 128 files (`MAX_SAMPLED`)
+  instead of all of them - 5578 disc reads on Starshine. What the check catches
+  is systematic: wrong drive, wrong LBA base, a dispatch that did not take. Those
+  miss every file, so a sample finds them. First and last are always read and
+  tail-recovered files stay unconditional.
+- `riivolution/verify.txt` restores stride 1 and the whole-mod read-back for when
+  one specific file is in doubt.
+
 ## Changed in v3.7
 
 Each run has been reaching a later step than the one before it - "game partition

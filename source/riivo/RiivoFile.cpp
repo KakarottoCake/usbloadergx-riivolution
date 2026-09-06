@@ -7,6 +7,7 @@
 #include <sys/stat.h>
 #include <ctype.h>
 #include <algorithm>
+#include <map>
 #include "RiivoFile.hpp"
 #include "RiivoConfig.hpp"
 #include "gecko.h"
@@ -68,9 +69,42 @@ namespace Riivo
 		closedir(dir);
 	}
 
+	//! Every <folder> rule is listed TWICE per boot - once by ListModFiles to
+	//! decide placement, once by BuildRedirects to match against the disc - with
+	//! the same arguments both times. Each pass is an opendir plus a stat per
+	//! entry, so on a total conversion that is thousands of duplicated card
+	//! reads on a screen that is already black. Same inputs, same answer, so
+	//! remember it. Cleared per boot in SetBootContext, because the card can be
+	//! swapped between one launch and the next.
+	struct CachedListing
+	{
+		std::vector<std::string> files;
+		int skipped;
+		CachedListing() : skipped(0) {}
+	};
+	static std::map<std::string, CachedListing> g_dirCache;
+
+	void ClearDirListCache()
+	{
+		g_dirCache.clear();
+	}
+
 	void FsDirLister::List(const std::string &fullDir, bool recursive, std::vector<std::string> &out)
 	{
-		ListRecurse(fullDir, "", recursive, out, &skipped);
+		const std::string key = fullDir + (recursive ? "|r" : "|n");
+		std::map<std::string, CachedListing>::const_iterator hit = g_dirCache.find(key);
+		if (hit != g_dirCache.end())
+		{
+			out.insert(out.end(), hit->second.files.begin(), hit->second.files.end());
+			skipped += hit->second.skipped;
+			return;
+		}
+
+		CachedListing entry;
+		ListRecurse(fullDir, "", recursive, entry.files, &entry.skipped);
+		skipped += entry.skipped;
+		out.insert(out.end(), entry.files.begin(), entry.files.end());
+		g_dirCache[key] = entry;
 	}
 
 	//! Normalise a Riivo disc= value to a full lower-cased path with leading '/'.

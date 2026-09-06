@@ -25,11 +25,12 @@ untouched.
 Every launch writes a report next to the XML you picked —
 `<device>:/riivolution/usbloadergx_riivo.log`. Please attach it to any report.
 
-## Changed in v3.7
+## Changed in v3.8
 
-- Every step in the log now carries how long the boot had been running when it finished, so you can see whether it is progressing or stuck.
-- If the mod takes longer than five minutes to prepare, the loader gives up and boots the game unmodified instead of leaving a black screen.
-- The slowest check stays off unless you create `riivolution/verify.txt`.
+- Much faster to start a modded game. Each mod folder is now read off the card once instead of twice, and the per-file read-back check samples up to 128 files instead of reading all of them.
+- Every step in the log carries how long the boot had been running when it finished.
+- If preparing the mod takes longer than five minutes, the loader gives up and boots the game unmodified.
+- `riivolution/verify.txt` restores the full per-file check and the whole-mod read-back.
 - 146,237 automated checks, all passing.
 
 Older versions: [CHANGELOG.md](CHANGELOG.md)
