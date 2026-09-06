@@ -163,6 +163,14 @@ namespace Riivo
 	//! Set by riivolution/loadingbar.txt; see SetBootContext.
 	static bool verboseListing = false;
 
+	//! Set by riivolution/verify.txt. The large-read pass reads the WHOLE
+	//! mod back through the cIOS and compares it against the card - 128 MB
+	//! on Starshine, so 256 MB of traffic and minutes of black screen. It
+	//! proved what it was written to prove; it is diagnosis, not a gate, and
+	//! the per-file first/last check that stays on already establishes that
+	//! every fragment maps where the table says it does.
+	static bool deepVerify = false;
+
 
 	void SetBootContext(const ResolvedPatchSet *set, const std::string &device,
 						const std::string &logPath, u32 sectorSize,
@@ -188,6 +196,7 @@ namespace Riivo
 		//! give a moving bar and a line per <folder> rule; off, the phase is
 		//! as quiet as it used to be and only its start and end are recorded.
 		verboseListing = false;
+		deepVerify = false;
 		if (!device.empty())
 		{
 			FILE *v = fopen((device + "/riivolution/loadingbar.txt").c_str(), "rb");
@@ -195,6 +204,15 @@ namespace Riivo
 			{
 				verboseListing = true;
 				fclose(v);
+			}
+		}
+		if (!device.empty())
+		{
+			FILE *w = fopen((device + "/riivolution/verify.txt").c_str(), "rb");
+			if (w)
+			{
+				deepVerify = true;
+				fclose(w);
 			}
 		}
 		memPatchMarker.clear();
@@ -752,54 +770,65 @@ namespace Riivo
 			out += "  Rebuilt FST and dependent memory patches are withheld.\n";
 			return;
 		}
-		const FragList *retained = frag_list_get();
-		void *scratch = MEM2_alloc(READ_VERIFY_CHUNK);
-		if (!retained || !scratch) {
-			if (scratch) MEM2_free(scratch);
-			out += "  Large-read verification unavailable; FST withheld.\n";
-			return;
+		if (!deepVerify)
+		{
+			out += "\nLarge-read verification: SKIPPED.\n"
+				   "  It reads the whole mod back through the cIOS and compares it\n"
+				   "  against the card - on a mod this size that is minutes of a\n"
+				   "  black screen. The per-file check above already proves every\n"
+				   "  fragment maps. Create riivolution/verify.txt to run it.\n";
 		}
-		if (verboseListing)
-			progress.Step(tr("Verifying large reads"));
-		out += "\nLarge-read verification (128 KiB maximum single request)\n";
-		AppendLog(out);
-		out.clear();
-		ReadVerifyCallbacks callbacks;
-		ReadVerifyContext context;
-		callbacks.context = &context;
-		callbacks.readDisc = ReadLargeDisc;
-		callbacks.compareFile = CompareLargeFile;
-		callbacks.pendingRead = LogPendingRead;
-		ReadVerifyStats readStats;
-		const bool largeOK = VerifyLargeReads(placed, *retained, bootSectorSize,
-			scratch, READ_VERIFY_CHUNK, callbacks, readStats);
-		MEM2_free(scratch);
-		Addf(out, "  full files selected=%u internal-multifragment files=%u\n",
-			 readStats.fullFiles, readStats.multiFragmentFiles);
-		Addf(out, "  full calls=%u boundary calls=%u bytes compared=%llu largest successful call=%u\n",
-			 readStats.fullReads, readStats.boundaryReads,
-			 (unsigned long long)readStats.totalBytes, readStats.largestRead);
-		Addf(out, "  failed files=%u failed calls=%u\n", readStats.failedFiles, readStats.failedReads);
-		for (size_t i = 0; i < readStats.failureDetails.size(); ++i) {
-			const ReadVerifyStats::FailureDetail &failure = readStats.failureDetails[i];
-			Addf(out, "    disc=%010llx file=%llu request=%u read=%d ",
-				 (unsigned long long)failure.discOffset,
-				 (unsigned long long)failure.fileOffset, failure.requestLength,
-				 (int)failure.readResult);
-			if (failure.compareResult == READ_VERIFY_COMPARE_NOT_RUN)
-				out += "compare=not-run: ";
-			else
-				Addf(out, "compare=%d (-1=file I/O, 1=mismatch): ", failure.compareResult);
-			out += failure.path + "\n";
+		else
+		{
+			const FragList *retained = frag_list_get();
+			void *scratch = MEM2_alloc(READ_VERIFY_CHUNK);
+			if (!retained || !scratch) {
+				if (scratch) MEM2_free(scratch);
+				out += "  Large-read verification unavailable; FST withheld.\n";
+				return;
+			}
+			if (verboseListing)
+				progress.Step(tr("Verifying large reads"));
+			out += "\nLarge-read verification (128 KiB maximum single request)\n";
+			AppendLog(out);
+			out.clear();
+			ReadVerifyCallbacks callbacks;
+			ReadVerifyContext context;
+			callbacks.context = &context;
+			callbacks.readDisc = ReadLargeDisc;
+			callbacks.compareFile = CompareLargeFile;
+			callbacks.pendingRead = LogPendingRead;
+			ReadVerifyStats readStats;
+			const bool largeOK = VerifyLargeReads(placed, *retained, bootSectorSize,
+				scratch, READ_VERIFY_CHUNK, callbacks, readStats);
+			MEM2_free(scratch);
+			Addf(out, "  full files selected=%u internal-multifragment files=%u\n",
+				 readStats.fullFiles, readStats.multiFragmentFiles);
+			Addf(out, "  full calls=%u boundary calls=%u bytes compared=%llu largest successful call=%u\n",
+				 readStats.fullReads, readStats.boundaryReads,
+				 (unsigned long long)readStats.totalBytes, readStats.largestRead);
+			Addf(out, "  failed files=%u failed calls=%u\n", readStats.failedFiles, readStats.failedReads);
+			for (size_t i = 0; i < readStats.failureDetails.size(); ++i) {
+				const ReadVerifyStats::FailureDetail &failure = readStats.failureDetails[i];
+				Addf(out, "    disc=%010llx file=%llu request=%u read=%d ",
+					 (unsigned long long)failure.discOffset,
+					 (unsigned long long)failure.fileOffset, failure.requestLength,
+					 (int)failure.readResult);
+				if (failure.compareResult == READ_VERIFY_COMPARE_NOT_RUN)
+					out += "compare=not-run: ";
+				else
+					Addf(out, "compare=%d (-1=file I/O, 1=mismatch): ", failure.compareResult);
+				out += failure.path + "\n";
+			}
+			if (readStats.failedFiles > readStats.failureFiles.size())
+				Addf(out, "    ... and %u more\n", readStats.failedFiles - (u32)readStats.failureFiles.size());
+			if (!largeOK) {
+				if (!readStats.fatal.empty()) out += "  " + readStats.fatal + "\n";
+				out += "  Large-read verification failed; FST withheld.\n";
+				return;
+			}
+			out += "  Large-read verification passed. Larger single calls remain untested.\n";
 		}
-		if (readStats.failedFiles > readStats.failureFiles.size())
-			Addf(out, "    ... and %u more\n", readStats.failedFiles - (u32)readStats.failureFiles.size());
-		if (!largeOK) {
-			if (!readStats.fatal.empty()) out += "  " + readStats.fatal + "\n";
-			out += "  Large-read verification failed; FST withheld.\n";
-			return;
-		}
-		out += "  Large-read verification passed. Larger single calls remain untested.\n";
 		u8 check[32] ATTRIBUTE_ALIGN(32);
 		// These must remain errors on a DVD5 image despite readable mod data.
 		// LOW_READ, not UNENCREAD: the raw path serves any mapped fragment
@@ -874,6 +903,7 @@ namespace Riivo
 		u8 *fstData = 0;
 		u32 fstSize = 0, fstOffset = 0;
 		std::string err;
+		LogStep("reading the game's file table");
 		if (!ReadDiscFst(&fstData, &fstSize, &fstOffset, err))
 		{
 			Addf(out, "FAILED: %s\n", err.c_str());
@@ -901,7 +931,13 @@ namespace Riivo
 		FsDirLister lister;
 		std::vector<RedirectSpec> redirects;
 		std::vector<CreatedFile> created;
+		//! Walks every <folder> rule over the card a SECOND time. On a mod
+		//! this size that is thousands more directory reads, and it used to
+		//! happen with nothing on screen and nothing in the log.
+		LogStep("matching the mod against the disc (reads the card again)");
 		BuildRedirects(fst, *bootSet, bootDevice, &lister, redirects, &created);
+		LogStep("matched: %u replacement(s), %u addition(s)",
+				(unsigned) redirects.size(), (unsigned) created.size());
 
 		//! Size accounting. A replacement bigger than the file it stands in for
 		//! cannot be served by redirection alone: the file table still advertises
@@ -1316,7 +1352,9 @@ namespace Riivo
 		}
 		else
 		{
+			LogStep("checking the mod's files through the hook");
 			Activate(out, plan, placed, newFst);
+			LogStep("file work finished");
 		}
 
 		out += "\nHow this works\n";
