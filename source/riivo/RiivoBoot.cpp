@@ -545,6 +545,19 @@ namespace Riivo
 	static u8 *pendingFst = 0;
 	static u32 pendingFstSize = 0;
 
+	//! Where it is going, worked out once the apploader has filled the
+	//! boot-info block in. The copy into MEM1 does NOT happen there: the
+	//! game's table sits at the top of MEM1, which is also inside the
+	//! loader's own heap (measured: table 817c8100..817fffe9, loader arena
+	//! 81581000..817feff0), and ShutDownDevices, gamepatches and the memory
+	//! patches all still run after this point and all allocate. Anything
+	//! written here can be handed straight back out by malloc and
+	//! overwritten before the game ever sees it - which verifies perfectly
+	//! at install time and then black-screens. So the placement is kept and
+	//! the write is done last, by InstallPendingFst, just before the jump.
+	static FstPlacement pendingPlace;
+	static bool pendingPlaceOk = false;
+
 	struct ReadVerifyContext {
 		FILE *file;
 		std::string path;
@@ -1324,6 +1337,19 @@ namespace Riivo
 			ProgressGuard::active->Set(folderRulesDone++, folderRulesTotal);
 	}
 
+	//! The last thing the loader does before handing the console to the
+	//! game. Everything that allocates has already run, so this copy is the
+	//! one the game actually reads. Nothing is logged from here - the card
+	//! is gone by now - which is why the report above says what it booked.
+	void InstallPendingFst()
+	{
+		if (!pendingPlaceOk || !pendingFst || !pendingFstSize)
+			return;
+		const bool ok = InstallFst(pendingPlace, pendingFst, pendingFstSize);
+		pendingPlaceOk = false;
+		gprintf("Riivo: late FST install %s\n", ok ? "ok" : "REFUSED");
+	}
+
 	void LogBootStep(const char *what)
 	{
 		if (what)
@@ -1709,14 +1735,15 @@ namespace Riivo
 		//! the game boots with its own table exactly as it always did.
 		if (pendingFst && pendingFstSize && place.ok)
 		{
-			if (InstallFst(place, pendingFst, pendingFstSize))
-			{
-				fileWorkLive = true;
-				out += "\n  Installed. The game will read the mod's files.\n";
-			}
-			else
-				out += "\n  The table could not be written, so the game boots with its\n"
-					   "  own. The cIOS hook is harmless on its own.\n";
+			//! Booked, not written - see pendingPlace. The only thing that could
+			//! still refuse it is the bounds re-check inside InstallFst, and that
+			//! is decided by this placement, which is already known good.
+			pendingPlace = place;
+			pendingPlaceOk = true;
+			fileWorkLive = true;
+			out += "\n  Ready. The table goes in last, immediately before the\n"
+				   "  game starts, so nothing the loader still has to do can land\n"
+				   "  on top of it. The game will read the mod\'s files.\n";
 		}
 		else if (pendingFst)
 		{

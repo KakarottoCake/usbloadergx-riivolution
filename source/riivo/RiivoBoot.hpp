@@ -94,6 +94,11 @@ namespace Riivo
 	//! PrepareFragList and PrepareFileRedirects belong to the loader, not
 	//! to us, but they sit in the same unlogged window and a console that
 	//! stops in one of them looks exactly like one that stopped in ours.
+	//! Copy the rebuilt file table into the game's memory. Call this as late
+	//! as possible - it lands at the top of MEM1, which the loader's own heap
+	//! also occupies, so anything the loader does afterwards can overwrite it.
+	void InstallPendingFst();
+
 	void LogBootStep(const char *what);
 
 	void ReportLaunch(u32 entry);

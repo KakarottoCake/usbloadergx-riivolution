@@ -941,6 +941,13 @@ int GameBooter::BootGame(struct discHdr *gameHdr, const s8 useOcarina)
 	}
 
 	//! Jump to the entrypoint of the game - the last function of the USB Loader
+	//! LAST. The table lands at the top of MEM1, which is also inside the
+	//! loader's own heap, and everything above here - ShutDownDevices,
+	//! gamepatches, the mod's memory patches - allocates. Installing it any
+	//! earlier lets malloc hand the same memory out again and overwrite it,
+	//! which verifies clean at install time and then black-screens.
+	Riivo::InstallPendingFst();
+
 	gprintf("Jumping to game entrypoint: 0x%08x.\n", AppEntrypoint);
 	return Disc_JumpToEntrypoint(Hooktype, WDMMenu::GetDolParameter());
 }

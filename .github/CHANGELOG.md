@@ -3,6 +3,29 @@
 Full history for the Riivolution fork. The GitHub release body carries only the
 current version's bullets; everything older lives here.
 
+## Changed in v3.2
+
+Starshine GLE completed every check the loader can make - 2789 of 2789 files
+read back through the cIOS, 128,547,465 bytes compared, 6050 FST paths walked,
+the table installed - and still black-screened. The failure is therefore
+somewhere the log cannot reach, and two very different failures were producing
+the same black screen.
+
+- `InstallPendingFst()` does the copy into MEM1 last, immediately before
+  `Disc_JumpToEntrypoint`, instead of inside `ReportFstPlacement`. The table
+  lands at the top of MEM1 (measured: `817c8100..817fffe9`) which is also inside
+  the loader's own heap (`81581000..817feff0`), and `ShutDownDevices`,
+  `gamepatches` and the mod's memory patches all still run after the old install
+  point. The placement is still decided where it was - it needs the boot-info
+  block the apploader fills in - but only the placement is kept.
+- `Disc_JumpToEntrypoint` paints the framebuffer white after
+  `__exception_closeall()`. `Disc_SetVMode()` at the top of that function is what
+  blanks the display, so black currently means either "died before the jump" or
+  "jumped into a game that never reached its own video init". White is set once
+  threads are dead, so nothing repaints over it, and a game that boots overwrites
+  it as soon as it configures video. The mode and framebuffer are captured before
+  `__IOS_ShutdownSubsystems()`, because `VIDEO_GetPreferredMode` reads SYSCONF.
+
 ## Changed in v3.1
 
 The step log from v3.0 says afterwards where a boot stopped; it does nothing for
