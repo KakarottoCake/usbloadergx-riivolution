@@ -3,6 +3,17 @@
 Full history for the Riivolution fork. The GitHub release body carries only the
 current version's bullets; everything older lives here.
 
+## Changed in v3.9
+
+Pressing Play on a file-replacing mod while the game is set to anything other
+than d2x v11 beta3 now shows a Continue/Cancel warning naming the game's IOS
+slot. Only file replacement needs that build; memory-only mods and unmodded
+boots are not nagged. The check reads the slot's NAND info block, so unknown
+slots and non-d2x cIOS warn the same way.
+
+- Play-click warning for non-beta3 cIOS on file-replacing mods.
+- 146,270 automated checks, all passing.
+
 ## Changed in v3.8
 
 Startup cost is not a bug in this design, it is the design. Riivolution's

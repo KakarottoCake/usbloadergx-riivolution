@@ -1,4 +1,6 @@
 #include <unistd.h>
+#include <string.h>
+#include <ogcsys.h>
 #include "GameWindow.hpp"
 #include "usbloader/disc.h"
 #include "usbloader/wbfs.h"
@@ -755,6 +757,29 @@ int GameWindow::MainLoop()
 	return returnVal;
 }
 
+//! True when the given cIOS slot holds d2x v11 beta3 - the build the file-
+//! replacement hook is derived against. Anything else (older beta, Hermes,
+//! a slot with no info block at all) cannot serve mod files, so the game
+//! would boot unmodified without explanation. Checked at Play-click time,
+//! while there is still a screen, with ISFS briefly up to read the info.
+static bool RiivoCiosIsBeta3(s32 slot)
+{
+	bool ok = false;
+	ISFS_Initialize();
+	iosinfo_t *info = IosLoader::GetIOSInfo(slot);
+	if (info)
+	{
+		char name[0x11], vers[0x10 + 1];
+		memcpy(name, info->name, 0x10);          name[0x10] = 0;
+		memcpy(vers, info->versionstring, 0x10); vers[0x10] = 0;
+		if (strncasecmp(name, "d2x", 3) == 0 && strncasecmp(vers, "beta3", 5) == 0)
+			ok = true;
+		free(info);
+	}
+	ISFS_Deinitialize();
+	return ok;
+}
+
 void GameWindow::BootGame(struct discHdr *header)
 {
 	wiilight(0);
@@ -875,6 +900,12 @@ void GameWindow::BootGame(struct discHdr *header)
 			//! boot that quietly did nothing.
 			else if ((!riivoSet.files.empty() || !riivoSet.folders.empty()) && !AHBPROT_DISABLED)
 				warning = tr( "This mod replaces files, which needs hardware access this loader was not given. Launch USB Loader GX from the Homebrew Channel directly - not from a forwarder channel - or the mod's files will not be applied. The game will still boot unmodified." );
+			else if ((!riivoSet.files.empty() || !riivoSet.folders.empty()) && !RiivoCiosIsBeta3(gameIOS))
+			{
+				char ciosMsg[256];
+				snprintf(ciosMsg, sizeof(ciosMsg), tr( "This mod replaces game files, which only works on d2x v11 beta3. This game is set to IOS %d. Install beta3 (slot 252 works) with the d2x cIOS installer and select it for this game, or continue and the game will boot unmodified." ), (int) gameIOS);
+				warning = ciosMsg;
+			}
 			else if (riivoSet.IsEmpty())
 				warning = tr( "No Riivolution patches are enabled for this game - every option is set to Disabled." );
 		}
