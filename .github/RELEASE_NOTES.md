@@ -25,9 +25,10 @@ untouched.
 Every launch writes a report next to the XML you picked —
 `<device>:/riivolution/usbloadergx_riivo.log`. Please attach it to any report.
 
-## Changed in v3.0
+## Changed in v3.1
 
-- The log now records each boot step as it completes, with free memory, so a boot that stops before the file report says where it stopped.
+- A progress bar now covers the slow parts of a Riivolution boot instead of a black screen: reading the mod's folders, mapping its files, checking them, and verifying large reads.
+- The log records each boot step as it completes, with free memory, so a boot that stops before the file report says where it stopped.
 - Each `<folder>` rule is logged as it is listed, with a running file count.
 - 146,237 automated checks, all passing.
 
