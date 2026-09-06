@@ -32,6 +32,21 @@ proof that subsequent memory patching or the actual jump completed. A different
 result with `nomempatch.txt` narrows the cause, but a black screen in both runs does
 not establish a file-table fault: a mod may require its custom code to read its assets.
 
+What the log does prove about memory patches, read these three lines:
+
+- The preflight table names every skip with expected-versus-actual bytes. When it
+  reports hard failures the whole set is held back at entry, and the consequence
+  line next to it states which boot that means: files-only when the mod's files
+  are installed (not unmodified), unmodified when the mod replaces no files. Do
+  not assume a clean boot means no mod was active.
+- The cIOS survey names the slot that actually runs the game and verdicts it for
+  file replacement. On AUTO game IOS the Play-click check can only confirm a beta3
+  exists somewhere; this verdict is the one that knows the resolved slot.
+- The final patch policy states the launch rule: post-apply and pre-jump re-reads
+  are diagnostic-only and always launch. Their mismatches reach USB Gecko alone
+  and never appear in this file; the preflight table above is the persistent
+  record of what should be in RAM.
+
 No IOS dumps are needed for this round. They are disabled unless
 `usb1:/riivolution/dumpios.txt` exists. Any opt-in dump is taken before patching and
 has a 41-byte `RIIVODIP1` ASCII header.

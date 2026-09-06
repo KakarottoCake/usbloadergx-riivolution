@@ -50,8 +50,13 @@ namespace Riivo
 	void AppendLog(const std::string &text);
 
 	//! Survey the cIOS slots and describe what is installed, including which
-	//! one we are currently running under. Appended to the boot log.
-	void ReportCios();
+	//! one we are currently running under. When `filesWanted` (the mod
+	//! replaces files) also record the verdict on the running slot: whether
+	//! it is the d2x v11 beta3 the read hook needs. That is the boot-time
+	//! half of the Play-click check in GameWindow, which cannot know the
+	//! AUTO-resolved slot - this runs after the reload, so it can. Appended
+	//! to the boot log.
+	void ReportCios(bool filesWanted);
 
 	//! Read the FST from the currently open partition, match the selected
 	//! <file>/<folder> patches against it and report every redirect that would
@@ -80,6 +85,13 @@ namespace Riivo
 	//! total conversion patched without its assets exits to the System Menu
 	//! rather than booting. Only meaningful after ReportFstPlacement has run.
 	bool FileWorkIncomplete();
+
+	//! True when the mod's files were installed and the game will read them.
+	//! The complement that FileWorkIncomplete cannot express: incomplete is
+	//! false both when nothing was wanted and when everything went live, and
+	//! a held-back memory set means "unmodified" in the first case but
+	//! "files-only" in the second. Only meaningful after ReportFstPlacement.
+	bool FileWorkLive();
 
 	//! True when a marker file next to the XML asked for the mod's files to
 	//! be installed WITHOUT its <memory> patches. That halfway state is one

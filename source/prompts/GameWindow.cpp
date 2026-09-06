@@ -1,5 +1,6 @@
 #include <unistd.h>
 #include <string.h>
+#include <vector>
 #include <ogcsys.h>
 #include "GameWindow.hpp"
 #include "usbloader/disc.h"
@@ -758,10 +759,24 @@ int GameWindow::MainLoop()
 }
 
 //! True when the given cIOS slot holds d2x v11 beta3 - the build the file-
-//! replacement hook is derived against. Anything else (older beta, Hermes,
-//! a slot with no info block at all) cannot serve mod files, so the game
-//! would boot unmodified without explanation. Checked at Play-click time,
-//! while there is still a screen, with ISFS briefly up to read the info.
+//! replacement hook is derived against. Name, numeric major version AND the
+//! beta string are all required: a beta3-era string on another major, or a
+//! v11 without the beta3 string, is not the tested build. Anything else
+//! (older beta, Hermes, a slot with no info block at all) cannot serve mod
+//! files. Checked at Play-click time, while there is still a screen, with
+//! ISFS briefly up to read the info. The verdict on the slot that actually
+//! runs the game lives in RiivoBoot::ReportCios, which sees the AUTO-
+//! resolved slot this check cannot know (see RiivoCiosCoversMod below).
+static bool RiivoInfoIsBeta3(const iosinfo_t *info)
+{
+	if (!info || info->version != 11)
+		return false;
+	char name[0x11], vers[0x10 + 1];
+	memcpy(name, info->name, 0x10);          name[0x10] = 0;
+	memcpy(vers, info->versionstring, 0x10); vers[0x10] = 0;
+	return strncasecmp(name, "d2x", 3) == 0 && strncasecmp(vers, "beta3", 5) == 0;
+}
+
 static bool RiivoCiosIsBeta3(s32 slot)
 {
 	bool ok = false;
@@ -769,12 +784,35 @@ static bool RiivoCiosIsBeta3(s32 slot)
 	iosinfo_t *info = IosLoader::GetIOSInfo(slot);
 	if (info)
 	{
-		char name[0x11], vers[0x10 + 1];
-		memcpy(name, info->name, 0x10);          name[0x10] = 0;
-		memcpy(vers, info->versionstring, 0x10); vers[0x10] = 0;
-		if (strncasecmp(name, "d2x", 3) == 0 && strncasecmp(vers, "beta3", 5) == 0)
-			ok = true;
+		ok = RiivoInfoIsBeta3(info);
 		free(info);
+	}
+	ISFS_Deinitialize();
+	return ok;
+}
+
+extern std::vector<struct d2x> d2x_list;
+
+//! Play-click gate for the cIOS requirement. A per-game IOS choice is the
+//! slot that will run, so it is checked exactly. On AUTO BootGame replaces
+//! the setting at boot with the d2x slot matching the disc's requested
+//! base, which cannot be known here - the checkable precondition is that a
+//! beta3 exists at all. ISFS is held up across the scan instead of bouncing
+//! it once per slot.
+static bool RiivoCiosCoversMod(s32 gameIOS, u8 autoIOS)
+{
+	if (autoIOS == GAME_IOS_CUSTOM)
+		return RiivoCiosIsBeta3(gameIOS);
+	bool ok = false;
+	ISFS_Initialize();
+	for (size_t i = 0; i < d2x_list.size() && !ok; ++i)
+	{
+		iosinfo_t *info = IosLoader::GetIOSInfo(d2x_list[i].slot);
+		if (info)
+		{
+			ok = RiivoInfoIsBeta3(info);
+			free(info);
+		}
 	}
 	ISFS_Deinitialize();
 	return ok;
@@ -900,12 +938,19 @@ void GameWindow::BootGame(struct discHdr *header)
 			//! boot that quietly did nothing.
 			else if ((!riivoSet.files.empty() || !riivoSet.folders.empty()) && !AHBPROT_DISABLED)
 				warning = tr( "This mod replaces files, which needs hardware access this loader was not given. Launch USB Loader GX from the Homebrew Channel directly - not from a forwarder channel - or the mod's files will not be applied. The game will still boot unmodified." );
-			else if ((!riivoSet.files.empty() || !riivoSet.folders.empty()) && !RiivoCiosIsBeta3(gameIOS))
-			{
-				char ciosMsg[256];
-				snprintf(ciosMsg, sizeof(ciosMsg), tr( "This mod replaces game files, which only works on d2x v11 beta3. This game is set to IOS %d. Install beta3 (slot 252 works) with the d2x cIOS installer and select it for this game, or continue and the game will boot unmodified." ), (int) gameIOS);
-				warning = ciosMsg;
-			}
+		else if ((!riivoSet.files.empty() || !riivoSet.folders.empty()) && !RiivoCiosCoversMod(gameIOS, autoIOS))
+		{
+			//! "Without the mod's files", not "unmodified": a wrong cIOS
+			//! refuses the file work through the usual interlock (which also
+			//! holds the memory patches back), but only that path is
+			//! guaranteed - the message must not promise more than it.
+			char ciosMsg[384];
+			if (autoIOS == GAME_IOS_CUSTOM)
+				snprintf(ciosMsg, sizeof(ciosMsg), tr( "This mod replaces game files, which only works on d2x v11 beta3. This game is set to IOS %d. Install beta3 (slot 252 works) with the d2x cIOS installer and select it for this game, or continue and the game will boot without the mod's files." ), (int) gameIOS);
+			else
+				snprintf(ciosMsg, sizeof(ciosMsg), "%s", tr( "This mod replaces game files, which only works on d2x v11 beta3, and none of the installed cIOS slots is beta3. The boot picks its slot automatically, so install beta3 (slot 252 works) with the d2x cIOS installer first, or continue and the game will boot without the mod's files." ));
+			warning = ciosMsg;
+		}
 			else if (riivoSet.IsEmpty())
 				warning = tr( "No Riivolution patches are enabled for this game - every option is set to Disabled." );
 		}

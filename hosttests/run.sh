@@ -90,4 +90,10 @@ build_run test_fstwalk "$SRC/riivo/RiivoFstWalk.cpp" "$SRC/riivo/RiivoFstBuild.c
 build_run test_readverify "$SRC/riivo/RiivoReadVerify.cpp"
 build_run test_patchguard "$SRC/riivo/RiivoPatchGuard.cpp" "$SRC/riivo/RiivoConfig.cpp"
 
+# Memory-patch preflight: same checks as the apply path, read-only, plus the
+# hold-back policy and the apply summary. DOL sections come from stubs and
+# cache ops are shim no-ops; direct-RAM reads are target-only by nature, so
+# absolute-address paths are exercised by PPC compile, not here.
+build_run test_memcheck "$SRC/riivo/RiivoMemory.cpp" "$SRC/riivo/RiivoPatchGuard.cpp" "$SRC/riivo/RiivoConfig.cpp"
+
 printf '\nall suites passed\n'
