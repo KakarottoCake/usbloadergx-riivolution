@@ -200,7 +200,8 @@ namespace Riivo
 	}
 
 	void ListModFiles(const ResolvedPatchSet &set, const std::string &device,
-					  DirLister *lister, std::vector<ModCandidate> &out)
+					  DirLister *lister, std::vector<ModCandidate> &out,
+					  ListProgressFn progress, void *ctx)
 	{
 		out.clear();
 
@@ -224,6 +225,9 @@ namespace Riivo
 				const ResolvedFolder &f = set.folders[i];
 				const std::string discDir = DiscPath(f.disc);
 				const std::string extDir = JoinPath(device, f.root, f.external);
+
+				if (progress)
+					progress(ctx, extDir, (u32) out.size());
 
 				std::vector<std::string> rel;
 				lister->List(extDir, f.recursive, rel);
