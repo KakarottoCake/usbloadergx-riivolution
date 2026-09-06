@@ -25,11 +25,11 @@ untouched.
 Every launch writes a report next to the XML you picked —
 `<device>:/riivolution/usbloadergx_riivo.log`. Please attach it to any report.
 
-## Changed in v3.6
+## Changed in v3.7
 
-- The slowest check is now off by default. It read the whole mod back and compared it against the card - about 256 MB of traffic on a large mod, which is minutes of black screen. Create `riivolution/verify.txt` if you want it.
-- Every step of the second half of the boot is now logged as it completes, so a boot that stops there says where.
-- The Riivolution page only lists mods for the game you are on, shows the mod name and path on their own lines, and says whether the mod is on SD or USB.
+- Every step in the log now carries how long the boot had been running when it finished, so you can see whether it is progressing or stuck.
+- If the mod takes longer than five minutes to prepare, the loader gives up and boots the game unmodified instead of leaving a black screen.
+- The slowest check stays off unless you create `riivolution/verify.txt`.
 - 146,237 automated checks, all passing.
 
 Older versions: [CHANGELOG.md](CHANGELOG.md)

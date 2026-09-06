@@ -10,6 +10,7 @@
 #include <map>
 #include <gccore.h>
 #include <ogcsys.h>
+#include <ogc/lwp_watchdog.h>
 
 #include "RiivoBoot.hpp"
 #include "RiivoConfig.hpp"
@@ -160,6 +161,37 @@ namespace Riivo
 	//! the files. Diagnostic, and off unless the marker exists.
 	static bool memPatchSuppressed = false;
 	static std::string memPatchMarker;
+	//! When the first boot step ran, and how long the whole file half is
+	//! allowed to take. Nothing measured time before this, so a phase that
+	//! was merely slow and one that was wedged produced the same black
+	//! screen, and the only way to tell them apart was to sit there.
+	//!
+	//! The budget is a safety net, not a performance policy: a mod big
+	//! enough to need longer than this is better off booting unmodified
+	//! than leaving someone staring at nothing with no way to know.
+	static const u32 RIIVO_TIME_BUDGET_MS = 300000;   // five minutes
+	static u64 bootClockStart = 0;
+	static bool stepHeaderWritten = false;
+	static bool deadlinePassed = false;
+
+	//! Milliseconds since the first step. Zero until the clock starts.
+	static u32 BootElapsedMs()
+	{
+		if (!bootClockStart)
+			return 0;
+		return (u32) ticks_to_millisecs(diff_ticks(bootClockStart, gettime()));
+	}
+
+	//! Checked at every phase boundary. Once it trips it stays tripped, so
+	//! the refusal is reported once and every later phase declines to start.
+	bool RiivoDeadlinePassed()
+	{
+		if (!deadlinePassed && bootClockStart
+			&& BootElapsedMs() > RIIVO_TIME_BUDGET_MS)
+			deadlinePassed = true;
+		return deadlinePassed;
+	}
+
 	//! Set by riivolution/loadingbar.txt; see SetBootContext.
 	static bool verboseListing = false;
 
@@ -197,6 +229,9 @@ namespace Riivo
 		//! as quiet as it used to be and only its start and end are recorded.
 		verboseListing = false;
 		deepVerify = false;
+		bootClockStart = 0;
+		deadlinePassed = false;
+		stepHeaderWritten = false;
 		if (!device.empty())
 		{
 			FILE *v = fopen((device + "/riivolution/loadingbar.txt").c_str(), "rb");
@@ -334,7 +369,6 @@ namespace Riivo
 	//! Those two cannot be told apart after the fact, which cost a whole test
 	//! round. A step costs one line and names the phase that did not finish;
 	//! the free-heap figure beside it catches exhaustion directly.
-	static bool stepHeaderWritten = false;
 	static void LogStep(const char *fmt, ...)
 	{
 		std::string out;
@@ -351,7 +385,10 @@ namespace Riivo
 		va_start(args, fmt);
 		vsnprintf(buf, sizeof(buf), fmt, args);
 		va_end(args);
-		Addf(out, "  %-52s MEM2 free %u KB\n", buf,
+		if (!bootClockStart)
+			bootClockStart = gettime();
+		Addf(out, "  %-52s %6u ms  MEM2 free %u KB\n", buf,
+			 (unsigned) BootElapsedMs(),
 			 (unsigned) (MEM2_freesize() / 1024));
 		AppendLog(out);
 	}
@@ -1345,7 +1382,7 @@ namespace Riivo
 		out += "---------------\n";
 
 		if (!(fstWalkOK && extentFits && plan.ok && gameFrags && patchApplied
-			  && fragsRegistered && unplaced == 0))
+			  && fragsRegistered && unplaced == 0 && !RiivoDeadlinePassed()))
 		{
 			out += "  Not attempted - one of the checks above did not pass. The game\n"
 				   "  boots exactly as it would without Riivolution.\n";
@@ -1568,6 +1605,15 @@ namespace Riivo
 						 verboseListing ? LogListProgress : 0, 0);
 		}
 		LogStep("mod files listed: %u found", (unsigned) cand.size());
+		//! Checked here because nothing has been changed yet: the fragment
+		//! list is still the game's own, so bailing out costs no cleanup.
+		if (RiivoDeadlinePassed())
+		{
+			LogStep("over the time budget - booting the game unmodified");
+			fragListUntouched = true;
+			fragRefusal = "reading the mod took longer than the time budget";
+			return;
+		}
 		if (cand.empty())
 		{
 			fragListUntouched = true;
