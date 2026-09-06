@@ -5,6 +5,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include "RiivoConfig.hpp"
+#include "RiivoBuildId.hpp"
 #include "gecko.h"
 
 namespace Riivo
@@ -279,6 +280,47 @@ namespace Riivo
 	}
 
 	// --------------------------------------------------------------------
+	// Previous-boot outcome (machine-parseable, for the settings UI)
+	// --------------------------------------------------------------------
+
+	bool ParseBootOutcome(const std::string &logText, bool &liveOut,
+						  std::string &codeOut)
+	{
+		static const char prefix[] = "OUTCOME:";
+		liveOut = false;
+		codeOut.clear();
+
+		bool found = false;
+		size_t at = 0;
+		while (at < logText.size())
+		{
+			size_t eol = logText.find('\n', at);
+			if (eol == std::string::npos)
+				eol = logText.size();
+			size_t len = eol - at;
+			if (len > 0 && logText[eol - 1] == '\r')
+				--len;
+			std::string line = logText.substr(at, len);
+			if (line.compare(0, sizeof(prefix) - 1, prefix) == 0)
+			{
+				std::string rest = line.substr(sizeof(prefix) - 1);
+				size_t s = rest.find_first_not_of(" \t");
+				rest = (s == std::string::npos) ? "" : rest.substr(s);
+				size_t e = rest.find_last_not_of(" \t");
+				rest = (e == std::string::npos) ? "" : rest.substr(0, e + 1);
+				if (!rest.empty())
+				{
+					found = true;
+					liveOut = (rest == "FILES_LIVE");
+					codeOut = rest;
+				}
+			}
+			at = eol + 1;
+		}
+		return found;
+	}
+
+	// --------------------------------------------------------------------
 	// Selection persistence (flattened option order across all sections)
 	// --------------------------------------------------------------------
 
@@ -419,6 +461,7 @@ namespace Riivo
 
 		fprintf(f, "USB Loader GX - Riivolution boot log\n");
 		fprintf(f, "game id : %s\n", gameId ? gameId : "(unknown)");
+		fprintf(f, "build   : %s\n", BuildId().c_str());
 		fprintf(f, "xml     : %s\n", xmlPath.c_str());
 
 		if (parseError)
@@ -493,7 +536,7 @@ namespace Riivo
 							   "and were skipped. Check choice->patch id spelling in the XML.\n",
 							skippedPatchRefs);
 			}
-			else if (set->memories.empty() && set->savegames.empty())
+			else if (set->IsEmpty())
 				fprintf(f, "\nNothing to apply. If you expected a mod here, check that an option\n"
 						   "above is set to something other than Disabled.\n");
 			else

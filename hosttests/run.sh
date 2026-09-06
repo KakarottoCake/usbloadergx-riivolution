@@ -190,4 +190,10 @@ build_run test_resolvemerge "$SRC/riivo/RiivoConfig.cpp"
 # test_pipeline's link set.
 build_run test_manifest_extents "$SRC/riivo/RiivoFile.cpp" "$SRC/riivo/RiivoManifest.cpp" "$SRC/riivo/RiivoConfig.cpp" "$SRC/riivo/RiivoFst.cpp" "$SRC/xml/pugixml.cpp"
 
+# Two-phase reconciliation (Newer SMBW fix): early registration records
+# against late placement, skip reasons, recovered-offset matching, and the
+# previous-boot outcome parser. Header-only reconcile plus the FST builder
+# (last-wins) and the resolver (outcome parsing).
+build_run test_reconcile "$SRC/riivo/RiivoFstBuild.cpp" "$SRC/riivo/RiivoFst.cpp" "$SRC/riivo/RiivoConfig.cpp"
+
 printf '\nall suites passed\n'

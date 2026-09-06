@@ -243,6 +243,14 @@ and permanent silence, and a write failure drops the socket rather than retrying
 - test_netlog: 23 checks on the address parsing, the half that fails quietly.
 - 146,353 automated checks, all passing.
 
+## Changed in v3.12
+
+- Versioned runtime manifest and address model shared by the loader and IOS sides.
+- Multiple XML files can be merged, with later files winning patch id clashes.
+- Partial file replacements and resize=false clamps carry through to the manifest.
+- Misspelled patch ids and version-filtered XMLs report correctly in the boot log.
+- 146,741 automated checks, all passing.
+
 ## Changed in v3.11
 
 - New on-demand mode: the mod's files are opened by path from inside IOS when the game asks for them.

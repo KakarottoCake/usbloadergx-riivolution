@@ -62,6 +62,13 @@ INCLUDES	:=	source
 #---------------------------------------------------------------------------------
 CFLAGS		=	-ggdb -Os -Wall -Wno-multichar -Wno-unused-parameter -Wextra $(MACHDEP) $(INCLUDE) -D_GNU_SOURCE -DNDEBUG -DWOLFSSL_USER_SETTINGS
 CXXFLAGS	=	$(CFLAGS)
+
+# Bake the source commit into the binary so every Riivolution boot log names
+# the exact build it came from. Falls back to "unknown" outside a git
+# checkout; the fallback keeps this from ever failing a build.
+RIIVO_COMMIT	:=	$(shell git rev-parse --short HEAD 2>/dev/null || echo unknown)
+CFLAGS		+=	-DRIIVO_COMMIT="$(RIIVO_COMMIT)"
+CXXFLAGS	+=	-DRIIVO_COMMIT="$(RIIVO_COMMIT)"
 LDFLAGS		=	-ggdb $(MACHDEP) -Wl,-Map,$(notdir $@).map,--section-start,.init=0x80B00000,-wrap,malloc,-wrap,free,-wrap,memalign,-wrap,calloc,-wrap,realloc,-wrap,malloc_usable_size
 
 ifeq ($(BUILDMODE),channel)

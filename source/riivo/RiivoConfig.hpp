@@ -56,6 +56,17 @@ namespace Riivo
 	std::string SerializeSelection(const Disc &disc);
 	void ApplySelection(Disc &disc, const std::string &serialized);
 
+	//! Read the machine-parseable outcome of a previous boot log. The running
+	//! boot appends one `OUTCOME:` line: `FILES_LIVE`, `NO_FILE_WORK`, or
+	//! `WITHHELD <STAGE>`. The last such line wins; returns false when the
+	//! text holds none (a log from before outcome lines existed). `liveOut`
+	//! is true only for FILES_LIVE; `codeOut` is the token after the prefix
+	//! (`FILES_LIVE`, `NO_FILE_WORK`, or the WITHHELD stage). The game
+	//! settings UI uses this to report the previous boot's file work before
+	//! launching again.
+	bool ParseBootOutcome(const std::string &logText, bool &liveOut,
+						  std::string &codeOut);
+
 	//! gprintf a human-readable dump of the parsed disc and the resolved set.
 	void DumpDisc(const Disc &disc);
 	void DumpResolved(const ResolvedPatchSet &set);
