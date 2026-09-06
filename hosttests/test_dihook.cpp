@@ -122,6 +122,38 @@ int main(int argc,char **argv) {
            && p3.code[0x66]==u8(moved>>8) && p3.code[0x67]==u8(moved|1),
            "moved epilogue address is the one emitted");
     }
+    // Storage must be DERIVED from the worker's own call, never a delta from
+    // the site. Move the reader, retarget the worker, and the build has to
+    // follow: `site - 0x984` agreed with this fixture for four versions and
+    // disagreed with a d2x build whose plugin sat 0x20 lower.
+    {
+        std::vector<u8> b5=v;
+        const u32 moved = kBase + 0x900;
+        for(int i=0;i<8;++i) b5[kStore-kBase+i]=0;
+        hex(b5,moved-kBase,"B5F0B08992050A57");
+        u8 c5[4]; EncodeThumbCall(kWork+0x4A,moved,c5);
+        for(int i=0;i<4;++i) b5[kWork+0x4A-kBase+i]=c5[i];
+        DiHookPlan p5; std::string w5;
+        ck(BuildDiHook(&b5[0],b5.size(),kBase,kSite,kEndW,p5,w5),"storage found where the worker calls");
+        ck(p5.storage==moved,"moved storage is the one patched");
+        u32 t5=0;
+        ck(DecodeThumbCall(kSite,&p5.branch[0],t5)&&t5==moved+8,"entry calls the moved routine");
+    }
+    // A worker whose calls lead to nothing shaped like the reader is refused.
+    {
+        std::vector<u8> b6=v;
+        for(int i=0;i<8;++i) b6[kStore-kBase+i]=0;
+        ck(!BuildDiHook(&b6[0],b6.size(),kBase,kSite,kEndW,p,why),"missing storage refused");
+    }
+    // Two candidates are ambiguous. Refuse rather than pick one.
+    {
+        std::vector<u8> b7=v;
+        const u32 second = kBase + 0x900;
+        hex(b7,second-kBase,"B5F0B08992050A57");
+        u8 c7[4]; EncodeThumbCall(kWork+0x5A,second,c7);
+        for(int i=0;i<4;++i) b7[kWork+0x5A-kBase+i]=c7[i];
+        ck(!BuildDiHook(&b7[0],b7.size(),kBase,kSite,kEndW,p,why),"ambiguous storage refused");
+    }
     // A branch that lands on something that is not the epilogue is refused.
     {
         std::vector<u8> b4=v;

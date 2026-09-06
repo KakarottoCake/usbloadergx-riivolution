@@ -1491,6 +1491,10 @@ namespace Riivo
 					   : "the patch site was found more than once, which is not expected";
 		}
 		if (!patchApplied) {
+			//! A refusal is the one outcome worth bytes. The probe already
+			//! chose its windows and the card is still mounted, so write them
+			//! now rather than spend another round on a marker file.
+			WriteProbeDumps(bootProbe, dumpPath);
 			RestoreFragList(originalNum, originalLast);
 			fragsRegistered = false;
 			modOffsets.clear();

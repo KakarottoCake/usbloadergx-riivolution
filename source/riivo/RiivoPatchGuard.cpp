@@ -31,11 +31,11 @@ void ConfigurePatchProtection(const ResolvedPatchSet &set, const std::string &de
         if (m.search || m.ocarina) continue;
         u32 length = (u32)m.value.size();
         if (!m.valuefile.empty()) {
-            // The bytes are read when the patch is applied, which is after the
-            // card is gone, so the length has to be measured here. One that
-            // cannot be measured stays unprotected: the late collision check
-            // before the code handler then refuses the launch rather than
-            // letting the two writes land on each other.
+            // PreloadValueFiles inlines these and clears the field, so reaching
+            // here means its load failed - or a future caller skipped it. Measure
+            // the file rather than assume a length. One that cannot be measured
+            // stays unprotected, and the late collision check before the code
+            // handler refuses the launch rather than letting both writes land.
             struct stat info;
             length = (stat(JoinPath(device, m.root, m.valuefile).c_str(), &info) == 0
                       && info.st_size > 0) ? (u32)info.st_size : 0;

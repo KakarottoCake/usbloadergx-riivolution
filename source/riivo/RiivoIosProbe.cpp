@@ -307,12 +307,12 @@ namespace Riivo
 		u32 skipped = 0;
 		MergeDumpWindows(pending, merged, &skipped);
 		out.dumpsSkipped = skipped;
+		out.windows = merged;
 
 		//! The dispatch the hook needs lives somewhere near a d2x pair - the
 		//! dump window is the search window, so a site found here is always
 		//! inside the bytes we bring home. Windows anchored on other modules
 		//! are not searched.
-		const bool multi = merged.size() > 1;
 		for (size_t i = 0; i < merged.size(); ++i)
 		{
 			bool hasD2x = false;
@@ -322,14 +322,35 @@ namespace Riivo
 			if (hasD2x)
 				SearchPatternWindow(merged[i].base, merged[i].base + merged[i].size,
 									out.selfLo, out.selfHi, out.patchSites);
+		}
+
+		//! Only when asked. A refusal further along the boot calls this again,
+		//! which is the moment the bytes actually earn their place on the card.
+		if (writeDumps)
+			WriteProbeDumps(out, dumpPath);
+
+	}
+
+	void WriteProbeDumps(IosProbe &out, const std::string &dumpPath)
+	{
+		//! Idempotent: the probe calls this when dumps were asked for, and the
+		//! boot path calls it again if the hook then refuses. Whichever runs
+		//! first writes the files; the second sees them and does nothing.
+		if (!out.attempted || !out.ahbprot || !out.dumps.empty())
+			return;
+		out.dumpsEnabled = true;
+
+		const bool multi = out.windows.size() > 1;
+		for (size_t i = 0; i < out.windows.size(); ++i)
+		{
 			IosProbe::DiDump dump;
 			dump.base = 0;
 			dump.size = 0;
 			dump.fallback = false;
-			dump.anchor = merged[i].anchor;
-			dump.kind = merged[i].kind;
-			if (writeDumps && WriteModuleDump(merged[i].base, merged[i].size,
-								DumpPathFor(dumpPath, merged[i].anchor, multi),
+			dump.anchor = out.windows[i].anchor;
+			dump.kind = out.windows[i].kind;
+			if (WriteModuleDump(out.windows[i].base, out.windows[i].size,
+								DumpPathFor(dumpPath, out.windows[i].anchor, multi),
 								out.iosVersion, out.iosRevision, dump))
 				out.dumps.push_back(dump);
 		}
@@ -339,7 +360,7 @@ namespace Riivo
 		//! and a diagnostic round that brings home no bytes cannot be paid
 		//! for twice. It is not searched for a dispatch, so it cannot be
 		//! patched blind - the log marks it as a fallback.
-		if (writeDumps && out.dumps.empty())
+		if (out.dumps.empty())
 		{
 			std::vector<u32> ceilingHits;
 			for (size_t i = 0; i < out.patterns.size(); ++i)

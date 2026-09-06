@@ -3,6 +3,28 @@
 Full history for the Riivolution fork. The GitHub release body carries only the
 current version's bullets; everything older lives here.
 
+## Changed in v2.9
+
+A second console, running d2x v11 beta1 instead of beta3, found the dispatch
+correctly at `93800bb0` and then refused: `hook storage head not found`. Its plugin
+sits 0x20 lower than the one the hook was written against, and the storage was the
+last thing in `BuildDiHook` still located by a fixed delta (`site - 0x984`).
+
+- Storage is now derived, like everything else in that function: walk the read
+  worker's own calls, take the one whose head matches the bit0 reader and that
+  nothing else calls, refuse if there is not exactly one. No offset survives.
+- Verified against the real beta3 module: the search returns `9380024c`, the same
+  address the delta gave, so the change is behaviour-preserving where it worked.
+- Three new host tests relocate the storage, remove it, and duplicate it. The
+  relocation test crashes the old delta-based build rather than passing it, so it
+  is not a test that agrees with whatever the code happens to do.
+- A hook refusal now calls `WriteProbeDumps` itself. The probe keeps the windows it
+  chose whether or not it wrote them, so a build this code cannot read comes home
+  with its bytes in the same round instead of costing another.
+- Release notes now state the same-drive requirement: the cIOS is handed one device
+  number for the whole fragment list, so a mod on SD with a game on USB is refused.
+- 146,237 automated checks, all passing (was 146,232).
+
 ## Changed in v2.8
 
 v2.7 proved the loader's half works: all 2088 mod files read back correctly at 6 GiB

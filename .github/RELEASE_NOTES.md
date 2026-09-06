@@ -13,6 +13,9 @@ Put the mod on your SD card the way its author describes, then: game cover →
 **Settings** → **Riivolution**, pick the XML, set the options, **Save**, launch.
 Choices are stored per game.
 
+The mod's files must be on the same drive as the game. USB game, USB mod; SD game,
+SD mod. Mixing them is refused, because the cIOS reads every fragment from one drive.
+
 Needs AHBPROT — launch from the Homebrew Channel directly, not from a forwarder.
 
 `<memory>`, `<savegame>` and the option menus work. `<file>`/`<folder>` replacement is
@@ -22,13 +25,10 @@ untouched.
 Every launch writes a report next to the XML you picked —
 `<device>:/riivolution/usbloadergx_riivo.log`. Please attach it to any report.
 
-## Changed in v2.8
+## Changed in v2.9
 
-- Mod files are now verified with full 128 KiB reads and reads across every fragment boundary, not 32 bytes per file.
-- The rebuilt file table is walked independently and every path resolved before it is installed.
-- The Gecko code handler and the width/480p trampolines stand down when the mod owns the memory they write.
-- The log records the loader's own patch settings and the handler policy actually used.
-- IOS dumps are off unless `riivolution/dumpios.txt` exists.
-- 146,232 automated checks, all passing.
+- The read hook finds its storage by walking the cIOS's own code instead of a fixed offset, so it works on d2x builds other than the one it was written against.
+- A refused hook now writes the IOS dump by itself; `dumpios.txt` is only needed to force one otherwise.
+- 146,237 automated checks, all passing.
 
 Older versions: [CHANGELOG.md](CHANGELOG.md)
