@@ -818,6 +818,60 @@ static bool RiivoCiosCoversMod(s32 gameIOS, u8 autoIOS)
 	return ok;
 }
 
+//! Read the previous boot's log for this game and report a withheld file
+//! replacement, if that is how the last boot ended. Activation happens
+//! after the UI is gone, so the next launch is the only screen that can
+//! show it. Returns the warning text, or empty when there is nothing to
+//! report (no log yet, no OUTCOME line, or the files went live). Bounded:
+//! only the tail that can hold the outcome is read.
+static std::string RiivoPreviousOutcome(const char *riivoPath, const char *gameId)
+{
+	if (!riivoPath || !*riivoPath || !gameId || !*gameId)
+		return std::string();
+	const std::string path(riivoPath);
+	const size_t colon = path.find(':');
+	if (colon == std::string::npos)
+		return std::string();
+	std::string id(gameId);
+	if (id.size() > 6)
+		id.resize(6);
+	const std::string logPath = path.substr(0, colon + 1)
+							  + "/riivolution/usbloadergx_riivo_" + id + ".log";
+	FILE *f = fopen(logPath.c_str(), "rb");
+	if (!f)
+		return std::string();
+	fseek(f, 0, SEEK_END);
+	long size = ftell(f);
+	if (size <= 0 || size > 262144)
+	{
+		fclose(f);
+		return std::string();
+	}
+	//! The OUTCOME line is appended last, so the tail is enough and this
+	//! stays fast on a multi-megabyte log.
+	const long start = size > 8192 ? size - 8192 : 0;
+	fseek(f, start, SEEK_SET);
+	std::string tail;
+	tail.resize((size_t) (size - start));
+	if (fread(&tail[0], 1, tail.size(), f) != tail.size())
+	{
+		fclose(f);
+		return std::string();
+	}
+	fclose(f);
+	bool live = false;
+	std::string code;
+	if (!Riivo::ParseBootOutcome(tail, live, code) || live)
+		return std::string();
+	if (code.compare(0, 8, "WITHHELD") != 0)
+		return std::string();
+	char msg[576];
+	snprintf(msg, sizeof(msg),
+			 "The last boot withheld file replacement (%s). See %s for details.",
+			 code.c_str(), logPath.c_str());
+	return msg;
+}
+
 void GameWindow::BootGame(struct discHdr *header)
 {
 	wiilight(0);
@@ -953,6 +1007,20 @@ void GameWindow::BootGame(struct discHdr *header)
 		}
 			else if (riivoSet.IsEmpty())
 				warning = tr( "No Riivolution patches are enabled for this game - every option is set to Disabled." );
+		}
+
+		//! An activation failure happens after the UI is gone: surface the
+		//! previous boot's OUTCOME here rather than launching the original
+		//! game a second time in silence.
+		{
+			const std::string prevOutcome =
+				RiivoPreviousOutcome(game_cfg->RiivoPath.c_str(), IDfull);
+			if (!prevOutcome.empty())
+			{
+				if (!warning.empty())
+					warning += "\n";
+				warning += prevOutcome;
+			}
 		}
 
 		if (warning.size() > 0 && !WindowPrompt(tr( "Riivolution:" ), warning.c_str(),

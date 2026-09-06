@@ -16,6 +16,7 @@
 #include "RiivoBoot.hpp"
 #include "RiivoNet.hpp"
 #include "RiivoConfig.hpp"
+#include "RiivoReconcile.hpp"
 #include "RiivoFst.hpp"
 #include "RiivoFile.hpp"
 #include "RiivoFstBuild.hpp"
@@ -167,6 +168,29 @@ namespace Riivo
 	static u64 modRegionEnd = 0;
 	static bool fragsRegistered = false;
 	static FragBuildStats fragStats;
+
+	//! One registration record per early candidate: source path, synthetic
+	//! offset and stat size. The late list (CollectPlaced) only holds files
+	//! the rebuilt table references, so a recovered offset missing there is
+	//! looked up here instead of refused anonymously - the record names the
+	//! file and its retained bytes are verified in its place. Filled in
+	//! PrepareFragList, cleared wherever modOffsets is cleared.
+	static std::vector<RegRecord> modRecords;
+
+	//! Per-disc table-build failures from PrepareFileRedirects: the redirect
+	//! existed but the entry never made it into the rebuilt table (the table
+	//! refused it, or the external file failed to stat between phases).
+	//! Lets the reconcile step name the exclusion reason for each file.
+	static std::map<std::string, SkipReason> modAddFails;
+
+	//! Registered files that never became placed entries, with reasons.
+	//! Built after CollectPlaced; consumed by Activate and the report.
+	static std::vector<SkipRecord> modSkips;
+
+	//! Machine-parseable outcome of the file work, for the previous-boot
+	//! check in the game settings UI. FILES_LIVE only when the table went
+	//! live; WITHHELD carries the stage that stopped it.
+	static std::string withholdStage;
 
 	//! The game's id, needed to ask which partition it lives on.
 	static u8 bootGameId[8] = { 0 };
@@ -797,6 +821,7 @@ namespace Riivo
 		if (placed.empty())
 		{
 			out += "  Nothing was placed, so there is nothing to switch on.\n";
+			withholdStage = "NOTHING_PLACED";
 			return;
 		}
 
@@ -815,6 +840,7 @@ namespace Riivo
 		{
 			out += "  The mod's fragments were never registered, so there is\n"
 				   "  nothing for the rebuilt table to point at.\n";
+			withholdStage = "NOT_REGISTERED";
 			return;
 		}
 		Addf(out, "  fragments            : %u -> %u of %u, registered in SetupDisc\n",
@@ -863,41 +889,80 @@ namespace Riivo
 			}
 			else ++verified;
 		}
-		size_t extendedVerified = 0;
-		//! Files rescued by tail-cluster recovery are verified
-		//! unconditionally, exempt from the stride: the appended sector is a
-		//! contiguity guess only the read-back can prove. Skips the ones the
-		//! sample above already covered, so nothing is checked twice. A
-		//! failure here counts exactly like any other read-back failure -
-		//! the fallback is the behaviour without recovery, never a boot with
-		//! wrong bytes. The count below is every rescued file, whichever of
-		//! the two loops actually read it back.
-		for (size_t k = 0; k < fragStats.extended.size(); ++k)
+	size_t extendedVerified = 0;
+	//! Files rescued by tail-cluster recovery are verified
+	//! unconditionally, exempt from the stride: the appended sector is a
+	//! contiguity guess only the read-back can prove. Skips the ones the
+	//! sample above already covered, so nothing is checked twice. A
+	//! failure here counts exactly like any other read-back failure -
+	//! the fallback is the behaviour without recovery, never a boot with
+	//! wrong bytes. The count below is every rescued file, whichever of
+	//! the loops actually read it back.
+	//!
+	//! Matched against the registration records, not just the placed list:
+	//! a recovered file can be registered early but absent late (no disc
+	//! counterpart without create=true, a refused table entry, a stat that
+	//! failed between phases). Nothing reads those offsets, so they are
+	//! harmless - but the retained record still names the file, and its
+	//! bytes still get proven rather than assumed.
+	std::vector<u64> placedOffsets;
+	placedOffsets.reserve(placed.size());
+	for (size_t j = 0; j < placed.size(); ++j)
+		placedOffsets.push_back(placed[j].offset);
+	std::vector<RecMatch> recMatches;
+	std::vector<u64> unregistered;
+	ReconcileRecovered(placedOffsets, modRecords, modSkips,
+					   fragStats.extended, recMatches, unregistered);
+	if (!unregistered.empty())
+	{
+		out += "  The rebuilt table references file offset(s) with no registration\n"
+			   "  record, so activation cannot prove what serves them.\n";
+		for (size_t i = 0; i < unregistered.size() && i < 8; ++i)
+			Addf(out, "    0x%010llx\n", (unsigned long long) unregistered[i]);
+		if (unregistered.size() > 8)
+			Addf(out, "    ... and %u more\n",
+				 (unsigned) (unregistered.size() - 8));
+		out += "  Rebuilt FST and dependent memory patches are withheld.\n";
+		withholdStage = "UNREGISTERED";
+		return;
+	}
+	for (size_t k = 0; k < recMatches.size(); ++k)
+	{
+		const RecMatch &m = recMatches[k];
+		if (m.state == REC_UNKNOWN)
 		{
-			//! Matched by offset, walking the list rather than trusting the
-			//! two vectors to have been built with the same membership. A
-			//! recovered file that cannot be found here is a contradiction,
-			//! and refusing is the only honest answer to it.
-			size_t idx = placed.size();
-			for (size_t j = 0; j < placed.size(); ++j)
-				if (placed[j].offset == fragStats.extended[k]) { idx = j; break; }
-			if (idx == placed.size())
-			{
-				out += "  A file rescued from an under-reported tail cluster is not\n"
-					   "  in the placement list, so it cannot be read back.\n";
-				out += "  Rebuilt FST and dependent memory patches are withheld.\n";
-				return;
-			}
+			Addf(out, "  A file rescued from an under-reported tail cluster at 0x%010llx\n"
+					  "  matches no registered file, so it cannot be read back.\n",
+				 (unsigned long long) fragStats.extended[k]);
+			out += "  Rebuilt FST and dependent memory patches are withheld.\n";
+			withholdStage = "UNREGISTERED";
+			return;
+		}
+		if (m.state == REC_INACTIVE)
+		{
+			const RegRecord &rec = modRecords[m.index];
+			Addf(out, "    recovered but unreferenced: %s at 0x%010llx (%u bytes): %s\n",
+				 rec.external.c_str(), (unsigned long long) rec.offset,
+				 rec.length, SkipReasonText(m.reason));
 			++extendedVerified;
-			if (idx % stride == 0 || idx == placed.size() - 1)
-				continue; // the sample above already read this one back
-			if (!VerifyModFragment(placed[idx].offset, placed[idx].length, placed[idx].external, why)) {
+			if (!VerifyModFragment(rec.offset, rec.length, rec.external, why)) {
 				if (failed < MAX_NAMED)
 					Addf(failures, "    %s\n", why.c_str());
 				++failed;
 			}
+			continue;
 		}
-		Addf(out, "  LOW_READ checks      : first/last bytes of %u of %u files passed\n",
+		const size_t idx = m.index;
+		++extendedVerified;
+		if (idx % stride == 0 || idx == placed.size() - 1)
+			continue; // the sample above already read this one back
+		if (!VerifyModFragment(placed[idx].offset, placed[idx].length, placed[idx].external, why)) {
+			if (failed < MAX_NAMED)
+				Addf(failures, "    %s\n", why.c_str());
+			++failed;
+		}
+	}
+		Addf(out, "  LOW_READ checks      : first/last-byte sample of %u of %u files passed (interior bytes are not covered by this check)\n",
 			 (unsigned)verified, (unsigned)placed.size());
 		if (extendedVerified)
 			Addf(out, "  tail recovery        : %u extended file(s) verified unconditionally\n",
@@ -909,6 +974,7 @@ namespace Riivo
 			if (failed > MAX_NAMED)
 				Addf(out, "    ... and %u more\n", (unsigned)(failed - MAX_NAMED));
 			out += "  Rebuilt FST and dependent memory patches are withheld.\n";
+			withholdStage = "READBACK";
 			return;
 		}
 		if (!deepVerify)
@@ -917,7 +983,7 @@ namespace Riivo
 				   "  It reads the whole mod back through the cIOS and compares it\n"
 				   "  against the card - on a mod this size that is minutes of a\n"
 				   "  black screen. The per-file check above already proves every\n"
-				   "  fragment maps. Create riivolution/verify.txt to run it.\n";
+				   "  file's head and tail map. Create riivolution/verify.txt to run it.\n";
 		}
 		else
 		{
@@ -926,6 +992,7 @@ namespace Riivo
 			if (!retained || !scratch) {
 				if (scratch) MEM2_free(scratch);
 				out += "  Large-read verification unavailable; FST withheld.\n";
+				withholdStage = "LARGE_VERIFY";
 				return;
 			}
 			if (verboseListing)
@@ -966,6 +1033,7 @@ namespace Riivo
 			if (!largeOK) {
 				if (!readStats.fatal.empty()) out += "  " + readStats.fatal + "\n";
 				out += "  Large-read verification failed; FST withheld.\n";
+				withholdStage = "LARGE_VERIFY";
 				return;
 			}
 			out += "  Large-read verification passed. Larger single calls remain untested.\n";
@@ -981,11 +1049,13 @@ namespace Riivo
 			if (WDVD_Read(check, sizeof(check), probes[i]) == 0) {
 				Addf(out, "  Unexpected LOW_READ success at 0x%010llx; FST withheld\n",
 					 (unsigned long long)probes[i]);
+				withholdStage = "LAYER_PROBE";
 				return;
 			}
 		}
 		if (WDVD_Read(check, sizeof(check), modRegionEnd) == 0) {
 			out += "  LOW_READ past mod end succeeded; FST withheld.\n";
+			withholdStage = "PAST_END";
 			return;
 		}
 		out += "  layer/end-range checks : expected failures preserved\n";
@@ -1003,6 +1073,7 @@ namespace Riivo
 		{
 			out += "  Out of memory for the rebuilt table, so it will not be\n"
 				   "  installed. The patch above is harmless on its own.\n";
+			withholdStage = "NO_MEMORY";
 			return;
 		}
 		memcpy(pendingFst, &newFst[0], newFst.size());
@@ -1033,6 +1104,9 @@ namespace Riivo
 		//! From here on the mod is one that needs its files. If they do not end
 		//! up installed, the memory patches must not be applied either.
 		fileWorkWanted = true;
+		modAddFails.clear();
+		modSkips.clear();
+		withholdStage = "FST_WITHHELD";
 
 		std::string out;
 		out += "\n\nFile and folder replacement\n"
@@ -1169,29 +1243,43 @@ namespace Riivo
 		for (size_t i = 0; i < redirects.size(); ++i)
 		{
 			u32 extSize = 0;
+			const std::string key = NormaliseDiscPath(redirects[i].disc);
 			if (!ExternalFileSize(redirects[i].external, &extSize))
+			{
+				modAddFails[key] = SKIP_STAT_FAILED;
 				continue;
+			}
 			if (builder.AddOrReplace(redirects[i].disc, extSize, &isNew))
 			{
 				++planned;
-				expectedModSizes[NormaliseDiscPath(redirects[i].disc)] = extSize;
+				expectedModSizes[key] = extSize;
 			}
 			else
+			{
+				modAddFails[key] = SKIP_ADD_FAILED;
 				++rejected;
+			}
 		}
 		for (size_t i = 0; i < created.size(); ++i)
 		{
 			u32 extSize = 0;
+			const std::string key = NormaliseDiscPath(created[i].disc);
 			if (!ExternalFileSize(created[i].external, &extSize))
+			{
+				modAddFails[key] = SKIP_STAT_FAILED;
 				continue;
+			}
 			modBytes += extSize;
 			if (builder.AddOrReplace(created[i].disc, extSize, &isNew))
 			{
 				++planned;
-				expectedModSizes[NormaliseDiscPath(created[i].disc)] = extSize;
+				expectedModSizes[key] = extSize;
 			}
 			else
+			{
+				modAddFails[key] = SKIP_ADD_FAILED;
 				++rejected;
+			}
 		}
 
 		//! The mod region has to clear two floors: the synthetic LOW_READ
@@ -1412,6 +1500,9 @@ namespace Riivo
 			{
 				Addf(out, "  mod fragments      : %u file(s) located, %u fragment(s) total\n",
 					 fragStats.files, fragStats.fragsAfter);
+				Addf(out, "  mode               : %s\n",
+					 onDemandPlanned ? "on-demand (files resolved by path at read time)"
+									 : "fraglist (every file mapped up front)");
 				if (!fragStats.extended.empty())
 					Addf(out, "  tail recovery      : %u file(s) recovered from an under-reported tail cluster\n",
 						 (unsigned) fragStats.extended.size());
@@ -1439,11 +1530,31 @@ namespace Riivo
 				Addf(out, "  %u modded entr%s no placement, so the table is unusable\n",
 					 unplaced, unplaced == 1 ? "y has" : "ies have");
 
-			//! Feed the placed files through the same checks that would gate a
-			//! fresh layout: ordering, alignment, the read ceiling, the table.
-			CollectPlaced(builder, modOffsets.empty() ? region : modRegionStart,
-						  redirects, created, placed);
-			ToExtents(placed, extents);
+		//! Feed the placed files through the same checks that would gate a
+		//! fresh layout: ordering, alignment, the read ceiling, the table.
+		CollectPlaced(builder, modOffsets.empty() ? region : modRegionStart,
+					  redirects, created, placed);
+		ToExtents(placed, extents);
+
+		//! Registration records that never became placed entries, with
+		//! reasons. A tail-recovered offset landing on one of these is
+		//! verified through its retained record instead of refused
+		//! anonymously - nothing reads those offsets, so they are harmless,
+		//! but the bytes still get proven (see Activate).
+		{
+			std::vector<u64> lateOffsets;
+			lateOffsets.reserve(placed.size());
+			for (size_t i = 0; i < placed.size(); ++i)
+				lateOffsets.push_back(placed[i].offset);
+			std::map<std::string, char> hasRedirect;
+			for (size_t i = 0; i < redirects.size(); ++i)
+				hasRedirect[NormaliseDiscPath(redirects[i].disc)] = 1;
+			for (size_t i = 0; i < created.size(); ++i)
+				hasRedirect[NormaliseDiscPath(created[i].disc)] = 1;
+			FindSkips(modRecords, lateOffsets,
+					  modOffsets.empty() ? region : modRegionStart,
+					  hasRedirect, modAddFails, modSkips);
+		}
 
 			plan = PlanFragRegion(gameDataEnd, bootSectorSize,
 								  fragStats.fragsBefore ? fragStats.fragsBefore
@@ -1463,11 +1574,22 @@ namespace Riivo
 					 plan.minFragments, plan.fragsAvailable);
 				Addf(out, "  payload            : %llu bytes\n",
 					 (unsigned long long) plan.payloadBytes);
-				Addf(out, "  spare below ceiling: %llu bytes\n",
-					 (unsigned long long) plan.ceilingSpare);
-				out += "  Everything fits.\n";
-			}
-			out += "\n";
+			Addf(out, "  spare below ceiling: %llu bytes\n",
+				 (unsigned long long) plan.ceilingSpare);
+			out += "  Everything fits.\n";
+		}
+		if (!modSkips.empty())
+		{
+			Addf(out, "  registered but unreferenced: %u file(s) got fragments, but the rebuilt table points nowhere at them (nothing reads those offsets)\n",
+				 (unsigned) modSkips.size());
+			for (size_t i = 0; i < modSkips.size() && i < 16; ++i)
+				Addf(out, "    %s: %s\n",
+					 modSkips[i].disc.c_str(), SkipReasonText(modSkips[i].reason));
+			if (modSkips.size() > 16)
+				Addf(out, "    ... and %u more\n",
+					 (unsigned) (modSkips.size() - 16));
+		}
+		out += "\n";
 		}
 
 		//! The probe and the patch already happened, back in SetupDisc, because
@@ -1490,6 +1612,7 @@ namespace Riivo
 		{
 			out += "  Not attempted - one of the checks above did not pass. The game\n"
 				   "  boots exactly as it would without Riivolution.\n";
+			withholdStage = "NOT_SWITCHED";
 		}
 		else
 		{
@@ -1577,6 +1700,7 @@ namespace Riivo
 		//! registered - that points the game at unmapped space.
 		fragsRegistered = false;
 		modOffsets.clear();
+		modRecords.clear();
 		fragListUntouched = true;
 		fragRefusal = "the cIOS refused the enlarged fragment list";
 		return true;
@@ -1752,6 +1876,8 @@ namespace Riivo
 
 		std::vector<PlacedFile> placed;
 		placed.reserve(cand.size());
+		modRecords.clear();
+		modRecords.reserve(cand.size());
 		u64 cursor = regionStart;
 		for (size_t i = 0; i < cand.size(); ++i)
 		{
@@ -1763,6 +1889,12 @@ namespace Riivo
 				//! without advancing it; a zero-length read never touches it.
 				cursor = (cursor + align - 1) & ~((u64) align - 1);
 				modOffsets[cand[i].disc] = cursor;
+				RegRecord rec;
+				rec.disc = cand[i].disc;
+				rec.external = cand[i].external;
+				rec.offset = cursor;
+				rec.length = 0;
+				modRecords.push_back(rec);
 				continue;
 			}
 			cursor = (cursor + align - 1) & ~((u64) align - 1);
@@ -1772,6 +1904,12 @@ namespace Riivo
 			pf.external = cand[i].external;
 			placed.push_back(pf);
 			modOffsets[cand[i].disc] = cursor;
+			RegRecord rec;
+			rec.disc = cand[i].disc;
+			rec.external = cand[i].external;
+			rec.offset = cursor;
+			rec.length = cand[i].size;
+			modRecords.push_back(rec);
 			cursor += cand[i].size;
 		}
 		modRegionStart = regionStart;
@@ -1790,6 +1928,7 @@ namespace Riivo
 		if (!earlyPlan.ok) {
 			fragRefusal = earlyPlan.why;
 			modOffsets.clear();
+			modRecords.clear();
 			modRegionStart = modRegionEnd = 0;
 			fragListUntouched = true;
 			return;
@@ -1835,6 +1974,7 @@ namespace Riivo
 		{
 			gprintf("Riivo: fragment build failed: %s\n", fragStats.firstFailure.c_str());
 			modOffsets.clear();
+			modRecords.clear();
 			fragsRegistered = false;
 		}
 		else if (fragStats.failed)
@@ -1844,6 +1984,7 @@ namespace Riivo
 			//! read sparse zeros. Partial coverage is not a partial success.
 			gprintf("Riivo: %u file(s) could not be mapped, refusing\n", fragStats.failed);
 			modOffsets.clear();
+			modRecords.clear();
 			fragsRegistered = false;
 		}
 		else
@@ -1948,6 +2089,7 @@ namespace Riivo
 			RestoreFragList(originalNum, originalLast);
 			fragsRegistered = false;
 			modOffsets.clear();
+			modRecords.clear();
 			fragRefusal = patchWhy;
 			fragListUntouched = true;
 		}
@@ -1968,16 +2110,34 @@ namespace Riivo
 		//! otherwise stop without explaining why the game booted clean.
 		if (want == 0 && FileWorkIncomplete())
 		{
-			AppendLog("\n\nMemory patches\n"
-					  "--------------\n"
-					  "  HELD BACK. This mod replaces files, the plan above did not\n"
-					  "  complete, so the memory patches are skipped too. Applying\n"
-					  "  them without the mod's files is what makes a game exit to\n"
-					  "  the System Menu. The game boots completely unmodified.\n");
+			if (bootSet && !bootSet->memories.empty())
+			{
+				AppendLog("\n\nMemory patches\n"
+						  "--------------\n"
+						  "  HELD BACK. This mod replaces files, the plan above did not\n"
+						  "  complete, so the memory patches are skipped too. Applying\n"
+						  "  them without the mod's files is what makes a game exit to\n"
+						  "  the System Menu. The game boots completely unmodified.\n");
+			}
+			else
+			{
+				AppendLog("\n\nMemory patches\n"
+						  "--------------\n"
+						  "  No <memory> patches requested by this mod's options;\n"
+						  "  nothing scheduled.\n");
+			}
+			withholdStage = "NO_PLACEMENT";
+			AppendLog("OUTCOME: WITHHELD NO_PLACEMENT\n");
 			return;
 		}
 		if (want == 0)
+		{
+			//! No file work was ever wanted (a memory-only mod, say): record
+			//! the outcome so a WITHHELD line from an earlier file-mod boot
+			//! does not linger and mislead the next pre-launch check.
+			AppendLog("OUTCOME: NO_FILE_WORK\n");
 			return;
+		}
 
 		const ArenaInfo arena = ReadArenaInfo();
 		const FstPlacement place = PlaceFst(arena, want, 32);
@@ -2045,13 +2205,29 @@ namespace Riivo
 		{
 			out += "\n  Held a rebuilt table but could not place it, so it was not\n"
 				   "  installed. The game boots unmodified.\n";
+			withholdStage = "FST_PLACE";
 		}
+
+		//! Machine-parseable outcome for the previous-boot check in the game
+		//! settings UI. The prose above carries the details; this line is the
+		//! part the UI can read without parsing prose.
+		if (!fileWorkWanted)
+			out += "OUTCOME: NO_FILE_WORK\n";
+		else if (fileWorkLive)
+			out += "OUTCOME: FILES_LIVE\n";
+		else
+			Addf(out, "OUTCOME: WITHHELD %s\n", withholdStage.c_str());
 
 		//! Say plainly what this means for the rest of the boot. A mod whose
 		//! files did not make it must not get its memory patches either.
 		out += "\n\nMemory patches\n";
 		out += "--------------\n";
-		if (FileWorkIncomplete())
+		if (!bootSet || bootSet->memories.empty())
+		{
+			out += "  No <memory> patches requested by this mod's options;\n"
+				   "  nothing scheduled.\n";
+		}
+		else if (FileWorkIncomplete())
 		{
 			out += "  HELD BACK. This mod replaces files, and those files were not\n"
 				   "  installed, so its memory patches are being skipped as well.\n"
@@ -2100,6 +2276,11 @@ namespace Riivo
 			out += "  This entry point was returned by the apploader. Device shutdown,\n"
 				   "  loader patches, mod memory patches and the actual jump follow.\n"
 				   "  This log cannot prove those later operations completed.\n";
+		//! Grand total, wall-clock from the first Riivolution step (fragment
+		//! list retained in SetupDisc) to here. The per-step lines above say
+		//! where the time went; this line says how much loading cost in all.
+		Addf(out, "  total elapsed      : %u ms (%u s) since the first Riivolution step\n",
+			 (unsigned) BootElapsedMs(), (unsigned) (BootElapsedMs() / 1000));
 		AppendLog(out);
 	}
 }

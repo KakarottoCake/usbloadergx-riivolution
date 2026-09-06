@@ -33,12 +33,12 @@ on. Without that file nothing changes and the build behaves exactly like v3.10.
 It has never run on a console. Expect it to fail; the log and a USB Gecko trace are the
 point of it. Leave the file off for normal use.
 
-## Changed in v3.12
+## Changed in v3.13
 
-- Versioned runtime manifest and address model shared by the loader and IOS sides.
-- Multiple XML files can be merged, with later files winning patch id clashes.
-- Partial file replacements and resize=false clamps carry through to the manifest.
-- Misspelled patch ids and version-filtered XMLs report correctly in the boot log.
-- 146,741 automated checks, all passing.
+- Recovered files absent from the rebuilt table no longer withhold the mod anonymously.
+- Every boot log names its build commit and ends with a machine-readable outcome line.
+- The game settings screen reports the previous boot's withheld file replacement.
+- Boot logs show total elapsed loading time and per-file exclusion reasons.
+- 146,772 automated checks, all passing.
 
 Older versions: [CHANGELOG.md](CHANGELOG.md)
