@@ -277,4 +277,65 @@ bool BuildDiHook(const u8 *image, u32 size, u32 base, u32 site,
     why.clear();
     return true;
 }
+
+bool BuildDiHookOnDemand(const u8 *image, u32 size, u32 base, u32 site,
+                         u32 moduleEntry, DiHookPlan &plan, std::string &why) {
+    // Bit 0 of a Thumb symbol is state, not address. The BL encoding has no
+    // room for it and rounding it off here would be a guess about which way.
+    if (moduleEntry & 1) {
+        why = "module entry is odd; pass the address without the Thumb bit";
+        return false;
+    }
+    if (!moduleEntry) {
+        why = "no module entry to call; no IOS code changed";
+        return false;
+    }
+
+    // Discovery, ABI checks, storage liveness and the epilogue all come from
+    // BuildDiHook, so this cannot drift from the shipped path. The limit it
+    // writes is discarded with the rest of the code below; it only has to pass
+    // that function's own range check.
+    if (!BuildDiHook(image, size, base, site, 0x70000000u, plan, why))
+        return false;
+
+    // BuildDiHook has already resolved and validated the epilogue; take it
+    // back out of the code it emitted rather than finding it a second way.
+    const u32 epiThumb = Read32(&plan.code[0x64]);
+    if (!epiThumb) {
+        why = "epilogue did not resolve; no IOS code changed";
+        return false;
+    }
+
+    // Bytes assembled from ios/redirect_ondemand.S, ARMv5TE big-endian
+    // Thumb-1. Offsets mirror the redirect2_* labels: the call to the module,
+    // then the epilogue word. The host test reassembles the .S and checks
+    // these bytes against it, so the two can never skew silently.
+    static const u32 CALL_OFF = 0x1A;
+    static const u32 EPI2_OFF = 0x48;
+    static const u32 STORAGE_SIZE = 0xC4;
+    const std::vector<u8> code = Hex(
+        "20A00200477046C0B5D96841688268A368E0181B18D20010003A"
+        "F7FFFFFE2801D0032800D1070005E009BCD9BC02468E6823079A"
+        "47704B05612325A0022DBCD9B0014B01471846C0000000000003"
+        "1100");
+    if (code.size() > STORAGE_SIZE) {
+        why = "on-demand hook does not fit the storage site";
+        return false;
+    }
+    plan.code = code;
+
+    // The branch BuildDiHook computed still applies: it aims at storage + 8,
+    // and redirect2_entry sits at +8 exactly as redirect_entry does.
+    if (!EncodeThumbCall(plan.storage + CALL_OFF, moduleEntry,
+                         &plan.code[CALL_OFF])) {
+        why = "module is too far from the hook for a Thumb call";
+        return false;
+    }
+    // Already carries bit 0 from BuildDiHook. bx takes its target state from
+    // that bit: written even, the core switches to ARM and runs the Thumb
+    // epilogue as ARM instructions.
+    Write32(&plan.code[EPI2_OFF], epiThumb);
+    why.clear();
+    return true;
+}
 }

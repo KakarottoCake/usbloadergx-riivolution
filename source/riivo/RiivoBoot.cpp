@@ -23,6 +23,8 @@
 #include "RiivoReadVerify.hpp"
 #include "RiivoFstInstall.hpp"
 #include "RiivoIosProbe.hpp"
+#include "RiivoOnDemand.hpp"
+#include "RiivoRedirectTable.hpp"
 #include "RiivoDiPatch.hpp"
 #include "RiivoFragPlan.hpp"
 #include "RiivoFragBuild.hpp"
@@ -51,6 +53,40 @@ namespace Riivo
 
 	static const ResolvedPatchSet *bootSet = 0;
 	static std::string bootDevice;
+
+	//! Set when the boot took the on-demand path: the mod's files were NOT
+	//! mapped to sectors, so the redirect table and the module are what make
+	//! them readable, and the fragment-based hook must not be used instead.
+	static bool onDemandPlanned = false;
+	static OnDemandLayout onDemandLayout;
+
+	//! Opt-in, by a file on the card, in the same shape as dumpios.txt. The
+	//! fragment path still works and is still the default; this one replaces
+	//! how every mod file is reached, so it earns its way in rather than being
+	//! switched on under people who did not ask for it.
+	static bool OnDemandRequested()
+	{
+		if (bootDevice.empty())
+			return false;
+		FILE *f = fopen((bootDevice + "/riivolution/ondemand.txt").c_str(), "rb");
+		if (!f)
+			return false;
+		fclose(f);
+		return true;
+	}
+
+	//! "usb1:/Spectral/x.arc" -> "/Spectral/x.arc". The module mounts the FAT
+	//! partition itself and knows nothing about the loader's device names.
+	static std::string PartitionPath(const std::string &external)
+	{
+		const size_t colon = external.find(':');
+		if (colon == std::string::npos)
+			return external;
+		std::string rest = external.substr(colon + 1);
+		if (rest.empty() || rest[0] != '/')
+			rest = "/" + rest;
+		return rest;
+	}
 	static std::string bootLogPath;
 
 	//! Size of the table PrepareFileRedirects worked out, carried across to
@@ -231,6 +267,11 @@ namespace Riivo
 		//! as quiet as it used to be and only its start and end are recorded.
 		verboseListing = false;
 		deepVerify = false;
+		//! Per boot, like the directory cache: the card can be swapped between
+		//! one launch and the next, and a stale flag here would take the
+		//! on-demand path with no module installed.
+		onDemandPlanned = false;
+		onDemandLayout = OnDemandLayout();
 		ClearDirListCache();
 		bootClockStart = 0;
 		deadlinePassed = false;
@@ -1771,7 +1812,24 @@ namespace Riivo
 		LogStep("mapping fragments for %u file(s)", (unsigned) placed.size());
 		if (verboseListing)
 			progress.Step(tr("Mapping the mod's files"));
-		if (!AppendModFragments(placed, sector, (u8) modDev.fsType,
+		if (OnDemandRequested())
+		{
+			//! The whole point of the on-demand path. Mapping opens every
+			//! placed file and walks its cluster chain - thousands of them, on
+			//! a screen that is already black, and the cost grows with the mod
+			//! rather than with what the game actually reads. On-demand resolves
+			//! a file by path when the game asks for it, so none of that
+			//! happens here.
+			//!
+			//! The game's own fragments are already in the list and are left
+			//! exactly as they were, so a refusal further on still boots the
+			//! game unmodified.
+			fragsRegistered = true;
+			onDemandPlanned = true;
+			LogStep("on-demand: skipped mapping %u file(s)",
+					(unsigned) placed.size());
+		}
+		else if (!AppendModFragments(placed, sector, (u8) modDev.fsType,
 								modDev.lbaStart, fragStats,
 								verboseListing ? FragProgress : 0, 0))
 		{
@@ -1840,7 +1898,36 @@ namespace Riivo
 		if (dumpMarker) fclose(dumpMarker);
 		ProbeIosPlugin(dumpPath, bootProbe, writeDumps);
 
-		if (bootProbe.patchSites.size() == 1)
+		if (bootProbe.patchSites.size() == 1 && onDemandPlanned)
+		{
+			//! Paths go over as the module will look them up: from the root of
+			//! the FAT partition, without the loader's device prefix.
+			std::vector<RedirectEntry> entries;
+			entries.reserve(placed.size());
+			for (size_t i = 0; i < placed.size(); ++i)
+				entries.push_back(RedirectEntry(placed[i].offset, placed[i].length,
+												PartitionPath(placed[i].external)));
+
+			std::vector<u8> table;
+			if (!BuildRedirectTable(entries, RIIVO_PART_DISCOVER, table, patchWhy))
+			{
+				gprintf("Riivo: redirect table refused: %s\n", patchWhy.c_str());
+			}
+			else
+			{
+				LogStep("on-demand: table built, %u file(s), %u bytes",
+						(unsigned) entries.size(), (unsigned) table.size());
+				patchApplied = InstallOnDemand(bootProbe.patchSites[0], table,
+											   RIIVO_PART_DISCOVER, onDemandLayout,
+											   patchWhy);
+				if (patchApplied)
+					patchStorage = onDemandLayout.moduleAddr;
+			}
+			gprintf("Riivo: on-demand hook at %08x: %s\n",
+					bootProbe.patchSites[0],
+					patchApplied ? "applied" : patchWhy.c_str());
+		}
+		else if (bootProbe.patchSites.size() == 1)
 		{
 			patchApplied = ApplyDiPatch(bootProbe.patchSites[0], (u32)(modRegionEnd >> 2), patchWhy, &patchStorage);
 			gprintf("Riivo: early cIOS hook at %08x: %s\n",

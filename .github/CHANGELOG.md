@@ -5,6 +5,180 @@ current version's bullets; everything older lives here.
 
 ## Unreleased
 
+The last gap in the on-demand path is closed: os_sync_after_write is now found
+in the running plugin instead of being left out.
+
+Starlet's data cache is write-back and does not snoop toward the PowerPC, so
+without that call the game reads whatever was in its buffer before - it fails
+later and looks like corruption rather than pointing anywhere near here. d2x's
+own read routines already sync what they DMA in; what was going unsynced was
+the module's own copy out to the game's buffer.
+
+IOS syscalls are the undefined ARM instruction 0xE6000010 | (num << 5), each
+wrapped in a stub ending in `bx lr`, so the routine is found by that pair
+rather than by counting entries in a table whose contents differ between IOS
+versions. That it is syscall 0x40 was established from the module itself -
+both device read routines call it around their own transfers - rather than
+from a remembered syscall table.
+
+Absence is tolerated, since the module skips the call and the result is merely
+stale rather than wrong-addressed. Ambiguity is not: two candidates resolve to
+none rather than to a coin toss, because calling the wrong stub would run an
+arbitrary syscall on every read.
+
+The address needs the same physical masking as everything else the module is
+handed - it is found by scanning a snapshot taken through the PowerPC's view,
+and reached from Thumb by a BLX, which takes the target state from bit 0.
+
+
+The on-demand path is wired into the boot sequence, behind a marker file
+(riivolution/ondemand.txt). The fragment path is untouched and still the
+default: this changes how every mod file is reached, so it earns its way in
+rather than being switched on under people who did not ask for it.
+
+With the marker present the boot skips AppendModFragments entirely. That call
+is the reason the screen stays black - it opens every placed file and walks its
+cluster chain, thousands of them, and the cost grows with the size of the mod
+rather than with what the game actually reads. On-demand resolves a file by
+path when the game asks for it, so none of it happens before the game starts.
+The game's own fragments are left exactly as they were, so a refusal anywhere
+after that still boots the game unmodified.
+
+The module and the redirect table come out of ONE MEM2 reservation. Lowering
+the arena boundary twice is a way to get the second one wrong, and getting it
+wrong is silent - the game simply allocates over whichever was left outside.
+The boundary is lowered before either is written, so a failure from that point
+on costs the game a little MEM2 and nothing else.
+
+One thing the wiring exposed, which would have been a freeze: the module is
+written by the PowerPC at 0x93xxxxxx but Starlet runs it at 0x13xxxxxx, so its
+relocations have to be applied against the physical address, and the pointers
+to d2x's own read routines have to be masked the same way. The hook's call into
+the module is unaffected either way - a Thumb BL is pc-relative, so the
+distance is the same in both views.
+
+
+The on-demand hook and the module that backs it are now buildable end to end.
+
+BuildDiHookOnDemand emits redirect_ondemand.S instead of the fragment-list
+routine and points its call at the module. It does not repeat any discovery:
+it runs the shipped builder first and reuses the site, the storage slot, the
+branch and the resolved epilogue, so the two paths cannot disagree about where
+it is safe to patch. The module entry must be passed even - a Thumb symbol's
+bit 0 is state, not address, and rounding it here would be a guess about which
+way. test_dihook now reassembles redirect_ondemand.S and compares it to the
+embedded bytes, so the .S and the copy that actually runs cannot drift.
+
+The module itself (source/riivo/ios) is compiled for the Starlet offline and
+carried as bytes, because the Wii build has no ARM compiler - the same
+arrangement redirect.S has always had. 5248 bytes of code, 4768 of bss.
+
+It is copied to whatever address the MEM2 reservation produced, which is not
+known until the game is booting, so it is linked with --emit-relocs and every
+absolute word is fixed up against where it actually landed. Only R_ARM_ABS32
+is touched; the pc-relative calls are correct wherever the module sits and
+adding a delta to one would send an internal call somewhere arbitrary. The
+test places the same module at two addresses and checks that exactly the
+relocated words differ, each by exactly the load delta, and that every one of
+them still points inside the module.
+
+The parameter block is written big-endian, byte by byte, because that is how a
+big-endian ARM reads its own memory - and its magic is checked before anything
+is filled in, so a blob and a set of offsets from different builds cannot be
+combined into something that branches into the middle of its own code.
+
+
+The injected module now runs end to end on emulated big-endian ARM: a redirect
+table goes in, and the game's bytes come out of a real FAT image, through the
+same C that will run on the Starlet.
+
+The address mask is the part worth testing and it is now tested so it cannot
+pass by accident. Destinations arrive in the PPC's view of memory (0x90xxxxxx)
+and Starlet sees the same memory at 0x10xxxxxx, so every one has to be masked
+before it is written through; getting it wrong is an ARM data abort inside an
+IPC that is then never answered - a hard freeze, no screen, no log. The
+emulator maps memory ONLY at the physical address, so a module that forgets to
+mask faults instead of appearing to work. Removing the mask was tried: it
+faults, which is what makes the passing run mean something.
+
+Everything Starlet reads goes through a bounce buffer the module owns rather
+than being DMA'd straight into the caller's buffer. That costs a copy per
+chunk and buys not having to know whether d2x's device routines accept a
+PPC-form address - a question nothing offline can settle, and whose wrong
+answer is a DMA into the wrong physical page.
+
+Two alignment bugs the emulator found, both of which would have meant nothing
+ever read on hardware: the FAT reader's sector buffer was 4-byte aligned when
+the storage engines DMA into it and need 32, and the multi-sector fast path
+could hand storage a destination that a partial head had left unaligned. The
+fast path now falls back to the bounce buffer in that case rather than being
+refused mid-transfer.
+
+redirect_ondemand.S is the hook that calls the module. It does no range test of
+its own - the module returns MISS for anything outside the mod region, which is
+the same decision made once instead of twice. Unlike the shipped hook it
+reaches its pass-through path AFTER issuing a call, so lr has been clobbered
+and is restored off the stack; returning with the wrong lr lands back inside
+the routine and loops.
+
+
+RiivoStorageProbe: finds the two cIOS routines that read raw sectors off the
+card. The on-demand design has to read arbitrary sectors from inside the DI
+thread, and the existing hook cannot - it calls d2x's fragment reader, which
+takes a 32-bit WORD offset on the virtual disc. That is 16 GiB of address
+space in total, and the mod region already sits at 6 GiB, so a card bigger
+than a couple of gigabytes cannot be addressed through it at all.
+
+Underneath the fragment reader, d2x resolves a fragment to a plain LBA and
+calls one of two device routines, chosen at run time by a word in its device
+config. Those take an absolute 32-bit sector number - two terabytes of range -
+and they are exactly the primitive a FAT reader wants. The two have DIFFERENT
+calling conventions, so which one applies is recorded rather than guessed:
+calling the wrong one puts the LBA where the count belongs, reads a plausible
+wrong sector, and returns success.
+
+The dispatch is located by its instruction pattern and required to be unique
+in the module. Anything else - an ambiguous match, a config pointer outside
+MEM2, a branch leaving the image, both calls resolving the same, a call that
+misses a function entry - refuses with no IOS code changed. Physical MEM2
+literals (0x13800000 upwards, where the plugin is linked) are accepted
+alongside the PPC-visible 0x93800000 view.
+
+Enumeration no longer stats every file twice. devkitPro's dirent carries
+d_stat, filled from the directory entry readdir just read; the old code threw
+that away and called stat() on the full path, making libfat walk from the root
+again for each of several thousand files and evicting the directory being
+iterated from its small sector cache.
+
+
+RiivoRedirectTable: the table the loader hands to IOS in the on-demand design.
+Entries are {disc offset, length, path} rather than raw sectors, so the loader
+no longer walks a FAT cluster chain per file before the game starts - it needs
+only each file's size, which enumeration already knows.
+
+The format is little-endian regardless of the console. A big-endian PowerPC
+writes it and a big-endian ARM reads it, and neither may depend on a struct
+layout, so every field is written a byte at a time. A memcpy of a u32 here
+would emit the wrong order and the module would reject the table as a number
+on a black screen.
+
+The builder refuses rather than emits anything the module would distrust:
+unsorted entries, overlapping extents, relative or empty paths, a path with an
+embedded null, an extent that wraps, or more entries than the module accepts.
+Each of those is checked on the module side too - it cannot assume the memory
+it was handed came from us - but a refusal here comes with a sentence instead
+of an error code.
+
+test_redirtable decodes the result with a second implementation written from
+the format description rather than by calling the builder's own helpers, so
+builder and decoder cannot drift together, and pins the byte order against a
+literal expected table rather than only round-tripping. 49 checks. At 2802
+files - the size of the mod that motivated this - the table is 168 KB, which
+is why the module reads it in place rather than copying it into an IOS heap
+measured in tens of kilobytes.
+
+
+
 The memory patcher writes through absolute console addresses - CommitWrite and
 VerifyAppliedPatches cast 0x80600000 straight to a pointer - so on a host those
 pages are unmapped and every write path bailed before writing. test_memcheck

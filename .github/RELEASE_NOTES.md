@@ -25,11 +25,19 @@ untouched.
 Every launch writes a report next to the XML you picked —
 `<device>:/riivolution/usbloadergx_riivo_<GAMEID>.log`. Please attach it to any report.
 
-## Changed in v3.10
+## On-demand mode (opt-in, new, untested on hardware)
 
-- Memory patches are now checked before any are applied, and the log names every skipped patch with the bytes it expected and the bytes it found.
-- A hard preflight failure holds the whole set back; the log states whether the game then boots with the mod's files only, or completely unmodified.
-- Patched bytes are re-read after the patches go in and again just before the game starts; anything that changed is reported over USB Gecko.
-- 146,284 automated checks, all passing.
+Create an empty file `riivolution/ondemand.txt` on the same drive as the mod to turn it
+on. Without that file nothing changes and the build behaves exactly like v3.10.
+
+It has never run on a console. Expect it to fail; the log and a USB Gecko trace are the
+point of it. Leave the file off for normal use.
+
+## Changed in v3.11
+
+- New on-demand mode: the mod's files are opened by path from inside IOS when the game asks for them.
+- On-demand skips the pre-boot fragment mapping entirely.
+- Directory enumeration no longer stats every file a second time.
+- 146,642 automated checks, all passing.
 
 Older versions: [CHANGELOG.md](CHANGELOG.md)

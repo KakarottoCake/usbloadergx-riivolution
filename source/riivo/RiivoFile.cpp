@@ -54,10 +54,32 @@ namespace Riivo
 			}
 			const std::string childRel = rel.empty() ? std::string(ent->d_name)
 													 : (rel + "/" + ent->d_name);
-			const std::string childFull = dirPath + "/" + ent->d_name;
+
+			//! readdir has already stat'ed this entry: devkitPro's dirent
+			//! carries d_stat, filled from the directory entry the driver just
+			//! read. Calling stat() on the full path again makes libfat walk
+			//! the path from the root a second time - and libfat's sector
+			//! cache is only a handful of entries, so on a mod with thousands
+			//! of files across hundreds of directories that second walk
+			//! evicts the directory we are in the middle of reading. It is
+			//! thousands of redundant card reads on a screen that is already
+			//! black, for an answer we were already handed.
+			//! d_stat is a devkitPro extension, so the host build - where the
+			//! cost this avoids does not exist - takes the plain path.
 			struct stat st;
-			if (stat(childFull.c_str(), &st) != 0)
-				continue;
+#ifdef _DIRENT_HAVE_D_STAT
+			st = ent->d_stat;
+			if (st.st_mode == 0)
+#else
+			memset(&st, 0, sizeof(st));
+#endif
+			{
+				//! A driver that does not fill d_stat. Fall back rather than
+				//! skip the file: correctness first, speed second.
+				const std::string childFull = dirPath + "/" + ent->d_name;
+				if (stat(childFull.c_str(), &st) != 0)
+					continue;
+			}
 			if (S_ISDIR(st.st_mode))
 			{
 				if (recursive)
