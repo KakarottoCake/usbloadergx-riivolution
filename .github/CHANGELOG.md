@@ -3,6 +3,29 @@
 Full history for the Riivolution fork. The GitHub release body carries only the
 current version's bullets; everything older lives here.
 
+## Changed in v3.6
+
+With the progress window off, Starshine listed all 2802 files, mapped 2789 of
+them to 2791 fragments, handed the list over and opened the partition - then the
+log stopped. So the loading bar was not the cause, and the next phase,
+`PrepareFileRedirects`, was the remaining blind spot: it logged nothing until it
+was completely finished.
+
+That phase is not cheap. It re-walks every `<folder>` rule over the card a second
+time in `BuildRedirects`, reads and rebuilds the file table, checks the first and
+last bytes of every placed file through the cIOS, and then reads the entire mod
+back and compares it against the card - 128,547,465 bytes on Starshine, so about
+256 MB of traffic counting both sides. A tester watching a black screen has no
+way to tell that from a hang, and reasonably gives up.
+
+- `deepVerify`, set by `riivolution/verify.txt`, gates the large-read pass. It is
+  diagnosis, not a gate: it proved what it was written to prove, and the per-file
+  first/last check that stays on already establishes that every fragment maps
+  where the table says it does.
+- `LogStep` now covers reading the game's table, matching the mod against it
+  (with the replacement/addition counts), the hook check, and the end of the file
+  work.
+
 ## Changed in v3.5
 
 The Riivolution page offered every XML on the card for every game - a Galaxy

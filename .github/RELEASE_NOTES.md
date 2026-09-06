@@ -25,13 +25,11 @@ untouched.
 Every launch writes a report next to the XML you picked —
 `<device>:/riivolution/usbloadergx_riivo.log`. Please attach it to any report.
 
-## Changed in v3.5
+## Changed in v3.6
 
-- The Riivolution page only lists mods for the game you are on. Mods for other games no longer appear.
-- The mod's name and its full path each get their own full-width line instead of being cut off in the narrow right-hand column.
-- A new line says whether the mod is on SD or USB.
-- The progress bar and the per-`<folder>` log lines are off unless you create `riivolution/loadingbar.txt`.
-- If the cIOS will not accept the enlarged fragment list, the game boots unmodified instead of exiting to the Homebrew Channel.
+- The slowest check is now off by default. It read the whole mod back and compared it against the card - about 256 MB of traffic on a large mod, which is minutes of black screen. Create `riivolution/verify.txt` if you want it.
+- Every step of the second half of the boot is now logged as it completes, so a boot that stops there says where.
+- The Riivolution page only lists mods for the game you are on, shows the mod name and path on their own lines, and says whether the mod is on SD or USB.
 - 146,237 automated checks, all passing.
 
 Older versions: [CHANGELOG.md](CHANGELOG.md)
