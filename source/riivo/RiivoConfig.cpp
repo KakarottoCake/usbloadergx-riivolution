@@ -26,9 +26,9 @@ namespace Riivo
 			return false;
 		if (filter.hasDeveloper && developer != filter.developer)
 			return false;
-		if (filter.hasDisc && discNumber != filter.disc)
+		if (filter.hasDisc && discNumber >= 0 && discNumber != filter.disc)
 			return false;
-		if (filter.hasVersion && revision != filter.version)
+		if (filter.hasVersion && revision >= 0 && revision != filter.version)
 			return false;
 		if (!filter.regions.empty())
 		{
@@ -206,6 +206,14 @@ namespace Riivo
 
 	void Resolve(const Disc &disc, const char *gameId, ResolvedPatchSet &out)
 	{
+		ResolveStats stats;
+		ResolveWithStats(disc, gameId, out, stats);
+	}
+
+	void ResolveWithStats(const Disc &disc, const char *gameId,
+						  ResolvedPatchSet &out, ResolveStats &stats)
+	{
+		stats.skippedPatchRefs = 0;
 		const ParamMap builtins = BuiltinParams(gameId);
 
 		for (size_t s = 0; s < disc.sections.size(); ++s)
@@ -223,7 +231,10 @@ namespace Riivo
 					const PatchRef &ref = choice.patchRefs[r];
 					const Patch *patch = disc.FindPatch(ref.id);
 					if (!patch)
+					{
+						++stats.skippedPatchRefs;
 						continue;
+					}
 					// Merge built-ins under the reference's params (built-ins are
 					// __-prefixed so a mod can't accidentally shadow them).
 					ParamMap params = ref.params;
@@ -232,6 +243,38 @@ namespace Riivo
 					ResolvePatch(disc, *patch, params, out);
 				}
 			}
+		}
+	}
+
+	// --------------------------------------------------------------------
+	// Multi-XML merge (WP1): sections concatenate, patch ids later-wins.
+	// --------------------------------------------------------------------
+
+	void MergeDiscs(const Disc &a, const Disc &b, Disc &out)
+	{
+		out = a;
+		if (!b.xmlPath.empty())
+		{
+			if (!out.xmlPath.empty())
+				out.xmlPath += ";";
+			out.xmlPath += b.xmlPath;
+		}
+		for (size_t s = 0; s < b.sections.size(); ++s)
+			out.sections.push_back(b.sections[s]);
+		for (size_t i = 0; i < b.patches.size(); ++i)
+		{
+			bool replaced = false;
+			for (size_t j = 0; j < out.patches.size(); ++j)
+			{
+				if (out.patches[j].id == b.patches[i].id)
+				{
+					out.patches[j] = b.patches[i];
+					replaced = true;
+					break;
+				}
+			}
+			if (!replaced)
+				out.patches.push_back(b.patches[i]);
 		}
 	}
 
@@ -364,7 +407,8 @@ namespace Riivo
 
 	void WriteLog(const std::string &path, const char *gameId, const std::string &xmlPath,
 				  const char *parseError, const Disc *disc, const ResolvedPatchSet *set,
-				  int valuefileFailures)
+				  int valuefileFailures, int discNumber, int revision,
+				  unsigned skippedPatchRefs)
 	{
 		FILE *f = fopen(path.c_str(), "w");
 		if (!f)
@@ -388,9 +432,10 @@ namespace Riivo
 
 		if (disc)
 		{
-			fprintf(f, "root    : %s\n", disc->root.c_str());
-			fprintf(f, "matches this game: %s\n", disc->IsValidForGame(gameId, 0, 0)
-					? "yes" : "NO - this XML is meant for a different game");
+		fprintf(f, "root    : %s\n", disc->root.c_str());
+		fprintf(f, "matches this game: %s\n",
+				disc->IsValidForGame(gameId, discNumber, revision)
+				? "yes" : "NO - this XML is meant for a different game");
 
 			fprintf(f, "\nOptions\n-------\n");
 			int shown = 0;
@@ -437,10 +482,17 @@ namespace Riivo
 						set->savegames[i].external.c_str(),
 						set->savegames[i].clone ? "yes" : "no");
 
-			if (valuefileFailures > 0)
-				fprintf(f, "\nWARNING: %d valuefile(s) could not be read; those patches will be\n"
-						   "skipped. Check that the mod's files sit on the same device as the XML.\n",
-						valuefileFailures);
+			if (valuefileFailures > 0 || skippedPatchRefs > 0)
+			{
+				if (valuefileFailures > 0)
+					fprintf(f, "\nWARNING: %d valuefile(s) could not be read; those patches will be\n"
+							   "skipped. Check that the mod's files sit on the same device as the XML.\n",
+							valuefileFailures);
+				if (skippedPatchRefs > 0)
+					fprintf(f, "\nWARNING: %u enabled choice(s) named a <patch> id with no definition\n"
+							   "and were skipped. Check choice->patch id spelling in the XML.\n",
+							skippedPatchRefs);
+			}
 			else if (set->memories.empty() && set->savegames.empty())
 				fprintf(f, "\nNothing to apply. If you expected a mod here, check that an option\n"
 						   "above is set to something other than Disabled.\n");

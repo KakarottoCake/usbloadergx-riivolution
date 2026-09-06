@@ -28,6 +28,29 @@ namespace Riivo
 	//! 6-char disc id used for the built-in params.
 	void Resolve(const Disc &disc, const char *gameId, ResolvedPatchSet &out);
 
+	//! Resolve statistics: references that named a <patch> id with no
+	//! definition are skipped (Riivolution leniency). The count exists so the
+	//! boot log can name a misspelled id instead of applying nothing silently.
+	struct ResolveStats
+	{
+		u32 skippedPatchRefs;
+		ResolveStats() : skippedPatchRefs(0) {}
+	};
+
+	//! Resolve with statistics. Identical to Resolve; `stats` reports skips.
+	void ResolveWithStats(const Disc &disc, const char *gameId,
+						  ResolvedPatchSet &out, ResolveStats &stats);
+
+	//! Merge two parsed XMLs for multi-XML mods (WP1). Sections concatenate
+	//! (a's first, then b's); <patch> definitions concatenate with later-wins
+	//! on id collision (b replaces a's entry in place, keeping a's position).
+	//! The merged filter and root come from `a`; callers must pre-validate
+	//! each XML with IsValidForGame before merging. Deterministic: merging is
+	//! associative in the patch list, and Resolve over the merged disc applies
+	//! patch refs in selection order with duplicate-disc file claims keeping
+	//! the last claim downstream (FsDirLister/BuildRedirects stable order).
+	void MergeDiscs(const Disc &a, const Disc &b, Disc &out);
+
 	//! Serialise the current selections as "optIdx=choiceIdx,..." for GameCFG,
 	//! and load them back. Indices are section-flattened option order.
 	std::string SerializeSelection(const Disc &disc);
@@ -42,10 +65,19 @@ namespace Riivo
 	//! on screen at that point, so without a USB Gecko this file is the only way
 	//! to see whether the XML parsed, which options were active, and whether
 	//! every valuefile was found. `disc`/`set` may be NULL when parsing failed;
-	//! `parseError` is NULL when it succeeded.
+	//! `parseError` is NULL when it succeeded. `discNumber`/`revision` feed the
+	//! "matches this game" line; pass RIIVO_DISC_UNKNOWN / RIIVO_REVISION_UNKNOWN
+	//! (the defaults) when the boot path does not know them - a negative value
+	//! skips that axis instead of comparing against disc 0 / revision 0, which
+	//! would falsely report version-filtered XMLs as meant for another game.
+	//! `skippedPatchRefs` (from ResolveWithStats) names misspelled choice->patch
+	//! ids in the log; without it a typo applies nothing silently.
 	void WriteLog(const std::string &path, const char *gameId, const std::string &xmlPath,
 				  const char *parseError, const Disc *disc, const ResolvedPatchSet *set,
-				  int valuefileFailures);
+				  int valuefileFailures,
+				  int discNumber = RIIVO_DISC_UNKNOWN,
+				  int revision = RIIVO_REVISION_UNKNOWN,
+				  unsigned skippedPatchRefs = 0);
 }
 
 #endif

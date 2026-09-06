@@ -243,6 +243,13 @@ and permanent silence, and a write failure drops the socket rather than retrying
 - test_netlog: 23 checks on the address parsing, the half that fails quietly.
 - 146,353 automated checks, all passing.
 
+## Changed in v3.11
+
+- New on-demand mode: the mod's files are opened by path from inside IOS when the game asks for them.
+- On-demand skips the pre-boot fragment mapping entirely.
+- Directory enumeration no longer stats every file a second time.
+- 146,642 automated checks, all passing.
+
 ## Changed in v3.10
 
 A memory patch that half-applied was the worst failure this fork could produce:

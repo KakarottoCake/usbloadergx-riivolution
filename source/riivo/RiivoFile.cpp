@@ -332,4 +332,123 @@ namespace Riivo
 		gprintf("Riivo file: built %u redirect(s)%s\n", (unsigned) out.size(),
 				outCreated ? "" : " (create= files ignored)");
 	}
+
+	static bool ByManifestOffset(const ManifestExtent &a, const ManifestExtent &b)
+	{
+		return a.discOffset < b.discOffset;
+	}
+
+	//! Source id from an external path's device prefix ("sd:/..." -> SD,
+	//! "usb1:/..." -> USB). RiiFS-backed paths arrive in WP8 with their own
+	//! scheme and are refused here so they can never be misclassified as
+	//! local sectors.
+	static bool ClassifySource(const std::string &external, u16 &outSrc)
+	{
+		size_t colon = external.find(':');
+		std::string dev = colon == std::string::npos ? "" : external.substr(0, colon);
+		for (size_t i = 0; i < dev.size(); ++i)
+			dev[i] = (char) tolower((unsigned char) dev[i]);
+		if (dev == "sd" || dev.compare(0, 2, "sd") == 0)
+		{
+			outSrc = RIIVO_SRC_SD;
+			return true;
+		}
+		if (dev.compare(0, 3, "usb") == 0)
+		{
+			outSrc = RIIVO_SRC_USB;
+			return true;
+		}
+		return false;
+	}
+
+	//! Path within the FAT partition: strip the "sd:" device prefix, keeping
+	//! the leading '/'. The runtime resolves it against partLba/discovery.
+	static std::string StripDevice(const std::string &external)
+	{
+		size_t colon = external.find(':');
+		if (colon == std::string::npos)
+			return external;
+		std::string p = external.substr(colon + 1);
+		if (p.empty() || p[0] != '/')
+			p = "/" + p;
+		return p;
+	}
+
+	bool BuildManifestExtents(const std::vector<RedirectSpec> &specs,
+							  const std::map<std::string, u32> &fileSizes,
+							  const std::vector<bool> &resizeFlags,
+							  std::vector<ManifestExtent> &out,
+							  std::string &why)
+	{
+		why.clear();
+		out.clear();
+		if (specs.empty())
+		{
+			why = "manifest extents: no redirects to describe";
+			return false;
+		}
+		if (!resizeFlags.empty() && resizeFlags.size() != specs.size())
+		{
+			why = "manifest extents: resize flags do not match specs";
+			return false;
+		}
+
+		for (size_t i = 0; i < specs.size(); ++i)
+		{
+			const RedirectSpec &s = specs[i];
+			std::map<std::string, u32>::const_iterator it = fileSizes.find(s.external);
+			if (it == fileSizes.end())
+			{
+				why = "manifest extents: no size for " + s.external;
+				return false;
+			}
+			u32 realSize = it->second;
+			if (s.fileOffset > realSize)
+			{
+				why = "manifest extents: fileoffset past end of " + s.external;
+				return false;
+			}
+			u64 avail = (u64) realSize - s.fileOffset;
+			u64 len = s.length ? (u64) s.length : avail;
+			if (s.length && (u64) s.fileOffset + s.length > realSize)
+			{
+				why = "manifest extents: range past end of " + s.external;
+				return false;
+			}
+			bool resize = resizeFlags.empty() ? true : resizeFlags[i];
+			if (!resize && len > s.discLength)
+				len = s.discLength;
+			if (len > 0xFFFFFFFFULL)
+			{
+				why = "manifest extents: file too large: " + s.external;
+				return false;
+			}
+			if (len == 0)
+				continue; // zero-length: placement is a no-op downstream
+
+			u16 src = RIIVO_SRC_NONE;
+			if (!ClassifySource(s.external, src))
+			{
+				why = "manifest extents: unknown device in " + s.external;
+				return false;
+			}
+			ManifestExtent e;
+			e.discOffset = s.discOffset;
+			e.length = (u32) len;
+			e.kind = RIIVO_EXT_EXTERNAL;
+			e.source = src;
+			e.srcOffset = s.fileOffset;
+			e.path = StripDevice(s.external);
+			e.genOff = 0;
+			out.push_back(e);
+		}
+
+		if (out.empty())
+		{
+			why = "manifest extents: nothing left after zero-length pruning";
+			return false;
+		}
+		std::stable_sort(out.begin(), out.end(), ByManifestOffset);
+		return true;
+	}
 }
