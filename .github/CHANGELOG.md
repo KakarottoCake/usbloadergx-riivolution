@@ -3,6 +3,42 @@
 Full history for the Riivolution fork. The GitHub release body carries only the
 current version's bullets; everything older lives here.
 
+## Unreleased
+
+The memory patcher writes through absolute console addresses - CommitWrite and
+VerifyAppliedPatches cast 0x80600000 straight to a pointer - so on a host those
+pages are unmapped and every write path bailed before writing. test_memcheck
+said so in its own header, and "applied 0/4, 0 mismatch(es) in 0 checked
+write(s)" was the most it could reach: the preflight was covered, the writing
+and the re-reading were not.
+
+A 64-bit host can just reserve those addresses. test_memapply takes 24 MB at
+0x80000000 and runs the UNMODIFIED patcher against it, with the fake DOL
+sections inside that region so a scan match is a console-shaped address. Bytes
+land where they would land on the Wii, and the verifier re-reads what was
+written. Nothing in source/ is shimmed for it.
+
+Covered for the first time: a direct write actually landing; original= matching
+and mismatching against real bytes; the preflight provably writing nothing; a
+search match writing at the found address and leaving the bytes past it; the
+ocarina branch encoding landing at the blr; the verifier reporting one, then
+two, then no corrupted writes as bytes are changed under it; last-writer-wins
+suppression on overlapping writes; and a hard-failed set leaving RAM untouched.
+
+The ocarina slot is kept out of the verifier cases on purpose. The patcher
+writes the branch as the native bytes of a u32 while the verifier expands the
+same word big-endian by hand: identical on PowerPC, reversed on a
+little-endian host. Correct on the target, untestable as-is off it, so the two
+halves are pinned by an explicit equivalence check instead.
+
+Both new behaviours were mutation-checked: removing the last-writer-wins skip
+fails exactly the two overlap cases, and reordering the direct checks fails the
+ordering cases. A test that cannot fail proves nothing.
+
+- test_memapply: 46 checks over the write and re-read paths, on reserved memory.
+- Skips itself with a note where the address space cannot be reserved.
+- 146,330 automated checks, all passing.
+
 ## Changed in v3.10
 
 A memory patch that half-applied was the worst failure this fork could produce:
