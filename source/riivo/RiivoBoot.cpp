@@ -206,6 +206,11 @@ namespace Riivo
 	//!
 	//! Only reached when something has already gone wrong, which is exactly
 	//! when the list is most likely to be missing - hence the null check.
+	//! The game's own fragment list, as it was before any of the mod's were
+	//! appended. Held at namespace scope so the revert below can reach it.
+	static u32 savedOrigNum = 0;
+	static Fragment savedOrigLast;
+
 	static void RestoreFragList(u32 originalNum, const Fragment &originalLast)
 	{
 		FragList *fl = frag_list_mutable();
@@ -1350,6 +1355,27 @@ namespace Riivo
 		gprintf("Riivo: late FST install %s\n", ok ? "ok" : "REFUSED");
 	}
 
+	//! Put the game's own fragment list back and stand everything else down.
+	//! Called when the cIOS refuses the enlarged list: registering it is the
+	//! one step whose failure used to end the boot outright, because
+	//! SetupDisc returns the error and BootGame answers it with
+	//! Sys_BackToLoader - the loader disappears to the Homebrew Channel.
+	//! Every other failure in this feature boots the game unmodified, and
+	//! this one should too.
+	bool RevertFragList()
+	{
+		if (!savedOrigNum || fragListUntouched)
+			return false;
+		RestoreFragList(savedOrigNum, savedOrigLast);
+		//! The table must not be installed against fragments that were never
+		//! registered - that points the game at unmapped space.
+		fragsRegistered = false;
+		modOffsets.clear();
+		fragListUntouched = true;
+		fragRefusal = "the cIOS refused the enlarged fragment list";
+		return true;
+	}
+
 	void LogBootStep(const char *what)
 	{
 		if (what)
@@ -1399,6 +1425,10 @@ namespace Riivo
 		origImageSectors = before->size;
 		const u32 originalNum = before->num;
 		const Fragment originalLast = before->frag[originalNum - 1];
+		//! Kept so SetupDisc can put the game's own list back if the cIOS
+		//! will not take the enlarged one - see RevertFragList.
+		savedOrigNum = originalNum;
+		savedOrigLast = originalLast;
 
 		//! And which partition it is on, while the partition object still
 		//! exists - SetupDisc unmounts SD a few lines below.

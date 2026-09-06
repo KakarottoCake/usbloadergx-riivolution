@@ -3,6 +3,23 @@
 Full history for the Riivolution fork. The GitHub release body carries only the
 current version's bullets; everything older lives here.
 
+## Changed in v3.3
+
+Two testers' consoles returned to the Homebrew Channel instead of booting. Both
+logs stop partway through the file listing, and one ends in 88 zero bytes - a
+write whose data never reached the card. The Homebrew Channel is reachable from
+here by exactly one route: `SetupDisc` returns a negative value and `BootGame`
+answers it with `Sys_BackToLoader()`. Both calls that can return it -
+`set_frag_list` and `Disc_Open` - run after the listing, so the listing finished
+and the later log lines simply never landed.
+
+- `RevertFragList()` puts the game's own fragment list back and stands the file
+  work down. `SetupDisc` calls it when `set_frag_list` fails and retries once
+  with the original list. Registering the enlarged list was the only step in
+  this feature whose failure ended the boot outright; everything else already
+  degrades to booting the game unmodified.
+- The failing return code is printed before the retry.
+
 ## Changed in v3.2
 
 Starshine GLE completed every check the loader can make - 2789 of 2789 files

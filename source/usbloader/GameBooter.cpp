@@ -277,7 +277,19 @@ int GameBooter::SetupDisc(struct discHdr &gameHeader)
 		DeviceHandler::Instance()->UnMountSD();
 		ret = set_frag_list(gameHeader.id, Settings.SDMode);
 		if (ret < 0)
-			return ret;
+		{
+			//! Riivolution enlarged this list. Registering it is the one step
+			//! whose failure used to end the boot outright: SetupDisc returns
+			//! the error and BootGame answers it with Sys_BackToLoader, so the
+			//! loader vanishes to the Homebrew Channel. Put the game's own list
+			//! back and try once more - every other failure in this feature
+			//! boots the game unmodified, and so should this one.
+			gprintf("set_frag_list failed (%d); reverting to the game's own\n", ret);
+			if (Riivo::RevertFragList())
+				ret = set_frag_list(gameHeader.id, Settings.SDMode);
+			if (ret < 0)
+				return ret;
+		}
 		gprintf("%s set to game\n", Settings.SDMode ? "SD" : "USB");
 		DeviceHandler::Instance()->MountSD();
 		//! Logged only once the card is back: the append would have had

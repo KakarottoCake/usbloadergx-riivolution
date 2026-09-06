@@ -97,6 +97,11 @@ namespace Riivo
 	//! Copy the rebuilt file table into the game's memory. Call this as late
 	//! as possible - it lands at the top of MEM1, which the loader's own heap
 	//! also occupies, so anything the loader does afterwards can overwrite it.
+	//! Put the game's own fragment list back after the cIOS refused the
+	//! enlarged one, so the game can still boot unmodified. True if it
+	//! changed anything.
+	bool RevertFragList();
+
 	void InstallPendingFst();
 
 	void LogBootStep(const char *what);
