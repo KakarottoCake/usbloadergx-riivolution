@@ -9,6 +9,7 @@
 #include "gecko.h"
 #include "patches/gamepatches.h"
 #include "patches/wip.h"
+#include "riivo/RiivoLight.h"
 #include "settings/SettingsEnums.h"
 
 /* Apploader function pointers */
@@ -65,8 +66,19 @@ s32 Apploader_Run(entry_point *entry, char * dolpath, u8 alternatedol, u32 alter
 	/* Initialize apploader */
 	appldr_init(gprintf);
 
+	/* The apploader is the longest silent stretch of a Riivolution boot -
+	   measured at 3081 ms of a 3563 ms boot on a memory-only test, with no
+	   logged step anywhere inside it. The drive light is driven from the log
+	   steps, so without a pulse here it freezes for those three seconds and
+	   goes out only when the game takes over, which is indistinguishable
+	   from the hang the tester is told to watch for. One flip per section
+	   read tracks real progress rather than a timer. */
+	RiivoPulseLight();
+
 	while(appldr_main(&dst, &len, &offset))
 	{
+		RiivoPulseLight();
+
 		/* Read data from DVD */
 		WDVD_Read(dst, len, (u64) (offset << 2));
 
