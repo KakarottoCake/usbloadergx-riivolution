@@ -1028,7 +1028,16 @@ int GameBooter::BootGame(struct discHdr *gameHdr, const s8 useOcarina)
 	//! gamepatches, the mod's memory patches - allocates. Installing it any
 	//! earlier lets malloc hand the same memory out again and overwrite it,
 	//! which verifies clean at install time and then black-screens.
-	Riivo::InstallPendingFst();
+	//! The install is verified inside: installed bytes against what was
+	//! staged, plus the words the game uses to find the table. A mismatch
+	//! refuses the jump and returns to the loader - a visible outcome naming
+	//! the install - instead of a black screen past this point.
+	if (!Riivo::InstallPendingFst())
+	{
+		gprintf("Riivo: FST install unverified, refusing the jump\n");
+		Sys_BackToLoader();
+		return -1;
+	}
 
 	//! Pre-jump integrity re-read: everything above (code handler, 480p,
 	//! Wiimmfi, the file-table install) writes game RAM after the memory
