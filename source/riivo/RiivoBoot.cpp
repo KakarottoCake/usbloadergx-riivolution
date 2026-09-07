@@ -261,6 +261,7 @@ namespace Riivo
 	//! SetBootContext while the card is mounted; the card is gone by the
 	//! time the screen shows.
 	static bool showExtended = false;
+	static bool showSummary = false;
 
 	//! The game's id, needed to ask which partition it lives on.
 	static u8 bootGameId[8] = { 0 };
@@ -421,17 +422,27 @@ namespace Riivo
 				fclose(w);
 			}
 		}
-		//! Extended pre-jump summary (riivolution/showlog.txt): without the
-		//! marker the screen shows a brief beat; with it, the full hold for
-		//! reading and photographing. Read here - the card is gone by the
-		//! time the screen shows - and reset per boot like every marker.
+		//! Pre-jump summary (riivolution/showlog.txt): OFF unless the marker
+		//! is present. It used to be unconditional, and that made it the only
+		//! thing this loader does after ShutDownDevices that stock does not:
+		//! it starts the progress GUI, sleeps, and blocks in ProgressStop,
+		//! immediately before the jump. A Test=Disabled boot - no memory
+		//! patch, no file work, no table install, nothing else on the path -
+		//! still black-screened with the drive light stuck on, which is what
+		//! a hang before EndLightPulse looks like. It is also why the summary
+		//! and the loading bar were reported as never appearing: the GUI
+		//! cannot present this late, and the attempt is not free.
+		//! Read here because the card is gone by the time the screen shows,
+		//! and reset per boot like every marker.
 		showExtended = false;
+		showSummary = false;
 		if (!device.empty())
 		{
 			FILE *s = fopen((device + "/riivolution/showlog.txt").c_str(), "rb");
 			if (s)
 			{
 				showExtended = true;
+				showSummary = true;
 				fclose(s);
 			}
 		}
@@ -2639,7 +2650,11 @@ namespace Riivo
 	//! boot continues with a quiet heap.
 	void ShowPreJumpSummary(bool memAttempted, int memApplied, int memTotal)
 	{
-		if (!bootSet)
+		//! Opt-in only. See the showlog.txt marker in SetBootContext: this
+		//! runs after ShutDownDevices and its GUI work sits between the
+		//! apploader and the jump, so on the default path it does nothing
+		//! at all and the boot goes straight to the game.
+		if (!bootSet || !showSummary)
 			return;
 		char title[64], msg1[192], msg2[128];
 		if (!fileWorkWanted)
