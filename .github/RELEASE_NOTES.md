@@ -37,6 +37,12 @@ on. Without that file nothing changes and the build behaves exactly like v3.10.
 It has never run on a console. Expect it to fail; the log and a USB Gecko trace are the
 point of it. Leave the file off for normal use.
 
+## Changed in v3.22
+
+- The disc light pulses while the mod is being prepared and goes out when the game takes over. If it is dark and the screen is still black after 20 seconds, it is stuck.
+- The loading bar is now on by default (`riivolution/noloadingbar.txt` turns it off).
+- The disc light now works for warnings and blink codes even if you have the disc light turned off in settings.
+
 ## Changed in v3.21
 
 - A mod on the SD card now warns you when you pick it, and again before launch.

@@ -3,6 +3,12 @@
 
 void wiilight(int enable);
 
+//! The drive light used as a diagnostic rather than as decoration, so it
+//! ignores Settings.wiilight. That setting is a preference about idle
+//! blinking; it must not be able to switch off a refusal code or the only
+//! sign of life a tester has while the screen is black.
+void wiilight_diag(int enable);
+
 /* Prototypes */
 void AppCleanUp(void);  //! Deletes all allocated space for everything
 void ExitApp(void);	 //! Like AppCleanUp() and additional device unmount

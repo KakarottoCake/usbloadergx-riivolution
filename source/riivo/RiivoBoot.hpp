@@ -135,6 +135,18 @@ namespace Riivo
 	//! gates Wii U out (its GUI threads are gone by boot time).
 	void ShowPreJumpSummary(bool memAttempted, int memApplied, int memTotal);
 
+	//! Flip the drive light. Called from every logged boot step, and from
+	//! inside the long silent stretches that log nothing, so the console has
+	//! a visible pulse for the whole time Riivolution is working. A light
+	//! that stops changing names the step that hung; a light that never
+	//! starts means the boot never reached Riivolution at all.
+	void PulseLight();
+
+	//! Light off, permanently, immediately before the jump. After this a
+	//! dark light means the loader is finished and the game has the console,
+	//! which is what lets a tester tell "still working" from "handed over".
+	void EndLightPulse();
+
 	void ReportLaunch(u32 entry);
 }
 

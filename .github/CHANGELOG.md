@@ -5,6 +5,39 @@ current version's bullets; everything older lives here.
 
 ## Unreleased
 
+The drive light pulses for as long as Riivolution is working, and goes out
+at the jump. The loading bar is on by default.
+
+Every channel this feature had needed something that is gone by the time it
+matters. The card log stops when the card is unmounted - which is exactly
+the window an SD boot dies in. The screen stops when the GUI does. gprintf
+needs hardware a tester does not own. The drive light is one register write
+at 0xCD0000C0: no devices, no threads, no allocation, and it survives the
+whole boot including the stretch where a black screen is the only other
+thing on offer.
+
+Toggled from the points that already mark progress rather than driven by a
+timer, so the light changing IS progress and a light that stops names the
+step it stopped on. No thread to schedule, nothing to tear down, and it
+cannot itself be what breaks a boot. The MEM2 pattern scan gets its own
+call every 0x40000 words: three seconds, thirteen million words, and until
+now not one thing on any channel to say the console was alive.
+
+Off, once, immediately before the jump - which is what makes "still
+pulsing" and "went dark" mean different things to someone watching a black
+screen. Dark plus no picture after twenty seconds is a hang; the longest
+loader phase measured is fifteen seconds and every one of those pulses.
+
+wiilight() honours Settings.wiilight, a preference about idle blinking.
+That preference was silently switching off the v3.20 refusal blink codes as
+well - a diagnostic disabled by a decoration. wiilight_diag() writes the
+same register without the check, and the refusal codes now use it.
+
+The loading bar was behind a riivolution/loadingbar.txt marker, so the
+normal case was a black screen for the whole of the slowest phase with
+nothing to say the console was alive. It is on by default now; the marker
+became riivolution/noloadingbar.txt for anyone who wants the stock look.
+
 A mod on the SD card is warned about twice: when it is chosen, and again
 before launch.
 
