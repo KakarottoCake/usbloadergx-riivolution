@@ -2698,3 +2698,10 @@ namespace Riivo
 		AppendLog(out);
 	}
 }
+
+//! C bridge for apploader.c, which cannot see the namespace. Defined here
+//! next to the state it toggles rather than in a shim of its own.
+extern "C" void RiivoPulseLight(void)
+{
+	Riivo::PulseLight();
+}
