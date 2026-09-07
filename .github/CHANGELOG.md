@@ -243,6 +243,14 @@ and permanent silence, and a write failure drops the socket rather than retrying
 - test_netlog: 23 checks on the address parsing, the half that fails quietly.
 - 146,353 automated checks, all passing.
 
+## Changed in v3.14
+
+- Late FST install is verified and refuses the jump instead of black-screening.
+- Boot outcome reads FST_STAGED; older logs still parse.
+- Large-read warning scales with the mod's actual payload size.
+- Rebuilt tables gain exactly the root NUL byte, proven by test.
+- 146,777 automated checks, all passing.
+
 ## Changed in v3.13
 
 - Recovered files absent from the rebuilt table no longer withhold the mod anonymously.

@@ -33,12 +33,11 @@ on. Without that file nothing changes and the build behaves exactly like v3.10.
 It has never run on a console. Expect it to fail; the log and a USB Gecko trace are the
 point of it. Leave the file off for normal use.
 
-## Changed in v3.14
+## Changed in v3.15
 
-- Late FST install is verified and refuses the jump instead of black-screening.
-- Boot outcome reads FST_STAGED; older logs still parse.
-- Large-read warning scales with the mod's actual payload size.
-- Rebuilt tables gain exactly the root NUL byte, proven by test.
+- Optional on-screen result summary before the jump (riivolution/showlog.txt).
+- Relocation install refuses visibly instead of risking loader memory.
+- Mount boundary markers name SD unmount/remount failures in the log.
 - 146,777 automated checks, all passing.
 
 Older versions: [CHANGELOG.md](CHANGELOG.md)

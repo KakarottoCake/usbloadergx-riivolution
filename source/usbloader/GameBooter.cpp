@@ -275,6 +275,10 @@ int GameBooter::SetupDisc(struct discHdr &gameHeader)
 		//! mod comes from. Does nothing when no file/folder patches are active.
 		Riivo::PrepareFragList();
 
+		//! Mount boundary markers: when the mod and its log live on SD,
+		//! everything after the unmount below is unwritable until the
+		//! remount, so a log that stops here names the killer precisely.
+		Riivo::LogBootStep("unmounting SD to register the fragment list");
 		DeviceHandler::Instance()->UnMountSD();
 		ret = set_frag_list(gameHeader.id, Settings.SDMode);
 		if (ret < 0)
@@ -292,7 +296,13 @@ int GameBooter::SetupDisc(struct discHdr &gameHeader)
 				return ret;
 		}
 		gprintf("%s set to game\n", Settings.SDMode ? "SD" : "USB");
-		DeviceHandler::Instance()->MountSD();
+		const bool sdRemounted = DeviceHandler::Instance()->MountSD();
+		//! If this line is missing from the log, the remount failed: every
+		//! later append had nowhere to go, and the mod's files (when they
+		//! live on SD) are unreachable, so the boot silently degrades to
+		//! unmodified. gprintf is the only channel left in that case.
+		gprintf("Riivo: SD remount %s\n", sdRemounted ? "ok" : "FAILED");
+		Riivo::LogBootStep(sdRemounted ? "SD remounted: yes" : "SD remounted: NO");
 		//! Logged only once the card is back: the append would have had
 		//! nowhere to go while SD was unmounted.
 		Riivo::LogBootStep("fragment list handed to the cIOS");
@@ -671,6 +681,7 @@ int GameBooter::BootGame(struct discHdr *gameHdr, const s8 useOcarina)
 	Riivo::ResolvedPatchSet riivoSet;
 	std::vector<Riivo::MemOutcome> riivoMemPre, riivoMemApp;
 	bool riivoMemAttempted = false;
+	int riivoMemAppliedCount = 0;
 	bool riivoSkipCodeHandler = false;
 	std::string riivoDevice; // SD/USB mount prefix, e.g. "sd:"
 	Riivo::ConfigurePatchProtection(riivoSet, riivoDevice, false);
@@ -952,6 +963,7 @@ int GameBooter::BootGame(struct discHdr *gameHdr, const s8 useOcarina)
 	{
 		riivoMemAttempted = true;
 		int riivoMemApplied = Riivo::ApplyMemoryPatches(riivoSet, riivoDevice, riivoMemApp);
+		riivoMemAppliedCount = riivoMemApplied;
 		gprintf("%s", Riivo::DescribeMemApplySummary(riivoMemPre, riivoMemApp, riivoMemApplied).c_str());
 		//! Diagnostic-only: a mismatch names bytes that changed under the
 		//! patches, but nothing this late can repair them and refusing the
@@ -1022,6 +1034,15 @@ int GameBooter::BootGame(struct discHdr *gameHdr, const s8 useOcarina)
 		}
 	}
 
+	//! On-screen result summary for tester rounds (opt-in via
+	//! riivolution/showlog.txt): everything above is card-logged, but a
+	//! black screen hides whether the boot even reached the jump. Drawn
+	//! here - before the FST install - so nothing is allocated afterwards,
+	//! and skipped on Wii U, whose GUI threads are gone by boot time. The
+	//! install refusal below stays the post-install signal.
+	if (!isWiiU())
+		Riivo::ShowPreJumpSummary(riivoMemAttempted, riivoMemAppliedCount,
+								   (int) riivoSet.memories.size());
 	//! Jump to the entrypoint of the game - the last function of the USB Loader
 	//! LAST. The table lands at the top of MEM1, which is also inside the
 	//! loader's own heap, and everything above here - ShutDownDevices,
