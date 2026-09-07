@@ -122,6 +122,12 @@ namespace Riivo
 
 	void LogBootStep(const char *what);
 
+	//! Pre-jump result screen (opt-in via riivolution/showlog.txt). Drawn
+	//! before the FST install so nothing is allocated afterwards. No-op
+	//! without the marker file or without a selected mod; the caller gates
+	//! Wii U out (its GUI threads are gone by boot time).
+	void ShowPreJumpSummary(bool memAttempted, int memApplied, int memTotal);
+
 	void ReportLaunch(u32 entry);
 }
 

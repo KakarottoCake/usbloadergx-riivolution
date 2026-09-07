@@ -7,6 +7,7 @@
 #include <strings.h>
 #include <malloc.h>
 #include <sys/stat.h>
+#include <unistd.h>
 #include <algorithm>
 #include <map>
 #include <gccore.h>
@@ -194,6 +195,22 @@ namespace Riivo
 	//! stopped it.
 	static std::string withholdStage;
 
+	//! Opt-in pre-jump result screen (riivolution/showlog.txt). The progress
+	//! window below only copies into static buffers and resumes a thread -
+	//! no allocation - so it is safe after device shutdown, but it must run
+	//! before the FST install all the same: anything allocated afterwards
+	//! could land on the installed table.
+	static bool showResults = false;
+
+	//! Outcome counters for that screen, captured where they are known.
+	static u32 sumPlaced = 0;
+	static u32 sumFailed = 0;
+
+	//! Seconds the result screen stays up. Long enough to read and
+	//! photograph, short enough to tolerate on every diagnostic boot.
+	//! No input is waited on: post-shutdown pads cannot be relied upon.
+	static const u32 RIIVO_SHOWLOG_SECONDS = 6;
+
 	//! The game's id, needed to ask which partition it lives on.
 	static u8 bootGameId[8] = { 0 };
 
@@ -318,6 +335,20 @@ namespace Riivo
 			{
 				deepVerify = true;
 				fclose(w);
+			}
+		}
+		//! Opt-in pre-jump result screen (showlog.txt): everything above is
+		//! card-logged, but a black screen hides whether the boot even
+		//! reached the jump. Read here for the same reason as the markers
+		//! above - the card is gone by jump time.
+		showResults = false;
+		if (!device.empty())
+		{
+			FILE *s = fopen((device + "/riivolution/showlog.txt").c_str(), "rb");
+			if (s)
+			{
+				showResults = true;
+				fclose(s);
 			}
 		}
 		//! Optional: "addr:port" of a listener on the LAN. Absent for
@@ -847,6 +878,8 @@ namespace Riivo
 		}
 		Addf(out, "  fragments            : %u -> %u of %u, registered in SetupDisc\n",
 			 fragStats.fragsBefore, fragStats.fragsAfter, RIIVO_FRAG_MAX);
+		sumPlaced = (u32) placed.size();
+		sumFailed = 0;
 
 		std::string why;
 		size_t verified = 0;
@@ -971,6 +1004,7 @@ namespace Riivo
 				 (unsigned)extendedVerified);
 		if (failed)
 		{
+			sumFailed = (u32) failed;
 			Addf(out, "  Read-back FAILED for %u file(s):\n", (unsigned)failed);
 			out += failures;
 			if (failed > MAX_NAMED)
@@ -1703,6 +1737,59 @@ namespace Riivo
 			return true;
 		const u32 addr = pendingPlace.fstAddr;
 		const u32 size = pendingFstSize;
+		//! A relocated table would overwrite bytes below the apploader's
+		//! reservation (and possibly past its old top). That region was free
+		//! heap as far as the game is concerned, but the loader itself still
+		//! runs from MEM1 after this write - heap metadata, jump parameters,
+		//! anything malloc handed out up there. Scan what is there BEFORE
+		//! writing: nonzero bytes are liveness evidence, and the install is
+		//! refused without touching anything rather than black-screened.
+		//! In-place installs touch nothing outside the reservation and skip
+		//! this entirely.
+		if (!pendingPlace.inPlace)
+		{
+			const u32 curPtr = *(vu32 *) 0x80000038;
+			const u32 curMax = *(vu32 *) 0x8000003C;
+			//! A zero reservation says nothing about what is reserved, so
+			//! there is nothing to check against - PlaceFst already refused
+			//! the cases that matter.
+			if (curMax > 0 && curPtr >= MEM1_BASE && curPtr < MEM1_END
+				&& curMax <= MEM1_END - curPtr)
+			{
+				const u32 origAddr = curPtr;
+				const u32 origTop = curPtr + curMax;
+				bool dirty = false;
+				if (origAddr > addr)
+				{
+					for (u32 p = addr; p < origAddr; ++p)
+					{
+						if (*(const volatile u8 *) p)
+						{
+							dirty = true;
+							break;
+						}
+					}
+				}
+				if (!dirty && addr + size > origTop)
+				{
+					for (u32 p = origTop; p < addr + size; ++p)
+					{
+						if (*(const volatile u8 *) p)
+						{
+							dirty = true;
+							break;
+						}
+					}
+				}
+				if (dirty)
+				{
+					pendingPlaceOk = false;
+					gprintf("Riivo: late FST install REFUSED - relocation target below 0x%08x holds nonzero bytes; returning to the loader instead of jumping\n",
+							origAddr);
+					return false;
+				}
+			}
+		}
 		const bool ok = InstallFst(pendingPlace, pendingFst, pendingFstSize);
 		pendingPlaceOk = false;
 		bool verified = false;
@@ -2296,6 +2383,46 @@ namespace Riivo
 		gprintf("Riivo: placement %s (%08x, %u bytes), memory patches %s\n",
 				place.ok ? "ok" : "refused", place.fstAddr, want,
 				FileWorkIncomplete() ? "held back" : "applied");
+	}
+
+	//! Pre-jump result screen (opt-in via riivolution/showlog.txt). The card
+	//! log ends at device shutdown, so a black screen hides whether the boot
+	//! even reached the jump; this puts the verdict where the tester can see
+	//! it. Only static buffers are touched (StartProgress copies into its
+	//! own), nothing is allocated, and it runs BEFORE the FST install - the
+	//! install refusal below stays the post-install signal. No input is
+	//! waited on; the screen holds a fixed delay and the boot continues.
+	void ShowPreJumpSummary(bool memAttempted, int memApplied, int memTotal)
+	{
+		if (!showResults || !bootSet)
+			return;
+		char title[64], msg1[192], msg2[128];
+		if (!fileWorkWanted)
+			snprintf(title, sizeof(title), "Riivolution: NO_FILE_WORK");
+		else if (fileWorkLive)
+			snprintf(title, sizeof(title), "Riivolution: FST_STAGED");
+		else
+			snprintf(title, sizeof(title), "Riivolution: WITHHELD %s",
+					 withholdStage.c_str());
+		if (!fileWorkWanted)
+			snprintf(msg1, sizeof(msg1), "no file work requested");
+		else
+			snprintf(msg1, sizeof(msg1), "files %u placed, %u read-back failures; FST %u bytes",
+					 (unsigned) sumPlaced, (unsigned) sumFailed, pendingFstSize);
+		if (memTotal <= 0)
+			snprintf(msg2, sizeof(msg2), "mem: none requested");
+		else if (!memAttempted)
+			snprintf(msg2, sizeof(msg2), "mem: %d requested, not applied (%s)",
+					 memTotal,
+					 MemoryPatchesSuppressed() ? "suppressed"
+					 : FileWorkIncomplete() ? "withheld" : "skipped");
+		else
+			snprintf(msg2, sizeof(msg2), "mem: %d/%d applied", memApplied, memTotal);
+		char *end = msg2 + strlen(msg2);
+		snprintf(end, sizeof(msg2) - (size_t) (end - msg2), "; launching in %us",
+				 RIIVO_SHOWLOG_SECONDS);
+		StartProgress(title, msg1, msg2, false, false);
+		usleep(RIIVO_SHOWLOG_SECONDS * 1000000u);
 	}
 
 	//! The last thing written while the card is still mounted. A black screen
