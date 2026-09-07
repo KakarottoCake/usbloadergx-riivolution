@@ -14,6 +14,7 @@
 #include <ogcsys.h>
 #include <ogc/lwp_watchdog.h>
 
+#include "sys.h"
 #include "RiivoBoot.hpp"
 #include "RiivoNet.hpp"
 #include "RiivoConfig.hpp"
@@ -194,6 +195,40 @@ namespace Riivo
 	//! needs these names. Cleared once per boot in SetBootContext.
 	static std::vector<MissingExternal> modMissing;
 
+	//! "The console is still working." Everything else this feature can say
+	//! needs something that is gone by the time it matters: the card log
+	//! stops when the card is unmounted, the screen stops when the GUI does,
+	//! gprintf needs hardware the tester does not own. The drive light is a
+	//! single register write - no devices, no threads, no allocation - so it
+	//! is the one channel that survives the whole boot, including the window
+	//! where a black screen is the only other thing on offer.
+	//!
+	//! Toggled rather than driven from a timer: this is called from the
+	//! points that already mark progress, so the light changing IS progress,
+	//! and a light that stops changing means the step it stopped on is the
+	//! one that hung. No thread to schedule, nothing to tear down, and it
+	//! cannot itself be the thing that breaks a boot.
+	static bool pulseOn = false;
+	static bool pulseArmed = false;
+
+	void PulseLight()
+	{
+		if (!pulseArmed)
+			return;
+		pulseOn = !pulseOn;
+		wiilight_diag(pulseOn ? 1 : 0);
+	}
+
+	//! Off, once and for all. Called immediately before the jump: from then
+	//! on a dark light means the loader is done and the game has it, which
+	//! is what makes "still pulsing" and "went out" mean different things.
+	void EndLightPulse()
+	{
+		pulseArmed = false;
+		pulseOn = false;
+		wiilight_diag(0);
+	}
+
 	//! Machine-parseable outcome of the file work, for the previous-boot
 	//! check in the game settings UI. FST_STAGED once the table is staged
 	//! for install (installation itself is verified after device shutdown
@@ -359,15 +394,24 @@ namespace Riivo
 		modMissing.clear();
 		modAddFails.clear();
 		installFailCode = 0;
+		//! On by default. It used to need a riivolution/loadingbar.txt
+		//! marker, which meant the normal case was a black screen for the
+		//! whole of the slowest phase - seconds on the test mod, fifteen on
+		//! a total conversion - with nothing to say the console was alive.
+		//! The marker now turns it OFF, for anyone who wants the stock look.
+		verboseListing = true;
 		if (!device.empty())
 		{
-			FILE *v = fopen((device + "/riivolution/loadingbar.txt").c_str(), "rb");
+			FILE *v = fopen((device + "/riivolution/noloadingbar.txt").c_str(), "rb");
 			if (v)
 			{
-				verboseListing = true;
+				verboseListing = false;
 				fclose(v);
 			}
 		}
+		//! Arm the drive-light pulse for this boot. Disarmed at the jump.
+		pulseArmed = true;
+		pulseOn = false;
 		if (!device.empty())
 		{
 			FILE *w = fopen((device + "/riivolution/verify.txt").c_str(), "rb");
@@ -553,6 +597,9 @@ namespace Riivo
 		va_end(args);
 		if (!bootClockStart)
 			bootClockStart = gettime();
+		//! Every logged step flips the light, so the blink rate IS the work
+		//! rate and a light that stops tells the tester which step hung.
+		PulseLight();
 		const u32 now = BootElapsedMs();
 		Addf(out, "  %-52s %6u ms  MEM2 free %u KB\n", buf,
 			 (unsigned) now,

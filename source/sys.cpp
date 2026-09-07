@@ -44,6 +44,18 @@ void wiilight(int enable) // Toggle wiilight (thanks Bool for wiilight source)
 	*_wiilight_reg = val;
 }
 
+//! Same register, without the preference check. Used where the light is
+//! carrying information - a refusal code, or the pulse that says the loader
+//! is still working behind a black screen. Someone who turned off the idle
+//! blinking did not ask to be left with no signal at all.
+void wiilight_diag(int enable)
+{
+	static vu32 *_wiilight_reg = (u32*) 0xCD0000C0;
+	u32 val = (*_wiilight_reg & ~0x20);
+	if (enable) val |= 0x20;
+	*_wiilight_reg = val;
+}
+
 /* Variables */
 u8 shutdown = 0;
 u8 reset = 0;

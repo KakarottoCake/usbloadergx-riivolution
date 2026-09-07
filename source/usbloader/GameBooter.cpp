@@ -362,12 +362,12 @@ void GameBooter::ShutDownDevices(int gameUSBPort)
 		usleep(700000);
 		for (u32 i = 0; i < n; ++i)
 		{
-			wiilight(1);
+			wiilight_diag(1);
 			usleep(350000);
-			wiilight(0);
+			wiilight_diag(0);
 			usleep(350000);
 		}
-		wiilight(0);
+		wiilight_diag(0);
 	}
 
 	//! Blink a refusal code unless on Wii U. Exact conditions: 1-5 FST
@@ -1145,6 +1145,12 @@ int GameBooter::BootGame(struct discHdr *gameHdr, const s8 useOcarina)
 			gprintf("Riivo mem: [pre-jump] %d write(s) changed since apply (handler/480p/Wiimmfi/FST install ran after); launching anyway (diagnostic only)\n",
 					riivoMemPreJumpMismatches);
 	}
+
+	//! Light out: the loader is done and the game has the console from the
+	//! next instruction. Everything before this pulsed the light on every
+	//! step, so "still blinking" and "went dark" now mean different things
+	//! to someone watching a black screen with no other channel available.
+	Riivo::EndLightPulse();
 
 	gprintf("Jumping to game entrypoint: 0x%08x.\n", AppEntrypoint);
 	return Disc_JumpToEntrypoint(Hooktype, WDMMenu::GetDolParameter());

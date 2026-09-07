@@ -9,6 +9,7 @@
 #include <ogc/system.h>
 
 #include "RiivoIosProbe.hpp"
+#include "RiivoBoot.hpp"
 #include "RiivoProbeClassify.hpp"
 #include "RiivoDiPatch.hpp"
 #include "RiivoDiHook.hpp"
@@ -233,6 +234,13 @@ namespace Riivo
 		for (u32 addr = SCAN_FROM; addr < MEM2_END; addr += 4)
 		{
 			const u32 v = ReadUncached(addr);
+			//! The longest stretch of the whole boot that logs nothing: 13.6
+			//! million words, about three seconds, during which every other
+			//! channel is silent. Flip the light roughly eight times a second
+			//! so the console is visibly working rather than visibly hung.
+			//! Masked on the counter, not a timer, so it costs one AND.
+			if ((words & 0x3FFFF) == 0)
+				PulseLight();
 			++words;
 			if (v)
 				++nonZero;
