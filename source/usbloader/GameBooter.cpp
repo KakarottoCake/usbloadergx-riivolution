@@ -277,7 +277,9 @@ int GameBooter::SetupDisc(struct discHdr &gameHeader)
 
 		//! Mount boundary markers: when the mod and its log live on SD,
 		//! everything after the unmount below is unwritable until the
-		//! remount, so a log that stops here names the killer precisely.
+		//! remount, so a log that stops here narrows the failure to the
+		//! unmount/register/remount/reopen interval without naming which.
+		Riivo::LogBootStep("unmounting SD to register the fragment list");
 		Riivo::LogBootStep("unmounting SD to register the fragment list");
 		DeviceHandler::Instance()->UnMountSD();
 		ret = set_frag_list(gameHeader.id, Settings.SDMode);
@@ -297,10 +299,11 @@ int GameBooter::SetupDisc(struct discHdr &gameHeader)
 		}
 		gprintf("%s set to game\n", Settings.SDMode ? "SD" : "USB");
 		const bool sdRemounted = DeviceHandler::Instance()->MountSD();
-		//! If this line is missing from the log, the remount failed: every
-		//! later append had nowhere to go, and the mod's files (when they
-		//! live on SD) are unreachable, so the boot silently degrades to
-		//! unmodified. gprintf is the only channel left in that case.
+		//! If this line is missing from the log, the failure sits somewhere
+		//! in the unmount/register/remount/reopen interval above - most
+		//! likely the remount, in which case the mod's files (when they live
+		//! on SD) are unreachable and the boot silently degrades. gprintf is
+		//! the only channel left in that case.
 		gprintf("Riivo: SD remount %s\n", sdRemounted ? "ok" : "FAILED");
 		Riivo::LogBootStep(sdRemounted ? "SD remounted: yes" : "SD remounted: NO");
 		//! Logged only once the card is back: the append would have had

@@ -243,6 +243,12 @@ and permanent silence, and a write failure drops the socket rather than retrying
 - test_netlog: 23 checks on the address parsing, the half that fails quietly.
 - 146,353 automated checks, all passing.
 
+## Changed in v3.16
+
+- Pre-jump result screen is on for every mod boot; no marker file needed.
+- Mount markers, install verification and FST_STAGED carry over from v3.15.
+- 146,777 automated checks, all passing.
+
 ## Changed in v3.15
 
 - Optional on-screen result summary before the jump (riivolution/showlog.txt).

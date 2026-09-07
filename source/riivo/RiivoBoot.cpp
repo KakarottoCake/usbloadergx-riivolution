@@ -1717,57 +1717,67 @@ namespace Riivo
 			return true;
 		const u32 addr = pendingPlace.fstAddr;
 		const u32 size = pendingFstSize;
-		//! A relocated table would overwrite bytes below the apploader's
-		//! reservation (and possibly past its old top). That region was free
-		//! heap as far as the game is concerned, but the loader itself still
-		//! runs from MEM1 after this write - heap metadata, jump parameters,
-		//! anything malloc handed out up there. Scan what is there BEFORE
-		//! writing: nonzero bytes are liveness evidence, and the install is
-		//! refused without touching anything rather than black-screened.
-		//! In-place installs touch nothing outside the reservation and skip
-		//! this entirely.
+		//! A relocated table overwrites bytes below the apploader's
+		//! reservation (and possibly past its old top). Whether anything
+		//! live sits there cannot be established from byte contents: free
+		//! heap routinely holds stale nonzero bytes (freed vectors from the
+		//! table build itself, HBC leftovers), and zeroed bytes can still
+		//! belong to something. So this scan is evidence only, never a
+		//! verdict: it records what the span held and where the loader heap
+		//! break sits, for post-hoc analysis, and the install always
+		//! proceeds to the verification below. In-place installs touch
+		//! nothing outside the reservation and skip this entirely.
 		if (!pendingPlace.inPlace)
 		{
 			const u32 curPtr = *(vu32 *) 0x80000038;
 			const u32 curMax = *(vu32 *) 0x8000003C;
 			//! A zero reservation says nothing about what is reserved, so
-			//! there is nothing to check against - PlaceFst already refused
+			//! there is nothing to scan against - PlaceFst already refused
 			//! the cases that matter.
 			if (curMax > 0 && curPtr >= MEM1_BASE && curPtr < MEM1_END
 				&& curMax <= MEM1_END - curPtr)
 			{
 				const u32 origAddr = curPtr;
 				const u32 origTop = curPtr + curMax;
-				bool dirty = false;
-				if (origAddr > addr)
+				char dirt[3 * 32 + 1];
+				size_t dirtLen = 0;
+				u32 dirtyAt = 0;
+				int dirtyCount = 0;
+				for (u32 p = addr; p < origAddr && dirtyCount < 32; ++p)
 				{
-					for (u32 p = addr; p < origAddr; ++p)
+					const u8 b = *(const volatile u8 *) p;
+					if (b && dirtyCount == 0)
+						dirtyAt = p;
+					if (b || dirtyCount > 0)
 					{
-						if (*(const volatile u8 *) p)
+						dirtLen += (size_t) snprintf(dirt + dirtLen,
+													 sizeof(dirt) - dirtLen,
+													 "%02x", b);
+						++dirtyCount;
+					}
+				}
+				if (dirtyCount == 0 && addr + size > origTop)
+				{
+					for (u32 p = origTop; p < addr + size && dirtyCount < 32; ++p)
+					{
+						const u8 b = *(const volatile u8 *) p;
+						if (b && dirtyCount == 0)
+							dirtyAt = p;
+						if (b || dirtyCount > 0)
 						{
-							dirty = true;
-							break;
+							dirtLen += (size_t) snprintf(dirt + dirtLen,
+														 sizeof(dirt) - dirtLen,
+														 "%02x", b);
+							++dirtyCount;
 						}
 					}
 				}
-				if (!dirty && addr + size > origTop)
-				{
-					for (u32 p = origTop; p < addr + size; ++p)
-					{
-						if (*(const volatile u8 *) p)
-						{
-							dirty = true;
-							break;
-						}
-					}
-				}
-				if (dirty)
-				{
-					pendingPlaceOk = false;
-					gprintf("Riivo: late FST install REFUSED - relocation target below 0x%08x holds nonzero bytes; returning to the loader instead of jumping\n",
-							origAddr);
-					return false;
-				}
+				if (dirtyCount > 0)
+					gprintf("Riivo: relocation span below 0x%08x held nonzero bytes (first at 0x%08x: %s); sbrk break 0x%08x\n",
+							origAddr, dirtyAt, dirt, (u32) (uintptr_t) sbrk(0));
+				else
+					gprintf("Riivo: relocation span below 0x%08x held all zeros; sbrk break 0x%08x\n",
+							origAddr, (u32) (uintptr_t) sbrk(0));
 			}
 		}
 		const bool ok = InstallFst(pendingPlace, pendingFst, pendingFstSize);
