@@ -347,6 +347,49 @@ int main()
            "unmapped below declared size is zeros");
     }
 
+    printf("12. sector-packed layout has no gap; final extent errors past it\n");
+    {
+        //! The v3.18 planner packs each file at the drive sector size, so
+        //! one file's fragment coverage ends exactly where the next begins.
+        //! Same two files as section 11, packed: every sector from the
+        //! first file's start through the last file's end must hit, and
+        //! only reads past the final extent may miss.
+        g_mode = M_NORMAL;
+        reset(MAX_FRAG);
+        const u32 s1 = 1000u, s2 = 3000u;
+        const u64 o1 = (u64) vbase * 512;
+        const u64 o2 = o1 + ((s1 + 511u) & ~511ull); // sector-packed, no gap
+        const u32 sizes[] = { s1, s2 };
+        std::vector<PlacedFile> v;
+        PlacedFile f1;
+        f1.offset = o1; f1.length = s1; f1.external = "mem:/0";
+        PlacedFile f2;
+        f2.offset = o2; f2.length = s2; f2.external = "mem:/1";
+        v.push_back(f1);
+        v.push_back(f2);
+        g_multi = sizes;
+        g_drvBase = 0x10000;
+        FragBuildStats st;
+        ck(AppendModFragments(v, 512, kFsFat, 0, st), "packed pair maps");
+        ck(st.failed == 0 && g_list.num == 2, "packed pair costs one fragment each");
+        g_multi = 0;
+        g_list.size = 0x0117400000ULL / 512;
+        u64 sector = 0;
+        ck(frag_lookup(o1 + 1024, 512, g_list.size, &sector) == 1,
+           "old gap position now hits the next file");
+        //! Cross-file boundary: every sector of a span crossing from file
+        //! 1's tail into file 2's head must resolve.
+        bool spanOk = true;
+        for (u64 p = o1 + 512; p < o1 + 2048; p += 512)
+            spanOk = spanOk && frag_lookup(p, 512, g_list.size, &sector) == 1;
+        ck(spanOk, "span across the file boundary resolves every sector");
+        const u64 lastEnd = o2 + ((s2 + 511u) & ~511ull);
+        ck(frag_lookup(lastEnd - 1, 512, g_list.size, &sector) == 1,
+           "last byte of the final extent hits");
+        ck(frag_lookup(lastEnd, 512, g_list.size, &sector) == -1,
+           "first byte past the final extent misses past declared size");
+    }
+
     printf("\n%d checks, %d failure(s)\n", checks, failures);
     return failures ? 1 : 0;
 }
