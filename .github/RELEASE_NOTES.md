@@ -33,10 +33,10 @@ on. Without that file nothing changes and the build behaves exactly like v3.10.
 It has never run on a console. Expect it to fail; the log and a USB Gecko trace are the
 point of it. Leave the file off for normal use.
 
-## Changed in v3.16
+## Changed in v3.17
 
-- Pre-jump result screen is on for every mod boot; no marker file needed.
-- Mount markers, install verification and FST_STAGED carry over from v3.15.
+- Relocation install no longer refuses on nonzero span bytes.
+- Span contents and heap break logged for post-hoc analysis instead.
 - 146,777 automated checks, all passing.
 
 Older versions: [CHANGELOG.md](CHANGELOG.md)
