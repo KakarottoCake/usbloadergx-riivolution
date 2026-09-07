@@ -27,6 +27,23 @@
 #include "settings/CSettings.h"
 #include "themes/CTheme.h"
 
+//! Where the message may be drawn, in pixels down from the top of the dialogue
+//! box. The title's glyph row is centred on y=55 in a 26px font, so it ends
+//! about y=68; the first button image is 44px tall and sits 55px up from the
+//! bottom of a 320px box, so it starts at y=221. Everything between is the
+//! message's, and nothing outside it is.
+//!
+//! This matters because GuiText centres a wrapped block on its own position
+//! and grows out of it in BOTH directions - it does not clip. A message
+//! longer than the band therefore rides up over the title and is drawn on top
+//! of it, which is exactly what a long Riivolution warning did. Centring the
+//! block in the band instead of 40px above the box's middle is what buys the
+//! room; FitMessageText below is what keeps a message from spending more than
+//! there is.
+static const int PROMPT_MSG_TOP    = 72;
+static const int PROMPT_MSG_BOTTOM = 219;
+static const int PROMPT_MSG_CENTER = (PROMPT_MSG_TOP + PROMPT_MSG_BOTTOM) / 2;
+
 PromptWindow::PromptWindow(const char *title, const char *msg)
 	: GuiWindow(472, 320)
 {
@@ -60,12 +77,15 @@ PromptWindow::PromptWindow(const char *title, const char *msg)
 
 	msgTxt = new GuiText(msg, 22, thColor("r=0 g=0 b=0 a=255 - prompt windows text color"));
 	msgTxt->SetAlignment(ALIGN_CENTER, ALIGN_MIDDLE);
-	msgTxt->SetPosition(0, -40);
+	msgTxt->SetPosition(0, PROMPT_MSG_CENTER - (int)(height / 2));
 	if(Settings.wsprompt && Settings.widescreen)
 		msgTxt->SetMaxWidth(width-140, WRAP);
 	else
 		msgTxt->SetMaxWidth(width-40, WRAP);
+	msgBaseSize = msgTxt->GetFontSize();
 	Append(msgTxt);
+
+	FitMessageText();
 
 	SetEffect(EFFECT_SLIDE_TOP | EFFECT_SLIDE_IN, 50);
 }
@@ -103,6 +123,84 @@ PromptWindow::~PromptWindow()
 	}
 
 	ResumeGui();
+}
+
+//! How many lines GuiText will actually wrap this message into at this font
+//! size. This walks the string the same way GuiText::WrapText does, using the
+//! same per-character widths, because guessing from the unwrapped width is
+//! wrong in the direction that hurts: word wrapping leaves a ragged right
+//! edge, so a guess undercounts, and an undercount is what puts text on top
+//! of the title. The bound on linenum only stops a pathological string from
+//! spinning here - the fit loop has already given up long before it.
+static int CountWrappedLines(const wchar_t *text, int size, int maxWidth)
+{
+	int i = 0;
+	int ch = 0;
+	int linenum = 0;
+	int lastSpace = -1;
+	int currentWidth = 0;
+
+	while (text[ch] && linenum < 64)
+	{
+		currentWidth += fontSystem->getCharWidth(text[ch], size, ch > 0 ? text[ch - 1] : 0x0000);
+
+		if (currentWidth >= maxWidth)
+		{
+			if (lastSpace >= 0)
+			{
+				ch = lastSpace;
+				lastSpace = -1;
+			}
+			currentWidth = 0;
+			++linenum;
+			i = -1;
+		}
+		if (text[ch] == ' ' && i >= 0)
+			lastSpace = ch;
+
+		++ch;
+		++i;
+	}
+
+	return linenum + 1;
+}
+
+void PromptWindow::FitMessageText()
+{
+	const int band = PROMPT_MSG_BOTTOM - PROMPT_MSG_TOP;
+	const int maxW = msgTxt->GetTextMaxWidth();
+	const wchar_t *wmsg = msgTxt->GetText();
+
+	//! GuiText's line pitch is the font size plus six, and the block is
+	//! centred on the band's centre, so the whole block is lines * pitch tall
+	//! and must not exceed the band. Take the largest size that fits; stop at
+	//! 12, below which it is not worth reading on a television.
+	int size = msgBaseSize;
+
+	if (wmsg && *wmsg && maxW > 0)
+	{
+		for (; size > 12; --size)
+		{
+			if (CountWrappedLines(wmsg, size, maxW) * (size + 6) <= band)
+				break;
+		}
+	}
+
+	msgTxt->SetFontSize(size);
+
+	//! Anything still over the band after shrinking is cut with an ellipsis
+	//! rather than drawn over the title. A warning sitting on top of its own
+	//! heading reads as neither.
+	int cap = band / (size + 6);
+	if (cap < 1)
+		cap = 1;
+	msgTxt->SetLinesToDraw(cap);
+}
+
+void PromptWindow::SetMessageText(const char *text)
+{
+	msgTxt->SetText(text);
+	FitMessageText();
 }
 
 void PromptWindow::PositionButtons()

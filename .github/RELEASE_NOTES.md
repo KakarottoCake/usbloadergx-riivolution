@@ -37,6 +37,11 @@ on. Without that file nothing changes and the build behaves exactly like v3.10.
 It has never run on a console. Expect it to fail; the log and a USB Gecko trace are the
 point of it. Leave the file off for normal use.
 
+## Changed in v3.24
+
+- Long prompt messages no longer draw on top of the prompt's own title.
+- The missing-files warning is shorter.
+
 ## Changed in v3.23
 
 - The loading screen no longer waits half a second before appearing, so short phases actually show it.
