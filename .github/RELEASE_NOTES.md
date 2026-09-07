@@ -33,10 +33,12 @@ on. Without that file nothing changes and the build behaves exactly like v3.10.
 It has never run on a console. Expect it to fail; the log and a USB Gecko trace are the
 point of it. Leave the file off for normal use.
 
-## Changed in v3.17
+## Changed in v3.18
 
-- Relocation install no longer refuses on nonzero span bytes.
-- Span contents and heap break logged for post-hoc analysis instead.
-- 146,777 automated checks, all passing.
+- Sector-granular mod packing with no padding gaps between files.
+- Progress summary ends and synchronizes before FST installation.
+- Staged table checksum verified before copying and after installing.
+- Register/remount window and phase timings logged through SD-independent channels.
+- 146,796 automated checks, all passing.
 
 Older versions: [CHANGELOG.md](CHANGELOG.md)

@@ -91,6 +91,21 @@ namespace Riivo
 	//! FstBuilder::LayoutFrom expects.
 	std::string NormaliseDiscPath(const std::string &path);
 
+	//! External-file sizes stated during early enumeration, reused late so
+	//! each file is stat'ed once per boot instead of three times
+	//! (ListModFiles, the size-accounting loop and the table-build loop each
+	//! stat'ed every file: thousands of libfat root-to-leaf walks behind a
+	//! black screen). A miss falls back to stat, so unknown paths behave
+	//! exactly as before. Cleared per boot with ClearDirListCache.
+	void RememberFileSizes(const std::vector<ModCandidate> &candidates);
+	bool KnownFileSize(const std::string &external, u32 *outSize);
+	void ClearFileSizeCache();
+	void FileSizeCacheStats(u32 *hits, u32 *misses);
+
+	//! Directory-listing cache hits and misses since the last clear, for the
+	//! boot report. A miss walks the card; a hit replays the early pass.
+	void DirCacheStats(u32 *hits, u32 *misses);
+
 	//! Translate resolved redirect specs into v1 manifest External extents
 	//! (WP2 planner -> manifest bridge, Gate C).
 	//!

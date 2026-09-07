@@ -193,7 +193,7 @@ build_run test_manifest_extents "$SRC/riivo/RiivoFile.cpp" "$SRC/riivo/RiivoMani
 # Two-phase reconciliation (Newer SMBW fix): early registration records
 # against late placement, skip reasons, recovered-offset matching, and the
 # previous-boot outcome parser. Header-only reconcile plus the FST builder
-# (last-wins) and the resolver (outcome parsing).
-build_run test_reconcile "$SRC/riivo/RiivoFstBuild.cpp" "$SRC/riivo/RiivoFst.cpp" "$SRC/riivo/RiivoConfig.cpp"
+# (last-wins), the file planner (size-cache reuse) and the resolver.
+build_run test_reconcile "$SRC/riivo/RiivoFstBuild.cpp" "$SRC/riivo/RiivoFst.cpp" "$SRC/riivo/RiivoFile.cpp" "$SRC/riivo/RiivoConfig.cpp"
 
 printf '\nall suites passed\n'

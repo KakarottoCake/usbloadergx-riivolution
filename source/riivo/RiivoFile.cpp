@@ -105,10 +105,13 @@ namespace Riivo
 		CachedListing() : skipped(0) {}
 	};
 	static std::map<std::string, CachedListing> g_dirCache;
+	static u32 g_dirHits = 0;
+	static u32 g_dirMisses = 0;
 
 	void ClearDirListCache()
 	{
 		g_dirCache.clear();
+		g_dirHits = g_dirMisses = 0;
 	}
 
 	void FsDirLister::List(const std::string &fullDir, bool recursive, std::vector<std::string> &out)
@@ -117,16 +120,66 @@ namespace Riivo
 		std::map<std::string, CachedListing>::const_iterator hit = g_dirCache.find(key);
 		if (hit != g_dirCache.end())
 		{
+			++g_dirHits;
 			out.insert(out.end(), hit->second.files.begin(), hit->second.files.end());
 			skipped += hit->second.skipped;
 			return;
 		}
 
+		++g_dirMisses;
 		CachedListing entry;
 		ListRecurse(fullDir, "", recursive, entry.files, &entry.skipped);
 		skipped += entry.skipped;
 		out.insert(out.end(), entry.files.begin(), entry.files.end());
 		g_dirCache[key] = entry;
+	}
+
+	//! Sizes stated while enumerating, so the late phase reuses them instead
+	//! of stat'ing every file twice more. See the header for why.
+	static std::map<std::string, u32> g_sizeCache;
+	static u32 g_sizeHits = 0;
+	static u32 g_sizeMisses = 0;
+
+	void ClearFileSizeCache()
+	{
+		g_sizeCache.clear();
+		g_sizeHits = g_sizeMisses = 0;
+	}
+
+	void RememberFileSizes(const std::vector<ModCandidate> &candidates)
+	{
+		for (size_t i = 0; i < candidates.size(); ++i)
+			g_sizeCache[candidates[i].external] = candidates[i].size;
+	}
+
+	bool KnownFileSize(const std::string &external, u32 *outSize)
+	{
+		std::map<std::string, u32>::const_iterator it = g_sizeCache.find(external);
+		if (it == g_sizeCache.end())
+		{
+			++g_sizeMisses;
+			return false;
+		}
+		++g_sizeHits;
+		if (outSize)
+			*outSize = it->second;
+		return true;
+	}
+
+	void FileSizeCacheStats(u32 *hits, u32 *misses)
+	{
+		if (hits)
+			*hits = g_sizeHits;
+		if (misses)
+			*misses = g_sizeMisses;
+	}
+
+	void DirCacheStats(u32 *hits, u32 *misses)
+	{
+		if (hits)
+			*hits = g_dirHits;
+		if (misses)
+			*misses = g_dirMisses;
 	}
 
 	//! Normalise a Riivo disc= value to a full lower-cased path with leading '/'.
@@ -302,6 +355,12 @@ namespace Riivo
 				}
 			}
 		}
+
+		//! Remember every stated size - including claims the dedup below
+		//! drops - before sorting, so the late phase reuses them instead of
+		//! stat'ing the same files again. Duplicate disc destinations keep
+		//! the last claim in both phases alike.
+		RememberFileSizes(out);
 
 		//! Overlapping <folder> rules name the same disc file more than once.
 		//! Keep the last, which is the one AddOrReplace keeps when the table is

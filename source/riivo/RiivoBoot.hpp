@@ -122,9 +122,10 @@ namespace Riivo
 
 	void LogBootStep(const char *what);
 
-	//! Pre-jump result screen. Drawn before the FST install so nothing is
-	//! allocated afterwards. No-op without a selected mod; the caller gates
-	//! Wii U out (its GUI threads are gone by boot time).
+	//! Pre-jump result screen. Drawn before the FST install, and the progress
+	//! operation is ended and synchronized before returning, so the heap is
+	//! quiet when the table lands. No-op without a selected mod; the caller
+	//! gates Wii U out (its GUI threads are gone by boot time).
 	void ShowPreJumpSummary(bool memAttempted, int memApplied, int memTotal);
 
 	void ReportLaunch(u32 entry);

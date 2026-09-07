@@ -104,9 +104,8 @@ namespace Riivo
 	{
 		REC_ACTIVE,   // referenced by the rebuilt table: verify via placed
 		REC_INACTIVE, // registered early but unreferenced: verify via record
-		REC_UNKNOWN   // matches no registration record: refuse, naming it
+				REC_UNKNOWN   // matches no registration record: refuse, naming it
 	};
-
 	struct RecMatch
 	{
 		RecState state;
@@ -233,6 +232,109 @@ namespace Riivo
 				}
 			}
 			matches.push_back(m);
+		}
+	}
+
+	// ------------------------------------------------------------------
+	// Runtime read contract, after rawksd-2013 dip.cpp read dispatch.
+	//
+	// Provenance note: STATUS.md records t5 (our launcher + official
+	// filemodule + our dipmodule) working, then a FileProvider
+	// ES_DiVerify fix for v3's Newer run - not "both official modules".
+	// The historical v3 zip is not in this checkout, so its exact binary
+	// composition is unresolved here; treat dip.cpp as a reference design,
+	// not a hardware-proven artifact of a verified build.
+	//
+	// A game read [pos, pos+len) against replaced extents resolves to an
+	// ordered segment list covering the whole request: file bytes where an
+	// extent covers, original-disc bytes everywhere else. The reference
+	// forwards the read to the disc first unless file extents cover it
+	// exactly, then overlays each clipped file range (advancing the file
+	// offset when the read starts mid-extent, clamping when it overruns).
+	// GX's fraglist runtime today serves neither the original side of a
+	// spanning read nor a nonzero source offset. This fixture is
+	// specification groundwork, not a compatibility fix: it pins the
+	// contract a future runtime must satisfy. No test mod currently issues
+	// partial <file> patches, and no runtime change is made here.
+	//
+	// Boot-order note: the reference installs its rebuilt FST into MEM
+	// before memory patches and unmounting (MenuLaunch: RVL_Patch, then
+	// apploader, then CommitRVL(false), then PatchMemory, then Unmount);
+	// GX stages pre-shutdown but installs after memory patches,
+	// post-shutdown, just before the jump. Registering asset redirects
+	// does not by itself establish that GX's apploader sees rebuilt
+	// metadata or executable replacements - its apploader runs before the
+	// install, so main.dol loads from the real disc.
+	// ------------------------------------------------------------------
+
+	//! One replaced range: partition bytes [off, off+len) come from a file
+	//! starting at fileOff. Sorted ascending, non-overlapping.
+	struct SpanExtent
+	{
+		u64 off;
+		u32 len;
+		u64 fileOff;
+
+		SpanExtent() : off(0), len(0), fileOff(0) {}
+	};
+
+	//! One output segment: [outOff, outOff+len) of the read buffer comes
+	//! from the file at fileOff (fromFile) or from the original disc.
+	struct SpanSeg
+	{
+		u64 outOff;
+		u32 len;
+		bool fromFile;
+		u64 fileOff;
+
+		SpanSeg() : outOff(0), len(0), fromFile(false), fileOff(0) {}
+	};
+
+	//! Split [pos, pos+len) into ascending segments covering exactly len
+	//! bytes. `fullyCovered` mirrors the reference's filecover: every byte
+	//! comes from a file extent, so no original-side forward is needed.
+	inline void ClipReadSpans(u64 pos, u32 len,
+							  const std::vector<SpanExtent> &ext,
+							  std::vector<SpanSeg> &out, bool &fullyCovered)
+	{
+		out.clear();
+		fullyCovered = true;
+		if (len == 0)
+			return;
+		u64 covered = 0;
+		for (size_t i = 0; i < ext.size(); ++i)
+		{
+			const u64 eEnd = ext[i].off + ext[i].len;
+			if (eEnd <= pos || ext[i].off >= pos + len)
+				continue;
+			const u64 start = ext[i].off > pos ? ext[i].off : pos;
+			const u64 end = eEnd < pos + len ? eEnd : pos + len;
+			if (start > pos + covered)
+			{
+				SpanSeg gap;
+				gap.outOff = covered;
+				gap.len = (u32) (start - (pos + covered));
+				gap.fromFile = false;
+				out.push_back(gap);
+				covered = start - pos;
+				fullyCovered = false;
+			}
+			SpanSeg seg;
+			seg.outOff = start - pos;
+			seg.len = (u32) (end - start);
+			seg.fromFile = true;
+			seg.fileOff = ext[i].fileOff + (start - ext[i].off);
+			out.push_back(seg);
+			covered = end - pos;
+		}
+		if (covered < len)
+		{
+			SpanSeg gap;
+			gap.outOff = covered;
+			gap.len = (u32) ((u64) len - covered);
+			gap.fromFile = false;
+			out.push_back(gap);
+			fullyCovered = false;
 		}
 	}
 }
