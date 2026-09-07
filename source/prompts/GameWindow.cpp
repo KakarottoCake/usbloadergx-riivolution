@@ -29,6 +29,8 @@
 #include "SoundOperations/MusicPlayer.h"
 #include "riivo/RiivoParser.hpp"
 #include "riivo/RiivoConfig.hpp"
+#include "riivo/RiivoFile.hpp"
+#include "riivo/RiivoSdWarning.hpp"
 #include "libs/libruntimeiospatch/runtimeiospatch.h"
 
 #define NONE		0
@@ -970,16 +972,23 @@ void GameWindow::BootGame(struct discHdr *header)
 		std::string riivoErr;
 		std::string warning;
 
+		//! Hoisted out of the branch below so the missing-file check can see
+		//! them: that check is appended to `warning` rather than chained into
+		//! the else-if, because a wrong cIOS and missing files are separate
+		//! problems and reporting only the first hides the second.
+		Riivo::ResolvedPatchSet riivoSet;
+		bool riivoParsedOk = false;
+
 		if (!Riivo::ParseFile(game_cfg->RiivoPath.c_str(), riivoDisc, &riivoErr))
 		{
 			warning = tr( "The selected Riivolution XML could not be read, so no mod will be applied." );
 		}
 		else
 		{
+			riivoParsedOk = true;
 			if (game_cfg->RiivoConfig.size() > 0)
 				Riivo::ApplySelection(riivoDisc, game_cfg->RiivoConfig);
 
-			Riivo::ResolvedPatchSet riivoSet;
 			Riivo::Resolve(riivoDisc, IDfull, riivoSet);
 
 			if (!riivoDisc.IsValidForGame(IDfull, Riivo::RIIVO_DISC_UNKNOWN, Riivo::RIIVO_REVISION_UNKNOWN))
@@ -992,26 +1001,70 @@ void GameWindow::BootGame(struct discHdr *header)
 			//! boot that quietly did nothing.
 			else if ((!riivoSet.files.empty() || !riivoSet.folders.empty()) && !AHBPROT_DISABLED)
 				warning = tr( "This mod replaces files, which needs hardware access this loader was not given. Launch USB Loader GX from the Homebrew Channel directly - not from a forwarder channel - or the mod's files will not be applied. The game will still boot unmodified." );
-		else if ((!riivoSet.files.empty() || !riivoSet.folders.empty()) && !RiivoCiosCoversMod(gameIOS, autoIOS))
-		{
-			//! "Without the mod's files", not "unmodified": a wrong cIOS
-			//! refuses the file work through the usual interlock (which also
-			//! holds the memory patches back), but only that path is
-			//! guaranteed - the message must not promise more than it.
-			char ciosMsg[384];
-			if (autoIOS == GAME_IOS_CUSTOM)
-				snprintf(ciosMsg, sizeof(ciosMsg), tr( "This mod replaces game files, which only works on d2x v11 beta3. This game is set to IOS %d. Install beta3 (slot 252 works) with the d2x cIOS installer and select it for this game, or continue and the game will boot without the mod's files." ), (int) gameIOS);
-			else
-				snprintf(ciosMsg, sizeof(ciosMsg), "%s", tr( "This mod replaces game files, which only works on d2x v11 beta3, and none of the installed cIOS slots is beta3. The boot picks its slot automatically, so install beta3 (slot 252 works) with the d2x cIOS installer first, or continue and the game will boot without the mod's files." ));
-			warning = ciosMsg;
-		}
+			else if ((!riivoSet.files.empty() || !riivoSet.folders.empty()) && !RiivoCiosCoversMod(gameIOS, autoIOS))
+			{
+				//! "Without the mod's files", not "unmodified": a wrong cIOS
+				//! refuses the file work through the usual interlock (which also
+				//! holds the memory patches back), but only that path is
+				//! guaranteed - the message must not promise more than it.
+				char ciosMsg[384];
+				if (autoIOS == GAME_IOS_CUSTOM)
+					snprintf(ciosMsg, sizeof(ciosMsg), tr( "This mod replaces game files, which only works on d2x v11 beta3. This game is set to IOS %d. Install beta3 (slot 252 works) with the d2x cIOS installer and select it for this game, or continue and the game will boot without the mod's files." ), (int) gameIOS);
+				else
+					snprintf(ciosMsg, sizeof(ciosMsg), "%s", tr( "This mod replaces game files, which only works on d2x v11 beta3, and none of the installed cIOS slots is beta3. The boot picks its slot automatically, so install beta3 (slot 252 works) with the d2x cIOS installer first, or continue and the game will boot without the mod's files." ));
+				warning = ciosMsg;
+			}
 			else if (riivoSet.IsEmpty())
 				warning = tr( "No Riivolution patches are enabled for this game - every option is set to Disabled." );
+		}
+
+		//! A mod on SD ends every boot the same way, so it replaces whatever
+		//! else was going to be said and nothing is appended after it. The
+		//! other warnings describe things that change what the mod does;
+		//! this one describes the game never appearing at all, and a reader
+		//! who has to find it among three paragraphs will not. Warned, not
+		//! refused - the launch still goes ahead if the user insists.
+		const bool riivoModOnSd = riivoParsedOk
+			&& (!riivoSet.files.empty() || !riivoSet.folders.empty())
+			&& Riivo::ModPathIsOnSd(game_cfg->RiivoPath);
+		if (riivoModOnSd)
+			warning = Riivo::SdModWarning();
+
+		//! Files the mod names that are not on the card. The boot log reports
+		//! these too, but only after the GUI is gone - and a mod that was
+		//! never fully unpacked, or whose XML still holds a placeholder path,
+		//! then just boots unmodified with the explanation on the card. The
+		//! card is still mounted here and there is still a screen, so say it
+		//! now. Appended rather than chained into the else-if above, so a
+		//! wrong cIOS and missing files are both reported instead of one
+		//! hiding the other.
+		if (riivoParsedOk && !riivoModOnSd && !riivoSet.files.empty())
+		{
+			//! The mount prefix the mod's paths are relative to, taken from
+			//! the XML's own path exactly as the boot path takes it.
+			const std::string xmlPath(game_cfg->RiivoPath);
+			const size_t colon = xmlPath.find(':');
+			const std::string device = (colon == std::string::npos)
+									   ? std::string() : xmlPath.substr(0, colon + 1);
+			Riivo::StatFileProbe probe;
+			std::vector<Riivo::MissingExternal> missing;
+			Riivo::FindMissingExternals(riivoSet, device, probe, missing);
+			if (!missing.empty())
+			{
+				char miss[576];
+				snprintf(miss, sizeof(miss),
+						 tr( "%u file(s) this mod replaces are not on the card, starting with %s. The game will boot without them. Check the mod is fully unpacked and its XML names the right paths." ),
+						 (unsigned) missing.size(), missing[0].external.c_str());
+				if (!warning.empty())
+					warning += "\n";
+				warning += miss;
+			}
 		}
 
 		//! An activation failure happens after the UI is gone: surface the
 		//! previous boot's OUTCOME here rather than launching the original
 		//! game a second time in silence.
+		if (!riivoModOnSd)
 		{
 			const std::string prevOutcome =
 				RiivoPreviousOutcome(game_cfg->RiivoPath.c_str(), IDfull);
@@ -1023,8 +1076,9 @@ void GameWindow::BootGame(struct discHdr *header)
 			}
 		}
 
-		if (warning.size() > 0 && !WindowPrompt(tr( "Riivolution:" ), warning.c_str(),
-											    tr( "Continue" ), tr( "Cancel" )))
+		if (warning.size() > 0
+			&& !WindowPrompt(riivoModOnSd ? Riivo::SdModWarningTitle() : tr( "Riivolution:" ),
+							 warning.c_str(), tr( "Continue" ), tr( "Cancel" )))
 			return;
 	}
 

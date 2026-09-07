@@ -12,6 +12,7 @@
 #include "themes/CTheme.h"
 #include "prompts/PromptWindows.h"
 #include "language/gettext.h"
+#include "riivo/RiivoSdWarning.hpp"
 #include "RiivoSM.hpp"
 #include "gecko.h"
 
@@ -306,6 +307,16 @@ int RiivoSM::GetMenuInternal()
 			Options->ClearList();
 			SetOptionNames();
 			SetOptionValues();
+			//! Said the moment the mod is chosen, not only at launch: the
+			//! choice is one button press old here and costs nothing to
+			//! undo, whereas finding out at launch costs a reset. The
+			//! selection is kept either way - this warns, it does not
+			//! refuse - and the same warning appears again before the game
+			//! starts, because a choice saved in an earlier session never
+			//! passes through this point.
+			if (Riivo::ModPathIsOnSd(GameConfig.RiivoPath))
+				WindowPrompt(Riivo::SdModWarningTitle(), Riivo::SdModWarning(),
+							 tr( "OK" ));
 		}
 		return MENU_NONE;
 	}

@@ -188,6 +188,12 @@ namespace Riivo
 	//! Built after CollectPlaced; consumed by Activate and the report.
 	static std::vector<SkipRecord> modSkips;
 
+	//! Files the mod names that are not on the card, from the enumeration
+	//! stat. Purely diagnostic, so it is NOT cleared alongside modOffsets
+	//! and modRecords on a refusal: the refusal is exactly when the tester
+	//! needs these names. Cleared once per boot in SetBootContext.
+	static std::vector<MissingExternal> modMissing;
+
 	//! Machine-parseable outcome of the file work, for the previous-boot
 	//! check in the game settings UI. FST_STAGED once the table is staged
 	//! for install (installation itself is verified after device shutdown
@@ -350,6 +356,7 @@ namespace Riivo
 		withholdStage.clear();
 		modRecords.clear();
 		modSkips.clear();
+		modMissing.clear();
 		modAddFails.clear();
 		installFailCode = 0;
 		if (!device.empty())
@@ -1314,8 +1321,27 @@ namespace Riivo
 		Addf(out, "  matched on disc   : %u\n", (unsigned) redirects.size());
 		Addf(out, "  no disc entry     : %u  (files the mod ADDS)\n",
 			 (unsigned) created.size());
-		Addf(out, "  metadata ignored  : %d  (macOS ._ twins, .DS_Store, Thumbs.db)\n\n",
+		Addf(out, "  metadata ignored  : %d  (macOS ._ twins, .DS_Store, Thumbs.db)\n",
 			 lister.skipped);
+		//! The files the mod names that the card does not have. Without these
+		//! names an unconfigured mod and a broken loader read identically -
+		//! "0 found" and nothing else - and telling those apart cost a round
+		//! of hardware tests. Each path here was built exactly as enumeration
+		//! built it, so it is the path that was actually tried.
+		if (!modMissing.empty())
+		{
+			Addf(out, "  NOT ON THE CARD   : %u file(s) the mod names but the card does not have:\n",
+				 (unsigned) modMissing.size());
+			for (size_t i = 0; i < modMissing.size() && i < 16; ++i)
+				Addf(out, "    %s  (for disc path %s)\n",
+					 modMissing[i].external.c_str(), modMissing[i].disc.c_str());
+			if (modMissing.size() > 16)
+				Addf(out, "    ... and %u more\n",
+					 (unsigned) (modMissing.size() - 16));
+			out += "  Nothing is applied for a file that is not there. Check the mod\n"
+				   "  is fully unpacked and that its XML names these paths correctly.\n";
+		}
+		out += "\n";
 
 		out += "Replacement size vs the file it replaces\n";
 		out += "---------------------------------------\n";
@@ -2115,9 +2141,16 @@ namespace Riivo
 		{
 			FsDirLister lister;
 			ListModFiles(*bootSet, bootDevice, &lister, cand,
-						 verboseListing ? LogListProgress : 0, 0);
+						 verboseListing ? LogListProgress : 0, 0, &modMissing);
 		}
 		LogStep("mod files listed: %u found", (unsigned) cand.size());
+		//! Named in the progress section as well as the report below: a boot
+		//! that dies later still shows the count here, and "0 found" with a
+		//! nonzero missing count is a mod pointing at files that are not
+		//! there - not a loader that cannot see them.
+		if (!modMissing.empty())
+			LogStep("mod files NOT on the card: %u (named in the report below)",
+					(unsigned) modMissing.size());
 		//! Checked here because nothing has been changed yet: the fragment
 		//! list is still the game's own, so bailing out costs no cleanup.
 		if (RiivoDeadlinePassed())

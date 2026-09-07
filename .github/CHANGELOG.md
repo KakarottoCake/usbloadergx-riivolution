@@ -5,6 +5,70 @@ current version's bullets; everything older lives here.
 
 ## Unreleased
 
+A mod on the SD card is warned about twice: when it is chosen, and again
+before launch.
+
+It has never worked. A mod must live on the same drive as the game, so
+choosing one on SD also means loading the game from SD, and that path does
+not survive the moment the loader hands its fragment list to the cIOS.
+Stock USB Loader GX unmounts SD around set_frag_list and mounts it again
+afterwards; on a Riivolution boot the card does not come back. The boot log
+stops at the unmount marker - by construction, since the log lives on the
+card that just went away - and the console sits on a black screen until it
+is reset. A tester found it the expensive way.
+
+Said twice because either place alone leaves a hole: at selection the choice
+is one button press old and costs nothing to undo, but a selection saved in
+an earlier session never passes through that point again. The launch warning
+replaces the others rather than joining them - the rest describe things that
+change what the mod does, this one describes the game never appearing, and a
+reader who has to find it among three paragraphs will not.
+
+It warns; it does not refuse. The evidence is one console and the unmount
+window holds three possible failures, so a hard block would assert more than
+is known. The wording states the outcome as certain because that part is not
+in doubt for the user: there is nothing here they can tune, and hedging just
+costs someone a reset.
+
+Detection delegates to DeviceHandler::PathToDriveType, the call the boot path
+already uses to decide which drive a mod is on, so the warning and the boot
+can never disagree about what "on SD" means. Message length is matched to the
+prompt box - 472x320, SetMaxWidth(430), a 22px font between the title and the
+buttons - so it wraps no worse than the longest message the loader already
+ships, with the headline moved into the title where wrapping cannot push it
+off.
+
+Files a mod names that are not on the card are reported by path, in the boot
+log and on screen before launch.
+
+Enumeration always dropped these, correctly - there is nothing to map - but it
+dropped them in silence, and the log then said "mod files listed: 0 found" and
+named nothing. That is indistinguishable from a loader that cannot read the
+card at all. A diagnostic pack run before its probe files were dropped in
+produced exactly that, four times, and separating "the mod is not set up" from
+"the loader is broken" cost a round of tests on a remote console.
+
+The boot log now lists each path under "NOT ON THE CARD", built by the same
+join enumeration uses, so it is the path that was actually tried rather than a
+reconstruction. It is filled from the stat already being performed, so it costs
+no extra card traffic on a path where every avoidable read is seconds of black
+screen. The list is deliberately not cleared alongside the placement state on a
+refusal: a refusal is exactly when those names are wanted.
+
+The pre-launch check runs the same rule while the card is still mounted and
+there is still a screen. It is appended to any existing warning rather than
+chained into the else-if beside it, because a wrong cIOS and missing files are
+separate problems and reporting only the first hides the second. `<folder>`
+rules are not checked there - their contents come from listing the directory,
+so an absent folder yields no files rather than named misses, and naming the
+folder itself would need the card. Boot-time enumeration still reports missing
+folder children, from the stat it already does.
+
+The existence test is injected, so the rule is host-tested with no filesystem:
+path joining, partial packs, duplicate claims, the `<folder>` exemption, and a
+patch with no disc path (malformed, not missing - naming a card path for it
+would send the user to the wrong place).
+
 The last gap in the on-demand path is closed: os_sync_after_write is now found
 in the running plugin instead of being left out.
 

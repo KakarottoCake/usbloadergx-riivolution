@@ -308,11 +308,56 @@ namespace Riivo
 		return a.disc < b.disc;
 	}
 
-	void ListModFiles(const ResolvedPatchSet &set, const std::string &device,
-					  DirLister *lister, std::vector<ModCandidate> &out,
-					  ListProgressFn progress, void *ctx)
+	bool StatFileProbe::IsRegularFile(const std::string &path)
+	{
+		struct stat st;
+		return stat(path.c_str(), &st) == 0 && S_ISREG(st.st_mode);
+	}
+
+	void FindMissingExternals(const ResolvedPatchSet &set,
+							  const std::string &device,
+							  FileProbe &probe,
+							  std::vector<MissingExternal> &out)
 	{
 		out.clear();
+		for (size_t i = 0; i < set.files.size(); ++i)
+		{
+			const ResolvedFile &f = set.files[i];
+			MissingExternal m;
+			m.external = JoinPath(device, f.root, f.external);
+			m.disc = NormaliseDiscPath(f.disc);
+			//! An empty disc path is a malformed patch, not a missing file,
+			//! and naming a card path for it would send the user looking in
+			//! the wrong place.
+			if (m.disc.empty())
+				continue;
+			if (!probe.IsRegularFile(m.external))
+				out.push_back(m);
+		}
+	}
+
+	//! Record a file the mod names that is not on the card. `missing` is
+	//! optional so the enumeration path stays allocation-free for callers
+	//! that do not want the list.
+	static void NoteMissing(std::vector<MissingExternal> *missing,
+							const std::string &disc, const std::string &external)
+	{
+		if (!missing)
+			return;
+		MissingExternal m;
+		m.disc = disc;
+		m.external = external;
+		missing->push_back(m);
+	}
+
+	void ListModFiles(const ResolvedPatchSet &set, const std::string &device,
+					  DirLister *lister, std::vector<ModCandidate> &out,
+					  ListProgressFn progress, void *ctx,
+					  std::vector<MissingExternal> *missing)
+	{
+		out.clear();
+		if (missing)
+			missing->clear();
 
 		for (size_t i = 0; i < set.files.size(); ++i)
 		{
@@ -321,8 +366,13 @@ namespace Riivo
 			c.external = JoinPath(device, f.root, f.external);
 			c.disc = NormaliseDiscPath(f.disc);
 			struct stat st;
-			if (c.disc.empty() || stat(c.external.c_str(), &st) != 0 || !S_ISREG(st.st_mode))
+			if (c.disc.empty())
 				continue;
+			if (stat(c.external.c_str(), &st) != 0 || !S_ISREG(st.st_mode))
+			{
+				NoteMissing(missing, c.disc, c.external);
+				continue;
+			}
 			c.size = (u32) st.st_size;
 			out.push_back(c);
 		}
@@ -347,9 +397,16 @@ namespace Riivo
 					c.external = JoinDisc(extDir, rel[j]);
 					c.disc = NormaliseDiscPath(JoinDisc(discDir, rel[j]));
 					struct stat st;
-					if (c.disc.empty() || stat(c.external.c_str(), &st) != 0
-						|| !S_ISREG(st.st_mode))
+					if (c.disc.empty())
 						continue;
+					//! The lister just named this file, so a stat that fails
+					//! here means it went away or is not a regular file -
+					//! rare, and worth naming for exactly that reason.
+					if (stat(c.external.c_str(), &st) != 0 || !S_ISREG(st.st_mode))
+					{
+						NoteMissing(missing, c.disc, c.external);
+						continue;
+					}
 					c.size = (u32) st.st_size;
 					out.push_back(c);
 				}
