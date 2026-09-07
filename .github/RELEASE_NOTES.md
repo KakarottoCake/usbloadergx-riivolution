@@ -37,6 +37,10 @@ on. Without that file nothing changes and the build behaves exactly like v3.10.
 It has never run on a console. Expect it to fail; the log and a USB Gecko trace are the
 point of it. Leave the file off for normal use.
 
+## Changed in v3.27
+
+- The pre-jump result screen is now off unless `riivolution/showlog.txt` exists. It was the only thing this loader did after releasing the drives, and a boot with no patches at all still black-screened with it on.
+
 ## Changed in v3.26
 
 - The log now records whether the staged file table is still intact at device shutdown, so a refused install says when it broke.
