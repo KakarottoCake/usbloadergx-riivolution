@@ -203,4 +203,9 @@ build_run test_reconcile "$SRC/riivo/RiivoFstBuild.cpp" "$SRC/riivo/RiivoFst.cpp
 # half of the comparison.
 build_run test_dolphinfst "$SRC/riivo/RiivoFstBuild.cpp" "$SRC/riivo/RiivoFst.cpp" "$SRC/riivo/RiivoFile.cpp" "$SRC/riivo/RiivoManifest.cpp" "$SRC/riivo/RiivoConfig.cpp" "$SRC/xml/pugixml.cpp"
 
+# The pre-launch check for files a mod names but the card does not have.
+# The existence test is injected, so this runs with no filesystem: path
+# joining, partial packs, duplicate claims and the <folder> exemption.
+build_run test_preflight "$SRC/riivo/RiivoFile.cpp" "$SRC/riivo/RiivoConfig.cpp" "$SRC/riivo/RiivoFst.cpp" "$SRC/xml/pugixml.cpp"
+
 printf '\nall suites passed\n'

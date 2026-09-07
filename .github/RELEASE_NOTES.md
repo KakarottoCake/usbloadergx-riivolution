@@ -9,12 +9,16 @@ USB Loader GX, so your settings, game list and covers are untouched.
 
 ## Using it
 
-Put the mod on your SD card the way its author describes, then: game cover →
+Put the game and the mod on a **USB drive**, then: game cover →
 **Settings** → **Riivolution**, pick the XML, set the options, **Save**, launch.
 Choices are stored per game.
 
-The mod's files must be on the same drive as the game. USB game, USB mod; SD game,
-SD mod. Mixing them is refused, because the cIOS reads every fragment from one drive.
+The mod's files must be on the same drive as the game, because the cIOS reads every
+fragment from one drive. Mixing them is refused.
+
+**Mods on the SD card do not work.** The game will not load - the screen stays black
+and you have to reset the console. This happens every time. The loader now warns you
+when you pick a mod on SD, and again before launch. Use a USB drive.
 
 Needs AHBPROT — launch from the Homebrew Channel directly, not from a forwarder.
 
@@ -33,10 +37,21 @@ on. Without that file nothing changes and the build behaves exactly like v3.10.
 It has never run on a console. Expect it to fail; the log and a USB Gecko trace are the
 point of it. Leave the file off for normal use.
 
+## Changed in v3.21
+
+- A mod on the SD card now warns you when you pick it, and again before launch.
+
 ## Changed in v3.20
 
+- Files the mod names but the card does not have are now listed by path, in the log and on screen before launch.
 - Missing created files named instead of phantom additions.
 - Dolphin reference byte-diff for FST rebuilds.
-- 146,848 automated checks, all passing.
+- Deliberate returns to the loader blink a distinct drive-light code.
+- Every mod boot briefly shows its result before launching.
+- The last boot's outcome is shown when you launch that game again.
+- Mods pack at the drive's sector size, leaving no unmapped gaps between files.
+- The rebuilt file table is verified after install; a bad install refuses instead of black-screening.
+- Tail-recovered files are matched against their registration records instead of withholding the whole mod.
+- 146,865 automated checks, all passing.
 
 Older versions: [CHANGELOG.md](CHANGELOG.md)

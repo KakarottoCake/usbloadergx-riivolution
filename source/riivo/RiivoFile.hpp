@@ -39,6 +39,50 @@ namespace Riivo
 		std::string external; // where it actually is on the card
 	};
 
+	//! A file the mod names that is not on the card. Enumeration drops these,
+	//! because there is nothing to map - but dropping them in silence is what
+	//! made an unconfigured mod indistinguishable from a broken loader: the
+	//! log said "0 found" and named nothing, and the cause took a hardware
+	//! round to find. Both the boot log and the pre-launch check report these
+	//! by path now.
+	struct MissingExternal
+	{
+		std::string disc;     // disc path the patch names (may be a <folder> child)
+		std::string external; // full path on the card that failed to stat
+	};
+
+	//! Injectable existence test, so the pre-launch check is host-testable
+	//! without a filesystem. StatFileProbe is the real one.
+	struct FileProbe
+	{
+		virtual ~FileProbe() {}
+		virtual bool IsRegularFile(const std::string &path) = 0;
+	};
+
+	//! stat()-backed FileProbe. Regular files only: a directory where a file
+	//! belongs cannot be redirected either.
+	struct StatFileProbe : public FileProbe
+	{
+		virtual bool IsRegularFile(const std::string &path);
+	};
+
+	//! Every <file> patch whose external is not on the card, by path.
+	//!
+	//! <file> only. A <folder> rule names a directory, and its contents come
+	//! from listing that directory, so an absent folder yields no files at
+	//! all rather than a set of named misses - reporting the folder itself
+	//! would need the lister and the card, which is exactly what this check
+	//! exists to avoid. Boot-time enumeration reports missing folder children
+	//! separately, from the stat it already performs.
+	//!
+	//! Order follows `set.files`; duplicates are not collapsed, because two
+	//! patches naming the same absent file are two things for the user to
+	//! fix.
+	void FindMissingExternals(const ResolvedPatchSet &set,
+							  const std::string &device,
+							  FileProbe &probe,
+							  std::vector<MissingExternal> &out);
+
 	//! Enumerates files under an external folder. Backed by readdir on hardware;
 	//! injected in tests. Returned paths are RELATIVE to `fullDir` (e.g. "a/b.arc").
 	struct DirLister
@@ -83,9 +127,13 @@ namespace Riivo
 	//! makes a runaway obvious while it is still running.
 	typedef void (*ListProgressFn)(void *ctx, const std::string &dir, u32 soFar);
 
+	//! `missing`, when given, collects every file the mod names that failed to
+	//! stat - filled from the stat this already performs, so it costs no extra
+	//! card traffic. Covers both <file> patches and <folder> children.
 	void ListModFiles(const ResolvedPatchSet &set, const std::string &device,
 					  DirLister *lister, std::vector<ModCandidate> &out,
-					  ListProgressFn progress = 0, void *ctx = 0);
+					  ListProgressFn progress = 0, void *ctx = 0,
+					  std::vector<MissingExternal> *missing = 0);
 
 	//! Lower-case a disc path and strip empty components, giving the exact key
 	//! FstBuilder::LayoutFrom expects.
