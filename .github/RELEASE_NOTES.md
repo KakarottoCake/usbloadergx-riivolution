@@ -33,11 +33,10 @@ on. Without that file nothing changes and the build behaves exactly like v3.10.
 It has never run on a console. Expect it to fail; the log and a USB Gecko trace are the
 point of it. Leave the file off for normal use.
 
-## Changed in v3.19
+## Changed in v3.20
 
-- Drive-light blink codes name each launch refusal.
-- Checkpoints isolate the apploader-return window.
-- Install-failure code split by bytes versus pointers.
-- 146,796 automated checks, all passing.
+- Missing created files named instead of phantom additions.
+- Dolphin reference byte-diff for FST rebuilds.
+- 146,848 automated checks, all passing.
 
 Older versions: [CHANGELOG.md](CHANGELOG.md)

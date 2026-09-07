@@ -196,4 +196,11 @@ build_run test_manifest_extents "$SRC/riivo/RiivoFile.cpp" "$SRC/riivo/RiivoMani
 # (last-wins), the file planner (size-cache reuse) and the resolver.
 build_run test_reconcile "$SRC/riivo/RiivoFstBuild.cpp" "$SRC/riivo/RiivoFst.cpp" "$SRC/riivo/RiivoFile.cpp" "$SRC/riivo/RiivoConfig.cpp"
 
+# Byte-diff against Dolphin's reference FST serializer and file-patch
+# semantics: extracted DirectoryBlob/RiivolutionPatcher logic (host-only
+# reference copy, see the file header) runs against the same trees and
+# patches as our builder. Needs the file planner link set for the manifest
+# half of the comparison.
+build_run test_dolphinfst "$SRC/riivo/RiivoFstBuild.cpp" "$SRC/riivo/RiivoFst.cpp" "$SRC/riivo/RiivoFile.cpp" "$SRC/riivo/RiivoManifest.cpp" "$SRC/riivo/RiivoConfig.cpp" "$SRC/xml/pugixml.cpp"
+
 printf '\nall suites passed\n'

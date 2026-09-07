@@ -1365,6 +1365,11 @@ namespace Riivo
 
 		u32 planned = 0, rejected = 0;
 		std::map<std::string, u32> expectedModSizes;
+		//! Created files whose externals are not on the card. BuildRedirects
+		//! counts them as additions without stating them, so without this
+		//! list a missing folder looks like one phantom addition that plans
+		//! nothing - exactly the confusion to avoid.
+		std::vector<std::string> missingCreated;
 		bool isNew = false;
 		for (size_t i = 0; i < redirects.size(); ++i)
 		{
@@ -1393,6 +1398,7 @@ namespace Riivo
 			if (!ExternalFileSize(created[i].external, &extSize))
 			{
 				modAddFails[key] = SKIP_STAT_FAILED;
+				missingCreated.push_back(created[i].external);
 				continue;
 			}
 			modBytes += extSize;
@@ -1408,6 +1414,16 @@ namespace Riivo
 			}
 		}
 		LogStep("table entries planned: %u (%u rejected)", planned, rejected);
+		if (!missingCreated.empty())
+		{
+			Addf(out, "  missing created file(s): %u listed as additions above but NOT on the card:\n",
+				 (unsigned) missingCreated.size());
+			for (size_t i = 0; i < missingCreated.size() && i < 8; ++i)
+				Addf(out, "    %s\n", missingCreated[i].c_str());
+			if (missingCreated.size() > 8)
+				Addf(out, "    ... and %u more\n",
+					 (unsigned) (missingCreated.size() - 8));
+		}
 		{
 			//! How much card traffic the caches saved. Sizes were stated
 			//! once during early enumeration; listings replay the early
