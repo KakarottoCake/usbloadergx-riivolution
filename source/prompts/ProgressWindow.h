@@ -24,6 +24,10 @@ extern "C"
 #endif
 
 void ProgressCancelEnable(bool allowCancel);
+//! Draw the next progress window at once instead of waiting half a second
+//! to see whether the operation is long enough to be worth it. For callers
+//! that already know they want to be seen; applies to one window.
+void ProgressSkipDebounce();
 void StartProgress(const char * title, const char * msg1, const char * msg2, bool swSize, bool swTime);
 void ShowProgress(s64 done, s64 total);
 bool ProgressCanceled();
