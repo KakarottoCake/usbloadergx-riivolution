@@ -115,6 +115,13 @@ namespace Riivo
 	//! install returns to the loader instead of black-screening.
 	bool InstallPendingFst();
 
+	//! Which install check refused last: 0 none/success, 1 live game with
+	//! nothing staged, 2 staged pre-copy checksum, 3 InstallFst bounds,
+	//! 4 installed bytes/CRC, 5 low-memory pointer/arena. Read by the
+	//! caller after a false return to blink the drive light, since the
+	//! refusal text itself only reaches gprintf past device shutdown.
+	u32 InstallFailCode();
+
 	//! Put the game's own fragment list back after the cIOS refused the
 	//! enlarged one, so the game can still boot unmodified. True if it
 	//! changed anything.

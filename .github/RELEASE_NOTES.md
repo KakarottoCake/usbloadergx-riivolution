@@ -33,12 +33,11 @@ on. Without that file nothing changes and the build behaves exactly like v3.10.
 It has never run on a console. Expect it to fail; the log and a USB Gecko trace are the
 point of it. Leave the file off for normal use.
 
-## Changed in v3.18
+## Changed in v3.19
 
-- Sector-granular mod packing with no padding gaps between files.
-- Progress summary ends and synchronizes before FST installation.
-- Staged table checksum verified before copying and after installing.
-- Register/remount window and phase timings logged through SD-independent channels.
+- Drive-light blink codes name each launch refusal.
+- Checkpoints isolate the apploader-return window.
+- Install-failure code split by bytes versus pointers.
 - 146,796 automated checks, all passing.
 
 Older versions: [CHANGELOG.md](CHANGELOG.md)

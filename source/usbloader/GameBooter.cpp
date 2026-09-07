@@ -348,6 +348,42 @@ void GameBooter::ShutDownDevices(int gameUSBPort)
 		USB_Deinitialize();
 }
 
+ 	//! Blink the drive light n times (n capped): refusal text past device
+	//! shutdown only reaches gprintf, so this count is the part the tester
+	//! can see and photograph. No allocation, no devices - safe on refusal
+	//! paths, where the boot is being aborted anyway. Skipped on Wii U,
+	//! which has no drive light to blink.
+	static void RiivoBlinkCode(u32 n)
+	{
+		if (n == 0)
+			n = 1;
+		if (n > 7)
+			n = 7;
+		usleep(700000);
+		for (u32 i = 0; i < n; ++i)
+		{
+			wiilight(1);
+			usleep(350000);
+			wiilight(0);
+			usleep(350000);
+		}
+		wiilight(0);
+	}
+
+	//! Blink a refusal code unless on Wii U. Exact conditions: 1-5 FST
+	//! install checks (see InstallFailCode), 6 BootPartition returned a
+	//! null entry point, 7 late code-handler collision refusal, which
+	//! requires Hooktype nonzero AND a protected mod range overlapping
+	//! 0x80001000..0x80003000. Note the unguarded conflict query below it
+	//! still runs at Hooktype=0 and sets the skip flag by design when the
+	//! mod owns that region - that is a skip, not a refusal, and blinks
+	//! nothing. A return with no code is unresolved by this scheme.
+	static void RiivoBlinkRefusal(u32 n)
+	{
+		if (!isWiiU())
+			RiivoBlinkCode(n);
+	}
+
 int GameBooter::BootGame(struct discHdr *gameHdr, const s8 useOcarina)
 {
 	if (!gameHdr)
@@ -844,11 +880,25 @@ int GameBooter::BootGame(struct discHdr *gameHdr, const s8 useOcarina)
 	{
 		gprintf("Game Boot\n");
 		AppEntrypoint = BootPartition(Settings.dolpath, videoChoice, alternatedol, alternatedoloffset, gameHeader);
+		//! Checkpoint, delivery kept separate from evidence: a missing
+		//! checkpoint was not observed (checkpoint output itself can fail);
+		//! a present checkpoint with no policy block after it bounds the
+		//! failure to this checkpoint through policy generation/writing,
+		//! without naming storage, allocation, or any other cause.
+		//! gprintf needs no card; the step line also goes to the network
+		//! collector ahead of the file write.
+		gprintf("Riivo: BootPartition returned entry %08x\n", AppEntrypoint);
+		Riivo::LogBootStep("apploader returned, back in BootGame");
 		// Resolve handler policy while the log is still writable, but only
 		// protect memory patches that this boot will actually attempt.
 		const bool riivoMemoryActive = !riivoSet.memories.empty() &&
 			!Riivo::FileWorkIncomplete() && !Riivo::MemoryPatchesSuppressed();
 		Riivo::ConfigurePatchProtection(riivoSet, riivoDevice, riivoMemoryActive);
+		//! Second checkpoint: isolates ConfigurePatchProtection's range
+		//! allocations (for this mod, 15 protected ranges) from the policy
+		//! formatting and write that follow.
+		gprintf("Riivo: patch protection configured (active=%d)\n", (int) riivoMemoryActive);
+		Riivo::LogBootStep("patch protection configured");
 		const u8 requestedHook = Hooktype;
 		riivoSkipCodeHandler = RiivoPatchConflict(0x80001000, 0x2000) != 0;
 		if (riivoSkipCodeHandler)
@@ -921,6 +971,7 @@ int GameBooter::BootGame(struct discHdr *gameHdr, const s8 useOcarina)
 	{
 		gprintf("AppEntryPoint is 0, something went wrong\n");
 		WDVD_ClosePartition();
+		RiivoBlinkRefusal(6);
 		Sys_BackToLoader();
 	}
 
@@ -1008,6 +1059,7 @@ int GameBooter::BootGame(struct discHdr *gameHdr, const s8 useOcarina)
 	// overwritten handler. Direct low-memory blobs were handled before patching.
 	if (Hooktype && RiivoPatchConflict(0x80001000, 0x2000)) {
 		gprintf("Riivo: late code-handler collision; launch refused\n");
+		RiivoBlinkRefusal(7);
 		Sys_BackToLoader();
 		return -1;
 	}
@@ -1069,7 +1121,13 @@ int GameBooter::BootGame(struct discHdr *gameHdr, const s8 useOcarina)
 	//! the install - instead of a black screen past this point.
 	if (!Riivo::InstallPendingFst())
 	{
-		gprintf("Riivo: FST install unverified, refusing the jump\n");
+		const u32 riivoFailCode = Riivo::InstallFailCode();
+		gprintf("Riivo: FST install unverified (code %u), refusing the jump\n",
+				(unsigned) riivoFailCode);
+		//! The code blinked on the drive light names the failed check for a
+		//! tester without a USB Gecko: 1 nothing staged, 2 staged checksum,
+		//! 3 install bounds, 4 installed bytes, 5 low-memory pointers.
+		RiivoBlinkRefusal(riivoFailCode);
 		Sys_BackToLoader();
 		return -1;
 	}

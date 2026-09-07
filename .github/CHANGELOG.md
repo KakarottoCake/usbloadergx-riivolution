@@ -243,6 +243,14 @@ and permanent silence, and a write failure drops the socket rather than retrying
 - test_netlog: 23 checks on the address parsing, the half that fails quietly.
 - 146,353 automated checks, all passing.
 
+## Changed in v3.18
+
+- Sector-granular mod packing with no padding gaps between files.
+- Progress summary ends and synchronizes before FST installation.
+- Staged table checksum verified before copying and after installing.
+- Register/remount window and phase timings logged through SD-independent channels.
+- 146,796 automated checks, all passing.
+
 ## Changed in v3.17
 
 - Relocation install no longer refuses on nonzero span bytes.
