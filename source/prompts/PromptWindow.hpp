@@ -36,7 +36,7 @@ class PromptWindow : public GuiWindow
 		//! Set title text
 		void SetTitle(const char *text) { titleTxt->SetText(text); };
 		//! Set message text
-		void SetMessageText(const char *text) { msgTxt->SetText(text); };
+		void SetMessageText(const char *text);
 		//! Add new button and rearrange all buttons position. MAX 4 buttons.
 		void AddButton(const char *text);
 		//! Removes/deletes the last button and rearranges positions
@@ -49,12 +49,16 @@ class PromptWindow : public GuiWindow
 		PromptWindow& operator=(const PromptWindow &w);
 	protected:
 		void PositionButtons();
+		//! Shrink the message font until its wrapped block fits the band
+		//! between the title and the buttons.
+		void FitMessageText();
 
 		GuiImageData *btnOutline;
 		GuiImageData *dialogBox;
 		GuiImage *dialogBoxImg;
 		GuiText *titleTxt;
 		GuiText *msgTxt;
+		int msgBaseSize;
 		GuiTrigger *trigA;
 		GuiTrigger *trigB;
 		std::vector<GuiText *> ButtonTxt;

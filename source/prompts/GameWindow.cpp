@@ -1053,10 +1053,10 @@ void GameWindow::BootGame(struct discHdr *header)
 			{
 				char miss[576];
 				snprintf(miss, sizeof(miss),
-						 tr( "%u file(s) this mod replaces are not on the card, starting with %s. The game will boot without them. Check the mod is fully unpacked and its XML names the right paths." ),
+						 tr( "%u of the mod's files are not on the drive, starting with %s. The game will boot without them. Check the mod is fully unpacked." ),
 						 (unsigned) missing.size(), missing[0].external.c_str());
 				if (!warning.empty())
-					warning += "\n";
+					warning += "  ";
 				warning += miss;
 			}
 		}
@@ -1070,8 +1070,11 @@ void GameWindow::BootGame(struct discHdr *header)
 				RiivoPreviousOutcome(game_cfg->RiivoPath.c_str(), IDfull);
 			if (!prevOutcome.empty())
 			{
+				//! A literal newline is not a line break here - the prompt's
+				//! GuiText wraps on width and draws '\n' as an ordinary glyph.
+				//! Separate with spaces and let the wrap do the breaking.
 				if (!warning.empty())
-					warning += "\n";
+					warning += "  ";
 				warning += prevOutcome;
 			}
 		}
