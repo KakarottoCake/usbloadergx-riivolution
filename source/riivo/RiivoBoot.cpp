@@ -1925,6 +1925,13 @@ namespace Riivo
 	//! refuses the jump below, so a corrupted install returns to the loader
 	//! - a visible outcome naming the install - instead of a black screen
 	//! that could be anything past this point.
+	bool StagedFstStillIntact()
+	{
+		if (!pendingPlaceOk || !pendingFst || !pendingFstSize)
+			return true; // nothing staged; not this check's business
+		return Crc32(pendingFst, pendingFstSize) == pendingFstCrc;
+	}
+
 	bool InstallPendingFst()
 	{
 		if (!pendingPlaceOk || !pendingFst || !pendingFstSize)

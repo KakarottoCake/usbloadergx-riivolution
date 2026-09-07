@@ -37,6 +37,10 @@ on. Without that file nothing changes and the build behaves exactly like v3.10.
 It has never run on a console. Expect it to fail; the log and a USB Gecko trace are the
 point of it. Leave the file off for normal use.
 
+## Changed in v3.26
+
+- The log now records whether the staged file table is still intact at device shutdown, so a refused install says when it broke.
+
 ## Changed in v3.25
 
 - The disc light keeps pulsing through the apploader instead of freezing for the last three seconds of the boot.

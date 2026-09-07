@@ -113,6 +113,16 @@ namespace Riivo
 	//! words the game uses to find the table. True when there was nothing
 	//! staged or the install verified; false refuses the jump, so a corrupted
 	//! install returns to the loader instead of black-screening.
+	//! Re-check the staged table's checksum while the card is still mounted.
+	//! InstallPendingFst runs the same check, but only after ShutDownDevices,
+	//! where a failure can say nothing but a blink code. Running it here too
+	//! splits that blink in half: "still intact at shutdown" in the log means
+	//! anything that later fails the same check was corrupted in the window
+	//! after the card went away, which is a different bug from one that was
+	//! already broken when the apploader finished. Returns false only when
+	//! there IS a staged table and it no longer matches.
+	bool StagedFstStillIntact();
+
 	bool InstallPendingFst();
 
 	//! Which install check refused last: 0 none/success, 1 live game with

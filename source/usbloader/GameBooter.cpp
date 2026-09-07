@@ -950,6 +950,19 @@ int GameBooter::BootGame(struct discHdr *gameHdr, const s8 useOcarina)
 					Riivo::AppendLog("Riivo mem: consequence: whole set held back; this mod replaces no files, so the game boots unmodified.\n");
 			}
 		}
+		//! The staged table's last checkpoint on the card. The install runs
+		//! this same checksum after ShutDownDevices, where a mismatch can only
+		//! blink code 2 and the reason is unrecoverable. Recording it here
+		//! splits that outcome: intact now plus a code-2 blink means the table
+		//! was corrupted after the card went away - by gamepatches, the code
+		//! handler, the pre-jump summary's GUI work - and not by the apploader
+		//! or the table build. T7 on SB4E01 refused at this install with the
+		//! reason unrecorded; this is what that round was missing.
+		if (AppEntrypoint != 0)
+			Riivo::AppendLog(Riivo::StagedFstStillIntact()
+							 ? "Staged file table: checksum still matches at device shutdown.\n"
+							 : "Staged file table: CHECKSUM ALREADY BROKEN at device shutdown - corrupted before the jump window.\n");
+
 		// Reading of game is done we can close devices now
 		//! Last chance to get the queued log out: the socket dies with IOS.
 		Riivo::CloseCollector();
