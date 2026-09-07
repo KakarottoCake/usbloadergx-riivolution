@@ -112,6 +112,25 @@ static u32 covered(void)
     return n;
 }
 
+//! d2x __Frag_Get, relevant shape only: the first fragment covering the
+//! sector wins; an unmapped read below the declared size is zeros, past it
+//! an error. Both halves of this rule are already relied upon (sparse reads
+//! below size, range errors past it) and were measured on hardware.
+static int frag_lookup(u64 posBytes, u32 sectorSize, u32 declaredSectors, u64 *sectorOut)
+{
+    const u64 s = posBytes / sectorSize;
+    for (u32 i = 0; i < g_list.num; ++i) {
+        const u64 start = g_list.frag[i].offset;
+        if (s >= start && s < start + g_list.frag[i].count) {
+            if (sectorOut)
+                *sectorOut = (u64) g_list.frag[i].sector + (s - start);
+            return 1;
+        }
+    }
+    if (posBytes < (u64) declaredSectors * sectorSize) return 0;
+    return -1;
+}
+
 struct RealCase { const char *name; u32 size; };
 static const RealCase kReal[] = {
     { "JaiSeq", 164000 }, { "astro2", 2163072 }, { "Font", 360557 },
@@ -277,6 +296,55 @@ int main()
         ck(st.extended.size() == 2 && st.extended[0] == v[1].offset
            && st.extended[1] == v[2].offset, "rescued files named by their offsets");
         g_multi = 0;
+    }
+
+    printf("11. boundary requests through d2x's lookup rule\n");
+    {
+        //! The pre-fix planner aligned each file up to 2 KiB while
+        //! RebaseAppend clips every file's fragments to its exact length,
+        //! so the padding sliver between two files was unmapped. d2x serves
+        //! the first fragment covering a sector, zeros below the declared
+        //! size, and errors past it - so an over-read into padding errors
+        //! where the reference design serves original bytes. The planner
+        //! now packs at sector granularity to stop emitting this shape;
+        //! these requests prove what the old tables did, and pin why the
+        //! packing fix is required. Whether games issue such reads is a
+        //! hardware trace, not established here.
+        g_mode = M_NORMAL;
+        reset(MAX_FRAG);
+        const u32 s1 = 1000u, s2 = 3000u;
+        const u64 o1 = (u64) vbase * 512;
+        const u64 o2 = (o1 + s1 + 2047u) & ~2047ull;
+        const u32 sizes[] = { s1, s2 };
+        std::vector<PlacedFile> v;
+        PlacedFile f1;
+        f1.offset = o1; f1.length = s1; f1.external = "mem:/0";
+        PlacedFile f2;
+        f2.offset = o2; f2.length = s2; f2.external = "mem:/1";
+        v.push_back(f1);
+        v.push_back(f2);
+        g_multi = sizes;
+        g_drvBase = 0x10000;
+        FragBuildStats st;
+        ck(AppendModFragments(v, 512, kFsFat, 0, st), "boundary pair maps");
+        ck(st.failed == 0 && g_list.num == 2, "one fragment per contiguous file");
+        g_multi = 0;
+        //! Mirror the boot's restore step: frag_append leaves size at the
+        //! last mod fragment, and the boot puts the backup's own size back.
+        g_list.size = 0x0117400000ULL / 512;
+        u64 sector = 0;
+        ck(frag_lookup(o1, 512, g_list.size, &sector) == 1
+           && sector == 0x10000u, "exact file bytes hit");
+        ck(frag_lookup(o1 + s1 - 1, 512, g_list.size, &sector) == 1,
+           "last file byte hits");
+        ck(frag_lookup(o1 + 1024, 512, g_list.size, &sector) == -1,
+           "over-read into alignment padding misses past declared size");
+        ck(frag_lookup(o2 - 512, 512, g_list.size, &sector) == -1,
+           "padding just before the next file misses");
+        ck(frag_lookup(o2, 512, g_list.size, &sector) == 1,
+           "next file start hits");
+        ck(frag_lookup(0x1000, 512, g_list.size, &sector) == 0,
+           "unmapped below declared size is zeros");
     }
 
     printf("\n%d checks, %d failure(s)\n", checks, failures);

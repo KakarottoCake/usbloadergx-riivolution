@@ -20,6 +20,7 @@
 
 #include "riivo/RiivoReconcile.hpp"
 #include "riivo/RiivoFstBuild.hpp"
+#include "riivo/RiivoFile.hpp"
 #include "riivo/RiivoConfig.hpp"
 
 static int g_checks = 0;
@@ -333,6 +334,106 @@ static void TestOutcome()
 		  "empty OUTCOME is not an outcome");
 }
 
+//! Early-stated file sizes reused late instead of re-statting.
+static void TestSizeCache()
+{
+	Riivo::ClearFileSizeCache();
+	std::vector<Riivo::ModCandidate> cands;
+	Riivo::ModCandidate m;
+	m.disc = "/a.arc";
+	m.external = "sd:/mod/a.arc";
+	m.size = 1234;
+	cands.push_back(m);
+	Riivo::RememberFileSizes(cands);
+	u32 size = 0;
+	check(Riivo::KnownFileSize("sd:/mod/a.arc", &size) && size == 1234,
+		  "remembered size hits");
+	check(!Riivo::KnownFileSize("sd:/mod/nope.arc", &size),
+		  "unknown path misses back to stat");
+	u32 hits = 0, misses = 0;
+	Riivo::FileSizeCacheStats(&hits, &misses);
+	check(hits == 1 && misses == 1, "hit/miss counters");
+	Riivo::ClearFileSizeCache();
+	check(!Riivo::KnownFileSize("sd:/mod/a.arc", &size),
+		  "clear drops entries");
+}
+
+//! The runtime read contract, after rawksd-2013 dip.cpp: a request spanning
+//! replaced and original bytes splits into ordered segments; file ranges
+//! clip to the request with source offsets advanced past the request start.
+static Riivo::SpanExtent Sp(u64 off, u32 len, u64 fileOff)
+{
+	Riivo::SpanExtent e;
+	e.off = off;
+	e.len = len;
+	e.fileOff = fileOff;
+	return e;
+}
+
+static u32 SpanTotal(const std::vector<Riivo::SpanSeg> &segs)
+{
+	u32 total = 0;
+	for (size_t i = 0; i < segs.size(); ++i)
+		total += segs[i].len;
+	return total;
+}
+
+static void TestReadSpans()
+{
+	std::vector<Riivo::SpanExtent> ext;
+	ext.push_back(Sp(0x1000, 0x200, 0x40));
+	ext.push_back(Sp(0x2000, 0x100, 0x0));
+	std::vector<Riivo::SpanSeg> segs;
+	bool covered = false;
+
+	// Exact cover: one file segment, no original side needed.
+	Riivo::ClipReadSpans(0x1000, 0x200, ext, segs, covered);
+	check(segs.size() == 1 && segs[0].fromFile && segs[0].outOff == 0
+		  && segs[0].len == 0x200 && segs[0].fileOff == 0x40 && covered,
+		  "exact cover is one file segment");
+
+	// Read starts mid-extent: output starts at 0, file offset advances.
+	Riivo::ClipReadSpans(0x1080, 0x100, ext, segs, covered);
+	check(segs.size() == 1 && segs[0].fromFile && segs[0].outOff == 0
+		  && segs[0].len == 0x100 && segs[0].fileOff == 0xC0 && covered,
+		  "mid-extent start advances the file offset");
+
+	// Read overruns the extent end: length clamps to the request window.
+	Riivo::ClipReadSpans(0x1F00, 0x200, ext, segs, covered);
+	check(segs.size() == 2 && !segs[0].fromFile && segs[0].len == 0x100
+		  && segs[1].fromFile && segs[1].outOff == 0x100
+		  && segs[1].len == 0x100 && segs[1].fileOff == 0x0
+		  && !covered && SpanTotal(segs) == 0x200,
+		  "overrun clamps and appends an original tail");
+
+	// Spanning read across gap and both extents, in order.
+	Riivo::ClipReadSpans(0x800, 0x1900, ext, segs, covered);
+	check(segs.size() == 4 && !segs[0].fromFile && segs[0].len == 0x800
+		  && segs[1].fromFile && segs[1].fileOff == 0x40
+		  && !segs[2].fromFile && segs[2].outOff == 0xA00
+		  && segs[3].fromFile && segs[3].outOff == 0x1800
+		  && !covered && SpanTotal(segs) == 0x1900,
+		  "spanning read splits original/file/original/file in order");
+
+	// Read fully inside a gap: original bytes only.
+	Riivo::ClipReadSpans(0x1400, 0x100, ext, segs, covered);
+	check(segs.size() == 1 && !segs[0].fromFile && segs[0].len == 0x100
+		  && !covered, "gap-only read is original");
+
+	// Empty read: nothing to split, vacuously covered.
+	Riivo::ClipReadSpans(0x1000, 0, ext, segs, covered);
+	check(segs.empty() && covered, "empty read is vacuous");
+
+	// Adjacent extents with no gap between: covered, two file segments.
+	std::vector<Riivo::SpanExtent> adj;
+	adj.push_back(Sp(0x1000, 0x100, 0x0));
+	adj.push_back(Sp(0x1100, 0x100, 0x100));
+	Riivo::ClipReadSpans(0x1000, 0x200, adj, segs, covered);
+	check(segs.size() == 2 && segs[0].fromFile && segs[1].fromFile
+		  && segs[1].fileOff == 0x100 && covered && SpanTotal(segs) == 0x200,
+		  "adjacent extents stay covered");
+}
+
 int main()
 {
 	TestAllMatched();
@@ -342,6 +443,8 @@ int main()
 	TestReasons();
 	TestLastWins();
 	TestNoLeadingNul();
+	TestSizeCache();
+	TestReadSpans();
 	TestOutcome();
 
 	std::printf("%d checks, %d failure(s)\n", g_checks, g_fail);

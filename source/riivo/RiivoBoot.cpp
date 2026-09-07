@@ -200,10 +200,18 @@ namespace Riivo
 	static u32 sumPlaced = 0;
 	static u32 sumFailed = 0;
 
-	//! Seconds the result screen stays up. Long enough to read and
-	//! photograph, short enough to tolerate on every diagnostic boot.
-	//! No input is waited on: post-shutdown pads cannot be relied upon.
-	static const u32 RIIVO_SHOWLOG_SECONDS = 6;
+	//! Seconds the result screen stays up with the marker file present:
+	//! long enough to read and photograph. Without the marker the screen
+	//! shows a brief beat instead - proof the boot reached the jump
+	//! sequence, without stalling successful launches. No input is waited
+	//! on either way: post-shutdown pads cannot be relied upon.
+	static const u32 RIIVO_SHOWLOG_HOLD_SECONDS = 6;
+	static const u32 RIIVO_SHOWLOG_BEAT_SECONDS = 1;
+
+	//! Extended summary requested (riivolution/showlog.txt). Read in
+	//! SetBootContext while the card is mounted; the card is gone by the
+	//! time the screen shows.
+	static bool showExtended = false;
 
 	//! The game's id, needed to ask which partition it lives on.
 	static u8 bootGameId[8] = { 0 };
@@ -248,6 +256,17 @@ namespace Riivo
 	static u64 bootClockStart = 0;
 	static bool stepHeaderWritten = false;
 	static bool deadlinePassed = false;
+
+	//! Step names and times for the phase-duration table, kept in a small
+	//! ring. Declared up here so per-boot state resets in SetBootContext;
+	//! recorded in LogStep, printed in ReportLaunch.
+	struct StepMark
+	{
+		char name[56];
+		u32 ms;
+	};
+	static StepMark stepMarks[48];
+	static u32 stepMarkCount = 0;
 
 	//! Milliseconds since the first step. Zero until the clock starts.
 	static u32 BootElapsedMs()
@@ -310,9 +329,20 @@ namespace Riivo
 		onDemandPlanned = false;
 		onDemandLayout = OnDemandLayout();
 		ClearDirListCache();
+		ClearFileSizeCache();
 		bootClockStart = 0;
 		deadlinePassed = false;
 		stepHeaderWritten = false;
+		//! Per-boot diagnostics: a single boot runs per process, but reset
+		//! anyway so an aborted launch or a changed mod can never inherit
+		//! another boot's verdicts, records, or timings.
+		stepMarkCount = 0;
+		sumPlaced = 0;
+		sumFailed = 0;
+		withholdStage.clear();
+		modRecords.clear();
+		modSkips.clear();
+		modAddFails.clear();
 		if (!device.empty())
 		{
 			FILE *v = fopen((device + "/riivolution/loadingbar.txt").c_str(), "rb");
@@ -329,6 +359,20 @@ namespace Riivo
 			{
 				deepVerify = true;
 				fclose(w);
+			}
+		}
+		//! Extended pre-jump summary (riivolution/showlog.txt): without the
+		//! marker the screen shows a brief beat; with it, the full hold for
+		//! reading and photographing. Read here - the card is gone by the
+		//! time the screen shows - and reset per boot like every marker.
+		showExtended = false;
+		if (!device.empty())
+		{
+			FILE *s = fopen((device + "/riivolution/showlog.txt").c_str(), "rb");
+			if (s)
+			{
+				showExtended = true;
+				fclose(s);
 			}
 		}
 		//! Optional: "addr:port" of a listener on the LAN. Absent for
@@ -435,6 +479,13 @@ namespace Riivo
 	{
 		if (bootLogPath.empty() || text.empty())
 			return;
+		//! Same text to the listener, if one was configured. Sent first so
+		//! it survives even when the card is unmounted: the SetupDisc
+		//! register/remount window unmounts SD, and a file-only copy would
+		//! go silent exactly when it is needed most. The file stays the
+		//! record; this is the copy that survives a boot that never
+		//! finishes or a card that never comes back.
+		SendCollector(text);
 		FILE *f = fopen(bootLogPath.c_str(), "a");
 		if (!f)
 		{
@@ -443,10 +494,6 @@ namespace Riivo
 		}
 		fwrite(text.data(), 1, text.size(), f);
 		fclose(f);
-		//! Same text to the listener, if one was configured. Sent after the
-		//! card write, never instead of it: the file is the record, this is
-		//! only the copy that survives a boot that never finishes.
-		SendCollector(text);
 	}
 
 	//! Small printf-into-std::string helper; the reports are short.
@@ -468,6 +515,10 @@ namespace Riivo
 	//! Those two cannot be told apart after the fact, which cost a whole test
 	//! round. A step costs one line and names the phase that did not finish;
 	//! the free-heap figure beside it catches exhaustion directly.
+	//!
+	//! Step names and times are also kept in the ring above, so the report
+	//! can print a phase-duration table at the end: per-step lines say when,
+	//! the table says how long each phase took.
 	static void LogStep(const char *fmt, ...)
 	{
 		std::string out;
@@ -486,10 +537,35 @@ namespace Riivo
 		va_end(args);
 		if (!bootClockStart)
 			bootClockStart = gettime();
+		const u32 now = BootElapsedMs();
 		Addf(out, "  %-52s %6u ms  MEM2 free %u KB\n", buf,
-			 (unsigned) BootElapsedMs(),
+			 (unsigned) now,
 			 (unsigned) (MEM2_freesize() / 1024));
 		AppendLog(out);
+		if (stepMarkCount < sizeof(stepMarks) / sizeof(stepMarks[0]))
+		{
+			StepMark &m = stepMarks[stepMarkCount++];
+			strncpy(m.name, buf, sizeof(m.name) - 1);
+			m.name[sizeof(m.name) - 1] = 0;
+			m.ms = now;
+		}
+	}
+
+	//! Phase durations from the ring above, oldest first. Step-to-step
+	//! deltas: how long each phase took, not just when it finished. Covers
+	//! pre-shutdown steps only - this prints from ReportLaunch, which runs
+	//! before device shutdown, so shutdown itself and the final jump are
+	//! not timed here.
+	static void AppendStepTimings(std::string &out)
+	{
+		if (stepMarkCount < 2)
+			return;
+		out += "\nPhase durations, pre-shutdown steps only (step-to-step deltas)\n";
+		for (u32 i = 1; i < stepMarkCount; ++i)
+		{
+			Addf(out, "  %-44s +%6u ms\n", stepMarks[i].name,
+				 stepMarks[i].ms - stepMarks[i - 1].ms);
+		}
 	}
 
 	//! The loader's own progress window, driven across the two phases that
@@ -761,6 +837,10 @@ namespace Riivo
 	//! with the game and would walk straight over anything parked there.
 	static u8 *pendingFst = 0;
 	static u32 pendingFstSize = 0;
+	//! CRC of the staged table, captured when it is staged - not recomputed
+	//! from the staging buffer at install time, which would bless a buffer
+	//! that rotted in MEM2 in between.
+	static u32 pendingFstCrc = 0;
 
 	//! Where it is going, worked out once the apploader has filled the
 	//! boot-info block in. The copy into MEM1 does NOT happen there: the
@@ -1104,6 +1184,11 @@ namespace Riivo
 		}
 		memcpy(pendingFst, &newFst[0], newFst.size());
 		pendingFstSize = (u32) newFst.size();
+		//! Captured now, from the bytes just staged - the install step
+		//! compares the installed region against this, so a staging buffer
+		//! that rotted in MEM2 in between still fails instead of blessing
+		//! itself.
+		pendingFstCrc = Crc32(pendingFst, pendingFstSize);
 
 		Addf(out, "  rebuilt table        : %u bytes held, ready to install\n",
 			 pendingFstSize);
@@ -1113,6 +1198,11 @@ namespace Riivo
 
 	static bool ExternalFileSize(const std::string &path, u32 *outSize)
 	{
+		//! Stated during early enumeration: same boot, same card, so the
+		//! late phase reuses it instead of walking libfat from the root
+		//! again for every file. A miss stats as before.
+		if (KnownFileSize(path, outSize))
+			return true;
 		struct stat st;
 		if (stat(path.c_str(), &st) != 0)
 			return false;
@@ -1308,6 +1398,19 @@ namespace Riivo
 				++rejected;
 			}
 		}
+		LogStep("table entries planned: %u (%u rejected)", planned, rejected);
+		{
+			//! How much card traffic the caches saved. Sizes were stated
+			//! once during early enumeration; listings replay the early
+			//! pass. Misses walk the card again.
+			u32 sizeHits = 0, sizeMisses = 0, dirHits = 0, dirMisses = 0;
+			FileSizeCacheStats(&sizeHits, &sizeMisses);
+			DirCacheStats(&dirHits, &dirMisses);
+			Addf(out, "  file sizes         : %u reused, %u re-statted\n",
+				 sizeHits, sizeMisses);
+			Addf(out, "  directory listings : %u cached, %u walked\n",
+				 dirHits, dirMisses);
+		}
 
 		//! The mod region has to clear two floors: the synthetic LOW_READ
 		//! window the hook tests (RiivoDiPatch.hpp), and the end of the
@@ -1357,10 +1460,16 @@ namespace Riivo
 		//! undecrypted.
 		const bool extentFits = extent < RIIVO_REGION_BYTES;
 		//! Align to the drive's own sectors, never to less: a fragment cannot
-		//! begin part-way through one. 2 KB is the floor because that is a Wii
-		//! disc's own granularity, but a 4K-native drive needs 4 KB and would
+		//! begin part-way through one. A 4K-native drive needs 4 KB and would
 		//! otherwise have every file rejected by the alignment check later.
-		const u32 layoutAlign = bootSectorSize > 0x800 ? bootSectorSize : 0x800;
+		//! Deliberately sector-granular, not the old 2 KB floor: fragments
+		//! cover ceil(len/sector) sectors, so packing at sector granularity
+		//! leaves no unmapped padding sliver between files. The host
+		//! boundary test (test_fragtail section 11) proves the old shape
+		//! errors past the declared size where the rawksd reference serves
+		//! original bytes; ordinary sector-aligned game reads can land in
+		//! those slivers independently of any partial <file> XML usage.
+		const u32 layoutAlign = bootSectorSize ? bootSectorSize : 512;
 
 		//! Apply the placement decided in SetupDisc rather than choosing a new
 		//! one: the fragments are already registered against those offsets and
@@ -1372,9 +1481,11 @@ namespace Riivo
 			unplaced = builder.LayoutFrom(modOffsets);
 		else
 			builder.Layout(region, layoutAlign);
+		LogStep("early placement applied: %u without", unplaced);
 
 		std::vector<u8> newFst;
 		builder.Serialize(newFst, true);
+		LogStep("table serialised: %u bytes", (unsigned) newFst.size());
 		// Expectations come from the original disc and external-file sizes,
 		// not from reparsing the builder's result with the builder itself.
 		std::vector<FstWalkExpectation> expectedFst;
@@ -1714,7 +1825,11 @@ namespace Riivo
 	bool InstallPendingFst()
 	{
 		if (!pendingPlaceOk || !pendingFst || !pendingFstSize)
-			return true;
+			//! No staged state means no install is expected - except when
+			//! the game was already told its files are live. A live game
+			//! pointed at an uninstalled table reads unmapped space, so
+			//! that combination refuses instead of jumping.
+			return !fileWorkLive;
 		const u32 addr = pendingPlace.fstAddr;
 		const u32 size = pendingFstSize;
 		//! A relocated table overwrites bytes below the apploader's
@@ -1780,25 +1895,32 @@ namespace Riivo
 							origAddr, (u32) (uintptr_t) sbrk(0));
 			}
 		}
+		//! Prove the staging buffer before copying it: the check below
+		//! compares installed bytes against this same buffer, so rot between
+		//! staging and here would otherwise bless itself.
+		if (Crc32(pendingFst, size) != pendingFstCrc)
+		{
+			pendingPlaceOk = false;
+			gprintf("Riivo: late FST install REFUSED - staged table failed its checksum before copying\n");
+			return false;
+		}
 		const bool ok = InstallFst(pendingPlace, pendingFst, pendingFstSize);
 		pendingPlaceOk = false;
 		bool verified = false;
-		u32 crc = 0;
 		u32 ptr = 0, max = 0, arena = 0;
 		if (ok)
 		{
-			crc = Crc32(pendingFst, size);
 			ptr = *(vu32 *) 0x80000038;
 			max = *(vu32 *) 0x8000003C;
 			arena = *(vu32 *) 0x80000034;
 			verified = (memcmp((const void *) addr, pendingFst, size) == 0)
 					   && ptr == addr && max == size
 					   && arena == pendingPlace.newArenaHi
-					   && Crc32((const u8 *) addr, size) == crc;
+					   && Crc32((const u8 *) addr, size) == pendingFstCrc;
 		}
 		gprintf("Riivo: late FST install %s at %08x, %u bytes, crc %08x (ptr %08x max %u arena %08x)\n",
 				verified ? "verified" : (ok ? "UNVERIFIED" : "REFUSED"),
-				addr, (unsigned) size, crc, ptr, max, arena);
+				addr, (unsigned) size, pendingFstCrc, ptr, max, arena);
 		return verified;
 	}
 
@@ -1989,7 +2111,7 @@ namespace Riivo
 		//! would measure the mod against itself and refuse its own placement.
 		origMappedEnd = gameEnd;
 
-		const u32 align = sector > 0x800 ? sector : 0x800;
+		const u32 align = sector ? sector : 512;
 		const u64 regionStart = PlanRegionStart(gameEnd, align);
 
 		std::vector<PlacedFile> placed;
@@ -2377,11 +2499,12 @@ namespace Riivo
 
 	//! Pre-jump result screen. The card log ends at device shutdown, so a
 	//! black screen hides whether the boot even reached the jump; this puts
-	//! the verdict where the tester can see it. Only static buffers are
-	//! touched (StartProgress copies into its own), nothing is allocated,
-	//! and it runs BEFORE the FST install - the install refusal below stays
-	//! the post-install signal. No input is waited on; the screen holds a
-	//! fixed delay and the boot continues.
+	//! the verdict where the tester can see it. It runs BEFORE the FST
+	//! install, and the progress operation is ended and synchronized here
+	//! before returning: the progress thread builds GUI resources while it
+	//! runs, so anything it allocates afterwards could land on the installed
+	//! table. No input is waited on; the screen holds a fixed delay and the
+	//! boot continues with a quiet heap.
 	void ShowPreJumpSummary(bool memAttempted, int memApplied, int memTotal)
 	{
 		if (!bootSet)
@@ -2409,10 +2532,17 @@ namespace Riivo
 		else
 			snprintf(msg2, sizeof(msg2), "mem: %d/%d applied", memApplied, memTotal);
 		char *end = msg2 + strlen(msg2);
-		snprintf(end, sizeof(msg2) - (size_t) (end - msg2), "; launching in %us",
-				 RIIVO_SHOWLOG_SECONDS);
+		const u32 hold = showExtended ? RIIVO_SHOWLOG_HOLD_SECONDS
+									  : RIIVO_SHOWLOG_BEAT_SECONDS;
+		snprintf(end, sizeof(msg2) - (size_t) (end - msg2), "; continuing in %us",
+				 hold);
 		StartProgress(title, msg1, msg2, false, false);
-		usleep(RIIVO_SHOWLOG_SECONDS * 1000000u);
+		usleep(hold * 1000000u);
+		//! End and synchronize the progress operation before returning: the
+		//! thread suspends itself once the flag drops (the same start/stop
+		//! pairing the menus use), and only then is the heap quiet for the
+		//! FST install that follows in the caller.
+		ProgressStop();
 	}
 
 	//! The last thing written while the card is still mounted. A black screen
@@ -2439,6 +2569,7 @@ namespace Riivo
 		//! where the time went; this line says how much loading cost in all.
 		Addf(out, "  total elapsed      : %u ms (%u s) since the first Riivolution step\n",
 			 (unsigned) BootElapsedMs(), (unsigned) (BootElapsedMs() / 1000));
+		AppendStepTimings(out);
 		AppendLog(out);
 	}
 }

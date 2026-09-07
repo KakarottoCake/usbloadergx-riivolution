@@ -279,10 +279,13 @@ int GameBooter::SetupDisc(struct discHdr &gameHeader)
 		//! everything after the unmount below is unwritable until the
 		//! remount, so a log that stops here narrows the failure to the
 		//! unmount/register/remount/reopen interval without naming which.
-		Riivo::LogBootStep("unmounting SD to register the fragment list");
+		//! Return values travel over gprintf and the network collector,
+		//! which need neither the card nor the file log.
 		Riivo::LogBootStep("unmounting SD to register the fragment list");
 		DeviceHandler::Instance()->UnMountSD();
+		gprintf("Riivo: registering fragment list (SDMode=%d)\n", (int) Settings.SDMode);
 		ret = set_frag_list(gameHeader.id, Settings.SDMode);
+		gprintf("Riivo: set_frag_list returned %d\n", ret);
 		if (ret < 0)
 		{
 			//! Riivolution enlarged this list. Registering it is the one step
@@ -294,8 +297,16 @@ int GameBooter::SetupDisc(struct discHdr &gameHeader)
 			gprintf("set_frag_list failed (%d); reverting to the game's own\n", ret);
 			if (Riivo::RevertFragList())
 				ret = set_frag_list(gameHeader.id, Settings.SDMode);
+			gprintf("Riivo: set_frag_list retry returned %d\n", ret);
 			if (ret < 0)
+			{
+				//! Registration-error early return, before the remount: the
+				//! card stays unmounted here, so this marker only travels
+				//! over gprintf and the collector, never the file log.
+				Riivo::LogBootStep("fragment registration failed twice, aborting to loader");
+				gprintf("Riivo: registration failed twice (%d), aborting to loader\n", ret);
 				return ret;
+			}
 		}
 		gprintf("%s set to game\n", Settings.SDMode ? "SD" : "USB");
 		const bool sdRemounted = DeviceHandler::Instance()->MountSD();
@@ -1039,10 +1050,10 @@ int GameBooter::BootGame(struct discHdr *gameHdr, const s8 useOcarina)
 
 	//! On-screen result summary for tester rounds: everything above is
 	//! card-logged, but a black screen hides whether the boot even reached
-	//! the jump. Drawn here - before the FST install - so nothing is
-	//! allocated afterwards, and skipped on Wii U, whose GUI threads are
-	//! gone by boot time. The install refusal below stays the post-install
-	//! signal.
+	//! the jump. Drawn here - before the FST install, and synchronized
+	//! before returning - so the heap is quiet when the table lands, and
+	//! skipped on Wii U, whose GUI threads are gone by boot time. The
+	//! install refusal below stays the post-install signal.
 	if (!isWiiU())
 		Riivo::ShowPreJumpSummary(riivoMemAttempted, riivoMemAppliedCount,
 								   (int) riivoSet.memories.size());
