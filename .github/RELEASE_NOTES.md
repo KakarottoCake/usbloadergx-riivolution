@@ -33,12 +33,12 @@ on. Without that file nothing changes and the build behaves exactly like v3.10.
 It has never run on a console. Expect it to fail; the log and a USB Gecko trace are the
 point of it. Leave the file off for normal use.
 
-## Changed in v3.13
+## Changed in v3.14
 
-- Recovered files absent from the rebuilt table no longer withhold the mod anonymously.
-- Every boot log names its build commit and ends with a machine-readable outcome line.
-- The game settings screen reports the previous boot's withheld file replacement.
-- Boot logs show total elapsed loading time and per-file exclusion reasons.
-- 146,772 automated checks, all passing.
+- Late FST install is verified and refuses the jump instead of black-screening.
+- Boot outcome reads FST_STAGED; older logs still parse.
+- Large-read warning scales with the mod's actual payload size.
+- Rebuilt tables gain exactly the root NUL byte, proven by test.
+- 146,777 automated checks, all passing.
 
 Older versions: [CHANGELOG.md](CHANGELOG.md)

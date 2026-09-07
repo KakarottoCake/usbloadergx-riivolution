@@ -272,6 +272,43 @@ static void TestLastWins()
 		  "winning claim is the last one");
 }
 
+//! A table whose string table has no leading root NUL (root name offset 0
+//! points at the first real name) parses, and serialising it adds exactly
+//! one byte: the root's empty name. Entry count, paths, offsets and lengths
+//! are otherwise identical. This is the benign mechanism behind a rebuilt
+//! table measuring one byte larger than the original with no added entries.
+static void TestNoLeadingNul()
+{
+	// Root (2 entries) + one file; strings hold only "a.arc\0".
+	std::vector<u8> fst(2 * 12, 0);
+	std::string strings;
+	strings += "a.arc"; strings += '\0';
+	fst[0] = 1; // root dir
+	fst[1] = 0; fst[2] = 0; fst[3] = 0; // root name offset 0
+	Wr32(fst, 4, 0); // parent 0
+	Wr32(fst, 8, 2); // end 2
+	fst[12] = 0; // file
+	fst[13] = 0; fst[14] = 0; fst[15] = 0; // name offset 0
+	Wr32(fst, 16, 0x1000 >> 2);
+	Wr32(fst, 20, 0x800);
+	fst.insert(fst.end(), strings.begin(), strings.end());
+
+	Riivo::FstBuilder parsed;
+	check(parsed.Parse(&fst[0], (u32) fst.size(), true), "nul-less table parses");
+	std::vector<u8> rebuilt;
+	parsed.Serialize(rebuilt, true);
+	check(rebuilt.size() == fst.size() + 1,
+		  "serialise adds exactly the root NUL");
+	Riivo::FstBuilder reparsed;
+	check(reparsed.Parse(&rebuilt[0], (u32) rebuilt.size(), true),
+		  "rebuilt table re-parses");
+	u64 off = 0;
+	u32 len = 0;
+	check(reparsed.FindAssigned("/a.arc", &off, &len)
+		  && off == 0x1000 && len == 0x800,
+		  "file entry survives the round trip");
+}
+
 //! Previous-boot outcome parsing for the settings UI.
 static void TestOutcome()
 {
@@ -279,13 +316,16 @@ static void TestOutcome()
 	std::string code;
 	check(!Riivo::ParseBootOutcome("no outcome here\n", live, code),
 		  "text without OUTCOME is not an outcome");
+	check(Riivo::ParseBootOutcome("OUTCOME: FST_STAGED\n", live, code)
+		  && live && code == "FST_STAGED", "FST_STAGED parses live");
 	check(Riivo::ParseBootOutcome("OUTCOME: FILES_LIVE\n", live, code)
-		  && live && code == "FILES_LIVE", "FILES_LIVE parses live");
-	check(Riivo::ParseBootOutcome("noise\nOUTCOME: WITHHELD READBACK\n", live, code)
-		  && !live && code == "WITHHELD READBACK", "WITHHELD parses with stage");
-	check(Riivo::ParseBootOutcome("OUTCOME: WITHHELD READBACK\nOUTCOME: FILES_LIVE\n",
+		  && live && code == "FILES_LIVE",
+		  "old FILES_LIVE logs still parse live");
+	check(Riivo::ParseBootOutcome("OUTCOME: WITHHELD READBACK\nOUTCOME: FST_STAGED\n",
 								  live, code) && live,
 		  "last OUTCOME line wins");
+	check(Riivo::ParseBootOutcome("noise\nOUTCOME: WITHHELD READBACK\n", live, code)
+		  && !live && code == "WITHHELD READBACK", "WITHHELD parses with stage");
 	check(Riivo::ParseBootOutcome("OUTCOME: NO_FILE_WORK\r\n", live, code)
 		  && !live && code == "NO_FILE_WORK",
 		  "CRLF tolerated, NO_FILE_WORK is not live");
@@ -301,6 +341,7 @@ int main()
 	TestZeroLength();
 	TestReasons();
 	TestLastWins();
+	TestNoLeadingNul();
 	TestOutcome();
 
 	std::printf("%d checks, %d failure(s)\n", g_checks, g_fail);

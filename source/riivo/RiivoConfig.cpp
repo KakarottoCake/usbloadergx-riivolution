@@ -311,7 +311,7 @@ namespace Riivo
 				if (!rest.empty())
 				{
 					found = true;
-					liveOut = (rest == "FILES_LIVE");
+					liveOut = (rest == "FST_STAGED" || rest == "FILES_LIVE");
 					codeOut = rest;
 				}
 			}

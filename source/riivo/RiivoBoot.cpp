@@ -188,8 +188,10 @@ namespace Riivo
 	static std::vector<SkipRecord> modSkips;
 
 	//! Machine-parseable outcome of the file work, for the previous-boot
-	//! check in the game settings UI. FILES_LIVE only when the table went
-	//! live; WITHHELD carries the stage that stopped it.
+	//! check in the game settings UI. FST_STAGED once the table is staged
+	//! for install (installation itself is verified after device shutdown
+	//! and cannot extend the card log); WITHHELD carries the stage that
+	//! stopped it.
 	static std::string withholdStage;
 
 	//! The game's id, needed to ask which partition it lives on.
@@ -979,11 +981,21 @@ namespace Riivo
 		}
 		if (!deepVerify)
 		{
+			//! The generic "minutes" warning is wrong for small mods - a
+			//! 590 KB payload verifies in seconds. Scale the cost by what is
+			//! actually staged so the advice fits the mod in question.
+			u64 verifyBytes = 0;
+			for (size_t i = 0; i < placed.size(); ++i)
+				verifyBytes += placed[i].length;
+			const char *cost = verifyBytes < 2ULL * 1024 * 1024 ? "seconds of a"
+							 : verifyBytes < 20ULL * 1024 * 1024 ? "well under a minute of"
+							 : "minutes of a";
 			out += "\nLarge-read verification: SKIPPED.\n"
-				   "  It reads the whole mod back through the cIOS and compares it\n"
-				   "  against the card - on a mod this size that is minutes of a\n"
-				   "  black screen. The per-file check above already proves every\n"
-				   "  file's head and tail map. Create riivolution/verify.txt to run it.\n";
+				   "  It reads the whole mod back through the cIOS and compares it\n";
+			Addf(out, "  against the card - on a mod this size that is %s\n"
+					  "  black screen. The per-file check above already proves every\n"
+					  "  file's head and tail map. Create riivolution/verify.txt to run it.\n",
+				 cost);
 		}
 		else
 		{
@@ -1081,7 +1093,8 @@ namespace Riivo
 
 		Addf(out, "  rebuilt table        : %u bytes held, ready to install\n",
 			 pendingFstSize);
-		out += "\n  Riivolution is ON for this boot.\n";
+		out += "\n  Riivolution is prepared for this boot; the table installs\n"
+			   "  last, just before the jump, and only a verified install runs.\n";
 	}
 
 	static bool ExternalFileSize(const std::string &path, u32 *outSize)
@@ -1675,13 +1688,41 @@ namespace Riivo
 	//! game. Everything that allocates has already run, so this copy is the
 	//! one the game actually reads. Nothing is logged from here - the card
 	//! is gone by now - which is why the report above says what it booked.
-	void InstallPendingFst()
+	//! Install the staged table and prove it landed. Past device shutdown
+	//! the card is gone, so this verification is the last thing that can
+	//! establish what the game will read: the installed bytes are compared
+	//! against what was staged, the low-memory words the game uses to find
+	//! the table are re-read, and the region is checksummed. True (the
+	//! common case, including nothing staged) lets the boot continue; false
+	//! refuses the jump below, so a corrupted install returns to the loader
+	//! - a visible outcome naming the install - instead of a black screen
+	//! that could be anything past this point.
+	bool InstallPendingFst()
 	{
 		if (!pendingPlaceOk || !pendingFst || !pendingFstSize)
-			return;
+			return true;
+		const u32 addr = pendingPlace.fstAddr;
+		const u32 size = pendingFstSize;
 		const bool ok = InstallFst(pendingPlace, pendingFst, pendingFstSize);
 		pendingPlaceOk = false;
-		gprintf("Riivo: late FST install %s\n", ok ? "ok" : "REFUSED");
+		bool verified = false;
+		u32 crc = 0;
+		u32 ptr = 0, max = 0, arena = 0;
+		if (ok)
+		{
+			crc = Crc32(pendingFst, size);
+			ptr = *(vu32 *) 0x80000038;
+			max = *(vu32 *) 0x8000003C;
+			arena = *(vu32 *) 0x80000034;
+			verified = (memcmp((const void *) addr, pendingFst, size) == 0)
+					   && ptr == addr && max == size
+					   && arena == pendingPlace.newArenaHi
+					   && Crc32((const u8 *) addr, size) == crc;
+		}
+		gprintf("Riivo: late FST install %s at %08x, %u bytes, crc %08x (ptr %08x max %u arena %08x)\n",
+				verified ? "verified" : (ok ? "UNVERIFIED" : "REFUSED"),
+				addr, (unsigned) size, crc, ptr, max, arena);
+		return verified;
 	}
 
 	//! Put the game's own fragment list back and stand everything else down.
@@ -2214,7 +2255,7 @@ namespace Riivo
 		if (!fileWorkWanted)
 			out += "OUTCOME: NO_FILE_WORK\n";
 		else if (fileWorkLive)
-			out += "OUTCOME: FILES_LIVE\n";
+			out += "OUTCOME: FST_STAGED\n";
 		else
 			Addf(out, "OUTCOME: WITHHELD %s\n", withholdStage.c_str());
 

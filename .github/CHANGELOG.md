@@ -243,6 +243,14 @@ and permanent silence, and a write failure drops the socket rather than retrying
 - test_netlog: 23 checks on the address parsing, the half that fails quietly.
 - 146,353 automated checks, all passing.
 
+## Changed in v3.13
+
+- Recovered files absent from the rebuilt table no longer withhold the mod anonymously.
+- Every boot log names its build commit and ends with a machine-readable outcome line.
+- The game settings screen reports the previous boot's withheld file replacement.
+- Boot logs show total elapsed loading time and per-file exclusion reasons.
+- 146,772 automated checks, all passing.
+
 ## Changed in v3.12
 
 - Versioned runtime manifest and address model shared by the loader and IOS sides.

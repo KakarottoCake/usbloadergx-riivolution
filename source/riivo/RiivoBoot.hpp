@@ -109,12 +109,16 @@ namespace Riivo
 	//! Copy the rebuilt file table into the game's memory. Call this as late
 	//! as possible - it lands at the top of MEM1, which the loader's own heap
 	//! also occupies, so anything the loader does afterwards can overwrite it.
+	//! Verifies the installed bytes against what was staged and re-reads the
+	//! words the game uses to find the table. True when there was nothing
+	//! staged or the install verified; false refuses the jump, so a corrupted
+	//! install returns to the loader instead of black-screening.
+	bool InstallPendingFst();
+
 	//! Put the game's own fragment list back after the cIOS refused the
 	//! enlarged one, so the game can still boot unmodified. True if it
 	//! changed anything.
 	bool RevertFragList();
-
-	void InstallPendingFst();
 
 	void LogBootStep(const char *what);
 

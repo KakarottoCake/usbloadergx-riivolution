@@ -35,6 +35,20 @@
 
 namespace Riivo
 {
+	//! CRC-32 (IEEE) for post-install verification. Inline so both the
+	//! loader and the host tests share one implementation.
+	inline u32 Crc32(const u8 *data, u32 len)
+	{
+		u32 crc = 0xFFFFFFFFu;
+		for (u32 i = 0; i < len; ++i)
+		{
+			crc ^= data[i];
+			for (int k = 0; k < 8; ++k)
+				crc = (crc & 1) ? (crc >> 1) ^ 0xEDB88320u : crc >> 1;
+		}
+		return crc ^ 0xFFFFFFFFu;
+	}
+
 	//! One early-registered file: what it is, where it was placed, how big
 	//! the card said it was. Filled in PrepareFragList for every candidate,
 	//! including zero-length files (they share the cursor without advancing
