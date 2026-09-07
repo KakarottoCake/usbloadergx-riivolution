@@ -1034,12 +1034,12 @@ int GameBooter::BootGame(struct discHdr *gameHdr, const s8 useOcarina)
 		}
 	}
 
-	//! On-screen result summary for tester rounds (opt-in via
-	//! riivolution/showlog.txt): everything above is card-logged, but a
-	//! black screen hides whether the boot even reached the jump. Drawn
-	//! here - before the FST install - so nothing is allocated afterwards,
-	//! and skipped on Wii U, whose GUI threads are gone by boot time. The
-	//! install refusal below stays the post-install signal.
+	//! On-screen result summary for tester rounds: everything above is
+	//! card-logged, but a black screen hides whether the boot even reached
+	//! the jump. Drawn here - before the FST install - so nothing is
+	//! allocated afterwards, and skipped on Wii U, whose GUI threads are
+	//! gone by boot time. The install refusal below stays the post-install
+	//! signal.
 	if (!isWiiU())
 		Riivo::ShowPreJumpSummary(riivoMemAttempted, riivoMemAppliedCount,
 								   (int) riivoSet.memories.size());

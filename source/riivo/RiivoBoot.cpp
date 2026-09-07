@@ -195,14 +195,8 @@ namespace Riivo
 	//! stopped it.
 	static std::string withholdStage;
 
-	//! Opt-in pre-jump result screen (riivolution/showlog.txt). The progress
-	//! window below only copies into static buffers and resumes a thread -
-	//! no allocation - so it is safe after device shutdown, but it must run
-	//! before the FST install all the same: anything allocated afterwards
-	//! could land on the installed table.
-	static bool showResults = false;
-
-	//! Outcome counters for that screen, captured where they are known.
+	//! Outcome counters for the pre-jump screen, captured where they are
+	//! known.
 	static u32 sumPlaced = 0;
 	static u32 sumFailed = 0;
 
@@ -335,20 +329,6 @@ namespace Riivo
 			{
 				deepVerify = true;
 				fclose(w);
-			}
-		}
-		//! Opt-in pre-jump result screen (showlog.txt): everything above is
-		//! card-logged, but a black screen hides whether the boot even
-		//! reached the jump. Read here for the same reason as the markers
-		//! above - the card is gone by jump time.
-		showResults = false;
-		if (!device.empty())
-		{
-			FILE *s = fopen((device + "/riivolution/showlog.txt").c_str(), "rb");
-			if (s)
-			{
-				showResults = true;
-				fclose(s);
 			}
 		}
 		//! Optional: "addr:port" of a listener on the LAN. Absent for
@@ -2385,16 +2365,16 @@ namespace Riivo
 				FileWorkIncomplete() ? "held back" : "applied");
 	}
 
-	//! Pre-jump result screen (opt-in via riivolution/showlog.txt). The card
-	//! log ends at device shutdown, so a black screen hides whether the boot
-	//! even reached the jump; this puts the verdict where the tester can see
-	//! it. Only static buffers are touched (StartProgress copies into its
-	//! own), nothing is allocated, and it runs BEFORE the FST install - the
-	//! install refusal below stays the post-install signal. No input is
-	//! waited on; the screen holds a fixed delay and the boot continues.
+	//! Pre-jump result screen. The card log ends at device shutdown, so a
+	//! black screen hides whether the boot even reached the jump; this puts
+	//! the verdict where the tester can see it. Only static buffers are
+	//! touched (StartProgress copies into its own), nothing is allocated,
+	//! and it runs BEFORE the FST install - the install refusal below stays
+	//! the post-install signal. No input is waited on; the screen holds a
+	//! fixed delay and the boot continues.
 	void ShowPreJumpSummary(bool memAttempted, int memApplied, int memTotal)
 	{
-		if (!showResults || !bootSet)
+		if (!bootSet)
 			return;
 		char title[64], msg1[192], msg2[128];
 		if (!fileWorkWanted)
