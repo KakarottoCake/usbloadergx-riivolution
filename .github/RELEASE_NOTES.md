@@ -33,11 +33,10 @@ on. Without that file nothing changes and the build behaves exactly like v3.10.
 It has never run on a console. Expect it to fail; the log and a USB Gecko trace are the
 point of it. Leave the file off for normal use.
 
-## Changed in v3.15
+## Changed in v3.16
 
-- Optional on-screen result summary before the jump (riivolution/showlog.txt).
-- Relocation install refuses visibly instead of risking loader memory.
-- Mount boundary markers name SD unmount/remount failures in the log.
+- Pre-jump result screen is on for every mod boot; no marker file needed.
+- Mount markers, install verification and FST_STAGED carry over from v3.15.
 - 146,777 automated checks, all passing.
 
 Older versions: [CHANGELOG.md](CHANGELOG.md)

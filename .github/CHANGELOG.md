@@ -243,6 +243,13 @@ and permanent silence, and a write failure drops the socket rather than retrying
 - test_netlog: 23 checks on the address parsing, the half that fails quietly.
 - 146,353 automated checks, all passing.
 
+## Changed in v3.15
+
+- Optional on-screen result summary before the jump (riivolution/showlog.txt).
+- Relocation install refuses visibly instead of risking loader memory.
+- Mount boundary markers name SD unmount/remount failures in the log.
+- 146,777 automated checks, all passing.
+
 ## Changed in v3.14
 
 - Late FST install is verified and refuses the jump instead of black-screening.
