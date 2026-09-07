@@ -195,6 +195,14 @@ namespace Riivo
 	//! stopped it.
 	static std::string withholdStage;
 
+	//! Which install check refused last, for the drive-light blink code in
+	//! the caller: 0 none/success, 1 live game with nothing staged,
+	//! 2 staged buffer failed its pre-copy checksum, 3 InstallFst bounds
+	//! refusal, 4 installed bytes/CRC mismatch, 5 low-memory pointer/arena
+	//! mismatch. The refusal text itself only reaches gprintf - the card is
+	//! gone - so this number is the part the tester can see.
+	static u32 installFailCode = 0;
+
 	//! Outcome counters for the pre-jump screen, captured where they are
 	//! known.
 	static u32 sumPlaced = 0;
@@ -343,6 +351,7 @@ namespace Riivo
 		modRecords.clear();
 		modSkips.clear();
 		modAddFails.clear();
+		installFailCode = 0;
 		if (!device.empty())
 		{
 			FILE *v = fopen((device + "/riivolution/loadingbar.txt").c_str(), "rb");
@@ -1825,11 +1834,14 @@ namespace Riivo
 	bool InstallPendingFst()
 	{
 		if (!pendingPlaceOk || !pendingFst || !pendingFstSize)
+		{
 			//! No staged state means no install is expected - except when
 			//! the game was already told its files are live. A live game
 			//! pointed at an uninstalled table reads unmapped space, so
-			//! that combination refuses instead of jumping.
+			//! that combination refuses instead of jumping (code 1).
+			installFailCode = fileWorkLive ? 1 : 0;
 			return !fileWorkLive;
+		}
 		const u32 addr = pendingPlace.fstAddr;
 		const u32 size = pendingFstSize;
 		//! A relocated table overwrites bytes below the apploader's
@@ -1901,6 +1913,7 @@ namespace Riivo
 		if (Crc32(pendingFst, size) != pendingFstCrc)
 		{
 			pendingPlaceOk = false;
+			installFailCode = 2;
 			gprintf("Riivo: late FST install REFUSED - staged table failed its checksum before copying\n");
 			return false;
 		}
@@ -1908,20 +1921,31 @@ namespace Riivo
 		pendingPlaceOk = false;
 		bool verified = false;
 		u32 ptr = 0, max = 0, arena = 0;
-		if (ok)
+		if (!ok)
+			installFailCode = 3;
+		else
 		{
 			ptr = *(vu32 *) 0x80000038;
 			max = *(vu32 *) 0x8000003C;
 			arena = *(vu32 *) 0x80000034;
-			verified = (memcmp((const void *) addr, pendingFst, size) == 0)
-					   && ptr == addr && max == size
-					   && arena == pendingPlace.newArenaHi
-					   && Crc32((const u8 *) addr, size) == pendingFstCrc;
+			const bool bytesOk = (memcmp((const void *) addr, pendingFst, size) == 0)
+								 && Crc32((const u8 *) addr, size) == pendingFstCrc;
+			const bool ptrsOk = ptr == addr && max == size
+								&& arena == pendingPlace.newArenaHi;
+			verified = bytesOk && ptrsOk;
+			//! Bytes first: a failed write and a moved pointer are different
+			//! faults, and the blink code is the only channel that survives.
+			installFailCode = verified ? 0 : (bytesOk ? 5 : 4);
 		}
 		gprintf("Riivo: late FST install %s at %08x, %u bytes, crc %08x (ptr %08x max %u arena %08x)\n",
 				verified ? "verified" : (ok ? "UNVERIFIED" : "REFUSED"),
 				addr, (unsigned) size, pendingFstCrc, ptr, max, arena);
 		return verified;
+	}
+
+	u32 InstallFailCode()
+	{
+		return installFailCode;
 	}
 
 	//! Put the game's own fragment list back and stand everything else down.
