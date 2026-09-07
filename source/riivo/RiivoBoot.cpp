@@ -655,6 +655,11 @@ namespace Riivo
 				ShowProgress(msg, 0, 0);
 			else
 			{
+				//! Draw at once. The default half-second wait means a phase
+				//! shorter than it draws nothing at all and still costs the
+				//! full wait when the window is stopped - which is how a boot
+				//! spent 460ms on a window that never appeared.
+				ProgressSkipDebounce();
 				StartProgress(tr("Riivolution"),
 							  tr("Preparing the mod's files"), msg, false, true);
 				on = true;

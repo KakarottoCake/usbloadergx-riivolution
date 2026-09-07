@@ -5,6 +5,23 @@ current version's bullets; everything older lives here.
 
 ## Unreleased
 
+The progress window draws immediately instead of waiting half a second to
+decide whether it is worth drawing.
+
+ProgressWindow opens with a 500ms sleep so operations too short to matter
+never flash a window. That is right for a file copy and wrong here: a phase
+shorter than the wait draws nothing at all, and ProgressStop then blocks
+until the sleeping thread wakes, so the boot pays the full half second for
+a window nobody saw. Measured on a tester's console - the same step took
+48ms with the bar off and 507ms with it on, and nothing appeared either
+time.
+
+ProgressSkipDebounce() applies to one window and clears itself, so the
+behaviour every other caller relies on is unchanged. Whether this is the
+whole reason the loading screen has never been seen is not established:
+the long phase should have drawn it on the old path too, and that has not
+been reproduced away from the hardware.
+
 The drive light pulses for as long as Riivolution is working, and goes out
 at the jump. The loading bar is on by default.
 
