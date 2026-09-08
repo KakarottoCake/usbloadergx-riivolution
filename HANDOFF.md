@@ -1,8 +1,37 @@
-# Handoff — 2026-09-08
+# Handoff — 2026-09-08 (updated: v3.33 paired runs)
 
-State of the SB4E01 (Super Mario Galaxy 2) debugging effort. Written at the end of a
-long session; read this before acting on any earlier conclusion, because several of
-them were wrong and are corrected here.
+State of the SB4E01 (Super Mario Galaxy 2) debugging effort. Read the
+"Latest evidence" section first — it supersedes the drive-blocker framing
+below, which is kept for the steps it still requires.
+
+## Latest evidence: paired T0 runs on v3.33, same build `07dfade1`
+
+| Run | Table staged | Result |
+|---|---|---|
+| Normal T0 | Rebuilt, 153,934 bytes at `0x817da6a0` | Black screen |
+| T0 + `relocorig.txt` | Verbatim original + 160 zero bytes, 153,952 bytes, same address | Black screen |
+| Earlier T0 + `nofstinstall.txt` | Install skipped | Game boots |
+
+Both installs target `0x817da6a0`, 160 bytes below the original table.
+Both pass file read checks and report an intact staging checksum before
+shutdown. Neither persistent log proves the late install completed.
+
+Reading: the hook/fragment half is exonerated (again — `nofstinstall`
+boots with hook and fragments live). Original entries do not rescue the
+boot, so the serializer is deprioritized; the shared staging/install
+path is now the suspect, not table content.
+
+Open, provisional: the tester reported two flashes then darkness on the
+`relocorig` run, possibly refusal code 2 (staged checksum mismatch at
+the late copy). Ordinary progress flicker looks similar, so the count
+alone confirms nothing — the pattern must be pause-then-two-slow-flashes
+(~350 ms on/off). If code 2 is confirmed, the staging buffer changed
+between the pre-shutdown checkpoint and the late copy, the destination
+copy never happened, and relocation is unimplicated. If ruled out,
+destination ownership and the installed pointer/size/arena values stay
+open. A post-shutdown refusal returning visibly is itself unproven: the
+return runs after device teardown and may die silently, which would also
+present as black screen.
 
 ## The one thing that blocks everything
 
@@ -127,7 +156,8 @@ shutdown" plus a code-2 blink means the corruption happened after the card went 
 
 | marker (next to the XML, on the mod's drive) | effect |
 |---|---|
-| `riivolution/nofstinstall.txt` | stage everything, then **don't** install the table. Splits table/install faults from hook/fragment faults. **Never yet run.** |
+| `riivolution/nofstinstall.txt` | stage everything, then **don't** install the table. Splits table/install faults from hook/fragment faults. |
+| `riivolution/relocorig.txt` | stage the **verbatim original** table (+160 zero bytes) instead of the rebuilt one, at the same relocated address. Splits relocation faults from new-table-content faults. Never combine with `nofstinstall.txt`. |
 | `riivolution/verify.txt` | full large-read verification of the mod through the cIOS |
 | `riivolution/dumpios.txt` | IOS dumps |
 | `riivolution/ondemand.txt` | on-demand path (never run on hardware) |
@@ -136,8 +166,9 @@ shutdown" plus a code-2 blink means the corruption happened after the card went 
 
 `v3.24` prompt text overflow · `v3.25` light pulses through the apploader ·
 `v3.26` staged-table checkpoint · `v3.27` summary opt-in · `v3.28` checkpoint 3-state ·
-`v3.29` loading bar off · `v3.30` `nofstinstall.txt` · `v3.31` all GUI removed
-(`5a7bad8b`, current).
+`v3.29` loading bar off · `v3.30` `nofstinstall.txt` · `v3.31` all GUI removed ·
+`v3.32` white flash removed from the jump · `v3.33` `relocorig.txt`
+(`d1712fb5`, current).
 
 Test pack (GXDiag-SB4E01): https://files.catbox.moe/8ohcmi.zip — Part 1 order is
 `P1 T0 Creates`, `P1 T7 Folder`, `P1 T5 Memory`, `P1 T6 Combined`. P1/P2 prefixes lead
