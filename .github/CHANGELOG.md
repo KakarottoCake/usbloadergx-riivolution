@@ -357,6 +357,12 @@ and permanent silence, and a write failure drops the socket rather than retrying
 - test_netlog: 23 checks on the address parsing, the half that fails quietly.
 - 146,353 automated checks, all passing.
 
+## Changed in v3.34
+
+- Removed the last leftover text of the deleted result screen. Nothing is drawn on the boot path.
+- Fixed comments that overstated what light-out proves, to match the blink-code table.
+- 146,865 automated checks, all passing.
+
 ## Changed in v3.32
 
 - The white flash in the jump sequence is gone. The launch path is back to stock code; a black screen after the light goes out means the game itself never came up.
