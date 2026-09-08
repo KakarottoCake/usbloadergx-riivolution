@@ -1,4 +1,4 @@
-# Handoff — 2026-09-08 (updated: round-2 corrections + CI bundle green, T0 cleared)
+# Handoff — 2026-09-08 (updated: v3.39 released + binary-gated; T0 run live)
 
 State of the SB4E01 (Super Mario Galaxy 2) debugging effort. Read the
 "Latest evidence" section first — it supersedes the drive-blocker framing
@@ -90,12 +90,13 @@ Read starts at the bases, not past them; every word is base + offset:
 it", rides the next code change: comment-only, and committing it now
 would orphan the cleared bundle.)
 
-Ordered run (awaits tester): ONE T0 with artifact bundle `a733ec0d`
+Ordered run (tester): ONE T0 with artifact bundle `a733ec0d`
 (`diag-bundle-a733ec0d…`, run 34273600459) - install `boot.dol` from it
 (verify digest against the in-artifact manifest first; back up the SD's
 current dol), DELETE `nofstinstall.txt` and `relocorig.txt` if present
 (normal full install at the new placement), v7 pack, watch and ideally
 VIDEO the final light sequence (groups? solid second?), send the log.
+(Code-identical to v3.39; only docs differ after `a733ec0d`.)
 No pointer patch on changed-bytes alone, whatever the dump says.
 Live on branch: the placement report now dumps the 8 words at
 `0x81201b80` (neighbors name the shape: boot words beside +0x10 read as
@@ -186,6 +187,14 @@ shifted vs v3.37, as new code requires). Binary gate passed on the
 published bits (digest matches; all new strings present; commit
 `47e30da` present ×2). Pack: GXDiag-SB4E01-v7.zip (signaling docs).
 T0 round: v3.38 + v7, report groups-vs-solid + screen + log.
+
+## v3.39 (released + binary-gated): struct evidence + handover signals
+
+Run 34275688432 green. Assets: zip + boot.dol (`110e3af6…`, 5,135,360)
++ boot.elf (`1861d40f…`) + boot.elf.map (`f06e1aff…`, 5,152,563 - all
+shifted vs v3.38, as new code requires). Binary gate passed on the
+published bits (digest matches; struct-block strings + commit `7ce364c`
+present). T0 round per above uses the code-identical artifact bundle.
 
 ## Reference review: Project+ FilePatchCode.asm (analysis only, NO code taken)
 
