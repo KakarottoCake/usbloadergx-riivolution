@@ -3431,3 +3431,19 @@ extern "C" void RiivoNoteDOLRange(unsigned int dst, unsigned int len,
 {
 	Riivo::NoteDOLRange((u32) dst, (u32) len, (u32) discOffset);
 }
+
+//! C bridge for a failed apploader chunk read (see RiivoLight.h). Formats
+//! and persists the record immediately: the caller returns failure, after
+//! which BootPartition is over and no placement report can follow, so a
+//! later write would never happen. Card log only; the blink-6 return path
+//! below carries the outcome to the tester.
+extern "C" void RiivoLogChunkFailure(unsigned int dst, unsigned int len,
+									 unsigned int discOffset, int code)
+{
+	char line[192];
+	snprintf(line, sizeof(line),
+			 "\nApploader chunk read FAILED: dst %08x, %d bytes, disc 0x%08x, code %d\n"
+			 "  The game image is incomplete; refusing the boot below.\n",
+			 dst, (int) len, discOffset, code);
+	Riivo::AppendLog(line);
+}

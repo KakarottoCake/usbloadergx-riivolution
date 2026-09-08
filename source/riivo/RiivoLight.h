@@ -13,6 +13,12 @@ void RiivoPulseLight(void);
 /* Record one apploader yield: bytes [dst, dst+len) came from discOffset.
    Evidence only; the boot below runs exactly as without it. */
 void RiivoNoteDOLRange(unsigned int dst, unsigned int len, unsigned int discOffset);
+/* Record a failed apploader chunk read and persist it now: destination,
+   length, disc offset and the read's return code. The card log is alive
+   at this point; after the return below, BootPartition is over and no
+   placement report can follow, so this line is the record. */
+void RiivoLogChunkFailure(unsigned int dst, unsigned int len,
+						   unsigned int discOffset, int code);
 #ifdef __cplusplus
 }
 #endif

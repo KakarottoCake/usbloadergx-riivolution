@@ -75,17 +75,22 @@ separate them yet:
   strings - small, and far bigger vectors succeeded minutes earlier in
   the same boot, which lowers but does not eliminate the risk (later
   failure and corruption stay possible).
-- Read-error handling, verified in the candidate build
-  (`apploader.c:83`): header/image reads are checked (`ret < 0`
-  returns), but the per-chunk `WDVD_Read` return is DISCARDED. A failed
-  chunk read therefore does NOT reach code 6: the loop continues over
-  stale/partial bytes, registers the range, flushes caches over it, and
-  boots a corrupted image silently. Consequence set: full log (loop
-  finishes, placement persists, table-only install verifies, jump
-  executes) + dead game. It does NOT truncate a log - so it cannot
-  explain this truncation, but it stands as a separate corruption path
-  (and the note call records source offsets regardless of read
-  success). Candidate follow-up, NOT ordered: fail loud on chunk error.
+- Read-error handling, verified then FIXED (branch, CI below):
+  `apploader.c:83` discarded the per-chunk `WDVD_Read` return while
+  header/image reads were checked. Correction to the earlier audit: a
+  failed read does NOT guarantee the loop finishes - subsequent
+  apploader calls consume the stale/partial bytes and may themselves
+  fail (→ apploader-fail branch, truncated log, blink 6, back) or hang,
+  and reads into the apploader's own region corrupt live code, not just
+  the later game. So chunk failure CAN fit this truncation, and the old
+  "cannot explain truncation" line is withdrawn. Fix, ordered: check
+  each chunk result before registering or proceeding; on failure record
+  destination, length, disc offset and return code persistently, then
+  `return ret` through the EXISTING error path (BootPartition 0 →
+  blink 6 → back). Convention verified: `WDVD_Read` returns 0 on
+  success, negative codes otherwise (`wdvd.c`, tree-wide `ret < 0`
+  use). No new paths, no new codes; a silent corrupt boot becomes a
+  logged refusal.
 - Return-branch map (all hypotheses, none established): apploader-fail
   → blink 6 → back, with NO placement text by design (placement never
   runs) - compatible with this log, needs 6x3 blink groups to promote.
@@ -94,19 +99,20 @@ separate them yet:
   possible: the FAT layer just went through unmount/remount gymnastics
   in SetupDisc. Manual reset is not a branch and carries no signal. Two
   flashes alone match none of these shapes and identify nothing.
-- Landed for the next run (branch `c8f72963`, CI green, bundle
-  `diag-bundle-c8f72963…` preserved): an apploader-returned
+- Landed for the next run (branch, CI below): an apploader-returned
   LogStep+gprintf (log + light prove the apploader finished, return
-  value separates fail from hang), and the placement assembly persists
+  value separates fail from hang), the placement assembly persisting
   in three chunks (prose / evidence+struct / booking+OUTCOME) so the
-  next truncation bounds itself. Logging only; decisions, timing
-  (fopen x3 pre-shutdown), and layout effects stated, nothing else.
+  next truncation bounds itself, and the chunk-failure record above.
+  Logging plus one existing-path refusal; decisions otherwise
+  unchanged, timing (fopen pre-shutdown) and layout effects stated.
 - Needed from the tester for THIS run (log questions answered
-  locally): (1) auto-return or manual reset, with timing; (2) exact
-  blink groups on video if any - 6x3 vs 2x3 vs formless flicker decides
-  branches, plus light motion during the apploader window (frozen vs
-  moving); (3) stock no-mod boot on this hardware, if not already
-  known (new drive - the old lesson).
+  locally): (1) auto-return or manual reset, with timing - the
+  user-reported return to HBC is recorded as observed, branch open;
+  (2) exact blink groups on video if any - 6x3 vs 2x3 vs formless
+  flicker decides branches, plus light motion during the apploader
+  window (frozen vs moving); (3) stock no-mod boot on this hardware,
+  if not already known (control validity, no hardware-change claim).
 
 ## 0x81201b90 audit: candidate secondary FST pointer (meaning open)
 
@@ -253,9 +259,8 @@ placement defect, now fixed:
   extracting it stranded them outside gxdiag/ - exactly the reported
   missing a.bin; v6 mirrors the drive as riivolution/gxdiag.xml +
   riivolution/gxdiag/T0/..., same 8 probes, docs point at v3.37 + the
-  expected `817b2de0` address). Tester for this round is the repo owner
-  (new console/drive vs all prior rounds - do not mix results across
-  testers without saying so). T2 stays separate.
+  expected `817b2de0` address). Tester for this round is the repo owner.
+  T2 stays separate.
 
 ## Light signals: attempted repeatedly, inconclusive (not untested)
 
