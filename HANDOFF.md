@@ -1,4 +1,4 @@
-# Handoff — 2026-09-08 (updated: LAN collector assessed unusable, lights stand)
+# Handoff — 2026-09-08 (updated: lights inconclusive-tried, pending build verified, collector terms)
 
 State of the SB4E01 (Super Mario Galaxy 2) debugging effort. Read the
 "Latest evidence" section first — it supersedes the drive-blocker framing
@@ -198,7 +198,41 @@ placement defect, now fixed:
   (new console/drive vs all prior rounds - do not mix results across
   testers without saying so). T2 stays separate.
 
-## LAN collector assessment: dead before shutdown, not at it (no code changed)
+## Light signals: attempted repeatedly, inconclusive (not untested)
+
+v3.38's 3x/solid-second protocol has run on hardware repeatedly; reports
+stay "two flashes, then black". That neither confirms nor refutes any
+branch: an irregular flicker tail reads the same with or without the new
+rules when the tester cannot resolve groups. No unchanged rerun will
+sharpen this - the protocol needs the video record (pattern over time,
+not a count from memory) plus the log, or it stays undecided. The rules
+themselves are unchanged and stay in the build.
+
+## Pending run vehicle (verified, not a rerun)
+
+Commit `0e6c9c3d`, CI run 34279739038 green (compile, files, symbols
+present+resolved, manifest, upload all success), artifact
+`diag-bundle-0e6c9c3d…` (17,879,895 bytes, fresh): per-yield disc
+offsets + struct source-compare + all prior evidence. New information
+vs every prior round, so this run is changed by construction. Video of
+the ending supports the light reading; the log carries the evidence.
+
+## Collector terms (requirements, not a design yet)
+
+Blocking TCP is accepted as an implementation defect, not a verdict on
+the channel. IF revisited, all three are required: bounded
+initialization (no open-ended DHCP on the boot path), nonblocking or
+timeout-limited sends, and logging failure never blocking boot.
+Feasibility checked, not implemented: CI-era public `network.h`
+(v2.11.0, validated) already carries `SO_SNDTIMEO`/`SO_RCVTIMEO`,
+`net_setsockopt`, `O_NONBLOCK`/`FIONBIO` via `net_fcntl`/`net_ioctl`,
+`net_select`, `net_poll`, `MSG_DONTWAIT` - timeout-limited sends need
+no private API. Still also required and still open: deterministic
+resurrection after `AppCleanUp` (the inert-on-boot-path finding
+stands), lifetime extension with the wedge analysis, and a confirmed
+tester end (listener? WiFi?). Sequence: pending run first - its results
+may obsolete branches before any of this is built. One combined build
+per round when building resumes.
 
 Transport: blocking TCP (`RiivoNetSock.c`, libogc net_*), no timeouts,
 fail-latched dead. Findings, in dependency order:
@@ -224,14 +258,15 @@ boot) AND extending socket lifetime past shutdown (blocking-write wedge
 risk moves into the install window; first stall wedges indistinguishably
 from install failure). Both perturb the failing path for a channel whose
 tester end (listener? WiFi?) is unconfirmed.
-Recommendation: do not pursue. The 3x/solid-second light protocol
-answers install-vs-launch with zero new init, zero new traffic, and no
-listener - observe it first; revisit the collector only if lights prove
-insufficient AND WiFi + listener are confirmed on the test rig. SD log
-stays the persistent baseline throughout (untouched by all options).
+Recommendation (superseded 2026-09-08 - see Collector terms above):
+the assessment below stands as mechanism, but "do not pursue" no
+longer stands as policy. Blocking TCP is an implementation defect to
+fix under the three requirements, not a reason the channel cannot work.
+SD log stays the persistent baseline throughout (untouched by all
+options).
 Not proposed: moving install earlier (reintroduces the heap-overwrite
 hazard the late install exists to avoid), keeping SD/USB mounted (game
-boot requires the teardown), non-blocking rewrite (bigger, unmeasured).
+boot requires the teardown).
 
 ## v3.36 post-mortem: tagged before the code was committed
 
