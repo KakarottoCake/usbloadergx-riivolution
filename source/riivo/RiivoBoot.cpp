@@ -395,18 +395,31 @@ namespace Riivo
 		modMissing.clear();
 		modAddFails.clear();
 		installFailCode = 0;
-		//! On by default. It used to need a riivolution/loadingbar.txt
-		//! marker, which meant the normal case was a black screen for the
-		//! whole of the slowest phase - seconds on the test mod, fifteen on
-		//! a total conversion - with nothing to say the console was alive.
-		//! The marker now turns it OFF, for anyone who wants the stock look.
-		verboseListing = true;
+		//! OFF by default, and back behind riivolution/loadingbar.txt.
+		//!
+		//! v3.22 turned this on by default to give the black screen something
+		//! to show. That was safe only by accident: ProgressWindow opened with
+		//! a 500ms "is this worth drawing?" wait, and every phase here is
+		//! shorter than that, so the thread woke to find the work already done
+		//! and returned WITHOUT DRAWING. Nothing ever appeared - which is
+		//! exactly what testers kept reporting.
+		//!
+		//! v3.23 removed that wait so the window would finally draw. It drew,
+		//! and the boot stopped: a T0 log ends on the "mapping fragments" step
+		//! with no line after it, though every branch of that block writes one,
+		//! and the only things in between are this window and the FragProgress
+		//! callback below. Drawing on the boot path is not free - the same
+		//! lesson as the pre-jump summary, one phase earlier.
+		//!
+		//! The drive light is the signal that works here; it needs no GUI and
+		//! costs a register write. See PulseLight.
+		verboseListing = false;
 		if (!device.empty())
 		{
-			FILE *v = fopen((device + "/riivolution/noloadingbar.txt").c_str(), "rb");
+			FILE *v = fopen((device + "/riivolution/loadingbar.txt").c_str(), "rb");
 			if (v)
 			{
-				verboseListing = false;
+				verboseListing = true;
 				fclose(v);
 			}
 		}
@@ -666,11 +679,12 @@ namespace Riivo
 				ShowProgress(msg, 0, 0);
 			else
 			{
-				//! Draw at once. The default half-second wait means a phase
-				//! shorter than it draws nothing at all and still costs the
-				//! full wait when the window is stopped - which is how a boot
-				//! spent 460ms on a window that never appeared.
-				ProgressSkipDebounce();
+				//! No ProgressSkipDebounce here. Skipping the wait was v3.23's
+				//! attempt to make this window finally appear; it appeared, and
+				//! the boot stopped on the step that raised it. Leaving the
+				//! 500ms wait in place means a phase shorter than it still
+				//! draws nothing - wasteful, and deliberately so, because the
+				//! alternative measured worse than a wasted half second.
 				StartProgress(tr("Riivolution"),
 							  tr("Preparing the mod's files"), msg, false, true);
 				on = true;
