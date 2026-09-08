@@ -53,43 +53,60 @@ cannot exclude references it may hold to the original table.
 
 v3.40 T0 log ends after the file-work report ("How this works"): no
 placement prose, no evidence/struct blocks, no OUTCOME, no policy
-block, no launch report. Separately, an observed return (to menu/HBC)
-with "two flashes". Filed here, not under install failure, because the
-combination fits three different branches and the log cannot separate
-them yet:
-- The placement report assembles ~140 lines into few appends, so its
-  absence does not prove execution never entered it. Dead window for a
-  silent stop: PrepareFileRedirects return → Disc_SetLowMem (word
-  writes, cannot hang) → Disc_SelectVMode (stock video calls) →
-  Apploader_Run (header/image/chunk reads, Nintendo code, per-chunk
-  RegisterDOL + note call + cache ops, final) → placement head (arena
-  read, small occ vector, pure PlaceFst).
-- v3.40-new elements in that window, audited: the note call is a
-  bounded static append (no alloc, no IO - hang-impossible short of
-  prior corruption); struct/section reads are guarded with messages and
-  run after the apploader anyway. Allocation: occ vector (~11 entries)
-  plus strings, after far bigger vectors succeeded minutes earlier in
-  the same boot - exhaustion excluded for practical purposes. Read
-  errors funnel to one branch: apploader-fail → BootPartition 0.
-- Return-branch map: apploader-fail → blink 6 → back, with NO placement
-  text by design (placement never runs) - fits this log exactly, needs
-  6x3 blink groups to confirm. Install/handler refusals (1-5,7) need
-  placement to have persisted (card alive then), so they need a second
-  fault (append death) to fit - possible: the FAT layer just went
-  through unmount/remount gymnastics in SetupDisc. Manual reset is not
-  a branch and carries no signal. Two flashes alone match none of
-  these shapes and identify nothing, as ordered.
-- Landed for the next run (branch, CI pending): an apploader-returned
+block, no launch report. Locally inspected (no tester round-trip
+needed): 9857 bytes, ends cleanly at a `\n` (section boundary, not a
+torn write), OUTCOME count 0. An older SB4E01 log on disk DOES contain
+the placement section and OUTCOME - so truncation is new with this
+run's conditions, not the format. Separately, an observed return (to
+menu/HBC) with "two flashes". Filed here, not under install failure,
+because the combination fits several branches and the log cannot
+separate them yet:
+- The placement report assembles into few appends, so its absence does
+  not prove execution never entered it. Dead window for a silent stop:
+  PrepareFileRedirects return → Disc_SetLowMem (word writes) →
+  Disc_SelectVMode (stock video calls) → Apploader_Run (header/image/
+  chunk reads, Nintendo code, per-chunk RegisterDOL + note call + cache
+  ops, final) → placement head (arena read, small occ vector, pure
+  PlaceFst).
+- v3.40-new elements in that window, audited without overclaim: the
+  note call is a bounded static append (no alloc, no IO - low risk, not
+  no risk); struct/section reads are guarded with messages and run
+  after the apploader anyway. Allocation: occ vector (~11 entries) plus
+  strings - small, and far bigger vectors succeeded minutes earlier in
+  the same boot, which lowers but does not eliminate the risk (later
+  failure and corruption stay possible).
+- Read-error handling, verified in the candidate build
+  (`apploader.c:83`): header/image reads are checked (`ret < 0`
+  returns), but the per-chunk `WDVD_Read` return is DISCARDED. A failed
+  chunk read therefore does NOT reach code 6: the loop continues over
+  stale/partial bytes, registers the range, flushes caches over it, and
+  boots a corrupted image silently. Consequence set: full log (loop
+  finishes, placement persists, table-only install verifies, jump
+  executes) + dead game. It does NOT truncate a log - so it cannot
+  explain this truncation, but it stands as a separate corruption path
+  (and the note call records source offsets regardless of read
+  success). Candidate follow-up, NOT ordered: fail loud on chunk error.
+- Return-branch map (all hypotheses, none established): apploader-fail
+  → blink 6 → back, with NO placement text by design (placement never
+  runs) - compatible with this log, needs 6x3 blink groups to promote.
+  Install/handler refusals (1-5,7) need placement to have persisted
+  (card alive then), so they need a second fault (append death) to fit -
+  possible: the FAT layer just went through unmount/remount gymnastics
+  in SetupDisc. Manual reset is not a branch and carries no signal. Two
+  flashes alone match none of these shapes and identify nothing.
+- Landed for the next run (branch `c8f72963`, CI green, bundle
+  `diag-bundle-c8f72963…` preserved): an apploader-returned
   LogStep+gprintf (log + light prove the apploader finished, return
   value separates fail from hang), and the placement assembly persists
   in three chunks (prose / evidence+struct / booking+OUTCOME) so the
   next truncation bounds itself. Logging only; decisions, timing
   (fopen x3 pre-shutdown), and layout effects stated, nothing else.
-- Needed from the tester for THIS run: (1) auto-return or manual
-  reset, with timing; (2) exact blink groups on video if any - 6x3 vs
-  2x3 vs formless flicker decides branches; (3) confirm the log file
-  truly ends there (size? OUTCOME absent?); (4) stock no-mod boot on
-  this hardware, if not already known (new drive - the old lesson).
+- Needed from the tester for THIS run (log questions answered
+  locally): (1) auto-return or manual reset, with timing; (2) exact
+  blink groups on video if any - 6x3 vs 2x3 vs formless flicker decides
+  branches, plus light motion during the apploader window (frozen vs
+  moving); (3) stock no-mod boot on this hardware, if not already
+  known (new drive - the old lesson).
 
 ## 0x81201b90 audit: candidate secondary FST pointer (meaning open)
 
