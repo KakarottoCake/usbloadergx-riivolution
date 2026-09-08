@@ -1,4 +1,4 @@
-# Handoff — 2026-09-08 (updated: lights inconclusive-tried, pending build verified, collector terms)
+# Handoff — 2026-09-08 (updated: v3.40 released + binary-gated; T0 round live)
 
 State of the SB4E01 (Super Mario Galaxy 2) debugging effort. Read the
 "Latest evidence" section first — it supersedes the drive-blocker framing
@@ -291,13 +291,22 @@ published bits (digest matches; all new strings present; commit
 `47e30da` present ×2). Pack: GXDiag-SB4E01-v7.zip (signaling docs).
 T0 round: v3.38 + v7, report groups-vs-solid + screen + log.
 
+## v3.40 (released + binary-gated): source-compare evidence
+
+Run 34280807103 green. Assets: zip + boot.dol (`83e94c0b…`, 5,136,928)
++ boot.elf (`3f7e1ab1…`) + boot.elf.map (`3f0bf8e0…`, 5,153,216 - all
+shifted vs v3.39, as new code requires). Binary gate passed on the
+published bits (digest matches; source-compare strings + commit
+`af04e70` present). T0 round: v3.40 + v7 pack, no bypass markers, video
+the ending if possible, send the log.
+
 ## v3.39 (released + binary-gated): struct evidence + handover signals
 
 Run 34275688432 green. Assets: zip + boot.dol (`110e3af6…`, 5,135,360)
 + boot.elf (`1861d40f…`) + boot.elf.map (`f06e1aff…`, 5,152,563 - all
 shifted vs v3.38, as new code requires). Binary gate passed on the
 published bits (digest matches; struct-block strings + commit `7ce364c`
-present). T0 round per above uses the code-identical artifact bundle.
+present). Superseded by v3.40 for the T0 round.
 
 ## Reference review: Project+ FilePatchCode.asm (analysis only, NO code taken)
 
