@@ -61,4 +61,38 @@ jobs:
           name: usbloadergx_${{ env.sha }}_debug
           path: |
             boot.elf
-            boot.map
+            build/boot.map
+
+      # Diagnostic bundle, scoped to the relocation-evidence branch only.
+      # Writes a manifest (source commit + SHA-256 of every file) and checks
+      # the weak stack symbols resolved in the linked ELF; any missing file
+      # or unresolved symbol fails the run before the upload.
+      - name: Write diagnostic manifest
+        if: ${{ github.ref == 'refs/heads/diag/reloc-evidence' }}
+        run: |
+          set -e
+          for f in boot.dol boot.elf build/boot.map; do
+            test -f "$f" || { echo "missing $f"; exit 1; }
+          done
+          NM="${DEVKITPPC:-/opt/devkitpro/devkitPPC}/bin/powerpc-eabi-nm"
+          "$NM" boot.elf | grep -E ' (__stack_addr|__stack_end)$' | tee diag-symbols.txt
+          test -s diag-symbols.txt || { echo "stack symbols absent from ELF"; exit 1; }
+          "$NM" boot.elf | grep -E ' (__stack_addr|__stack_end)$' \
+            | awk '$2 ~ /^[Uuvw]$/ {bad=1} END{exit bad}' \
+            || { echo "UNRESOLVED weak stack symbol"; exit 1; }
+          {
+            echo "commit $(git rev-parse HEAD)"
+            sha256sum boot.dol boot.elf build/boot.map
+          } | tee diag-MANIFEST.txt
+
+      - name: Upload diagnostic bundle
+        if: ${{ github.ref == 'refs/heads/diag/reloc-evidence' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: diag-bundle-${{ github.sha }}
+          path: |
+            boot.dol
+            boot.elf
+            build/boot.map
+            diag-MANIFEST.txt
+            diag-symbols.txt
