@@ -33,6 +33,7 @@
 #include "RiivoFragBuild.hpp"
 #include "usbloader/frag.h"
 #include "usbloader/wbfs.h"
+#include "patches/gamepatches.h"
 #include "settings/CSettings.h"
 #include "Controls/DeviceHandler.hpp"
 #include "memory/mem2.h"
@@ -1940,6 +1941,33 @@ namespace Riivo
 	//! refuses the jump below, so a corrupted install returns to the loader
 	//! - a visible outcome naming the install - instead of a black screen
 	//! that could be anything past this point.
+	//! Current stack pointer: a snapshot of one instant. A plain read of r1
+	//! at the call site; it covers frames live at that instant and nothing
+	//! between samples - calls made after one sample can use deeper frames
+	//! and return before the next.
+	static u32 ReadStackPointer()
+	{
+		u32 sp = 0;
+		__asm__ volatile ("mr %0, 1" : "=r" (sp));
+		return sp;
+	}
+
+	//! Main-thread stack bounds, from the same symbols libogc itself uses to
+	//! start that thread: __lwp_thread_init(_thr_main, __stack_end,
+	//! __stack_addr - __stack_end, ...) in lwp.c, validated against the
+	//! v2.11.0 sources (May 2025 - the vintage the CI image carries). The
+	//! thread-control struct itself is private to libogc, so the symbols are
+	//! read directly instead: they must resolve at link for ANY libogc build
+	//! to link, which proves their presence, and weak linkage degrades a
+	//! future toolchain without them to "unknown" rather than a build break.
+	//! Values are validated at runtime where they are used (both inside
+	//! MEM1, low < high, SP inside) before any reading is drawn from them.
+	extern "C"
+	{
+		extern u8 __stack_addr[] __attribute__((weak));
+		extern u8 __stack_end[] __attribute__((weak));
+	}
+
 	bool HaveStagedFst()
 	{
 		return pendingPlaceOk && pendingFst && pendingFstSize;
@@ -2038,6 +2066,16 @@ namespace Riivo
 							origAddr, (u32) (uintptr_t) sbrk(0));
 			}
 		}
+		//! Install-time SP/break snapshots, first of two. Post-shutdown, so this
+		//! only reaches USB Gecko - the placement-time block in the card log
+		//! is the persistent record and this is its closer-to-the-copy twin.
+		//! Each sample covers only its own instant: calls between the two can
+		//! use deeper frames and return unseen. Past the last sample only the
+		//! return path, light-out and jump sequence execute - shallow, but
+		//! likewise unsampled.
+		gprintf("Riivo: pre-copy SP %08x (thread %08x), break %08x\n",
+				(unsigned) ReadStackPointer(), (unsigned) LWP_GetSelf(),
+				(unsigned) (uintptr_t) sbrk(0));
 		//! Prove the staging buffer before copying it: the check below
 		//! compares installed bytes against this same buffer, so rot between
 		//! staging and here would otherwise bless itself.
@@ -2071,6 +2109,8 @@ namespace Riivo
 		gprintf("Riivo: late FST install %s at %08x, %u bytes, crc %08x (ptr %08x max %u arena %08x)\n",
 				verified ? "verified" : (ok ? "UNVERIFIED" : "REFUSED"),
 				addr, (unsigned) size, pendingFstCrc, ptr, max, arena);
+		gprintf("Riivo: post-verify SP %08x, break %08x\n",
+				(unsigned) ReadStackPointer(), (unsigned) (uintptr_t) sbrk(0));
 		return verified;
 	}
 
@@ -2488,6 +2528,178 @@ namespace Riivo
 		}
 	}
 
+	//! Relocation evidence, observations only. Runs inside
+	//! ReportFstPlacement, while the card log is still writable, the
+	//! apploader is done, and the DOL list is still alive. All install and
+	//! launch decisions below run exactly as without this block: no refusal,
+	//! no new blink code, no pointer writes. The block itself is NOT free -
+	//! it allocates, writes the card log, and shifts timing, stack use and
+	//! the binary layout, which is stated plainly because it matters to
+	//! exactly this investigation. It names, for the planned destination
+	//! interval, the three resident classes that could collide with it: the
+	//! executing thread's live stack, the apploader-loaded game ranges, and
+	//! the newlib heap extent. Closer-to-the-copy SP/break snapshots are
+	//! logged again at InstallPendingFst, but that runs after device
+	//! shutdown and only reaches USB Gecko - this card-log block is the
+	//! persistent record.
+	static void AppendRelocationEvidence(std::string &out, const FstPlacement &place,
+										 u32 want)
+	{
+		out += "\nRelocation evidence (observations only - installation decisions unchanged)\n";
+		out += "--------------------------------------------------------------------\n";
+
+		const u32 destLo = place.ok ? place.fstAddr : 0;
+		const u32 destHi = place.ok ? place.fstAddr + want : 0;
+		if (place.ok)
+			Addf(out, "  planned destination : [%08x, %08x) %u bytes, %s\n",
+				 destLo, destHi, want, place.inPlace ? "in place" : "relocated");
+		else
+			Addf(out, "  planned destination : none booked (%s)\n", place.why.c_str());
+
+		//! Placement-time SP is context, not proof: a snapshot of one instant on
+		//! a deeper chain than the install will use - expected below the
+		//! install-time SP, not guaranteed. Frames that run deeper in between
+		//! but return before the copy (gamepatches, the memory engine) are
+		//! dead by then and safe to have overwritten; only frames live across
+		//! the copy matter, and no single snapshot covers them all.
+		const u32 sp = ReadStackPointer();
+		const u32 self = (u32) LWP_GetSelf();
+		Addf(out, "  executing thread    : id %08x, SP %08x at placement\n", self, sp);
+
+		const u32 stackTop = __stack_addr ? (u32) __stack_addr : 0;
+		const u32 stackBot = __stack_end ? (u32) __stack_end : 0;
+		const bool stackKnown = stackTop > stackBot
+			&& stackBot >= MEM1_BASE && stackTop <= MEM1_END
+			&& sp >= stackBot && sp < stackTop;
+		if (__stack_addr && __stack_end)
+			Addf(out, "  main-thread stack   : [%08x, %08x)%s\n", stackBot, stackTop,
+				 stackKnown ? " (SP inside: bounds describe this stack)"
+							: " (SP outside: NOT this thread's stack, bounds unused)");
+		else
+			out += "  main-thread stack   : symbols absent at link, top unknown\n";
+
+		//! What sbrk(0) is: the current newlib/MEM1 heap break. With this
+		//! loader's MALLOC_MEM2 = 0 (mem2.cpp), libogc's _sbrk_r stays in its
+		//! MEM1-only branch (sbrk.c, identical at v2.11.0 and master): the
+		//! heap is [startup SYS_GetArenaLo, current SYS_GetArenaLo). It does
+		//! NOT cover: the MEM2 pool [0x90002000, 0x933e0000) (separate
+		//! allocator), anything the apploader reserved (untracked), or the
+		//! main-thread stack (HBC-provided). Non-main LWP stacks come from
+		//! the LWP workspace (lwp_stack.c), which is itself carved out of the
+		//! sbrk region at init (lwp_wkspace.c), so the break still bounds
+		//! them from above. The break alone does not establish the full heap
+		//! interval: the floor is the startup Lo (BSS end 0x8106c260 on the
+		//! tested binary IF symbol-inited - that startup path was not
+		//! re-verified, so the floor is cited, not relied on).
+		const u32 brk = (u32) (uintptr_t) sbrk(0);
+		const bool brkOk = brk != 0xFFFFFFFFu && brk >= MEM1_BASE && brk <= MEM1_END;
+		if (brkOk)
+			Addf(out, "  newlib break (sbrk): %08x\n", brk);
+		else
+			Addf(out, "  newlib break (sbrk): %08x INVALID - heap extent UNKNOWN\n", brk);
+
+		//! The ACTUAL loaded ranges, one line each, straight off the list the
+		//! apploader filled in. Entries are apploader chunks (a section may
+		//! arrive as more than one), which is finer than sections and exactly
+		//! what an overwrite would hit.
+		const int dolN = RiivoGetDOLCount();
+		Addf(out, "  loaded game ranges  : %d apploader chunk(s)\n", dolN);
+		u32 dolMin = 0, dolMax = 0;
+		int dolValid = 0, dolInvalid = 0, dolLines = 0;
+		bool dolHit = false;
+		for (int i = 0; i < dolN; ++i)
+		{
+			u8 *d = RiivoGetDOLDst(i);
+			int l = RiivoGetDOLLen(i);
+			//! Every entry must be usable before the verdict below may claim
+			//! an exclusion: a null/empty entry, a wrapped-around end, or an
+			//! address outside MEM1 makes the whole reading UNKNOWN rather
+			//! than silently narrower.
+			const u32 lo = d ? (u32) d : 0;
+			const u32 hi = d && l > 0 ? lo + (u32) l : 0;
+			const bool entryOk = d && l > 0 && hi > lo
+				&& lo >= MEM1_BASE && hi <= MEM1_END;
+			if (!entryOk)
+			{
+				++dolInvalid;
+				if (dolLines < 40)
+				{
+					Addf(out, "    entry %d INVALID (dst %08x, len %d) - excluded from the reading\n",
+						 i, lo, l);
+					++dolLines;
+				}
+				continue;
+			}
+			const bool hit = place.ok && RangesOverlap(lo, hi, destLo, destHi);
+			if (dolLines < 40)
+			{
+				Addf(out, "    [%08x, %08x) %d bytes%s\n", lo, hi, l,
+					 hit ? "  <-- OVERLAPS planned destination" : "");
+				++dolLines;
+			}
+			if (dolValid == 0) { dolMin = lo; dolMax = hi; }
+			else
+			{
+				if (lo < dolMin) dolMin = lo;
+				if (hi > dolMax) dolMax = hi;
+			}
+			++dolValid;
+			if (hit)
+				dolHit = true;
+		}
+		if (dolValid + dolInvalid > dolLines)
+			Addf(out, "    ... and %d more chunk(s)\n",
+				 dolValid + dolInvalid - dolLines);
+		if (dolValid == 0 && dolInvalid == 0)
+			out += "    (list empty at placement: an alternate-DOL path clears it; "
+				   "a main-DOL boot always registers)\n";
+		else
+		{
+			if (dolValid > 0)
+				Addf(out, "    overall game image: [%08x, %08x)\n", dolMin, dolMax);
+			if (dolInvalid > 0)
+				Addf(out, "    %d chunk(s) failed validation (INVALID above)\n", dolInvalid);
+		}
+
+		out += "  overlap reading (at placement) :\n";
+		if (!place.ok)
+			out += "    no destination booked; ranges above are context only\n";
+		else
+		{
+			//! An SP word alone decides two of three cases at its own instant:
+			//! inside the span is an observed risk, above it excludes the
+			//! stack with no top required (frames live upward of SP). Below
+			//! it with no top is UNDECIDED, not clear.
+			if (sp >= destLo && sp < destHi)
+				out += "    SP is INSIDE the destination at placement: live-stack overlap risk OBSERVED\n";
+			else if (stackKnown)
+				Addf(out, "    live stack [%08x, %08x) vs destination at placement: %s\n",
+					 sp, stackTop,
+					 RangesOverlap(sp, stackTop, destLo, destHi)
+					 ? "OVERLAP OBSERVED" : "no overlap observed");
+			else if (sp >= destHi)
+				out += "    SP is above the destination; the top is unknown, so frames live above SP are unbounded - context only\n";
+			else
+				out += "    SP is below the destination and the top is unknown: UNDECIDED from SP alone\n";
+			//! Missing or invalid ranges can never support an exclusion.
+			if (dolHit)
+				out += "    game ranges vs destination: OVERLAP OBSERVED\n";
+			else if (dolValid > 0 && dolInvalid == 0)
+				out += "    game ranges vs destination: no overlap observed\n";
+			else if (dolValid == 0 && dolInvalid == 0)
+				out += "    game ranges vs destination: UNKNOWN (list empty at placement)\n";
+			else
+				Addf(out, "    game ranges vs destination: UNKNOWN (%d invalid chunk(s))\n",
+					 dolInvalid);
+			if (!brkOk)
+				out += "    heap extent: UNKNOWN (break failed validation)\n";
+			else if (brk > destLo)
+				out += "    newlib break reaches past the destination bottom: heap EXTENT overlaps (evidence only - the loader heap is live through launch and dead after the jump; the floor is cited, not verified)\n";
+			else
+				out += "    newlib break is below the destination: heap extent clear (floor cited, not verified)\n";
+		}
+	}
+
 	void ReportFstPlacement()
 	{
 		if (!bootSet)
@@ -2588,6 +2800,11 @@ namespace Riivo
 				   "\n  relocorig.txt active: verbatim original staged for a real\n"
 				   "  relocation. Compare against the created-file run.\n";
 		}
+
+		//! Evidence first, verdicts never: the block runs for in-place
+		//! installs too, where the same geometry is a control. It costs log
+		//! lines plus the timing/stack/layout perturbation stated above.
+		AppendRelocationEvidence(out, place, want);
 
 		//! This is the step that actually points the game at the mod. It only
 		//! runs when the fragment list, the read-back check and the cIOS hook

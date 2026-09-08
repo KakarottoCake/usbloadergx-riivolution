@@ -59,4 +59,6 @@ jobs:
         uses: actions/upload-artifact@v4
         with: 
           name: usbloadergx_${{ env.sha }}_debug
-          path: boot.elf
+          path: |
+            boot.elf
+            boot.map

@@ -85,6 +85,16 @@ namespace Riivo
 	//! Does not touch memory - call Install() for that.
 	FstPlacement PlaceFst(const ArenaInfo &info, u32 fstSize, u32 align);
 
+	//! Half-open interval overlap: [aLo,aHi) against [bLo,bHi). An empty or
+	//! inverted interval overlaps nothing, so a zero length always reads
+	//! "no". Used by the relocation-evidence block to test the planned
+	//! destination against DOL ranges, the live stack and the heap extent.
+	//! Pure arithmetic, host-tested alongside PlaceFst.
+	inline bool RangesOverlap(u32 aLo, u32 aHi, u32 bLo, u32 bHi)
+	{
+		return aLo < aHi && bLo < bHi && aLo < bHi && bLo < aHi;
+	}
+
 	//! Read the four boot-info words out of low memory. Target only.
 	ArenaInfo ReadArenaInfo();
 
