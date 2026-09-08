@@ -101,13 +101,14 @@ announcing. v3.36 is void for the fix (v3.35 + docs); superseded, not
 deleted. Verify ancestry (`merge-base --is-ancestor`) and binary strings
 before every future tag.
 
-## v3.37 (verified): obstacle-aware placement + tracing, binary-gated
+## v3.38 (released + binary-gated): handover signals, reference scan
 
-Run 34221022717 green. Assets: zip + boot.dol (`f2bbe27d…`, 5,132,480)
-+ boot.elf (`7a13211a…`) + boot.elf.map (`4979f14d…`, 5,151,873 - all
-sizes shifted vs v3.36, as new code requires). Binary gate passed on
-the published bits: all fix strings present, commit `8e051e8` present,
-digest matches. THIS is the T0 build.
+Run 34270314568 green. Assets: zip + boot.dol (`ad0e7179…`, 5,133,952)
++ boot.elf (`e34c834c…`) + boot.elf.map (`bfcf94e0…`, 5,151,873 - all
+shifted vs v3.37, as new code requires). Binary gate passed on the
+published bits (digest matches; all new strings present; commit
+`47e30da` present ×2). Pack: GXDiag-SB4E01-v7.zip (signaling docs).
+T0 round: v3.38 + v7, report groups-vs-solid + screen + log.
 
 ## Reference review: Project+ FilePatchCode.asm (analysis only, NO code taken)
 
