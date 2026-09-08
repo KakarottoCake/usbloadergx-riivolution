@@ -37,6 +37,10 @@ on. Without that file nothing changes and the build behaves exactly like v3.10.
 It has never run on a console. Expect it to fail; the log and a USB Gecko trace are the
 point of it. Leave the file off for normal use.
 
+## Changed in v3.30
+
+- New diagnostic: `riivolution/nofstinstall.txt` stages the mod as usual but does not install the rebuilt file table, to separate a table fault from a hook or fragment fault.
+
 ## Changed in v3.29
 
 - The loading bar is off again by default, and no longer forced to draw immediately. Turn it on with `riivolution/loadingbar.txt` (it replaces `noloadingbar.txt`).

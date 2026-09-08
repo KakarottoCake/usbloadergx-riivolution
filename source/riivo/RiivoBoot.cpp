@@ -262,6 +262,7 @@ namespace Riivo
 	//! time the screen shows.
 	static bool showExtended = false;
 	static bool showSummary = false;
+	static bool skipFstInstall = false;
 
 	//! The game's id, needed to ask which partition it lives on.
 	static u8 bootGameId[8] = { 0 };
@@ -447,6 +448,24 @@ namespace Riivo
 		//! cannot present this late, and the attempt is not free.
 		//! Read here because the card is gone by the time the screen shows,
 		//! and reset per boot like every marker.
+		//! Diagnostic split (riivolution/nofstinstall.txt): stage everything -
+		//! hook, fragments, rebuilt table - then DO NOT install the table.
+		//! The game then reads its own original file table and never sees the
+		//! mod's files, while the cIOS hook and the registered fragments stay
+		//! exactly as a real mod boot leaves them. So a boot that fails with
+		//! the table installed and succeeds without it puts the fault in the
+		//! install or the table; one that fails both ways puts it in the hook
+		//! or the fragments. Nothing else distinguishes those two halves.
+		skipFstInstall = false;
+		if (!device.empty())
+		{
+			FILE *n = fopen((device + "/riivolution/nofstinstall.txt").c_str(), "rb");
+			if (n)
+			{
+				skipFstInstall = true;
+				fclose(n);
+			}
+		}
 		showExtended = false;
 		showSummary = false;
 		if (!device.empty())
@@ -1285,8 +1304,16 @@ namespace Riivo
 
 		Addf(out, "  rebuilt table        : %u bytes held, ready to install\n",
 			 pendingFstSize);
-		out += "\n  Riivolution is prepared for this boot; the table installs\n"
-			   "  last, just before the jump, and only a verified install runs.\n";
+		if (skipFstInstall)
+			out += "\n  DIAGNOSTIC: riivolution/nofstinstall.txt is present, so the\n"
+				   "  rebuilt table will NOT be installed. The hook and the mod's\n"
+				   "  fragments are live exactly as usual, but the game keeps its\n"
+				   "  own file table and will not see the mod's files. A normal\n"
+				   "  boot from here means the fault is the install or the table;\n"
+				   "  the same failure means it is the hook or the fragments.\n";
+		else
+			out += "\n  Riivolution is prepared for this boot; the table installs\n"
+				   "  last, just before the jump, and only a verified install runs.\n";
 	}
 
 	static bool ExternalFileSize(const std::string &path, u32 *outSize)
@@ -1964,6 +1991,16 @@ namespace Riivo
 
 	bool InstallPendingFst()
 	{
+		//! Deliberately not installed; see the nofstinstall.txt marker. The
+		//! staged table is simply dropped and the game keeps its own, so the
+		//! jump goes ahead exactly as it would for a mod that staged nothing.
+		if (skipFstInstall)
+		{
+			pendingPlaceOk = false;
+			installFailCode = 0;
+			gprintf("Riivo: FST install SKIPPED by riivolution/nofstinstall.txt\n");
+			return true;
+		}
 		if (!pendingPlaceOk || !pendingFst || !pendingFstSize)
 		{
 			//! No staged state means no install is expected - except when
