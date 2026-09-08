@@ -37,6 +37,10 @@ on. Without that file nothing changes and the build behaves exactly like v3.10.
 It has never run on a console. Expect it to fail; the log and a USB Gecko trace are the
 point of it. Leave the file off for normal use.
 
+## Changed in v3.31
+
+- The loading bar and the pre-jump result screen are gone entirely, along with the markers that turned them on. Nothing is drawn during a mod boot; the disc light is the whole progress signal.
+
 ## Changed in v3.30
 
 - New diagnostic: `riivolution/nofstinstall.txt` stages the mod as usual but does not install the rebuilt file table, to separate a table fault from a hook or fragment fault.

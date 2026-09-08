@@ -43,26 +43,6 @@ static bool showTime = false;
 static bool showSize = false;
 static bool changed = true;
 static bool changedMessages = true;
-//! Skip the half-second "is this worth drawing?" wait for one window.
-//! See ProgressSkipDebounce below.
-static bool skipDebounce = false;
-
-/****************************************************************************
- * ProgressSkipDebounce
- *
- * ProgressWindow opens by sleeping 500ms so operations too short to be worth
- * a window never flash one. That is right for a file copy and wrong for a
- * caller that already knows it wants to be seen: an operation shorter than
- * the wait draws nothing at all, and ProgressStop then blocks until the
- * sleeping thread wakes - paying the full half second for a window nobody
- * saw. Call this immediately before StartProgress to draw at once. Applies
- * to the next window only, and clears itself.
- ***************************************************************************/
-extern "C" void ProgressSkipDebounce()
-{
-	skipDebounce = true;
-}
-
 /****************************************************************************
  * StartProgress
  ***************************************************************************/
@@ -298,13 +278,8 @@ static void ProgressWindow(const char *title, const char *msg1, const char *msg2
 {
 	progressCanceled = false;
 
-	if (skipDebounce)
-		skipDebounce = false;
-	else
-	{
-		usleep(500000); // wait to see if progress flag changes soon
-		if (!showProgress) return;
-	}
+	usleep(500000); // wait to see if progress flag changes soon
+	if (!showProgress) return;
 
 	const int ProgressPosY  = 20;
 
