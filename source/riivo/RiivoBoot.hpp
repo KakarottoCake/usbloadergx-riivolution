@@ -144,12 +144,6 @@ namespace Riivo
 
 	void LogBootStep(const char *what);
 
-	//! Pre-jump result screen. Drawn before the FST install, and the progress
-	//! operation is ended and synchronized before returning, so the heap is
-	//! quiet when the table lands. No-op without a selected mod; the caller
-	//! gates Wii U out (its GUI threads are gone by boot time).
-	void ShowPreJumpSummary(bool memAttempted, int memApplied, int memTotal);
-
 	//! Flip the drive light. Called from every logged boot step, and from
 	//! inside the long silent stretches that log nothing, so the console has
 	//! a visible pulse for the whole time Riivolution is working. A light

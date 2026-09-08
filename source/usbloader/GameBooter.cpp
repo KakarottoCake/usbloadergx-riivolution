@@ -731,7 +731,6 @@ int GameBooter::BootGame(struct discHdr *gameHdr, const s8 useOcarina)
 	Riivo::ResolvedPatchSet riivoSet;
 	std::vector<Riivo::MemOutcome> riivoMemPre, riivoMemApp;
 	bool riivoMemAttempted = false;
-	int riivoMemAppliedCount = 0;
 	bool riivoSkipCodeHandler = false;
 	std::string riivoDevice; // SD/USB mount prefix, e.g. "sd:"
 	Riivo::ConfigurePatchProtection(riivoSet, riivoDevice, false);
@@ -1043,7 +1042,6 @@ int GameBooter::BootGame(struct discHdr *gameHdr, const s8 useOcarina)
 	{
 		riivoMemAttempted = true;
 		int riivoMemApplied = Riivo::ApplyMemoryPatches(riivoSet, riivoDevice, riivoMemApp);
-		riivoMemAppliedCount = riivoMemApplied;
 		gprintf("%s", Riivo::DescribeMemApplySummary(riivoMemPre, riivoMemApp, riivoMemApplied).c_str());
 		//! Diagnostic-only: a mismatch names bytes that changed under the
 		//! patches, but nothing this late can repair them and refusing the
@@ -1115,15 +1113,12 @@ int GameBooter::BootGame(struct discHdr *gameHdr, const s8 useOcarina)
 		}
 	}
 
-	//! On-screen result summary for tester rounds: everything above is
-	//! card-logged, but a black screen hides whether the boot even reached
-	//! the jump. Drawn here - before the FST install, and synchronized
-	//! before returning - so the heap is quiet when the table lands, and
-	//! skipped on Wii U, whose GUI threads are gone by boot time. The
-	//! install refusal below stays the post-install signal.
-	if (!isWiiU())
-		Riivo::ShowPreJumpSummary(riivoMemAttempted, riivoMemAppliedCount,
-								   (int) riivoSet.memories.size());
+	//! Nothing is drawn between here and the jump, and nothing may be. Two
+	//! GUI draws on this path were each confirmed on hardware to stop the
+	//! boot - the result screen that used to sit here, and the loading bar
+	//! one phase earlier. The drive light carries the whole signal now: it
+	//! pulses on every logged step and goes out immediately before the jump,
+	//! so light-out plus a black screen means the game got the console.
 	//! Jump to the entrypoint of the game - the last function of the USB Loader
 	//! LAST. The table lands at the top of MEM1, which is also inside the
 	//! loader's own heap, and everything above here - ShutDownDevices,

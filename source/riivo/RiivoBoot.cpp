@@ -249,19 +249,6 @@ namespace Riivo
 	static u32 sumPlaced = 0;
 	static u32 sumFailed = 0;
 
-	//! Seconds the result screen stays up with the marker file present:
-	//! long enough to read and photograph. Without the marker the screen
-	//! shows a brief beat instead - proof the boot reached the jump
-	//! sequence, without stalling successful launches. No input is waited
-	//! on either way: post-shutdown pads cannot be relied upon.
-	static const u32 RIIVO_SHOWLOG_HOLD_SECONDS = 6;
-	static const u32 RIIVO_SHOWLOG_BEAT_SECONDS = 1;
-
-	//! Extended summary requested (riivolution/showlog.txt). Read in
-	//! SetBootContext while the card is mounted; the card is gone by the
-	//! time the screen shows.
-	static bool showExtended = false;
-	static bool showSummary = false;
 	static bool skipFstInstall = false;
 
 	//! The game's id, needed to ask which partition it lives on.
@@ -337,9 +324,6 @@ namespace Riivo
 		return deadlinePassed;
 	}
 
-	//! Set by riivolution/loadingbar.txt; see SetBootContext.
-	static bool verboseListing = false;
-
 	//! Set by riivolution/verify.txt. The large-read pass reads the WHOLE
 	//! mod back through the cIOS and compares it against the card - 128 MB
 	//! on Starshine, so 256 MB of traffic and minutes of black screen. It
@@ -372,7 +356,6 @@ namespace Riivo
 		//! stopped mid-listing, so both are off unless asked for. On, they
 		//! give a moving bar and a line per <folder> rule; off, the phase is
 		//! as quiet as it used to be and only its start and end are recorded.
-		verboseListing = false;
 		deepVerify = false;
 		//! Per boot, like the directory cache: the card can be swapped between
 		//! one launch and the next, and a stale flag here would take the
@@ -396,34 +379,14 @@ namespace Riivo
 		modMissing.clear();
 		modAddFails.clear();
 		installFailCode = 0;
-		//! OFF by default, and back behind riivolution/loadingbar.txt.
+		//! No loading bar, and no marker to turn one on. Two separate GUI
+		//! draws on this path were confirmed on hardware to stop the boot -
+		//! the pre-jump summary and this one - and each hid the next problem
+		//! behind it. An opt-in would only be a trap for whoever sets it.
 		//!
-		//! v3.22 turned this on by default to give the black screen something
-		//! to show. That was safe only by accident: ProgressWindow opened with
-		//! a 500ms "is this worth drawing?" wait, and every phase here is
-		//! shorter than that, so the thread woke to find the work already done
-		//! and returned WITHOUT DRAWING. Nothing ever appeared - which is
-		//! exactly what testers kept reporting.
-		//!
-		//! v3.23 removed that wait so the window would finally draw. It drew,
-		//! and the boot stopped: a T0 log ends on the "mapping fragments" step
-		//! with no line after it, though every branch of that block writes one,
-		//! and the only things in between are this window and the FragProgress
-		//! callback below. Drawing on the boot path is not free - the same
-		//! lesson as the pre-jump summary, one phase earlier.
-		//!
-		//! The drive light is the signal that works here; it needs no GUI and
-		//! costs a register write. See PulseLight.
-		verboseListing = false;
-		if (!device.empty())
-		{
-			FILE *v = fopen((device + "/riivolution/loadingbar.txt").c_str(), "rb");
-			if (v)
-			{
-				verboseListing = true;
-				fclose(v);
-			}
-		}
+		//! The drive light is the progress signal now: LogStep flips it, so
+		//! every logged step is a blink, and it needs no GUI, no thread and
+		//! no allocation - one register write. See PulseLight.
 		//! Arm the drive-light pulse for this boot. Disarmed at the jump.
 		pulseArmed = true;
 		pulseOn = false;
@@ -464,18 +427,6 @@ namespace Riivo
 			{
 				skipFstInstall = true;
 				fclose(n);
-			}
-		}
-		showExtended = false;
-		showSummary = false;
-		if (!device.empty())
-		{
-			FILE *s = fopen((device + "/riivolution/showlog.txt").c_str(), "rb");
-			if (s)
-			{
-				showExtended = true;
-				showSummary = true;
-				fclose(s);
 			}
 		}
 		//! Optional: "addr:port" of a listener on the LAN. Absent for
@@ -679,43 +630,6 @@ namespace Riivo
 	//! at this point - ExitGUIThreads() fires only on Wii U - so this is
 	//! the same machinery the rest of the loader already uses here.
 	//!
-	//! RAII because PrepareFragList has a dozen early returns, and a window
-	//! left standing would sit on top of the game for the rest of the boot.
-	struct ProgressGuard
-	{
-		static ProgressGuard *active;
-		bool on;
-		ProgressGuard() : on(false) { active = this; }
-		~ProgressGuard()
-		{
-			if (on)
-				ProgressStop();
-			active = 0;
-		}
-		void Step(const char *msg)
-		{
-			if (on)
-				ShowProgress(msg, 0, 0);
-			else
-			{
-				//! No ProgressSkipDebounce here. Skipping the wait was v3.23's
-				//! attempt to make this window finally appear; it appeared, and
-				//! the boot stopped on the step that raised it. Leaving the
-				//! 500ms wait in place means a phase shorter than it still
-				//! draws nothing - wasteful, and deliberately so, because the
-				//! alternative measured worse than a wasted half second.
-				StartProgress(tr("Riivolution"),
-							  tr("Preparing the mod's files"), msg, false, true);
-				on = true;
-			}
-		}
-		void Set(u32 done, u32 total)
-		{
-			if (on && total)
-				ShowProgress((s64) done, (s64) total);
-		}
-	};
-	ProgressGuard *ProgressGuard::active = 0;
 
 	// --------------------------------------------------------------------
 	// 1. cIOS survey
@@ -1032,9 +946,6 @@ namespace Riivo
 
 		//! Reads every placed file back through the hook. On a large mod
 		//! that is minutes of card traffic with nothing else on screen.
-		ProgressGuard progress;
-		if (verboseListing)
-			progress.Step(tr("Checking the mod's files"));
 
 		//! The fragments went in back in SetupDisc, inside the list the loader
 		//! handed over with set_frag_list. Nothing is registered here: d2x
@@ -1213,8 +1124,6 @@ namespace Riivo
 				withholdStage = "LARGE_VERIFY";
 				return;
 			}
-			if (verboseListing)
-				progress.Step(tr("Verifying large reads"));
 			out += "\nLarge-read verification (128 KiB maximum single request)\n";
 			AppendLog(out);
 			out.clear();
@@ -1942,26 +1851,15 @@ namespace Riivo
 	}
 
 
-	//! How far through the <folder> rules the listing is. The rules are the
-	//! only unit available before a rule has been read - the file count
-	//! inside one is not known until it comes back.
-	static u32 folderRulesDone = 0, folderRulesTotal = 0;
-
-	static void FragProgress(void *, u32 done, u32 total)
-	{
-		if (ProgressGuard::active)
-			ProgressGuard::active->Set(done, total);
-	}
-
 	//! One line per <folder> rule. The path is trimmed to the tail because
 	//! a full external path is mostly the device and mod root repeated.
+	//! Always on: it costs one log line, and LogStep flips the drive light,
+	//! which is the only progress signal this boot has left.
 	static void LogListProgress(void *, const std::string &dir, u32 soFar)
 	{
 		const size_t cut = dir.size() > 44 ? dir.size() - 44 : 0;
 		LogStep("  listing %s%s (%u so far)", cut ? "..." : "",
 				dir.c_str() + cut, soFar);
-		if (ProgressGuard::active)
-			ProgressGuard::active->Set(folderRulesDone++, folderRulesTotal);
 	}
 
 	//! The last thing the loader does before handing the console to the
@@ -2253,13 +2151,6 @@ namespace Riivo
 		//! table cannot be read until afterwards, so the table is made to agree
 		//! with this placement rather than the other way round.
 		std::vector<ModCandidate> cand;
-		ProgressGuard progress;
-		if (verboseListing)
-		{
-			folderRulesDone = 0;
-			folderRulesTotal = (u32) bootSet->folders.size();
-			progress.Step(tr("Reading the mod's folders"));
-		}
 		//! Reads every directory the mod's rules name. On a total conversion
 		//! that is thousands of entries off FAT, and it is the slowest thing
 		//! in the whole boot - so say so before starting, not after.
@@ -2267,7 +2158,7 @@ namespace Riivo
 		{
 			FsDirLister lister;
 			ListModFiles(*bootSet, bootDevice, &lister, cand,
-						 verboseListing ? LogListProgress : 0, 0, &modMissing);
+						 LogListProgress, 0, &modMissing);
 		}
 		LogStep("mod files listed: %u found", (unsigned) cand.size());
 		//! Named in the progress section as well as the report below: a boot
@@ -2388,8 +2279,6 @@ namespace Riivo
 		//! Opens every placed file and walks its cluster chain. The other
 		//! long phase, and the other one worth naming before it starts.
 		LogStep("mapping fragments for %u file(s)", (unsigned) placed.size());
-		if (verboseListing)
-			progress.Step(tr("Mapping the mod's files"));
 		if (OnDemandRequested())
 		{
 			//! The whole point of the on-demand path. Mapping opens every
@@ -2409,7 +2298,7 @@ namespace Riivo
 		}
 		else if (!AppendModFragments(placed, sector, (u8) modDev.fsType,
 								modDev.lbaStart, fragStats,
-								verboseListing ? FragProgress : 0, 0))
+								0, 0))
 		{
 			gprintf("Riivo: fragment build failed: %s\n", fragStats.firstFailure.c_str());
 			modOffsets.clear();
@@ -2704,49 +2593,6 @@ namespace Riivo
 	//! runs, so anything it allocates afterwards could land on the installed
 	//! table. No input is waited on; the screen holds a fixed delay and the
 	//! boot continues with a quiet heap.
-	void ShowPreJumpSummary(bool memAttempted, int memApplied, int memTotal)
-	{
-		//! Opt-in only. See the showlog.txt marker in SetBootContext: this
-		//! runs after ShutDownDevices and its GUI work sits between the
-		//! apploader and the jump, so on the default path it does nothing
-		//! at all and the boot goes straight to the game.
-		if (!bootSet || !showSummary)
-			return;
-		char title[64], msg1[192], msg2[128];
-		if (!fileWorkWanted)
-			snprintf(title, sizeof(title), "Riivolution: NO_FILE_WORK");
-		else if (fileWorkLive)
-			snprintf(title, sizeof(title), "Riivolution: FST_STAGED");
-		else
-			snprintf(title, sizeof(title), "Riivolution: WITHHELD %s",
-					 withholdStage.c_str());
-		if (!fileWorkWanted)
-			snprintf(msg1, sizeof(msg1), "no file work requested");
-		else
-			snprintf(msg1, sizeof(msg1), "files %u placed, %u read-back failures; FST %u bytes",
-					 (unsigned) sumPlaced, (unsigned) sumFailed, pendingFstSize);
-		if (memTotal <= 0)
-			snprintf(msg2, sizeof(msg2), "mem: none requested");
-		else if (!memAttempted)
-			snprintf(msg2, sizeof(msg2), "mem: %d requested, not applied (%s)",
-					 memTotal,
-					 MemoryPatchesSuppressed() ? "suppressed"
-					 : FileWorkIncomplete() ? "withheld" : "skipped");
-		else
-			snprintf(msg2, sizeof(msg2), "mem: %d/%d applied", memApplied, memTotal);
-		char *end = msg2 + strlen(msg2);
-		const u32 hold = showExtended ? RIIVO_SHOWLOG_HOLD_SECONDS
-									  : RIIVO_SHOWLOG_BEAT_SECONDS;
-		snprintf(end, sizeof(msg2) - (size_t) (end - msg2), "; continuing in %us",
-				 hold);
-		StartProgress(title, msg1, msg2, false, false);
-		usleep(hold * 1000000u);
-		//! End and synchronize the progress operation before returning: the
-		//! thread suspends itself once the flag drops (the same start/stop
-		//! pairing the menus use), and only then is the heap quiet for the
-		//! FST install that follows in the caller.
-		ProgressStop();
-	}
 
 	//! The last thing written while the card is still mounted. A black screen
 	//! after this point says the game was handed control and did not come
