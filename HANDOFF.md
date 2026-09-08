@@ -67,7 +67,9 @@ placement defect, now fixed:
   syntax-checked under the Makefile's PPC flags.
 - Next hardware run: T0 with v3.37 (NOT v3.36 - see below), pack
   GXDiag-SB4E01-v5.zip (same 8 probes, docs point at v3.37 + the
-  expected `817b2de0` address). T2 stays separate.
+  expected `817b2de0` address). Tester for this round is the repo owner
+  (new console/drive vs all prior rounds - do not mix results across
+  testers without saying so). T2 stays separate.
 
 ## v3.36 post-mortem: tagged before the code was committed
 
