@@ -76,14 +76,19 @@ overwrite). Explicitly refused: global word replacement. The field's
 meaning comes first; a single-word update would remain a controlled
 experiment, never an established fix, even if the dump favors it.
 
-Indexing verified line-by-line against the code (RiivoBoot.cpp ~947-979):
-read window RAM `[0x81201b40, +0x100)` vs disc `[image+0x1b40, +0x100)`;
-struct word `i` at RAM `ramBase+0x40+4i` vs disc `+0x40+4i`; target +0x10
-is `i=4`, disc offset `+0x50`, RAM `0x81201b90` - exactly as required.
-Max accessed offset `0x60` stays inside the `0x100` buffer. (A matching
-source-comment softening, "heap over it" → "may overlap it", is deferred
-to the next code change: comment-only, and any commit now would orphan
-the cleared bundle.)
+Indexing verified line-by-line against the code (RiivoBoot.cpp ~947-979).
+Read starts at the bases, not past them; every word is base + offset:
+
+| What | RAM | Disc buffer (`disc`, 0x100 B) | Absolute |
+|---|---|---|---|
+| Read start | `ramBase` = `0x81201b40` | `discBase` = image+`0x1b40` | — |
+| Struct word `i` (0-7) | `ramBase+0x40+4i` | `+0x40+4i` | image+`0x1b80+4i` |
+| Target +0x10 (`i=4`) | `0x81201b90` | `+0x50` | image+`0x1b90` |
+| Last byte touched | `0x81201b9f` | `+0x5f` (< `0x100`) | — |
+
+(A matching source-comment softening, "heap over it" → "may overlap
+it", rides the next code change: comment-only, and committing it now
+would orphan the cleared bundle.)
 
 Ordered run (awaits tester): ONE T0 with artifact bundle `a733ec0d`
 (`diag-bundle-a733ec0d…`, run 34273600459) - install `boot.dol` from it
