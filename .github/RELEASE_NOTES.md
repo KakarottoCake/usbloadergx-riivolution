@@ -37,6 +37,13 @@ on. Without that file nothing changes and the build behaves exactly like v3.10.
 It has never run on a console. Expect it to fail; the log and a USB Gecko trace are the
 point of it. Leave the file off for normal use.
 
+## Changed in v3.35
+
+- New diagnostic for the SB4E01 relocation failure: every file-mod boot now logs a "Relocation evidence" block naming the planned table address, the loaded game ranges one by one, the thread stack bounds, and the heap extent, with an overlap reading for each. Installation itself is unchanged - same decisions, same refusals, no new blink codes.
+- `boot.elf.map` (linker map) now ships with every release next to `boot.elf`, so each build's exact memory layout is on record.
+- If you are on the SB4E01 round: run T0 with this build and send the log - the new section is the evidence the relocation question needs.
+- 146,876 automated checks, all passing.
+
 ## Changed in v3.34
 
 - Removed the last leftover text of the deleted result screen. Nothing is drawn on the boot path.
@@ -78,37 +85,5 @@ point of it. Leave the file off for normal use.
 ## Changed in v3.25
 
 - The disc light keeps pulsing through the apploader instead of freezing for the last three seconds of the boot.
-
-## Changed in v3.24
-
-- Long prompt messages no longer draw on top of the prompt's own title.
-- The missing-files warning is shorter.
-
-## Changed in v3.23
-
-- The loading screen no longer waits half a second before appearing, so short phases actually show it. *(Reverted in v3.29 - the wait was what kept it from drawing, and drawing stopped boots.)*
-
-## Changed in v3.22
-
-- The disc light pulses while the mod is being prepared and goes out when the game takes over. If it is dark and the screen is still black after 20 seconds, it is stuck.
-- The loading bar is now on by default (`riivolution/noloadingbar.txt` turns it off). *(Reverted in v3.29 - drawing it stopped boots.)*
-- The disc light now works for warnings and blink codes even if you have the disc light turned off in settings.
-
-## Changed in v3.21
-
-- A mod on the SD card now warns you when you pick it, and again before launch.
-
-## Changed in v3.20
-
-- Files the mod names but the card does not have are now listed by path, in the log and on screen before launch.
-- Missing created files named instead of phantom additions.
-- Dolphin reference byte-diff for FST rebuilds.
-- Deliberate returns to the loader blink a distinct drive-light code.
-- Every mod boot briefly shows its result before launching.
-- The last boot's outcome is shown when you launch that game again.
-- Mods pack at the drive's sector size, leaving no unmapped gaps between files.
-- The rebuilt file table is verified after install; a bad install refuses instead of black-screening.
-- Tail-recovered files are matched against their registration records instead of withholding the whole mod.
-- 146,865 automated checks, all passing.
 
 Older versions: [CHANGELOG.md](CHANGELOG.md)
