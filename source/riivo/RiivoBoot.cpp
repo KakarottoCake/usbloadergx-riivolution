@@ -923,51 +923,93 @@ namespace Riivo
 
 	//! Apploader-retained words around 0x81201b80, where the reference scan
 	//! found the original FST address at +0x10. 0x81200000 is where this
-	//! loader puts the apploader image (apploader.c), so anything in that
-	//! window is either a disc-static constant of the image or a global the
-	//! apploader wrote while running: nothing else stores there, and our
-	//! tree reads nothing back from it. Comparing RAM against the same
-	//! bytes fresh off the disc tells the two apart while the card log is
-	//! still writable. Read-only on purpose: whether relocation must also
-	//! update +0x10 depends on a consumer no static audit can name (the
-	//! apploader itself is dead post-run; game startup is unobservable
-	//! from here), so that decision waits on this log - not on a global
-	//! word replace, which is explicitly not done.
+	//! loader puts the apploader image (apploader.c). Writers to that
+	//! window: the image load itself, the apploader while running, and -
+	//! if the heap ever reaches that high - our own loader heap over it
+	//! (see the break line below). Our tree reads nothing back from it.
+	//! Comparing RAM word-by-word against the same bytes fresh off the
+	//! disc separates "changed after loading" from "as shipped", per word:
+	//! the +0x10 verdict stands on its own, independent of the neighbors.
+	//! A difference proves post-load change, not a live reference; an
+	//! unchanged word may still be read by live code. Either way this
+	//! function only reads: whether relocation must also update +0x10
+	//! depends on a consumer no static audit can name (the apploader
+	//! itself is dead post-run; game startup is unobservable from here),
+	//! so that decision waits on this log - not on a global word replace,
+	//! which is explicitly not done.
 	static void AppendApploaderStructEvidence(std::string &out)
 	{
 		//! Measured offsets, not protocol: the struct address comes from
-		//! the T0 reference scan, the image base from apploader.c, the disc
-		//! base from APPLDR_OFFSET (0x2440) plus the 0x20 header.
+		//! the T0 reference scan. Disc base = APPLDR_OFFSET (0x2440, same
+		//! constant apploader.c reads the header from) + 0x20 header +
+		//! 0x1b40 struct offset within the image. Length mirrors
+		//! apploader.c exactly: buffer[5] + buffer[6] at header +0x14/+0x18.
 		static const u32 ramBase = 0x81201b40;   // struct - 0x40
-		static const u32 discBase = 0x2460 + 0x1b40;
+		static const u32 discBase = 0x2440 + 0x20 + 0x1b40;
 		static u8 disc[0x100] ATTRIBUTE_ALIGN(32);
+		static u8 appHdr[0x20] ATTRIBUTE_ALIGN(32);
 
 		out += "\nApploader struct around 81201b80 (read-only - nothing updated)\n";
 		out += "--------------------------------------------------------------\n";
 
-		//! The 8 words at the struct, as the CPU reads them. Neighbors name
-		//! the shape: boot words beside +0x10 would read as the apploader's
-		//! working copy of what it wrote to low memory; code bytes around
-		//! it would read as an embedded constant instead. The marker is
-		//! re-checked live against low memory rather than assumed from T0.
+		u32 appLen = 0;
+		if (WDVD_Read(appHdr, sizeof(appHdr), 0x2440) >= 0)
+			appLen = be32(appHdr + 0x14) + be32(appHdr + 0x18);
+		const bool inImage = appLen > 0x1bc0;
+		Addf(out, "  apploader image length: %u bytes (%s +0x1b80)\n", appLen,
+			 appLen == 0 ? "header unreadable - coverage unknown"
+			 : inImage ? "covers" : "DOES NOT COVER - not apploader image");
+
+		//! The 8 words at the struct, as the CPU reads them, each compared
+		//! against its disc twin on its own. Neighbors name the shape: boot
+		//! words beside +0x10 would read as the apploader's working copy of
+		//! what it wrote to low memory; code bytes around it would read as
+		//! an embedded constant instead. The +0x10 marker is re-checked
+		//! live against low memory rather than assumed from T0.
 		const u32 fstNow = *(vu32 *) 0x80000038;
+		const bool discOk = inImage
+			&& WDVD_Read(disc, sizeof(disc), discBase) >= 0;
+		if (!discOk && inImage)
+			out += "  (disc bytes unreadable - per-word compare skipped)\n";
+		u32 ndiff = 0;
+		bool w10diff = false;
 		for (u32 i = 0; i < 8; ++i)
 		{
-			const u32 w = *(const volatile u32 *) (uintptr_t) (ramBase + 0x40 + 4 * i);
-			Addf(out, "  +0x%02x : %08x%s\n", 4 * i, w,
-				 (4 * i == 0x10 && w == fstNow)
-				 ? "  <-- equals the FST address right now" : "");
+			const u32 ram = *(const volatile u32 *) (uintptr_t) (ramBase + 0x40 + 4 * i);
+			const bool diff = discOk && ram != be32(disc + 0x40 + 4 * i);
+			if (diff)
+			{
+				++ndiff;
+				if (i == 4)
+					w10diff = true;
+			}
+			Addf(out, "  +0x%02x : %08x%s%s\n", 4 * i, ram,
+				 (i == 4 && ram == fstNow)
+				 ? "  <-- equals the FST address right now" : "",
+				 diff ? "  (differs from disc)" : "");
+		}
+		if (!discOk)
+			out += "  disc verdict: unavailable\n";
+		else if (ndiff == 0)
+			out += "  disc verdict: all 8 identical - as shipped (still readable by live code)\n";
+		else
+		{
+			Addf(out, "  disc verdict: %u of 8 differ - written after loading (change, not proof of use)\n",
+				 ndiff);
+			out += w10diff ? "  +0x10 itself differs: the FST-address word was stored post-load\n"
+						   : "  +0x10 unchanged; change is in neighbors only\n";
 		}
 
-		if (WDVD_Read(disc, sizeof(disc), discBase) < 0)
-		{
-			out += "  disc compare unavailable (apploader bytes unreadable)\n";
-			return;
-		}
-		if (memcmp(disc + 0x40, (const void *) (uintptr_t) (ramBase + 0x40), 0x20) == 0)
-			out += "  same 8 words fresh off disc: IDENTICAL - a disc-static constant\n";
+		//! Third writer candidate: if the newlib break has passed the
+		//! struct, loader-heap objects may overlay the image - undecided,
+		//! like everything else here, but excludable per boot.
+		const u32 brk = (u32) (uintptr_t) sbrk(0);
+		if (brk > ramBase + 0x40)
+			Addf(out, "  newlib break %08x reaches the struct: loader-heap overlay possible (candidate, undecided)\n",
+				 brk);
 		else
-			out += "  same 8 words fresh off disc: DIFFERENT - written while running\n";
+			Addf(out, "  newlib break %08x is below the struct: loader heap cannot have stored there\n",
+				 brk);
 	}
 
 	static bool ByPlacedOffset(const PlacedFile &a, const PlacedFile &b)
