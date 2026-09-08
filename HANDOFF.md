@@ -1,4 +1,4 @@
-# Handoff — 2026-09-08 (updated: capture corrected + CI validation running, pre-T2)
+# Handoff — 2026-09-08 (updated: v3.35 pre-release published, T0 run ordered)
 
 State of the SB4E01 (Super Mario Galaxy 2) debugging effort. Read the
 "Latest evidence" section first — it supersedes the drive-blocker framing
@@ -159,6 +159,16 @@ from the run page, `sha256sum -c` against the manifest (skip its
 from here (artifact downloads need an owner token); everything
 observable without one is verified. No tag, no release. This exact
 bundle is the cleared build for the next T0 hardware run.
+
+Pre-release v3.35-riivo-evidence (run 34214692174, tag moved once after
+a Zip-step failure on the artifact's nested map path — fixed):
+published, pre-release flag set. Assets: zip + boot.dol
+(sha256 `191670a5…cf0f9a042`) + boot.elf (`52f54b40…07045d`) +
+boot.elf.map (`bf1432ca…415cb9d058d`, 5,150,680 bytes — first release
+with the map). Next hardware run: T0 with v3.35, send the log — the
+Relocation evidence section is the deliverable. Multi-path artifacts
+keep directory structure (`build/boot.elf.map` nested, not flat) —
+accounted for in both workflows.
 
 Stack bounds, validated against libogc v2.11.0 (May 25 2025 — the CI
 image `devkitppc:20250527` vintage): main-thread stack is
