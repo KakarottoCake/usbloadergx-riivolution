@@ -2661,10 +2661,12 @@ namespace Riivo
 				FileWorkIncomplete() ? "held back" : "applied");
 	}
 
-	//! The last thing written while the card is still mounted. A black screen
-	//! after this point says the game was handed control and did not come
-	//! back, which is a different fault from anything above; without the
-	//! entry point and the arena the log cannot tell those apart.
+	//! The last thing written while the card is still mounted. Everything
+	//! after this runs without a card log: shutdown, patching, install,
+	//! jump. A black screen past here is unresolved among a hang in that
+	//! window, a refusal whose return died silently, and a game dead
+	//! before its own video init. The entry point and arena below bound
+	//! the window but do not say which of the three happened.
 	void ReportLaunch(u32 entry)
 	{
 		std::string out;
