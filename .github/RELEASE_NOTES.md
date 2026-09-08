@@ -37,6 +37,12 @@ on. Without that file nothing changes and the build behaves exactly like v3.10.
 It has never run on a console. Expect it to fail; the log and a USB Gecko trace are the
 point of it. Leave the file off for normal use.
 
+## Changed in v3.39
+
+- New log section for the `0x81201b90` question: the placement report dumps the 8 words around the apploader-staged address that matched the original FST pointer, checks each against the same bytes fresh off the disc, verifies the address sits inside the loaded apploader image, and logs whether the loader heap could have reached it. Read-only - nothing is updated, no placement changed.
+- If you are on the SB4E01 round: run one T0 with THIS build (no `nofstinstall.txt`, no `relocorig.txt`), watch and ideally video the final light sequence, and send the log.
+- 146,897 automated checks, all passing.
+
 ## Changed in v3.38
 
 - Unambiguous handover signals. A refused boot now blinks its code THREE times with a pause between (meanings 1-7 unchanged - count one group, check the others match; irregular flicker is just progress). A verified install is followed by one solid second ON, then dark, then the jump. Groups without solid = refused; solid without groups = the game has it.
@@ -83,9 +89,5 @@ point of it. Leave the file off for normal use.
 ## Changed in v3.31
 
 - The loading bar and the pre-jump result screen are gone entirely, along with the markers that turned them on. Nothing is drawn during a mod boot; the disc light is the whole progress signal.
-
-## Changed in v3.30
-
-- New diagnostic: `riivolution/nofstinstall.txt` stages the mod as usual but does not install the rebuilt file table, to separate a table fault from a hook or fragment fault.
 
 Older versions: [CHANGELOG.md](CHANGELOG.md)
