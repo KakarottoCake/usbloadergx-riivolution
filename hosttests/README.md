@@ -19,7 +19,8 @@ Any C++ compiler will do (`g++` on PATH). Two shims in `shim/` stand in for
 | `test_scale` | the same rebuilder against a realistic 3920-file table — growth, timing, and that every relocated range is aligned and non-overlapping | 2159 |
 | `test_pipeline` | the seam `RiivoBoot::PrepareFileRedirects` walks on console: disc FST → `BuildRedirects` → `FstBuilder` → rebuilt table, including case-insensitive matching between a mod folder and the disc | 24 |
 | `test_fragplan` | Synthetic 6–8 GiB LOW_READ window, unchanged raw-disc geometry, DVD9 refusal and fragment budget | 72 |
-| `test_fstinstall` | `PlaceFst`: where the rebuilt table goes in the running game's memory, how much heap that costs, and — mostly — every case where it must refuse rather than guess | 37 |
+| `test_fstinstall` | `PlaceFst`: where the rebuilt table goes in the running game's memory, how much heap that costs, obstacle-aware growth past loaded ranges, and — mostly — every case where it must refuse rather than guess | 98 |
+| `test_installsim` | planning through installation into simulated MEM1 on the captured SB4E01 layout: protected ranges intact, copied bytes exact, boot words exact, refusal paths quiet, stack-overlap detector | 36 |
 
 ## Why the seam test exists
 

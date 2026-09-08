@@ -39,8 +39,8 @@ boot that ignored the redirect looks the same. That is T2's job.
 T0 with obstacle-aware placement (table below the 8 KB block, verified
 in the log) STILL black-screens. The overwrite was real and is still
 guarded against, but it is not the established cause — stopped being
-treated as one. Relocated-vs-in-place differences that remain suspects:
-pointer/arena value changes, heap given up, relocation-only checks.
+treated as one. What remains is audited in the next section, not
+hypothesized per round.
 Ruled out as consumers of the changed words: the IOS hook (reads no
 boot words), the jump sequence (reads none, wipes only loader BSS),
 everything between placement and install (no writer to `0x80000030-3C`
@@ -48,6 +48,67 @@ outside apploader/InstallFst). Remaining consumer: game startup itself.
 The 8 KB block reports "no section match" (table WAS read, so this is
 absence, not a failed read) — purpose still unknown, and avoidance
 cannot exclude references it may hold to the original table.
+
+## Relocated-FST handoff audit (model A vs model B, then code)
+
+References, strongest first: R1 in-place installs (boot on this game -
+same engine, same game, only the relocation deltas differ); R2 stock
+boot (apploader contract: table at top, arenaHi below it, Lo zeroed
+for the game - our `Disc_SetLowMem` matches it); R3 the official
+Riivolution mechanism as publicly documented (grown tables with updated
+address+size+arena on real hardware - the WORD updates are
+reference-blessed; what differs here is address choice and path, which
+is exactly what this audits); R4 Dolphin FST semantics at serializer
+level (in-tree tests, no placement content).
+
+Item by item, relocated vs R1/R2:
+- Table pointer (`0x80000038` new value): apploader-contract word, read
+  at game startup - the only consumer (no loader, IOS, or jump reader
+  anywhere in tree). R3-blessed pattern. RESOLVED, no change.
+- Size (`0x8000003C` = actual serialized size): table content is
+  self-delimiting U8; exact max is safe under every reading of the
+  field, and R3 writes grown sizes too. RESOLVED, no change.
+- Arena high lowered by reserved: game heap-init bound; loader heap far
+  below (BSS end `0x8106C260` + small-object demand, break logged per
+  boot); game not running so nothing allocates in the taken range.
+  RESOLVED, no change.
+- Arena low untouched (0): matches stock (loader zeroes pre-apploader,
+  game fills at startup). RESOLVED, no change.
+- Staged-buffer integrity across phases: MEM2 staging, checksum at
+  shutdown, pre-copy CRC re-check (codes 2/4/5 name rot vs write vs
+  pointer faults separately). Mechanism present. RESOLVED, no change.
+- Cache visibility (`InstallFst`: copy, flush table, write words, flush
+  `0x80000030` block): data-only table needs no IC invalidate; no
+  concurrent readers exist (game dead, IOS parses no FST); single
+  thread, stores-then-flush before handoff - standard shape.
+  RESOLVED, no change.
+- Everything executed afterward: patch engines write game-code regions
+  and the fixed `0x80001000` handler slot (Hooktype-gated; T0 runs
+  Hooktype=0 so no handler loads); loader heap far below the
+  destination; jump is stock code that boots unmodified games.
+  Reviewed by region, not line-exhaustive - stated scope. No writer to
+  the destination span identified. RESOLVED within that scope.
+- Jump + game startup: stock / external. Decided by hardware
+  (acceptance run below), not by further reading.
+- Destination span below the reservation: the ONE open item. Heap is
+  empty (game dead) except possibly live loader stack frames. Two
+  models, one discriminator (SP/stack-top from existing T0 logs -
+  zero hardware needed, just send those lines):
+  model A (stack above: top near MEM1 top, SP ~`0x817FDxxx`) makes the
+  cascade destination (`0x817B2DE0..0x817D772E`) clear and the OLD
+  destination fatal, and convicts the EVIDENCE-PATH stall seen in the
+  v3.41 log as the actual blocker;
+  model B (stack below the reservation) makes ANY downward growth hit
+  live frames, cascade included, while in-place stays structurally
+  safe. Fixture case 2 pins the detector; the target enforces nothing
+  yet - THAT fork (refuse-grown vs on-demand vs measured-clear) is
+  decided by the SP datum, not in advance.
+
+Resolved in code this round: nothing above needed changing except the
+diagnostic overweight (removed below) - that IS the audit's main
+result alongside the fixture. The remaining unknowns name their exact
+missing inputs: SP/stack-top lines (in hand already, unsent) and game
+consumption (acceptance run).
 
 ## Truncated-log return (distinct result - NOT a late-install black screen)
 
@@ -113,6 +174,83 @@ separate them yet:
   flicker decides branches, plus light motion during the apploader
   window (frozen vs moving); (3) stock no-mod boot on this hardware,
   if not already known (control validity, no hardware-change claim).
+
+## Relocated-FST handoff audit (model A vs model B, then code)
+
+References, strongest first: R1 in-place installs (boot on this game -
+same engine, same game, only the relocation deltas differ); R2 stock
+boot (apploader contract: table at top, arenaHi below it, Lo zeroed
+for the game - our `Disc_SetLowMem` matches it); R3 the official
+Riivolution mechanism as publicly documented (grown tables with updated
+address+size+arena on real hardware - the WORD updates are
+reference-blessed; what differs here is address choice and path, which
+is exactly what this audits); R4 Dolphin FST semantics at serializer
+level (in-tree tests, no placement content).
+
+Item by item, relocated vs R1/R2:
+- Table pointer (`0x80000038` new value): apploader-contract word, read
+  at game startup - the only consumer (no loader, IOS, or jump reader
+  anywhere in tree). R3-blessed pattern. RESOLVED, no change.
+- Size (`0x8000003C` = actual serialized size): table content is
+  self-delimiting U8; exact max is safe under every reading of the
+  field, and R3 writes grown sizes too. RESOLVED, no change.
+- Arena high lowered by reserved: game heap-init bound; loader heap far
+  below (BSS end `0x8106C260` + small-object demand, break logged per
+  boot); game not running so nothing allocates in the taken range.
+  RESOLVED, no change.
+- Arena low untouched (0): matches stock (loader zeroes pre-apploader,
+  game fills at startup). RESOLVED, no change.
+- Staged-buffer integrity across phases: MEM2 staging, checksum at
+  shutdown, pre-copy CRC re-check (codes 2/4/5 name rot vs write vs
+  pointer faults separately). Mechanism present. RESOLVED, no change.
+- Cache visibility (`InstallFst`: copy, flush table, write words, flush
+  `0x80000030` block): data-only table needs no IC invalidate; no
+  concurrent readers exist (game dead, IOS parses no FST); single
+  thread, stores-then-flush before handoff - standard shape.
+  RESOLVED, no change.
+- Everything executed afterward: patch engines write game-code regions
+  and the fixed `0x80001000` handler slot (Hooktype-gated; T0 runs
+  Hooktype=0 so no handler loads); loader heap far below the
+  destination; jump is stock code that boots unmodified games.
+  Reviewed by region, not line-exhaustive - stated scope. No writer to
+  the destination span identified. RESOLVED within that scope.
+- Jump + game startup: stock / external. Decided by hardware
+  (acceptance run below), not by further reading.
+- Destination span below the reservation: the ONE open item. Heap is
+  empty (game dead) except possibly live loader stack frames. Two
+  models, one discriminator (SP/stack-top from existing T0 logs -
+  zero hardware needed, just send those lines):
+  model A (stack above: top near MEM1 top, SP ~`0x817FDxxx`) makes the
+  cascade destination (`0x817B2DE0..0x817D772E`) clear and the OLD
+  destination fatal, and convicts the EVIDENCE-PATH stall seen in the
+  v3.41 log as the actual blocker;
+  model B (stack below the reservation) makes ANY downward growth hit
+  live frames, cascade included, while in-place stays structurally
+  safe. Fixture case 2 pins the detector; the target enforces nothing
+  yet - THAT fork (refuse-grown vs on-demand vs measured-clear) is
+  decided by the SP datum, not in advance.
+
+Resolved in code this round: nothing above needed changing except the
+diagnostic overweight (removed below) - that IS the audit's main
+result alongside the fixture. The remaining unknowns name their exact
+missing inputs: SP/stack-top lines (in hand already, unsent) and game
+consumption (acceptance run).
+
+## Host integration fixture (`test_installsim`, 36 checks)
+
+Planning through installation into simulated 24 MB MEM1, driven by the
+captured SB4E01 T0 numbers (arena/fst/max/want, 8 KB block, BSS) plus
+labeled synthetic extras: real `PlaceFst`, real `FstBuilder` seam case,
+real `Crc32` both sides of verification, mirrored stage/bounds/copy/
+words/verify/refuse sequence, canaried protected regions (reservation,
+block, BSS, low image, stack zone), exact destination/bytes/words
+assertions, refusal quietness, and a stack-overlap detector with the
+open fork documented at its definition. Validates the algorithm
+end-to-end on captured numbers; REQUIRES Wii hardware for: real
+addresses and cache behavior, the real apploader layout (simulated from
+log values), real thread/stack reality (SP arrives as logged input),
+timing and interrupts, IOS/cIOS behavior, and game consumption. A green
+fixture means the handoff is bit-exact, never that the game boots.
 
 ## 0x81201b90 audit: candidate secondary FST pointer (meaning open)
 

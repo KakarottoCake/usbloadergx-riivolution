@@ -44,6 +44,12 @@ build_run test_pipeline "$SRC/riivo/RiivoFstBuild.cpp" "$SRC/riivo/RiivoFst.cpp"
 # a test that it REFUSES: a wrong address here overwrites the game.
 build_run test_fstinstall "$SRC/riivo/RiivoFstInstall.cpp"
 
+# Planning through installation into simulated MEM1, driven by the captured
+# SB4E01 layout: protected ranges intact, copied bytes exact, boot words
+# exact, refusal paths quiet. See the file header for what this validates
+# and what still needs Wii hardware.
+build_run test_installsim "$SRC/riivo/RiivoFstInstall.cpp" "$SRC/riivo/RiivoFstBuild.cpp" "$SRC/riivo/RiivoFst.cpp"
+
 # Where the mod region sits on the virtual disc the cIOS reads, and whether it
 # clears the read ceiling and the fragment table.
 build_run test_fragplan "$SRC/riivo/RiivoFragPlan.cpp"
