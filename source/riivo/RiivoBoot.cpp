@@ -3281,6 +3281,12 @@ namespace Riivo
 				 (unsigned) occ.size(), place.ignoredRanges, place.malformedRanges,
 				 bss == BSS_VALID ? "held as an obstacle"
 				 : bss == BSS_INVALID ? "INVALID header values" : "absent");
+		//! Persisted here, not only at the end: everything above is pure
+		//! computation over words already read, while everything below
+		//! walks loaded ranges and reads the disc again. A log ending here
+		//! died in the evidence/struct computation, not the apploader.
+		AppendLog(out);
+		out.clear();
 		if (relocOrig)
 		{
 			//! Self-check for the diagnostic: without a real relocation this
@@ -3301,6 +3307,13 @@ namespace Riivo
 		//! Apploader-struct evidence rides with the relocation block: same
 		//! window (card alive, apploader done), same read-only terms.
 		AppendApploaderStructEvidence(out);
+
+		//! Second persist point: the evidence above is computed. What
+		//! follows is booking and outcome text only - no reads, no writes
+		//! to game memory - so a log ending here died assembling text,
+		//! not touching the game.
+		AppendLog(out);
+		out.clear();
 
 		//! This is the step that actually points the game at the mod. It only
 		//! runs when the fragment list, the read-back check and the cIOS hook
