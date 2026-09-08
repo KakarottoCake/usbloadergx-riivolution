@@ -2661,15 +2661,6 @@ namespace Riivo
 				FileWorkIncomplete() ? "held back" : "applied");
 	}
 
-	//! Pre-jump result screen. The card log ends at device shutdown, so a
-	//! black screen hides whether the boot even reached the jump; this puts
-	//! the verdict where the tester can see it. It runs BEFORE the FST
-	//! install, and the progress operation is ended and synchronized here
-	//! before returning: the progress thread builds GUI resources while it
-	//! runs, so anything it allocates afterwards could land on the installed
-	//! table. No input is waited on; the screen holds a fixed delay and the
-	//! boot continues with a quiet heap.
-
 	//! The last thing written while the card is still mounted. A black screen
 	//! after this point says the game was handed control and did not come
 	//! back, which is a different fault from anything above; without the
