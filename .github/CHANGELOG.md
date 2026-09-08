@@ -357,6 +357,14 @@ and permanent silence, and a write failure drops the socket rather than retrying
 - test_netlog: 23 checks on the address parsing, the half that fails quietly.
 - 146,353 automated checks, all passing.
 
+## Changed in v3.28
+
+- The staged-table checkpoint now says when no table was staged instead of reporting a checksum it never took.
+
+## Changed in v3.27
+
+- The pre-jump result screen is now off unless `riivolution/showlog.txt` exists. Drawing it after the drives were released stopped games booting - confirmed on hardware: a boot with no patches at all black-screened with it on and starts with it off.
+
 ## Changed in v3.26
 
 - The log now records whether the staged file table is still intact at device shutdown, so a refused install says when it broke.

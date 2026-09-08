@@ -37,6 +37,14 @@ on. Without that file nothing changes and the build behaves exactly like v3.10.
 It has never run on a console. Expect it to fail; the log and a USB Gecko trace are the
 point of it. Leave the file off for normal use.
 
+## Changed in v3.37
+
+- CORRECTION: v3.36's notes below describe this fix, but its binary was built from a tree that predates the code - T0 on v3.36 repeats the old black screen. This build carries the fix; the `build :` line in any log names its exact commit, and the release's boot.dol was string-checked for the new code before publishing.
+- Fixed the SB4E01 relocation overwrite: a grown file table is now moved down past every apploader-loaded range it would hit, instead of assuming the space below the old table is free. The stale table's own space is still reused (that overlap is expected); malformed range data refuses the grown install rather than guessing around it.
+- Every file-mod boot now logs each loaded range with its DOL section and disc offset (or BSS), and the placement names the ranges it kept clear.
+- If you are on the SB4E01 round: run T0 with THIS build and send the log - the table should land below the game's 8 KB block this time.
+- 146,886 automated checks, all passing.
+
 ## Changed in v3.36
 
 - Fixed the SB4E01 relocation overwrite: a grown file table is now moved down past every apploader-loaded range it would hit, instead of assuming the space below the old table is free. The stale table's own space is still reused (that overlap is expected); malformed range data refuses the grown install rather than guessing around it.
@@ -76,13 +84,5 @@ point of it. Leave the file off for normal use.
 ## Changed in v3.29
 
 - The loading bar is off again by default, and no longer forced to draw immediately. Turn it on with `riivolution/loadingbar.txt` (it replaces `noloadingbar.txt`).
-
-## Changed in v3.28
-
-- The staged-table checkpoint now says when no table was staged instead of reporting a checksum it never took.
-
-## Changed in v3.27
-
-- The pre-jump result screen is now off unless `riivolution/showlog.txt` exists. Drawing it after the drives were released stopped games booting - confirmed on hardware: a boot with no patches at all black-screened with it on and starts with it off.
 
 Older versions: [CHANGELOG.md](CHANGELOG.md)
