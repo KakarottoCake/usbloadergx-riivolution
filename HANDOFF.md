@@ -1,4 +1,4 @@
-# Handoff — 2026-09-08 (updated: v3.41 released + binary-gated; T0 round live)
+# Handoff — 2026-09-08 (updated: v3.42 released + binary-gated; T0 acceptance live)
 
 State of the SB4E01 (Super Mario Galaxy 2) debugging effort. Read the
 "Latest evidence" section first — it supersedes the drive-blocker framing
@@ -492,6 +492,17 @@ shifted vs v3.37, as new code requires). Binary gate passed on the
 published bits (digest matches; all new strings present; commit
 `47e30da` present ×2). Pack: GXDiag-SB4E01-v7.zip (signaling docs).
 T0 round: v3.38 + v7, report groups-vs-solid + screen + log.
+
+## v3.42 (released + binary-gated): trimmed diagnostics, install fixture
+
+Run 34289717082 green. Assets: zip + boot.dol (`4a64943a…`, 5,134,080)
++ boot.elf (`dcdecc8f…`) + boot.elf.map (`e226e89a…`, 5,152,819 - all
+shifted vs v3.41, as new code requires). Binary gate passed both ways
+on the published bits (digest matches; evidence header, obstacles
+line, apploader step and commit `e99ca5f` present; removed disc-verdict
+/ ref-scan / source-verdict strings absent). Pack v8 (v3.42 refs).
+T0 ACCEPTANCE: v3.42 + v8, no bypass markers - game boot is the test.
+Video the ending if possible, send the log. Real-mod run only after.
 
 ## v3.41 (released + binary-gated): chunk-failure refusal + truncation bounds
 
