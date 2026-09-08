@@ -49,7 +49,43 @@ The 8 KB block reports "no section match" (table WAS read, so this is
 absence, not a failed read) — purpose still unknown, and avoidance
 cannot exclude references it may hold to the original table.
 
-## Planned overwrite found in the v3.35 T0 log (branch, unpublished fix)
+## 0x81201b90 audit: candidate secondary FST pointer (meaning open)
+
+The reference scan found the original FST address as the word at
+`0x81201b90` (+0x10 into a structure at `0x81201b80`). Address identity:
+`0x81200000` is where this loader puts the apploader image
+(`apploader.c:23`) — nothing else in our tree stores into `0x8120xxxx`
+(DML/Neek defines are other boot paths). So the word is either a
+disc-static constant of the apploader image or a global the apploader
+wrote while running; coincidence is excluded by exact equality, and our
+loader is excluded as a writer (its only store there is the image load).
+
+Producer: {disc-static, apploader-runtime} — nothing else is possible.
+Consumers: none in our tree (no `0x81201b` reads anywhere); the
+apploader itself is dead post-run; game startup is unobservable from
+here, which is exactly why the equality alone proves nothing.
+Relocation updating it is UNDECIDED: necessary iff a live consumer
+reads it (most plausibly game startup following a stale pointer, which
+fits in-place-booting vs relocation-dying without any overwrite).
+Explicitly refused: global word replacement. The field's meaning comes
+first; a single-word update is the targeted fix IF the meaning lands.
+
+Live on branch (commit `071bc291`, CI green, bundle
+`diag-bundle-071bc291…`): the placement report now dumps the 8 words at
+`0x81201b80` (neighbors name the shape: boot words beside +0x10 read as
+the apploader's working copy; code bytes read as embedded constant),
+re-checks +0x10 against low memory live (no T0 hardcode), and compares
+the bytes against the same apploader bytes fresh off disc
+(`0x2460+0x1b40`, 256 B window). Read-only: no pointer updated, no
+placement changed. Decision tree for the next log:
+- Dump IDENTICAL to disc → static constant. Updating it patches dead
+  apploader rodata — pointless unless the game reads it (consumer test
+  = single-word update run, only if pursued).
+- Dump DIFFERENT → apploader global retaining the FST address. The
+  single-word update alongside `0x80000038` becomes the motivated
+  targeted fix; necessity still needs the boot test.
+Kept separate, as ordered: none of this proves late installation or
+game entry — that is what the 3×/solid-second signals are for.
 
 The evidence block names an apploader-loaded block
 `[0x817d8740, 0x817da740)` — 8 KB ending exactly where the FST begins.
