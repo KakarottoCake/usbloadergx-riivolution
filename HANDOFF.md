@@ -78,8 +78,9 @@ v3.34 release asset, sha256 `83edd306...07ab` verified on download):
   tree (bundled portlibs `sys/socket.h` vs new libogcakh `sockaddr_storage`,
   `socket`/`connect` now real functions colliding with the tree's own
   declarations, ~10 TUs). Any local binary would NOT match the tested
-  one; no local binary was kept. Original-env `boot.map` was never
-  published — worth asking the release pipeline to attach it.
+  one; no local binary was kept. (Resolved since: CI attaches
+  `boot.elf` already, and `boot.elf.map` rides along from the diag
+  branch work.)
 - Stack bounds are in NO file here: not the repo (no DOL linker
   script), not the DOL (no stack info), not the toolchain scripts. HBC
   owns SP init. Runtime-only (see capture spec).
@@ -121,7 +122,7 @@ persistent) + pre-copy / post-verify SP+break gprintf pair in
 `InstallPendingFst` (Gecko only — post-shutdown). Pure helper
 `RangesOverlap` in `RiivoFstInstall.hpp`, host-tested
 (`test_fstinstall` §8, 11 cases). `.github` change in the same diff:
-`boot.map` joins `boot.elf` in the debug artifact (both workflows) and
+`boot.elf.map` joins `boot.elf` in the debug artifact (both workflows) and
 in release assets.
 
 Corrections applied after review, all in code+comments, not just here:
@@ -147,13 +148,17 @@ validation: branch `diag/reloc-evidence` commit `16c02b34`, run
 34211117708 — `make release -j2` on `devkitppc:20250527` COMPLETED
 SUCCESS. Weak stack symbols + all APIs link under the exact toolchain.
 No tag, no release from this.
-Preservation gap: main.yml upload steps SKIPPED (`ALLOW_UPLOADS` not
-true for branch builds), so this run kept no DOL/ELF/map. The boot.map
-plumbing in the diff is workflow-valid (run parsed and executed) but
-unproven end-to-end until a build with uploads enabled. Exact rebuild
-stays available on demand: commit `16c02b34` + image
-`devkitpro/devkitppc:20250527`. Next tag build (release.yml, ungated)
-attaches DOL+ELF+MAP automatically.
+Preservation: run 34213381735 (commit `3d19e641`) COMPLETED SUCCESS with
+all diagnostic steps green — files present, both stack symbols present
+AND resolved in the ELF, manifest written, bundle uploaded as artifact
+`diag-bundle-3d19e641…` (17,849,856 bytes, not expired). Contents per
+the run: boot.dol + boot.elf + boot.elf.map + diag-MANIFEST.txt
+(commit + SHA-256) + diag-symbols.txt. Owner path: download the artifact
+from the run page, `sha256sum -c` against the manifest (skip its
+`commit` first line). Byte-level download verification is not possible
+from here (artifact downloads need an owner token); everything
+observable without one is verified. No tag, no release. This exact
+bundle is the cleared build for the next T0 hardware run.
 
 Stack bounds, validated against libogc v2.11.0 (May 25 2025 — the CI
 image `devkitppc:20250527` vintage): main-thread stack is
