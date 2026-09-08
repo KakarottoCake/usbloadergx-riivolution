@@ -959,9 +959,11 @@ int GameBooter::BootGame(struct discHdr *gameHdr, const s8 useOcarina)
 		//! or the table build. T7 on SB4E01 refused at this install with the
 		//! reason unrecorded; this is what that round was missing.
 		if (AppEntrypoint != 0)
-			Riivo::AppendLog(Riivo::StagedFstStillIntact()
-							 ? "Staged file table: checksum still matches at device shutdown.\n"
-							 : "Staged file table: CHECKSUM ALREADY BROKEN at device shutdown - corrupted before the jump window.\n");
+			Riivo::AppendLog(!Riivo::HaveStagedFst()
+							 ? "Staged file table: none staged for this boot.\n"
+							 : Riivo::StagedFstStillIntact()
+							   ? "Staged file table: checksum still matches at device shutdown.\n"
+							   : "Staged file table: CHECKSUM ALREADY BROKEN at device shutdown - corrupted before the jump window.\n");
 
 		// Reading of game is done we can close devices now
 		//! Last chance to get the queued log out: the socket dies with IOS.

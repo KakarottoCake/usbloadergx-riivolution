@@ -121,6 +121,11 @@ namespace Riivo
 	//! after the card went away, which is a different bug from one that was
 	//! already broken when the apploader finished. Returns false only when
 	//! there IS a staged table and it no longer matches.
+	//! Whether a rebuilt table is staged for this boot at all. A memory-only
+	//! or Disabled boot stages nothing, and the checkpoint below must say so
+	//! rather than report a checksum it never took.
+	bool HaveStagedFst();
+
 	bool StagedFstStillIntact();
 
 	bool InstallPendingFst();
