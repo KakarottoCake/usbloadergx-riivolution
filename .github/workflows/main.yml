@@ -38,10 +38,11 @@ jobs:
       - name: Compile USB Loader GX
         run: make release -j2
 
-      # Locate the real outputs once for every step below. The linker writes
-      # the map next to the objects (build/), not next to the ELF; probe
-      # both, fail on neither-found. Unscoped: a missing output fails any
-      # build loudly instead of an upload silently missing it.
+      # Locate the real outputs once for every step below. The map filename
+      # comes from LDFLAGS (-Map boot.elf.map); its directory depends on
+      # where the link runs, so probe the known spots and then search
+      # rather than assert one. Unscoped: a missing output fails any build
+      # loudly instead of an upload silently missing it.
       - name: Check diagnostic files present
         run: |
           set -e
@@ -52,7 +53,9 @@ jobs:
           elif test -f boot.elf.map; then
             echo "MAPFILE=boot.elf.map" >> "$GITHUB_ENV"
           else
-            echo "missing boot.elf.map (neither build/ nor root)"; exit 1
+            MAPFILE=$(find . -maxdepth 2 -name 'boot*.map' -print -quit)
+            test -n "$MAPFILE" || { echo "no map file anywhere"; exit 1; }
+            echo "MAPFILE=$MAPFILE" >> "$GITHUB_ENV"
           fi
 
       - name: Package

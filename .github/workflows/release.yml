@@ -35,7 +35,7 @@ jobs:
         run: make release -j$(nproc)
 
       # The linker writes the map next to the objects (build/), not next to
-      # the ELF. Probe both, fail on neither-found, pass the winner along.
+      # the ELF. Probe the known spots, then search; fail on nothing found.
       - name: Locate linker map
         run: |
           set -e
@@ -44,7 +44,9 @@ jobs:
           elif test -f boot.elf.map; then
             echo "MAPFILE=boot.elf.map" >> "$GITHUB_ENV"
           else
-            echo "missing boot.elf.map (neither build/ nor root)"; exit 1
+            MAPFILE=$(find . -maxdepth 2 -name 'boot*.map' -print -quit)
+            test -n "$MAPFILE" || { echo "no map file anywhere"; exit 1; }
+            echo "MAPFILE=$MAPFILE" >> "$GITHUB_ENV"
           fi
 
       # SD card layout: unzip at the root of the SD card and the app lands in
