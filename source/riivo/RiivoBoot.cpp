@@ -203,6 +203,44 @@ namespace Riivo
 	//! are relative to it, so the absolute disc offset is base + fileOff.
 	static u32 dolImageBase = 0;
 
+	//! One record per apploader yield: where the bytes went, how many, and
+	//! at which disc offset they were read from. RegisterDOL keeps only the
+	//! first two, which is enough to steer placement but leaves a range's
+	//! source untraceable - notably for chunks no DOL section describes
+	//! (scratch rereads). Last write wins: a repeated destination means the
+	//! earlier bytes are gone. Reset per boot in SetBootContext.
+	struct DolRangeNote
+	{
+		u32 dst;
+		u32 len;
+		u32 disc;
+	};
+	static DolRangeNote dolNotes[128];
+	static u32 dolNoteCount = 0, dolNotesDropped = 0;
+
+	//! Record side of the RiivoNoteDOLRange bridge (see RiivoLight.h).
+	//! Runs inside the apploader's read loop, beside RegisterDOL itself.
+	void NoteDOLRange(u32 dst, u32 len, u32 discOffset)
+	{
+		for (u32 i = 0; i < dolNoteCount; ++i)
+		{
+			if (dolNotes[i].dst == dst && dolNotes[i].len == len)
+			{
+				dolNotes[i].disc = discOffset;
+				return;
+			}
+		}
+		if (dolNoteCount < sizeof(dolNotes) / sizeof(dolNotes[0]))
+		{
+			dolNotes[dolNoteCount].dst = dst;
+			dolNotes[dolNoteCount].len = len;
+			dolNotes[dolNoteCount].disc = discOffset;
+			++dolNoteCount;
+		}
+		else
+			++dolNotesDropped;
+	}
+
 	//! Per-disc table-build failures from PrepareFileRedirects: the redirect
 	//! existed but the entry never made it into the rebuilt table (the table
 	//! refused it, or the external file failed to stat between phases).
@@ -417,6 +455,8 @@ namespace Riivo
 		dolSectionCount = 0;
 		dolBssAddr = dolBssSize = 0;
 		dolImageBase = 0;
+		dolNoteCount = 0;
+		dolNotesDropped = 0;
 		installFailCode = 0;
 		//! No loading bar, and no marker to turn one on. Two separate GUI
 		//! draws on this path were confirmed on hardware to stop the boot -
@@ -2891,10 +2931,28 @@ namespace Riivo
 				else
 					snprintf(src, sizeof(src), " (no section match)");
 			}
+			//! The yield that put these bytes here, when recorded: the only
+			//! source offset for chunks no DOL section describes. Last
+			//! write wins at record time, so a repeated destination names
+			//! its current bytes. Channel and alternate-DOL chunks never
+			//! report and read as not recorded.
+			char req[32];
+			bool reqKnown = false;
+			for (u32 n = 0; n < dolNoteCount; ++n)
+			{
+				if (dolNotes[n].dst == lo && dolNotes[n].len == (u32) l)
+				{
+					snprintf(req, sizeof(req), " req 0x%08x", dolNotes[n].disc);
+					reqKnown = true;
+					break;
+				}
+			}
+			if (!reqKnown)
+				snprintf(req, sizeof(req), " req ?");
 			if (dolLines < 40)
 			{
-				Addf(out, "    [%08x, %08x) %d bytes%s%s\n", lo, hi, l,
-					 hit ? "  <-- OVERLAPS planned destination" : "", src);
+				Addf(out, "    [%08x, %08x) %d bytes%s%s%s\n", lo, hi, l,
+					 hit ? "  <-- OVERLAPS planned destination" : "", src, req);
 				++dolLines;
 			}
 			if (dolValid == 0) { dolMin = lo; dolMax = hi; }
@@ -2919,6 +2977,8 @@ namespace Riivo
 				Addf(out, "    overall game image: [%08x, %08x)\n", dolMin, dolMax);
 			if (dolInvalid > 0)
 				Addf(out, "    %d chunk(s) failed validation (INVALID above)\n", dolInvalid);
+			if (dolNotesDropped > 0)
+				Addf(out, "    %u range note(s) dropped (cap)\n", dolNotesDropped);
 		}
 
 		out += "  overlap reading (at placement) :\n";
@@ -3278,4 +3338,11 @@ namespace Riivo
 extern "C" void RiivoPulseLight(void)
 {
 	Riivo::PulseLight();
+}
+
+//! C bridge for the per-yield disc offsets (see RiivoLight.h).
+extern "C" void RiivoNoteDOLRange(unsigned int dst, unsigned int len,
+								  unsigned int discOffset)
+{
+	Riivo::NoteDOLRange((u32) dst, (u32) len, (u32) discOffset);
 }
