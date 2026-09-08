@@ -25,13 +25,33 @@ Open, provisional: the tester reported two flashes then darkness on the
 `relocorig` run, possibly refusal code 2 (staged checksum mismatch at
 the late copy). Ordinary progress flicker looks similar, so the count
 alone confirms nothing — the pattern must be pause-then-two-slow-flashes
-(~350 ms on/off). If code 2 is confirmed, the staging buffer changed
-between the pre-shutdown checkpoint and the late copy, the destination
-copy never happened, and relocation is unimplicated. If ruled out,
-destination ownership and the installed pointer/size/arena values stay
-open. A post-shutdown refusal returning visibly is itself unproven: the
-return runs after device teardown and may die silently, which would also
-present as black screen.
+(~350 ms on/off). Established: the console stayed black (no HBC/menu),
+so re-asking black-versus-returned settles nothing further.
+If code 2 is confirmed, only this is established: the pre-copy checksum
+comparison failed and `InstallFst` was not reached. It would NOT establish
+MEM2 lifetime as the cause — buffer contents, expected CRC, pointer, or
+size could each be wrong, unranked until evidence distinguishes them.
+Ruling out intended frees and writers eliminates those ordinary paths,
+not corruption. If code 2 is ruled out, destination ownership and the
+installed pointer/size/arena values stay open. A post-shutdown refusal
+returning visibly is itself unproven: the return runs after device
+teardown and may die silently, which would also present as black screen.
+
+Design constraints for any staged-header diagnostic (not a boot fix):
+it still depends on a trustworthy pointer and bounded size; preserve the
+original checksum independently and never recompute-and-accept a new
+baseline; validate bounds before reading header or payload. Next work
+distinguishes changed payload versus changed staging metadata first,
+then identifies the first intervening operation responsible.
+
+Next run, one only: v3.33 T0 with `nofstinstall.txt`. The no-install
+result on record is from v3.32; this completes the same-build comparison
+(no-install boots / install black-screens twice). Its purpose is solely
+to confirm the split still holds on the build carrying the framebuffer
+removal — nothing else. Do not restart the other four; no missing result
+there would resolve anything new. Record the light throughout regardless
+of outcome, and capture video of the final flashes plus the ensuing
+screen.
 
 ## The one thing that blocks everything
 
@@ -130,12 +150,15 @@ screen never appeared, and it was the only reason the boot survived. v3.23's
   follows the same dark light.
 - **Light on and static** = hung before the jump.
 - **Slow deliberate blinks** = a refusal code. `RiivoBlinkCode`: 700 ms pause, then
-  *n* blinks at 350 ms on / 350 ms off, n ∈ 1..7. Countable by design. "Too fast to
-  count" is never a refusal code.
+  *n* blinks at 350 ms on / 350 ms off, n ∈ 1..7. Countable by design.
   - 1 nothing staged · 2 staged checksum · 3 install bounds · 4 installed bytes ·
     5 low-memory pointers · 6 BootPartition returned a null entry point ·
     7 code-handler collision (Hooktype nonzero AND a protected mod range overlapping
     0x80001000..0x80003000; the unguarded skip-flag query blinks nothing)
+- **Record the light on every run, whatever the screen does.** A refusal can
+  flash its code and then hang inside the return attempt, so blinks followed
+  by a black screen do not rule a refusal out. Ask for a short video covering
+  the final flashes and the ensuing black screen, not just a count.
 - **Back at the loader with no blinks** = `SetupDisc()` returned < 0
   (`GameBooter.cpp:823`). No blink, no log line. `get_frag_list` failing lands here.
 
