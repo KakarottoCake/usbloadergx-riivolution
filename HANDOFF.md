@@ -1,4 +1,4 @@
-# Handoff — 2026-09-08 (updated: v3.35 pre-release published, T0 run ordered)
+# Handoff — 2026-09-08 (updated: round-2 corrections + CI bundle green, T0 cleared)
 
 State of the SB4E01 (Super Mario Galaxy 2) debugging effort. Read the
 "Latest evidence" section first — it supersedes the drive-blocker framing
@@ -35,6 +35,88 @@ not break the boot. Relocation stands convicted by the relocorig run
 (a rebuilt serializer table boots when it stays put). What T1 does NOT
 prove: that the game consumed our bytes — the copy is identical, so a
 boot that ignored the redirect looks the same. That is T2's job.
+
+## Planned overwrite found in the v3.35 T0 log (branch, unpublished fix)
+
+The evidence block names an apploader-loaded block
+`[0x817d8740, 0x817da740)` — 8 KB ending exactly where the FST begins.
+T0's destination `0x817da6a0` overwrites its final 160 bytes. The
+"free space below the FST" assumption is invalid for this game: that
+space is game image. This establishes a PLANNED overwrite, not proof
+the late copy completed — the install verification still only reaches
+Gecko. No blink/checksum speculation follows from it; it is a concrete
+placement defect, now fixed:
+
+- `PlaceFst` takes the loaded ranges as obstacles and cascades a grown
+  table below every one it would overwrite (T0 now plans
+  `0x817b2de0`, heap cost 162,912 bytes). Ranges inside the stale-table
+  reservation are the expected overlap and are skipped + counted
+  (`ignoredRanges`); straddlers and malformed entries are obstacles and
+  skips respectively, never silent. No room anywhere → refused.
+- Tracing: the DOL section table + BSS come off the disc in the same
+  window as the FST, and each logged chunk now names its section and
+  disc offset (or BSS / no match). Purpose of the 8 KB block resolves
+  from the next log: BSS verdict vs section index, plus the dirt-scan
+  bytes already logged. Offline cross-check for the backup holder: DOL
+  header is 18 `(fileOffset, memAddr, size)` triples (7 text + 11 data),
+  big-endian; find the section containing the chunk's disc offset.
+- Regression `test_fstinstall` §9 pins the exact T0 addresses
+  (defective `0x817da6a0`, fixed `0x817b2de0`, reservation/straddle/
+  abut/multi/no-room/in-place/malformed cases). Full host suite green
+  (77 checks in fstinstall, 0 failures everywhere); edited TU
+  syntax-checked under the Makefile's PPC flags.
+- Next hardware run: T0 with a build of this branch. T2 stays separate.
+
+## Reference review: Project+ FilePatchCode.asm (analysis only, NO code taken)
+
+Source: `SDCard/Project+/Source/Project+/FilePatchCode.asm` (REDUX v0.95,
+Brawl RSBE v1.31). Read as a semantics reference for runtime replacement;
+nothing in it transfers to GX — every address, struct layout and helper
+below is Brawl-specific. It explains, however, why Brawl can serve SD mod
+files from a USB backup with no FST relocation, and why GX cannot do the
+same.
+
+How it works, per mechanism:
+- Lookup is per-request at the GAME's file API (HOOK @ $8001BF38, only
+  when request type is DVD): strip `dvd:`, build `<mod>/pf/<path>`, probe
+  existence with the game's own checkSD. Found → rewrite request path +
+  type 3 (SD). Not found → request untouched (DVD proceeds). No tables,
+  no sizes, no FST involvement. Fallback is automatic and total.
+- Sizes live at the size query (HOOK @ $8001FFF8): FAFStat on the SD
+  path wins (rounded to 0x20), zero falls back to the original size.
+  Bigger files get real buffers via the allocation fix ($8001CD0C:
+  heap from the request, else target address).
+- Partial reads are first-class request attributes (Length Fix
+  $8001CCB8: request length or full file; SDStreamRead takes explicit
+  offset+length; custom SDLoad builds {offset, length, loadAddress,
+  heap} requests). Streaming audio/video (BRSTM/THP) get their own
+  wrappers, each trying SD first and calling the DVD original on
+  failure — different game subsystems need different hooks.
+- Environmental prerequisite: "Never unmount SD" (`blr @ $8001eb94`
+  neuters the game's SD unmount). Brawl keeps SD mounted for the whole
+  session, so game code can read SD at any time.
+
+What this means for GX (review, not changes):
+- Opposite environments force opposite layers. Brawl runs WITH SD
+  mounted (game-managed); GX shuts everything down before the jump, so
+  SD is unusable and the mod must ride the same USB drive through the
+  cIOS. Path substitution at a game API is therefore not available to a
+  generic loader: no per-game hooks, no per-game request layouts, no
+  mounted filesystem at read time.
+- Given those constraints the current architecture is the right layer:
+  FST rebuild (lookup) + cIOS fragments (transport). Its necessary
+  consequence is that size changes MUST be written into the table —
+  hence relocation when growing, hence the placement fix above. FPC
+  bypasses the FST for SD files, so it never relocates anything.
+- Parallels already present: our unmapped-reads-hit-original-bytes is
+  the disc-layer version of FPC's untouched-request fallback; our table
+  lengths + padded reads are the size handling; sector packing +
+  boundary sampling is the partial-read story.
+- Labeled future-design question, NO action: FPC falls back PER FILE
+  (missing → DVD, rest redirect); GX currently withholds the whole
+  table on any failure. Per-file fallback (failed entries point back at
+  original offsets) would mirror FPC more closely but needs planner
+  support. Parked until relocation boots.
 
 Dropped as leading assumption: refusal code 2. The same two-flash
 signature appears on runs that then enter the game successfully, so the
@@ -169,6 +251,30 @@ with the map). Next hardware run: T0 with v3.35, send the log — the
 Relocation evidence section is the deliverable. Multi-path artifacts
 keep directory structure (`build/boot.elf.map` nested, not flat) —
 accounted for in both workflows.
+
+Round-2 corrections (branch `diag/reloc-evidence`, commit `1207ce91`,
+CI run 34218344255 ALL GREEN including files/symbols/manifest/upload):
+- No silent discards: obstacle list is exact-size (no cap), every
+  dolList entry handed over raw; malformed entries refuse GROWN
+  placement (`malformedRanges`, existing WITHHELD path) while in-place
+  ignores the list. Regression: refusal, in-place+malformed ok,
+  151-entry capacity, all exact-address.
+- Section tracing fixed: disc offsets are absolute (partition base +
+  fileOff + displacement, `%010llx`); slots keep DOL section numbers
+  (empty kept, `index` field) so text/data numbering can't compact.
+- BSS is a placement obstacle when the header names a valid one
+  (invalid non-empty BSS counts malformed and refuses grown); status
+  printed in the evidence block.
+- Map saga, honestly: `boot.elf.map` passed the probe on one run and
+  failed it on the next with identical paths — directory not stable
+  across runs (or transient). Pipeline now searches (`find`, maxdepth 2)
+  and the manifest records whichever path was hashed. Do not re-assert
+  a fixed directory without new evidence.
+- Preserved: artifact `diag-bundle-1207ce91…` (17,849,856 bytes, fresh):
+  boot.dol + boot.elf + map + diag-MANIFEST.txt + diag-symbols.txt.
+  That exact boot.dol is CLEARED for the next T0 run (verify against
+  the in-artifact manifest after download; byte-level check from here
+  still needs an owner token). No tag, no release from this branch.
 
 Stack bounds, validated against libogc v2.11.0 (May 25 2025 — the CI
 image `devkitppc:20250527` vintage): main-thread stack is
