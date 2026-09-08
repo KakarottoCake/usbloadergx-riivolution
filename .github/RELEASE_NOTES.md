@@ -37,6 +37,10 @@ on. Without that file nothing changes and the build behaves exactly like v3.10.
 It has never run on a console. Expect it to fail; the log and a USB Gecko trace are the
 point of it. Leave the file off for normal use.
 
+## Changed in v3.29
+
+- The loading bar is off again by default, and no longer forced to draw immediately. Turn it on with `riivolution/loadingbar.txt` (it replaces `noloadingbar.txt`).
+
 ## Changed in v3.28
 
 - The staged-table checkpoint now says when no table was staged instead of reporting a checksum it never took.
@@ -60,12 +64,12 @@ point of it. Leave the file off for normal use.
 
 ## Changed in v3.23
 
-- The loading screen no longer waits half a second before appearing, so short phases actually show it.
+- The loading screen no longer waits half a second before appearing, so short phases actually show it. *(Reverted in v3.29 - the wait was what kept it from drawing, and drawing stopped boots.)*
 
 ## Changed in v3.22
 
 - The disc light pulses while the mod is being prepared and goes out when the game takes over. If it is dark and the screen is still black after 20 seconds, it is stuck.
-- The loading bar is now on by default (`riivolution/noloadingbar.txt` turns it off).
+- The loading bar is now on by default (`riivolution/noloadingbar.txt` turns it off). *(Reverted in v3.29 - drawing it stopped boots.)*
 - The disc light now works for warnings and blink codes even if you have the disc light turned off in settings.
 
 ## Changed in v3.21
