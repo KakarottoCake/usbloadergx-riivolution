@@ -251,6 +251,18 @@ namespace Riivo
 
 	static bool skipFstInstall = false;
 
+	//! Diagnostic split (riivolution/relocorig.txt): relocate the VERBATIM
+	//! original table instead of the rebuilt one. Same placement, same
+	//! install, same hook and fragments - the only difference from a normal
+	//! boot is the installed bytes. If this boots and the created-file
+	//! table does not, the fault is the new table content; if this dies
+	//! the same way, it is the relocation itself. Raw bytes are retained
+	//! at FST parse time (below); the builder path re-serializes and would
+	//! hide exactly the difference under test.
+	//! Do not combine with nofstinstall.txt (which wins: nothing installs).
+	static bool relocOrig = false;
+	static std::vector<u8> relocOrigRaw;
+
 	//! The game's id, needed to ask which partition it lives on.
 	static u8 bootGameId[8] = { 0 };
 
@@ -427,6 +439,16 @@ namespace Riivo
 			{
 				skipFstInstall = true;
 				fclose(n);
+			}
+		}
+		relocOrig = false;
+		if (!device.empty())
+		{
+			FILE *r = fopen((device + "/riivolution/relocorig.txt").c_str(), "rb");
+			if (r)
+			{
+				relocOrig = true;
+				fclose(r);
 			}
 		}
 		//! Optional: "addr:port" of a listener on the LAN. Absent for
@@ -1195,7 +1217,20 @@ namespace Riivo
 		//! Last: hold on to the rebuilt table. Installing it is what actually
 		//! points the game at the mod, and it can only happen once the apploader
 		//! has run and said where the table lives.
-		pendingFst = (u8 *) MEM2_alloc(newFst.size());
+		//! DIAGNOSTIC (riivolution/relocorig.txt): stage the verbatim
+		//! original table plus zero padding instead of the rebuilt one.
+		//! Same placement, same install, same hook and fragments - the only
+		//! difference from a normal boot is the installed bytes. If this
+		//! boots and the created-file table does not, the fault is the new
+		//! table content; if this dies the same way, it is the relocation
+		//! itself. The pad mirrors T0's measured relocation (153934-153792
+		//! = 142, 160 with 32-alignment) so the geometry matches exactly.
+		static const u32 RELOC_ORIG_PAD = 160;
+		const bool stageRelocOrig = (relocOrig && !relocOrigRaw.empty());
+		const u8 *stageSrc = stageRelocOrig ? &relocOrigRaw[0] : &newFst[0];
+		const u32 stageSize = stageRelocOrig ? (u32) relocOrigRaw.size() + RELOC_ORIG_PAD
+											 : (u32) newFst.size();
+		pendingFst = (u8 *) MEM2_alloc(stageSize);
 		if (!pendingFst)
 		{
 			out += "  Out of memory for the rebuilt table, so it will not be\n"
@@ -1203,8 +1238,14 @@ namespace Riivo
 			withholdStage = "NO_MEMORY";
 			return;
 		}
-		memcpy(pendingFst, &newFst[0], newFst.size());
-		pendingFstSize = (u32) newFst.size();
+		if (stageRelocOrig)
+		{
+			memcpy(pendingFst, stageSrc, relocOrigRaw.size());
+			memset(pendingFst + relocOrigRaw.size(), 0, RELOC_ORIG_PAD);
+		}
+		else
+			memcpy(pendingFst, stageSrc, stageSize);
+		pendingFstSize = stageSize;
 		//! Captured now, from the bytes just staged - the install step
 		//! compares the installed region against this, so a staging buffer
 		//! that rotted in MEM2 in between still fails instead of blessing
@@ -1213,6 +1254,17 @@ namespace Riivo
 
 		Addf(out, "  rebuilt table        : %u bytes held, ready to install\n",
 			 pendingFstSize);
+		if (stageRelocOrig)
+			out += "\n  DIAGNOSTIC: riivolution/relocorig.txt is present: staged\n"
+				   "  the VERBATIM original table plus 160 zero bytes, NOT the\n"
+				   "  rebuilt one. Placement, install, hook and fragments are\n"
+				   "  exactly as usual. A normal boot from here means the fault\n"
+				   "  is the new table content; the same failure means it is\n"
+				   "  the relocation itself.\n";
+		else if (relocOrig)
+			out += "\n  DIAGNOSTIC: riivolution/relocorig.txt is present but no\n"
+				   "  original bytes were retained; the normal rebuilt table\n"
+				   "  was staged instead. This run does not test relocation.\n";
 		if (skipFstInstall)
 			out += "\n  DIAGNOSTIC: riivolution/nofstinstall.txt is present, so the\n"
 				   "  rebuilt table will NOT be installed. The hook and the mod's\n"
@@ -1252,6 +1304,7 @@ namespace Riivo
 		fileWorkWanted = true;
 		modAddFails.clear();
 		modSkips.clear();
+		relocOrigRaw.clear();
 		withholdStage = "FST_WITHHELD";
 
 		std::string out;
@@ -1398,6 +1451,13 @@ namespace Riivo
 			free(fstData);
 			AppendLog(out);
 			return;
+		}
+		if (relocOrig && fstSize > 0)
+		{
+			//! Retain the verbatim disc bytes for the relocorig diagnostic:
+			//! the builder below re-serializes and would hide exactly the
+			//! content difference under test. Kept until Activate stages.
+			relocOrigRaw.assign(fstData, fstData + fstSize);
 		}
 		free(fstData);
 		fstData = 0;
@@ -1821,6 +1881,11 @@ namespace Riivo
 			LogStep("checking the mod's files through the hook");
 			Activate(out, plan, placed, newFst);
 			LogStep("file work finished");
+			//! The staged copy (or the relocorig original) already lives in
+			//! its own MEM2 buffer; holding the disc bytes too would just
+			//! sit on 150 KB for the rest of the boot.
+			relocOrigRaw.clear();
+			relocOrigRaw.shrink_to_fit();
 		}
 
 		out += "\nHow this works\n";
@@ -2511,6 +2576,17 @@ namespace Riivo
 				Addf(out, "  blind-drop cap used        : %u of %u KB\n",
 					 place.reserved / 1024, MAX_BLIND_DROP / 1024);
 			}
+		}
+		if (relocOrig)
+		{
+			//! Self-check for the diagnostic: without a real relocation this
+			//! run tests nothing. An in-place original is exactly a vanilla
+			//! boot, still worth running, but say so plainly.
+			out += place.inPlace ?
+				   "\n  relocorig.txt active but the table fit in place: relocation\n"
+				   "  NOT exercised, this run is a vanilla boot, not a test.\n" :
+				   "\n  relocorig.txt active: verbatim original staged for a real\n"
+				   "  relocation. Compare against the created-file run.\n";
 		}
 
 		//! This is the step that actually points the game at the mod. It only
