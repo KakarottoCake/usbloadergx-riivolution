@@ -37,6 +37,13 @@ on. Without that file nothing changes and the build behaves exactly like v3.10.
 It has never run on a console. Expect it to fail; the log and a USB Gecko trace are the
 point of it. Leave the file off for normal use.
 
+## Changed in v3.38
+
+- Unambiguous handover signals. A refused boot now blinks its code THREE times with a pause between (meanings 1-7 unchanged - count one group, check the others match; irregular flicker is just progress). A verified install is followed by one solid second ON, then dark, then the jump. Groups without solid = refused; solid without groups = the game has it.
+- New log section: every file-mod boot scans all loaded ranges for words already equal to the table addresses (FST address, sizes, arena values), to tell whether anything references the original table.
+- If you are on the SB4E01 round: run T0 with THIS build and the v7 pack, and report the light pattern (repeating groups or solid second), the screen, and the log.
+- 146,897 automated checks, all passing.
+
 ## Changed in v3.37
 
 - CORRECTION: v3.36's notes below describe this fix, but its binary was built from a tree that predates the code - T0 on v3.36 repeats the old black screen. This build carries the fix; the `build :` line in any log names its exact commit, and the release's boot.dol was string-checked for the new code before publishing.
@@ -80,9 +87,5 @@ point of it. Leave the file off for normal use.
 ## Changed in v3.30
 
 - New diagnostic: `riivolution/nofstinstall.txt` stages the mod as usual but does not install the rebuilt file table, to separate a table fault from a hook or fragment fault.
-
-## Changed in v3.29
-
-- The loading bar is off again by default, and no longer forced to draw immediately. Turn it on with `riivolution/loadingbar.txt` (it replaces `noloadingbar.txt`).
 
 Older versions: [CHANGELOG.md](CHANGELOG.md)
