@@ -146,7 +146,18 @@ log (not yet in hand here):
 Built in response (branch, below): per-yield disc offsets, so the next
 log shows every chunk's source — the reread claim becomes directly
 checkable, including for `0x81201b80`. Still needed from the tester:
-the full T0 log (chunk lines, struct block, OUTCOME, light report). And
+the full T0 log (chunk lines, struct block, OUTCOME, light report).
+
+Struct block v2 (same branch): the chunk's OWN source is now primary
+(latest yield covering the struct; aligned-covering disc re-read;
+per-word RAM-vs-source with +0x10 separated), image compare demoted to
+context (a later read supersedes the image as the explanation).
+Coincidence language downgraded everywhere: equality nominates,
+nothing more. Heap line kept as possibility-only.
+Batching: this rides the next combined build with whatever
+network-logging work is in flight - one tester round, not one per
+addition. Open question back: what/where is that network-logging work
+(no implementation of it is visible from here)? And
 those signals are themselves still unobserved: no run yet has reported
 an unambiguous refusal or handover, so late-install completion stays
 unresolved regardless of this reference work.
