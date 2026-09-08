@@ -964,19 +964,22 @@ namespace Riivo
 	//! Apploader-retained words around 0x81201b80, where the reference scan
 	//! found the original FST address at +0x10. 0x81200000 is where this
 	//! loader puts the apploader image (apploader.c). Writers to that
-	//! window: the image load itself, the apploader while running, and -
-	//! if the heap ever reaches that high - our own loader heap over it
-	//! (see the break line below). Our tree reads nothing back from it.
-	//! Comparing RAM word-by-word against the same bytes fresh off the
-	//! disc separates "changed after loading" from "as shipped", per word:
-	//! the +0x10 verdict stands on its own, independent of the neighbors.
-	//! A difference proves post-load change, not a live reference; an
-	//! unchanged word may still be read by live code. Either way this
-	//! function only reads: whether relocation must also update +0x10
-	//! depends on a consumer no static audit can name (the apploader
-	//! itself is dead post-run; game startup is unobservable from here),
-	//! so that decision waits on this log - not on a global word replace,
-	//! which is explicitly not done.
+	//! window: the image load itself, the apploader while running, a later
+	//! disc read landing on the same destination (every yield is recorded,
+	//! so this is checkable, not assumed), and - if the heap ever reaches
+	//! that high - our own loader heap over it (see the break line below).
+	//! Our tree reads nothing back from it. Two compares, in priority
+	//! order: first the chunk's OWN recorded source (a later read to this
+	//! address supersedes the image bytes as the explanation), then the
+	//! image bytes as context. Per word in both: the +0x10 verdict stands
+	//! on its own, independent of the neighbors. A difference from either
+	//! source proves post-source change, not a live reference; an unchanged
+	//! word may still be read by live code. Either way this function only
+	//! reads: whether relocation must also update +0x10 depends on a
+	//! consumer no static audit can name (the apploader itself is dead
+	//! post-run; game startup is unobservable from here), so that decision
+	//! waits on this log - not on a global word replace, which is
+	//! explicitly not done.
 	static void AppendApploaderStructEvidence(std::string &out)
 	{
 		//! Measured offsets, not protocol: the struct address comes from
@@ -1031,13 +1034,82 @@ namespace Riivo
 		if (!discOk)
 			out += "  disc verdict: unavailable\n";
 		else if (ndiff == 0)
-			out += "  disc verdict: all 8 identical - as shipped (still readable by live code)\n";
+			out += "  image verdict: all 8 identical to image bytes (consistent with an untouched image region)\n";
 		else
 		{
-			Addf(out, "  disc verdict: %u of 8 differ - written after loading (change, not proof of use)\n",
+			Addf(out, "  image verdict: %u of 8 differ from image bytes (see source verdict below: a later read supersedes the image as the explanation)\n",
 				 ndiff);
-			out += w10diff ? "  +0x10 itself differs: the FST-address word was stored post-load\n"
-						   : "  +0x10 unchanged; change is in neighbors only\n";
+			out += w10diff ? "  +0x10 itself differs from the image\n"
+						   : "  +0x10 matches the image; change is in neighbors only\n";
+		}
+
+		//! Primary verdict: the chunk's own recorded source. Latest yield
+		//! covering the struct wins - an earlier read's bytes are gone where
+		//! a later one landed. Comparing those source bytes against the
+		//! final RAM contents is what distinguishes bytes the read supplied
+		//! from later changes. Neither outcome names a store or a consumer.
+		u32 srcDst = 0, srcLen = 0, srcOff = 0;
+		for (u32 n = dolNoteCount; n > 0; --n)
+		{
+			const DolRangeNote &r = dolNotes[n - 1];
+			if (r.len == 0 || r.len > 0x01000000 || r.dst < MEM1_BASE
+				|| r.dst + r.len <= r.dst || r.dst > 0x81201b80
+				|| r.dst + r.len <= 0x81201b80
+				|| r.disc + 0x20 < r.disc)
+				continue;
+			srcDst = r.dst;
+			srcLen = r.len;
+			srcOff = r.disc;
+			break;
+		}
+		if (srcLen == 0)
+			out += "  source verdict: no recorded yield covers 0x81201b80\n";
+		else
+		{
+			u32 lo = srcDst < 0x81201b80 ? 0x81201b80 : srcDst;
+			u32 hi = srcDst + srcLen > 0x81201ba0 ? 0x81201ba0 : srcDst + srcLen;
+			Addf(out, "  source: latest yield [%08x, %08x) from disc 0x%08x covers struct [%08x, %08x)\n",
+				 srcDst, srcDst + srcLen, srcOff, lo, hi);
+			static u8 src[0x40] ATTRIBUTE_ALIGN(32);
+			const u32 s0 = srcOff + (lo - 0x81201b80);
+			const u32 rBase = s0 & ~31u;
+			const u32 rEnd = (s0 + (hi - lo) + 31) & ~31u;
+			if (rEnd - rBase > sizeof(src))
+				out += "  source bytes unreadable (window error)\n";
+			else if (WDVD_Read(src, rEnd - rBase, rBase) < 0)
+				out += "  source bytes unreadable (disc read failed)\n";
+			else
+			{
+				u32 sdiff = 0;
+				bool s10diff = false, s10covered = false;
+				for (u32 a = lo; a + 4 <= hi; a += 4)
+				{
+					u32 ram = 0;
+					memcpy(&ram, (const void *) (uintptr_t) a, 4);
+					const u32 img = be32(src + (a - rBase));
+					if (ram != img)
+					{
+						++sdiff;
+						Addf(out, "  struct +0x%02x: RAM %08x != source %08x\n",
+							 a - 0x81201b80, ram, img);
+						if (a == 0x81201b90)
+							s10diff = true;
+					}
+					if (a == 0x81201b90)
+						s10covered = true;
+				}
+				if (sdiff == 0)
+					out += "  source verdict: covered bytes match the read\n";
+				else
+					Addf(out, "  source verdict: %u covered word(s) differ - changed after the read\n",
+						 sdiff);
+				if (s10covered)
+					Addf(out, "  +0x10 vs source: %s\n",
+						 s10diff ? "DIFFERS (stored after the read)"
+						 : "matches (as read)");
+				else
+					out += "  +0x10 vs source: uncovered by the recorded yield\n";
+			}
 		}
 
 		//! Third writer candidate: if the newlib break has passed the
