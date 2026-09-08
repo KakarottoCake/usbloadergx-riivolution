@@ -60,32 +60,53 @@ disc-static constant of the apploader image or a global the apploader
 wrote while running; coincidence is excluded by exact equality, and our
 loader is excluded as a writer (its only store there is the image load).
 
-Producer: {disc-static, apploader-runtime} — nothing else is possible.
-Consumers: none in our tree (no `0x81201b` reads anywhere); the
-apploader itself is dead post-run; game startup is unobservable from
-here, which is exactly why the equality alone proves nothing.
-Relocation updating it is UNDECIDED: necessary iff a live consumer
-reads it (most plausibly game startup following a stale pointer, which
-fits in-place-booting vs relocation-dying without any overwrite).
-Explicitly refused: global word replacement. The field's meaning comes
-first; a single-word update is the targeted fix IF the meaning lands.
+Producer: {disc-static, apploader-runtime} as the leading pair, plus
+loader-heap overlay while the break is unreached (our only deliberate
+store there is the image load, but sbrk heap past `0x81201b80` would
+hand that address out - the struct block now logs the break against it
+per boot). Equality makes the field a candidate, nothing more:
+structured coincidence (same-neighborhood constants, code words) is not
+excluded by it. Consumers: none in our tree (no `0x81201b` reads
+anywhere); the apploader itself is dead post-run; game startup is
+unobservable from here, which is exactly why the equality alone proves
+nothing. Relocation updating it is UNDECIDED: necessary iff a live
+consumer reads it (most plausibly game startup following a stale
+pointer, which fits in-place-booting vs relocation-dying without any
+overwrite). Explicitly refused: global word replacement. The field's
+meaning comes first; a single-word update would remain a controlled
+experiment, never an established fix, even if the dump favors it.
 
 Live on branch (commit `071bc291`, CI green, bundle
 `diag-bundle-071bc291…`): the placement report now dumps the 8 words at
 `0x81201b80` (neighbors name the shape: boot words beside +0x10 read as
 the apploader's working copy; code bytes read as embedded constant),
 re-checks +0x10 against low memory live (no T0 hardcode), and compares
-the bytes against the same apploader bytes fresh off disc
-(`0x2460+0x1b40`, 256 B window). Read-only: no pointer updated, no
-placement changed. Decision tree for the next log:
-- Dump IDENTICAL to disc → static constant. Updating it patches dead
-  apploader rodata — pointless unless the game reads it (consumer test
-  = single-word update run, only if pursued).
-- Dump DIFFERENT → apploader global retaining the FST address. The
-  single-word update alongside `0x80000038` becomes the motivated
-  targeted fix; necessity still needs the boot test.
+each word separately against the same apploader bytes fresh off disc
+(`0x2440` header + `0x20` + file offset `0x1b80`, length re-read from the
+header and checked to cover the struct). Verdicts kept apart: +0x10
+vs neighbors; changed-after-load vs live-reference (a difference proves
+the former only); heap overlay per the break. Read-only: no pointer
+updated, no placement changed. Decision tree for the next log:
+- Dump IDENTICAL to disc → static image bytes. Still readable by live
+  code, so not exonerated - but updating it patches dead bytes unless
+  the game reads them (consumer test = single-word update run, only if
+  pursued, and still an experiment).
+- Dump DIFFERENT → written after loading (apploader global or heap
+  overlay, per the break line). Still not a live reference, still not
+  justification to update.
+Disassembly brief (owner-side, needs the backup, not the console): the
+apploader image starts at disc `0x2460`, the field is at file offset
+`0x1b90`. In that binary look for stores to its RAM address
+(`stw` with the address materialized nearby - producer proof) and loads
+from it (consumer proof, noting whether the load sits on the
+pre-jump path or only reachable post-jump i.e. game code). A `lis/ori`
+pair building `0x817da740` nearby is address materialization, not a
+stored word - do not count it as the field.
 Kept separate, as ordered: none of this proves late installation or
-game entry — that is what the 3×/solid-second signals are for.
+game entry — that is what the 3×/solid-second signals are for. And
+those signals are themselves still unobserved: no run yet has reported
+an unambiguous refusal or handover, so late-install completion stays
+unresolved regardless of this reference work.
 
 The evidence block names an apploader-loaded block
 `[0x817d8740, 0x817da740)` — 8 KB ending exactly where the FST begins.
