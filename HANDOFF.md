@@ -61,10 +61,10 @@ wrote while running; coincidence is excluded by exact equality, and our
 loader is excluded as a writer (its only store there is the image load).
 
 Producer: {disc-static, apploader-runtime} as the leading pair, plus
-loader-heap overlay while the break is unreached (our only deliberate
-store there is the image load, but sbrk heap past `0x81201b80` would
-hand that address out - the struct block now logs the break against it
-per boot). Equality makes the field a candidate, nothing more:
+loader-heap overlap while the break is unreached (our only deliberate
+store there is the image load; a break past the struct puts the address
+inside the managed heap range - handed to a live object or free space,
+unknown which; possible, not established). Equality makes the field a candidate, nothing more:
 structured coincidence (same-neighborhood constants, code words) is not
 excluded by it. Consumers: none in our tree (no `0x81201b` reads
 anywhere); the apploader itself is dead post-run; game startup is
@@ -76,8 +76,23 @@ overwrite). Explicitly refused: global word replacement. The field's
 meaning comes first; a single-word update would remain a controlled
 experiment, never an established fix, even if the dump favors it.
 
-Live on branch (commit `071bc291`, CI green, bundle
-`diag-bundle-071bc291…`): the placement report now dumps the 8 words at
+Indexing verified line-by-line against the code (RiivoBoot.cpp ~947-979):
+read window RAM `[0x81201b40, +0x100)` vs disc `[image+0x1b40, +0x100)`;
+struct word `i` at RAM `ramBase+0x40+4i` vs disc `+0x40+4i`; target +0x10
+is `i=4`, disc offset `+0x50`, RAM `0x81201b90` - exactly as required.
+Max accessed offset `0x60` stays inside the `0x100` buffer. (A matching
+source-comment softening, "heap over it" → "may overlap it", is deferred
+to the next code change: comment-only, and any commit now would orphan
+the cleared bundle.)
+
+Ordered run (awaits tester): ONE T0 with artifact bundle `a733ec0d`
+(`diag-bundle-a733ec0d…`, run 34273600459) - install `boot.dol` from it
+(verify digest against the in-artifact manifest first; back up the SD's
+current dol), DELETE `nofstinstall.txt` and `relocorig.txt` if present
+(normal full install at the new placement), v7 pack, watch and ideally
+VIDEO the final light sequence (groups? solid second?), send the log.
+No pointer patch on changed-bytes alone, whatever the dump says.
+Live on branch: the placement report now dumps the 8 words at
 `0x81201b80` (neighbors name the shape: boot words beside +0x10 read as
 the apploader's working copy; code bytes read as embedded constant),
 re-checks +0x10 against low memory live (no T0 hardcode), and compares
