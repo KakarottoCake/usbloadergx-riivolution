@@ -37,9 +37,13 @@ on. Without that file nothing changes and the build behaves exactly like v3.10.
 It has never run on a console. Expect it to fail; the log and a USB Gecko trace are the
 point of it. Leave the file off for normal use.
 
+## Changed in v3.28
+
+- The staged-table checkpoint now says when no table was staged instead of reporting a checksum it never took.
+
 ## Changed in v3.27
 
-- The pre-jump result screen is now off unless `riivolution/showlog.txt` exists. It was the only thing this loader did after releasing the drives, and a boot with no patches at all still black-screened with it on.
+- The pre-jump result screen is now off unless `riivolution/showlog.txt` exists. Drawing it after the drives were released stopped games booting - confirmed on hardware: a boot with no patches at all black-screened with it on and starts with it off.
 
 ## Changed in v3.26
 
