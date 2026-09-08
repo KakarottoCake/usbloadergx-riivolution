@@ -124,7 +124,29 @@ pre-jump path or only reachable post-jump i.e. game code). A `lis/ori`
 pair building `0x817da740` nearby is address materialization, not a
 stored word - do not count it as the field.
 Kept separate, as ordered: none of this proves late installation or
-game entry — that is what the 3×/solid-second signals are for. And
+game entry — that is what the 3×/solid-second signals are for.
+
+## Forwarded hypothesis: a reread landed at 0x81201b80 (tests pending)
+
+A forwarded reading of the T0 log notes `0x81201b80` is itself a
+recorded apploader yield destination (`WDVD_Read(dst…)` before
+`RegisterDOL`), so "different from the image" may be a subsequent disc
+read, not a runtime store. Fair as logic; premises to check against the
+log (not yet in hand here):
+- The yield list must actually contain a chunk at/over `0x81201b80`.
+  If none does, the hypothesis has no object.
+- Boot-parameter shape of the words, read here, not there: +0x00..+0x0c
+  are `{doloff>>2, fstoff>>2, fstsize>>2, fstmaxsize>>2}` — exactly the
+  boot.bin `0x420`-block layout our own `ReadDiscFst` parses. That is an
+  apploader-parsed boot-parameter block with the computed address
+  appended, OR a boot.bin-tail reread plus a separate store. A reread
+  explains words 0-3 only with source ≈ disc `0x420` landing exactly
+  there; it cannot explain +0x10 (no disc source holds the runtime
+  address - structured-coincidence caveat standing).
+Built in response (branch, below): per-yield disc offsets, so the next
+log shows every chunk's source — the reread claim becomes directly
+checkable, including for `0x81201b80`. Still needed from the tester:
+the full T0 log (chunk lines, struct block, OUTCOME, light report). And
 those signals are themselves still unobserved: no run yet has reported
 an unambiguous refusal or handover, so late-install completion stays
 unresolved regardless of this reference work.

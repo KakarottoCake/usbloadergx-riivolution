@@ -83,6 +83,12 @@ s32 Apploader_Run(entry_point *entry, char * dolpath, u8 alternatedol, u32 alter
 		WDVD_Read(dst, len, (u64) (offset << 2));
 
 		RegisterDOL((u8 *) dst, len);
+		//! Same request, with its source offset kept: RegisterDOL records
+		//! only the destination, which names a range but not where its
+		//! bytes came from. Channel and alternate-DOL paths do not report
+		//! (different offset semantics), and read as "not recorded".
+		RiivoNoteDOLRange((unsigned int) (uintptr_t) dst, (unsigned int) len,
+						   ((unsigned int) offset << 2));
 
 		DCFlushRange(dst, len);
 		ICInvalidateRange(dst, len);
