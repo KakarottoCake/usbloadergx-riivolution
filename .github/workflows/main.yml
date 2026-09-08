@@ -47,12 +47,12 @@ jobs:
           set -e
           test -f boot.dol || { echo "missing boot.dol"; exit 1; }
           test -f boot.elf || { echo "missing boot.elf"; exit 1; }
-          if test -f build/boot.map; then
-            echo "MAPFILE=build/boot.map" >> "$GITHUB_ENV"
-          elif test -f boot.map; then
-            echo "MAPFILE=boot.map" >> "$GITHUB_ENV"
+          if test -f build/boot.elf.map; then
+            echo "MAPFILE=build/boot.elf.map" >> "$GITHUB_ENV"
+          elif test -f boot.elf.map; then
+            echo "MAPFILE=boot.elf.map" >> "$GITHUB_ENV"
           else
-            echo "missing boot.map (neither build/ nor root)"; exit 1
+            echo "missing boot.elf.map (neither build/ nor root)"; exit 1
           fi
 
       - name: Package
