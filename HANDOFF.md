@@ -49,6 +49,48 @@ The 8 KB block reports "no section match" (table WAS read, so this is
 absence, not a failed read) — purpose still unknown, and avoidance
 cannot exclude references it may hold to the original table.
 
+## Truncated-log return (distinct result - NOT a late-install black screen)
+
+v3.40 T0 log ends after the file-work report ("How this works"): no
+placement prose, no evidence/struct blocks, no OUTCOME, no policy
+block, no launch report. Separately, an observed return (to menu/HBC)
+with "two flashes". Filed here, not under install failure, because the
+combination fits three different branches and the log cannot separate
+them yet:
+- The placement report assembles ~140 lines into few appends, so its
+  absence does not prove execution never entered it. Dead window for a
+  silent stop: PrepareFileRedirects return → Disc_SetLowMem (word
+  writes, cannot hang) → Disc_SelectVMode (stock video calls) →
+  Apploader_Run (header/image/chunk reads, Nintendo code, per-chunk
+  RegisterDOL + note call + cache ops, final) → placement head (arena
+  read, small occ vector, pure PlaceFst).
+- v3.40-new elements in that window, audited: the note call is a
+  bounded static append (no alloc, no IO - hang-impossible short of
+  prior corruption); struct/section reads are guarded with messages and
+  run after the apploader anyway. Allocation: occ vector (~11 entries)
+  plus strings, after far bigger vectors succeeded minutes earlier in
+  the same boot - exhaustion excluded for practical purposes. Read
+  errors funnel to one branch: apploader-fail → BootPartition 0.
+- Return-branch map: apploader-fail → blink 6 → back, with NO placement
+  text by design (placement never runs) - fits this log exactly, needs
+  6x3 blink groups to confirm. Install/handler refusals (1-5,7) need
+  placement to have persisted (card alive then), so they need a second
+  fault (append death) to fit - possible: the FAT layer just went
+  through unmount/remount gymnastics in SetupDisc. Manual reset is not
+  a branch and carries no signal. Two flashes alone match none of
+  these shapes and identify nothing, as ordered.
+- Landed for the next run (branch, CI pending): an apploader-returned
+  LogStep+gprintf (log + light prove the apploader finished, return
+  value separates fail from hang), and the placement assembly persists
+  in three chunks (prose / evidence+struct / booking+OUTCOME) so the
+  next truncation bounds itself. Logging only; decisions, timing
+  (fopen x3 pre-shutdown), and layout effects stated, nothing else.
+- Needed from the tester for THIS run: (1) auto-return or manual
+  reset, with timing; (2) exact blink groups on video if any - 6x3 vs
+  2x3 vs formless flicker decides branches; (3) confirm the log file
+  truly ends there (size? OUTCOME absent?); (4) stock no-mod boot on
+  this hardware, if not already known (new drive - the old lesson).
+
 ## 0x81201b90 audit: candidate secondary FST pointer (meaning open)
 
 The reference scan found the original FST address as the word at

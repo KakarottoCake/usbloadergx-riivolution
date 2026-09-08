@@ -172,6 +172,15 @@ u32 GameBooter::BootPartition(char *dolpath, u8 videoselected, u8 alternatedol, 
 	/* Run apploader */
 	ret = Apploader_Run(&p_entry, dolpath, alternatedol, alternatedoloffset);
 
+	//! Proves the apploader finished, in both surviving channels: a step
+	//! line in the card log and a light flip. A log ending before this
+	//! line died inside the apploader window (or the card append died with
+	//! it); the return value below separates a failed apploader (negative,
+	//! BootPartition returns 0 and no placement report can follow) from a
+	//! hung one (this line never appears and no return follows either).
+	Riivo::LogBootStep("apploader returned");
+	gprintf("Riivo: Apploader_Run returned %d, entry %08x\n", ret, (u32) p_entry);
+
 	if (ret < 0)
 		return 0;
 
