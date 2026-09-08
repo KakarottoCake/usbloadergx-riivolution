@@ -34,6 +34,19 @@ jobs:
       - name: Compile USB Loader GX
         run: make release -j$(nproc)
 
+      # The linker writes the map next to the objects (build/), not next to
+      # the ELF. Probe both, fail on neither-found, pass the winner along.
+      - name: Locate linker map
+        run: |
+          set -e
+          if test -f build/boot.map; then
+            echo "MAPFILE=build/boot.map" >> "$GITHUB_ENV"
+          elif test -f boot.map; then
+            echo "MAPFILE=boot.map" >> "$GITHUB_ENV"
+          else
+            echo "missing boot.map (neither build/ nor root)"; exit 1
+          fi
+
       # SD card layout: unzip at the root of the SD card and the app lands in
       # /apps/usbloader_gx, which is where the Homebrew Channel looks for it.
       - name: Package
@@ -55,7 +68,7 @@ jobs:
           name: boot-elf
           path: |
             boot.elf
-            build/boot.map
+            ${{ env.MAPFILE }}
 
   release:
     name: Publish release
