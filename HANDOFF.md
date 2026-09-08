@@ -1,4 +1,4 @@
-# Handoff — 2026-09-08 (updated: v3.40 released + binary-gated; T0 round live)
+# Handoff — 2026-09-08 (updated: v3.41 released + binary-gated; T0 round live)
 
 State of the SB4E01 (Super Mario Galaxy 2) debugging effort. Read the
 "Latest evidence" section first — it supersedes the drive-blocker framing
@@ -355,14 +355,22 @@ published bits (digest matches; all new strings present; commit
 `47e30da` present ×2). Pack: GXDiag-SB4E01-v7.zip (signaling docs).
 T0 round: v3.38 + v7, report groups-vs-solid + screen + log.
 
+## v3.41 (released + binary-gated): chunk-failure refusal + truncation bounds
+
+Run 34285686779 green. Assets: zip + boot.dol (`de0c9b14…`, 5,137,440)
++ boot.elf (`b95a4dc6…`) + boot.elf.map (`7e40b55d…`, 5,153,659 - all
+shifted vs v3.40, as new code requires). Binary gate passed on the
+published bits (digest matches; chunk-failure + apploader-returned
+strings + commit `92abb8f` present). T0 round: v3.41 + v7 pack, no
+bypass markers, video the ending if possible, send the log.
+
 ## v3.40 (released + binary-gated): source-compare evidence
 
-Run 34280807103 green. Assets: zip + boot.dol (`83e94c0b…`, 5,136,928)
-+ boot.elf (`3f7e1ab1…`) + boot.elf.map (`3f0bf8e0…`, 5,153,216 - all
+Run 34280807103 green. Assets: zip + boot.dol (5,136,928)
++ boot.elf + boot.elf.map (5,153,216 - all
 shifted vs v3.39, as new code requires). Binary gate passed on the
-published bits (digest matches; source-compare strings + commit
-`af04e70` present). T0 round: v3.40 + v7 pack, no bypass markers, video
-the ending if possible, send the log.
+published bits (digest matches; source-compare strings present).
+Superseded by v3.41 for the T0 round.
 
 ## v3.39 (released + binary-gated): struct evidence + handover signals
 
