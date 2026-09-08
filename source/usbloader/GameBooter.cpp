@@ -349,40 +349,57 @@ void GameBooter::ShutDownDevices(int gameUSBPort)
 }
 
  	//! Blink the drive light n times (n capped): refusal text past device
-	//! shutdown only reaches gprintf, so this count is the part the tester
-	//! can see and photograph. No allocation, no devices - safe on refusal
-	//! paths, where the boot is being aborted anyway. Skipped on Wii U,
-	//! which has no drive light to blink.
-	static void RiivoBlinkCode(u32 n)
-	{
-		if (n == 0)
-			n = 1;
-		if (n > 7)
-			n = 7;
-		usleep(700000);
-		for (u32 i = 0; i < n; ++i)
-		{
-			wiilight_diag(1);
-			usleep(350000);
-			wiilight_diag(0);
-			usleep(350000);
-		}
-		wiilight_diag(0);
-	}
+ 	//! shutdown only reaches gprintf, so this count is the part the tester
+ 	//! can see and photograph. No allocation, no devices - safe on refusal
+ 	//! paths, where the boot is being aborted anyway. Skipped on Wii U,
+ 	//! which has no drive light to blink.
+ 	static void RiivoBlinkCode(u32 n)
+ 	{
+ 		if (n == 0)
+ 			n = 1;
+ 		if (n > 7)
+ 			n = 7;
+ 		usleep(700000);
+ 		for (u32 i = 0; i < n; ++i)
+ 		{
+ 			wiilight_diag(1);
+ 			usleep(350000);
+ 			wiilight_diag(0);
+ 			usleep(350000);
+ 		}
+ 		wiilight_diag(0);
+ 	}
 
-	//! Blink a refusal code unless on Wii U. Exact conditions: 1-5 FST
-	//! install checks (see InstallFailCode), 6 BootPartition returned a
-	//! null entry point, 7 late code-handler collision refusal, which
-	//! requires Hooktype nonzero AND a protected mod range overlapping
-	//! 0x80001000..0x80003000. Note the unguarded conflict query below it
-	//! still runs at Hooktype=0 and sets the skip flag by design when the
-	//! mod owns that region - that is a skip, not a refusal, and blinks
-	//! nothing. A return with no code is unresolved by this scheme.
-	static void RiivoBlinkRefusal(u32 n)
-	{
-		if (!isWiiU())
-			RiivoBlinkCode(n);
-	}
+ 	//! Blink a refusal code unless on Wii U. Exact conditions: 1-5 FST
+ 	//! install checks (see InstallFailCode), 6 BootPartition returned a
+ 	//! null entry point, 7 late code-handler collision refusal, which
+ 	//! requires Hooktype nonzero AND a protected mod range overlapping
+ 	//! 0x80001000..0x80003000. Note the unguarded conflict query below it
+ 	//! still runs at Hooktype=0 and sets the skip flag by design when the
+ 	//! mod owns that region - that is a skip, not a refusal, and blinks
+ 	//! nothing. A return with no code is unresolved by this scheme.
+ 	//!
+ 	//! Meanings 1-7 are unchanged. What changed is repetition: the code
+ 	//! blinks THREE times with a one-second gap, because a single group
+ 	//! proved ambiguous - ordinary progress flicker contains two-flash
+ 	//! stretches, and successful boots showed them too. An irregular
+ 	//! flicker is progress; the SAME count three times is a refusal.
+ 	//! Companion rule at the jump: one solid second ON, then dark, means
+ 	//! the loader verified the install and handed over - see EndLightPulse
+ 	//! below. Groups without a solid second = refused (if the menu never
+ 	//! comes back, the return itself died). Solid second without groups =
+ 	//! reached the jump (a black screen after it is the game, not us).
+ 	static void RiivoBlinkRefusal(u32 n)
+ 	{
+ 		if (isWiiU())
+ 			return;
+ 		for (u32 round = 0; round < 3; ++round)
+ 		{
+ 			RiivoBlinkCode(n);
+ 			if (round < 2)
+ 				usleep(1000000);
+ 		}
+ 	}
 
 int GameBooter::BootGame(struct discHdr *gameHdr, const s8 useOcarina)
 {
@@ -1162,6 +1179,15 @@ int GameBooter::BootGame(struct discHdr *gameHdr, const s8 useOcarina)
 	//! next instruction. Everything before this pulsed the light on every
 	//! step, so "still blinking" and "went dark" now mean different things
 	//! to someone watching a black screen with no other channel available.
+	//! Handover signal: one solid second ON, then dark. The install above
+	//! verified (a refusal would have blinked grouped codes and returned
+	//! instead), so from the next instruction the game owns the console.
+	//! Companion to the refusal protocol in RiivoBlinkRefusal: groups
+	//! without a solid second = refused; solid second without groups =
+	//! reached the jump. Post-shutdown usleep is already proven by the
+	//! refusal path; timer interrupts are alive this late.
+	wiilight_diag(1);
+	usleep(1000000);
 	Riivo::EndLightPulse();
 
 	gprintf("Jumping to game entrypoint: 0x%08x.\n", AppEntrypoint);

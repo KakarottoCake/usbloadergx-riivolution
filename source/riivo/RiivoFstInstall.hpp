@@ -30,6 +30,8 @@
 #define RIIVO_FST_INSTALL_HPP_
 
 #include <gctypes.h>
+#include <stdint.h>
+#include <string.h>
 #include <string>
 #include <vector>
 
@@ -118,6 +120,39 @@ namespace Riivo
 	inline bool RangesOverlap(u32 aLo, u32 aHi, u32 bLo, u32 bHi)
 	{
 		return aLo < aHi && bLo < bHi && aLo < bHi && bLo < aHi;
+	}
+
+	//! Scan [base, base+len) for 4-byte words equal to any of vals[0,nvals),
+	//! recording up to maxHits byte offsets into hitOffs. Returns the total
+	//! hit count, which may exceed maxHits - compare the two to tell
+	//! "unlisted" from "absent". Unaligned head bytes are skipped, never
+	//! faulted: PPC raises on unaligned loads. Endian note: words compare
+	//! as the running CPU reads them, which is what boot-info words are on
+	//! the console; host tests construct buffers with memcpy so both sides
+	//! agree by construction. Pure, host-tested.
+	inline u32 FindWordRefs(const u8 *base, u32 len, const u32 *vals, u32 nvals,
+							u32 *hitOffs, u32 maxHits)
+	{
+		u32 hits = 0;
+		if (!base || !vals || !hitOffs || nvals == 0)
+			return 0;
+		const u32 mis = (u32) (uintptr_t) base & 3;
+		for (u32 o = mis ? 4 - mis : 0; o + 4 <= len; o += 4)
+		{
+			u32 w = 0;
+			memcpy(&w, base + o, 4);
+			for (u32 v = 0; v < nvals; ++v)
+			{
+				if (w == vals[v])
+				{
+					if (hits < maxHits)
+						hitOffs[hits] = o;
+					++hits;
+					break;
+				}
+			}
+		}
+		return hits;
 	}
 
 	//! Read the four boot-info words out of low memory. Target only.
