@@ -55,7 +55,7 @@ jobs:
           name: boot-elf
           path: |
             boot.elf
-            boot.map
+            build/boot.map
 
   release:
     name: Publish release
