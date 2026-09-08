@@ -1,4 +1,4 @@
-# Handoff — 2026-09-08 (updated: v3.33 paired runs)
+# Handoff — 2026-09-08 (updated: capture corrected + CI validation running, pre-T2)
 
 State of the SB4E01 (Super Mario Galaxy 2) debugging effort. Read the
 "Latest evidence" section first — it supersedes the drive-blocker framing
@@ -11,6 +11,7 @@ below, which is kept for the steps it still requires.
 | T0 (`v3.33`) | Rebuilt, 153,934 bytes at `0x817da6a0` | Black screen |
 | T0 + `relocorig.txt` (`v3.33`) | Verbatim original + 160 zero bytes, 153,952 bytes, same address | Black screen |
 | T0 + `nofstinstall.txt` (`v3.34`, behavior-identical to v3.33) | Install skipped | Game boots |
+| T1 Identity (`v3.34`) | Rebuilt same-size table, IN PLACE at `0x817da740`, hook + fragments live, real redirect for TitleLogo.arc (identical bytes) | Game boots |
 
 Both installs target `0x817da6a0`, 160 bytes below the original table.
 Both pass file read checks and report an intact staging checksum before
@@ -25,6 +26,16 @@ verbatim original died too). The suspect is the shared path both failing
 runs take and the passing run skips: late staging checks, the FST copy,
 install verification, and the pointer/size/arena updates.
 
+T1 (`v3.34`) installs its rebuilt table IN PLACE at `0x817da740` — no
+relocation, no heap change — with hook and fragments live and a real
+redirect for TitleLogo.arc, and boots. So the install write itself,
+same-address pointer/size updates, and a live redirected read path do
+not break the boot. Relocation stands convicted by the relocorig run
+(verbatim bytes died on the move); table content stands unindicted
+(a rebuilt serializer table boots when it stays put). What T1 does NOT
+prove: that the game consumed our bytes — the copy is identical, so a
+boot that ignored the redirect looks the same. That is T2's job.
+
 Dropped as leading assumption: refusal code 2. The same two-flash
 signature appears on runs that then enter the game successfully, so the
 flashes are consistent with ordinary progress flicker. A code-2 reading
@@ -32,13 +43,130 @@ would additionally require the pause-then-two-slow-flashes pattern,
 which was never established. The install-verification sub-cases (bytes,
 pointers, staging metadata) stay unranked.
 
-Next run, one only: v3.34 T1 Identity. A same-size single-file replace
-installs IN PLACE (no relocation, no heap change), with hook and
-fragments live and the game reading our bytes for a title-screen file.
-Boots identical: relocation convicted, runtime reads work. Black screen:
-the install write itself — or any FST change at all — is broken, and
-relocation was never the question. Either outcome retires a whole
-branch with zero new code. T2 follows only if T1 boots.
+Next run, one only: v3.34 T2 Visible. One picture byte changed in
+TitleLogo.arc, same in-place geometry as T1. Title glitched: the game
+reads our files — the feature proven end to end on SB4E01. Title
+normal: the redirect is live but not consumed (the game never reads
+through it, or reads elsewhere). Either outcome retires a branch with
+zero new code. Do not order T3/T4 until T2 reports. T2 tests
+consumption ONLY; it says nothing about the relocation failure.
+
+## Read-only audit: span ownership + stale-arena check (no code changed)
+
+Scope stays: relocated install fails, in-place boots. Destination
+overwrite, pointer changes, arena change, relocation-only checks are
+NOT distinguished. The withdrawn items: SP-vs-origAddr as proof (needs
+real stack bounds), blink code 8 (helper clamps above 7), "heap far
+below" and "stack probably above" without addresses. What follows has
+addresses or names the exact gap.
+
+Loader layout, EXACT, from the tested binary itself (`boot.dol`,
+v3.34 release asset, sha256 `83edd306...07ab` verified on download):
+- text `[0x80B00000, 0x80DE6BC0)`, data `[0x80DE6BC0, 0x80FE3560)`,
+  BSS `[0x80FE3560, 0x8106C260)`, entry `0x80B00000`. (Base `0x80B00000`
+  comes from the tag Makefile `LDFLAGS --section-start`; the rvl.ld
+  default `0x80003F00` does NOT apply — an earlier audit line saying so
+  was wrong.)
+- Heap floor (`__Arena1Lo`) = `0x8106C260`. The span bottom sits
+  7,791,680 bytes above it. That is the floor ONLY — it says nothing
+  about extent; occupancy needs the break (`sbrk(0)`), which is
+  runtime-only. An earlier "heap far below" claim built on the floor
+  alone is withdrawn.
+- Build env, for the record: CI image `devkitpro/devkitppc:20250527`,
+  `make release -j2` (tag workflow). A local rebuild was attempted and
+  ABANDONED: local devkitPPC 16.1.0 + 2026 libogc no longer compile this
+  tree (bundled portlibs `sys/socket.h` vs new libogcakh `sockaddr_storage`,
+  `socket`/`connect` now real functions colliding with the tree's own
+  declarations, ~10 TUs). Any local binary would NOT match the tested
+  one; no local binary was kept. Original-env `boot.map` was never
+  published — worth asking the release pipeline to attach it.
+- Stack bounds are in NO file here: not the repo (no DOL linker
+  script), not the DOL (no stack info), not the toolchain scripts. HBC
+  owns SP init. Runtime-only (see capture spec).
+
+Game-side status: the apploader HAS populated game memory before the
+install (DOL sections at link addresses + FST reservation
+`[0x817da740, 0x81800000)` + boot info), so "nothing else can be there
+because the game isn't running" is WITHDRAWN. SB4E01 DOL section ranges
+are disc data, in no file here — excludable only from actual ranges
+(see capture spec), never "by construction". What static work DOES
+exclude: everything loader-owned except heap-extent and stack
+(code/data/BSS end `0x8106C260`, ~7.4 MB below the span); exit-path
+markers (`sys.cpp:214`, `StartUpProcess.cpp:300`,
+`PromptWindows.cpp:1018` — menu exits only, and inside the FST
+reservation anyway); `AlternateDolParameter` (`WDMMenu.cpp:37-38`,
+default 0, passed by value); XFBs (dead post-shutdown by standing
+decision).
+
+Stale-arena check — NO stale write on the Wii-disc path:
+- Planning captures size only (`RiivoBoot.cpp:1640` plannedFstSize);
+  no arena word is read pre-apploader.
+- Sole `PlaceFst` call is `ReportFstPlacement:2536`, post-apploader, on
+  fresh raw words; sole `pendingPlace` producer is `:2601`.
+- Sole low-memory writers: `InstallFst:156-158`, the apploader itself,
+  `channels.cpp` (channel-boot path, not this one), `Disc_SetLowMem`
+  (`Arena_L = 0`, pre-apploader — that is why blindLo is expected).
+  Nothing between placement and install touches `0x80000034`.
+- In-place writes back identical ptr/arena and updates max only.
+- The `0x817da740` vs `0x817feff0` log pair is two sources, both
+  correct: raw game word (placement report) vs libogc startup cache
+  `SYS_GetArenaHi` (`ReportLaunch:2677`, never touched by the
+  apploader). Expected pair, not a bug; the install never consumes
+  `SYS_GetArena*` (only MEM2 routing and that log line do).
+
+## Capture: relocation evidence (on branch `diag/reloc-evidence`, NOT published)
+
+Code: `AppendRelocationEvidence` in `ReportFstPlacement` (card log,
+persistent) + pre-copy / post-verify SP+break gprintf pair in
+`InstallPendingFst` (Gecko only — post-shutdown). Pure helper
+`RangesOverlap` in `RiivoFstInstall.hpp`, host-tested
+(`test_fstinstall` §8, 11 cases). `.github` change in the same diff:
+`boot.map` joins `boot.elf` in the debug artifact (both workflows) and
+in release assets.
+
+Corrections applied after review, all in code+comments, not just here:
+- Every SP/break value is a SNAPSHOT of its instant. Calls between two
+  samples can use deeper frames and return unseen; nothing bounds them.
+  Placement SP is context on a deeper chain (expected below
+  install-time, not guaranteed). Past the last sample only the return
+  path, light-out and jump sequence run — shallow, unsampled.
+- An empty DOL list reads UNKNOWN, never "no overlap". Null/empty,
+  wrapped, or out-of-MEM1 entries are logged INVALID individually and
+  force UNKNOWN — no exclusion off bad data.
+- An invalid break (`(void*)-1`, outside MEM1) reads UNKNOWN. The break
+  alone never establishes the full heap interval (floor cited
+  `0x8106c260`, not verified).
+- Wording everywhere is "installation decisions unchanged", never
+  "byte-identical": the block allocates, writes the log, and shifts
+  timing, stack use and binary layout.
+
+Validated: full host suite green (test_fstinstall 57 checks, 0 fail);
+edited TU syntax-checked with the Makefile's own PPC flags (local gcc
+16.1 — syntax/types only, NOT the CI toolchain). CI build/link
+validation: branch pushed, `main.yml` builds every branch — run status
+below. No tag, no release from this.
+
+Stack bounds, validated against libogc v2.11.0 (May 25 2025 — the CI
+image `devkitppc:20250527` vintage): main-thread stack is
+`[__stack_end, __stack_addr)`, the exact symbols lwp.c passes to
+`__lwp_thread_init` for `_thr_main`. The TCB struct itself is private
+(no public header carries it — checked installed `ogc/*.h`), so the
+code reads the two symbols directly (weak: a future toolchain without
+them logs "unknown"). Runtime cross-check in the block: both in MEM1,
+low < high, SP inside — else bounds unused.
+
+sbrk(0), documented from sbrk.c (identical v2.11.0/master): with the
+loader's `MALLOC_MEM2 = 0` it is the newlib/MEM1 break,
+`[startup-Lo, current-Lo)`. Excludes MEM2 pool, apploader reservations,
+main stack. Non-main LWP stacks are workspace-backed (lwp_stack.c) and
+the workspace is carved from the sbrk region at init (lwp_wkspace.c) —
+break bounds them from above. Startup-Lo source not re-verified: floor
+cited (`0x8106c260` on the tested binary), not relied on.
+
+The capture decides nothing by itself and gates nothing: a pre-install
+snapshot cannot exclude later corruption or relocation-only failures.
+It retires (or confirms) the ownership suspects only. T2 stays a
+separate consumption question and gates nothing here.
 
 ## The one thing that blocks everything
 
@@ -103,11 +231,13 @@ is broken right now, the drive is confirmed.
   address is the byte expected — it never proved nopping `stb r0,0x68(r4)` is safe, and
   `98040068` is an ordinary encoding, so a 4-byte match is weak revision evidence.
   Status: untested.
-- **The in-place vs relocation theory.** `PlaceFst` takes the in-place path when
-  `fstSize <= fstMaxSize` and relocates otherwise. Replacing a file never grows the
-  table; adding one does. So MP9 (replace only) took the safe path and T0/T7 (add
-  files) relocate. It fits the evidence but was built on a T7 refusal that happened on
-  a build which could not boot the game at all. Plausible, unproven.
+- **The in-place vs relocation fault line — confirmed, mechanism open.**
+  relocorig (verbatim bytes, moved 160B) died; T1 (rebuilt bytes, in
+  place) boots. The move itself kills T0, independent of table content.
+  Open: WHAT the span `[0x817da6a0, 0x817da740)` holds. Evidence
+  capture is IMPLEMENTED (unpublished — see Capture section): per-chunk
+  DOL ranges, validated stack bounds, SP at three points, sbrk break,
+  all observation-only, no gate, no blink change.
 
 ## Standing decision: nothing draws on the boot path
 

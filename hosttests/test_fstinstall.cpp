@@ -179,6 +179,25 @@ int main()
 		ck(!PlaceFst(known, 62189, 32).ok, "a known but tiny heap is still refused");
 	}
 
+	printf("8. half-open interval overlap for the evidence block\n");
+	{
+		ck(RangesOverlap(10, 20, 15, 25), "partial overlap");
+		ck(RangesOverlap(10, 20, 10, 20), "identical intervals");
+		ck(RangesOverlap(10, 30, 15, 20), "containment");
+		ck(!RangesOverlap(10, 20, 20, 30), "touching edges do not overlap");
+		ck(!RangesOverlap(10, 20, 0, 10), "touching edges, other side");
+		ck(!RangesOverlap(10, 20, 30, 40), "disjoint intervals");
+		ck(!RangesOverlap(10, 10, 5, 15), "empty first interval never overlaps");
+		ck(!RangesOverlap(5, 15, 10, 10), "empty second interval never overlaps");
+		ck(!RangesOverlap(20, 10, 0, 30), "inverted interval never overlaps");
+		//! The T0 span against its own destination reads as overlap.
+		ck(RangesOverlap(0x817da6a0, 0x817da740, 0x817da6a0, 0x817da6a0 + 153934),
+		   "T0 span overlaps the T0 destination");
+		//! A live stack fully above the span reads clear.
+		ck(!RangesOverlap(0x817f0000, 0x817feff0, 0x817da6a0, 0x817da740),
+		   "live stack fully above the span reads clear");
+	}
+
 	printf("\n%d checks, %d failure(s)\n", checks, failures);
 	return failures ? 1 : 0;
 }
