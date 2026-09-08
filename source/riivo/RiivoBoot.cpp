@@ -982,26 +982,13 @@ namespace Riivo
 	//! explicitly not done.
 	static void AppendApploaderStructEvidence(std::string &out)
 	{
-		//! Measured offsets, not protocol: the struct address comes from
-		//! the T0 reference scan. Disc base = APPLDR_OFFSET (0x2440, same
-		//! constant apploader.c reads the header from) + 0x20 header +
-		//! 0x1b40 struct offset within the image. Length mirrors
-		//! apploader.c exactly: buffer[5] + buffer[6] at header +0x14/+0x18.
+		//! RAM addresses only - no disc reads in this window. The struct
+		//! address comes from the T0 reference scan; ramBase backs off
+		//! 0x40 so the struct sits mid-window.
 		static const u32 ramBase = 0x81201b40;   // struct - 0x40
-		static const u32 discBase = 0x2440 + 0x20 + 0x1b40;
-		static u8 disc[0x100] ATTRIBUTE_ALIGN(32);
-		static u8 appHdr[0x20] ATTRIBUTE_ALIGN(32);
 
 		out += "\nApploader struct around 81201b80 (read-only - nothing updated)\n";
 		out += "--------------------------------------------------------------\n";
-
-		u32 appLen = 0;
-		if (WDVD_Read(appHdr, sizeof(appHdr), 0x2440) >= 0)
-			appLen = be32(appHdr + 0x14) + be32(appHdr + 0x18);
-		const bool inImage = appLen > 0x1bc0;
-		Addf(out, "  apploader image length: %u bytes (%s +0x1b80)\n", appLen,
-			 appLen == 0 ? "header unreadable - coverage unknown"
-			 : inImage ? "covers" : "DOES NOT COVER - not apploader image");
 
 		//! The 8 words at the struct, as the CPU reads them, each compared
 		//! against its disc twin on its own. Neighbors name the shape: boot
@@ -1010,107 +997,14 @@ namespace Riivo
 		//! an embedded constant instead. The +0x10 marker is re-checked
 		//! live against low memory rather than assumed from T0.
 		const u32 fstNow = *(vu32 *) 0x80000038;
-		const bool discOk = inImage
-			&& WDVD_Read(disc, sizeof(disc), discBase) >= 0;
-		if (!discOk && inImage)
-			out += "  (disc bytes unreadable - per-word compare skipped)\n";
-		u32 ndiff = 0;
-		bool w10diff = false;
 		for (u32 i = 0; i < 8; ++i)
 		{
-			const u32 ram = *(const volatile u32 *) (uintptr_t) (ramBase + 0x40 + 4 * i);
-			const bool diff = discOk && ram != be32(disc + 0x40 + 4 * i);
-			if (diff)
-			{
-				++ndiff;
-				if (i == 4)
-					w10diff = true;
-			}
-			Addf(out, "  +0x%02x : %08x%s%s\n", 4 * i, ram,
-				 (i == 4 && ram == fstNow)
-				 ? "  <-- equals the FST address right now" : "",
-				 diff ? "  (differs from disc)" : "");
+			const u32 w = *(const volatile u32 *) (uintptr_t) (ramBase + 0x40 + 4 * i);
+			Addf(out, "  +0x%02x : %08x%s\n", 4 * i, w,
+				 (4 * i == 0x10 && w == fstNow)
+				 ? "  <-- equals the FST address right now" : "");
 		}
-		if (!discOk)
-			out += "  disc verdict: unavailable\n";
-		else if (ndiff == 0)
-			out += "  image verdict: all 8 identical to image bytes (consistent with an untouched image region)\n";
-		else
-		{
-			Addf(out, "  image verdict: %u of 8 differ from image bytes (see source verdict below: a later read supersedes the image as the explanation)\n",
-				 ndiff);
-			out += w10diff ? "  +0x10 itself differs from the image\n"
-						   : "  +0x10 matches the image; change is in neighbors only\n";
-		}
-
-		//! Primary verdict: the chunk's own recorded source. Latest yield
-		//! covering the struct wins - an earlier read's bytes are gone where
-		//! a later one landed. Comparing those source bytes against the
-		//! final RAM contents is what distinguishes bytes the read supplied
-		//! from later changes. Neither outcome names a store or a consumer.
-		u32 srcDst = 0, srcLen = 0, srcOff = 0;
-		for (u32 n = dolNoteCount; n > 0; --n)
-		{
-			const DolRangeNote &r = dolNotes[n - 1];
-			if (r.len == 0 || r.len > 0x01000000 || r.dst < MEM1_BASE
-				|| r.dst + r.len <= r.dst || r.dst > 0x81201b80
-				|| r.dst + r.len <= 0x81201b80
-				|| r.disc + 0x20 < r.disc)
-				continue;
-			srcDst = r.dst;
-			srcLen = r.len;
-			srcOff = r.disc;
-			break;
-		}
-		if (srcLen == 0)
-			out += "  source verdict: no recorded yield covers 0x81201b80\n";
-		else
-		{
-			u32 lo = srcDst < 0x81201b80 ? 0x81201b80 : srcDst;
-			u32 hi = srcDst + srcLen > 0x81201ba0 ? 0x81201ba0 : srcDst + srcLen;
-			Addf(out, "  source: latest yield [%08x, %08x) from disc 0x%08x covers struct [%08x, %08x)\n",
-				 srcDst, srcDst + srcLen, srcOff, lo, hi);
-			static u8 src[0x40] ATTRIBUTE_ALIGN(32);
-			const u32 s0 = srcOff + (lo - 0x81201b80);
-			const u32 rBase = s0 & ~31u;
-			const u32 rEnd = (s0 + (hi - lo) + 31) & ~31u;
-			if (rEnd - rBase > sizeof(src))
-				out += "  source bytes unreadable (window error)\n";
-			else if (WDVD_Read(src, rEnd - rBase, rBase) < 0)
-				out += "  source bytes unreadable (disc read failed)\n";
-			else
-			{
-				u32 sdiff = 0;
-				bool s10diff = false, s10covered = false;
-				for (u32 a = lo; a + 4 <= hi; a += 4)
-				{
-					u32 ram = 0;
-					memcpy(&ram, (const void *) (uintptr_t) a, 4);
-					const u32 img = be32(src + (a - rBase));
-					if (ram != img)
-					{
-						++sdiff;
-						Addf(out, "  struct +0x%02x: RAM %08x != source %08x\n",
-							 a - 0x81201b80, ram, img);
-						if (a == 0x81201b90)
-							s10diff = true;
-					}
-					if (a == 0x81201b90)
-						s10covered = true;
-				}
-				if (sdiff == 0)
-					out += "  source verdict: covered bytes match the read\n";
-				else
-					Addf(out, "  source verdict: %u covered word(s) differ - changed after the read\n",
-						 sdiff);
-				if (s10covered)
-					Addf(out, "  +0x10 vs source: %s\n",
-						 s10diff ? "DIFFERS (stored after the read)"
-						 : "matches (as read)");
-				else
-					out += "  +0x10 vs source: uncovered by the recorded yield\n";
-			}
-		}
+		out += "  (disc compares removed - see note above; the yield list still names each read's source)\n";
 
 		//! Third writer candidate: if the newlib break has passed the
 		//! struct, loader-heap objects may overlay the image - undecided,
@@ -2861,38 +2755,7 @@ namespace Riivo
 	//! logged again at InstallPendingFst, but that runs after device
 	//! shutdown and only reaches USB Gecko - this card-log block is the
 	//! persistent record.
-	//! Report every boot-word hit inside one resident range, capped. listed
-	//! and total accumulate across ranges so the caller can close with an
-	//! "N more unlisted" line instead of implying absence.
-	static void ReportWordHits(std::string &out, const char *label, u32 lo, u32 hi,
-							   const u32 *vals, const char *const *names, u32 nvals,
-							   u32 &listed, u32 &total)
-	{
-		if (hi <= lo)
-			return;
-		u32 ho[16];
-		const u32 found = FindWordRefs((const u8 *) (uintptr_t) lo, hi - lo,
-									   vals, nvals, ho, sizeof(ho) / sizeof(ho[0]));
-		total += found;
-		for (u32 k = 0; k < found && k < 16 && listed < 16; ++k, ++listed)
-		{
-			u32 w = 0;
-			memcpy(&w, (const void *) (uintptr_t) (lo + ho[k]), 4);
-			const char *role = "?";
-			for (u32 v = 0; v < nvals; ++v)
-			{
-				if (vals[v] == w)
-				{
-					role = names[v];
-					break;
-				}
-			}
-			Addf(out, "    word %08x (= %s) at %s +0x%x\n", w, role, label, ho[k]);
-		}
-	}
-
-	static void AppendRelocationEvidence(std::string &out, const ArenaInfo &arena,
-										 const FstPlacement &place,
+	static void AppendRelocationEvidence(std::string &out, const FstPlacement &place,
 										 u32 want, BssState bss, u32 bssLo, u32 bssHi)
 	{
 		out += "\nRelocation evidence (observations only - installation decisions unchanged)\n";
@@ -3097,62 +2960,6 @@ namespace Riivo
 			else
 				out += "    newlib break is below the destination: heap extent clear (floor cited, not verified)\n";
 		}
-
-		//! Table references: words anywhere resident that already equal the
-		//! boot words. A moved table breaks such references even where no
-		//! byte is overwritten, so avoidance alone cannot exclude them.
-		//! Snapshots at placement time, like everything else here.
-		out += "  table references (words already equal to the boot words) :\n";
-		u32 refVals[5];
-		const char *refNames[5];
-		u32 refN = 0;
-		if (arena.fstAddr) { refVals[refN] = arena.fstAddr; refNames[refN++] = "FST address"; }
-		if (arena.fstMaxSize) { refVals[refN] = arena.fstMaxSize; refNames[refN++] = "FST max size"; }
-		if (arena.arenaHi) { refVals[refN] = arena.arenaHi; refNames[refN++] = "arena high"; }
-		if (arena.arenaLo) { refVals[refN] = arena.arenaLo; refNames[refN++] = "arena low"; }
-		if (arena.fstAddr && arena.fstMaxSize
-			&& arena.fstAddr + arena.fstMaxSize > arena.fstAddr)
-		{
-			refVals[refN] = arena.fstAddr + arena.fstMaxSize;
-			refNames[refN++] = "reservation top";
-		}
-		u32 listed = 0, total = 0, scanned = 0;
-		if (refN == 0)
-			out += "    (no nonzero boot words to match)\n";
-		else
-		{
-			char lbl[32];
-			for (int i = 0; i < dolN; ++i)
-			{
-				u8 *d = RiivoGetDOLDst(i);
-				int l = RiivoGetDOLLen(i);
-				if (!d || l <= 0)
-					continue;
-				const u32 lo = (u32) d, hi = lo + (u32) l;
-				if (hi <= lo || lo < MEM1_BASE || hi > MEM1_END)
-					continue;
-				snprintf(lbl, sizeof(lbl), "chunk %d", i);
-				ReportWordHits(out, lbl, lo, hi, refVals, refNames, refN,
-							   listed, total);
-				++scanned;
-			}
-			if (bss == BSS_VALID)
-			{
-				ReportWordHits(out, "BSS", bssLo, bssHi, refVals, refNames, refN,
-							   listed, total);
-				++scanned;
-			}
-			if (place.ok && !place.inPlace && destLo < arena.fstAddr)
-			{
-				ReportWordHits(out, "sliver below reservation", destLo, arena.fstAddr,
-							   refVals, refNames, refN, listed, total);
-				++scanned;
-			}
-			if (total == 0)
-				Addf(out, "    none observed in %u scanned range(s)\n", scanned);
-			else if (total > listed)
-				Addf(out, "    ... and %u more hit(s) unlisted\n", total - listed);
-		}
 	}
 
 	void ReportFstPlacement()
@@ -3302,7 +3109,7 @@ namespace Riivo
 		//! Evidence first, verdicts never: the block runs for in-place
 		//! installs too, where the same geometry is a control. It costs log
 		//! lines plus the timing/stack/layout perturbation stated above.
-		AppendRelocationEvidence(out, arena, place, want, bss, bssLo, bssHi);
+		AppendRelocationEvidence(out, place, want, bss, bssLo, bssHi);
 
 		//! Apploader-struct evidence rides with the relocation block: same
 		//! window (card alive, apploader done), same read-only terms.
