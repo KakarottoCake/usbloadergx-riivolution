@@ -44,8 +44,10 @@ baseline; validate bounds before reading header or payload. Next work
 distinguishes changed payload versus changed staging metadata first,
 then identifies the first intervening operation responsible.
 
-Next run, one only: v3.33 T0 with `nofstinstall.txt`. The no-install
+Next run, one only: v3.34 T0 with `nofstinstall.txt`. The no-install
 result on record is from v3.32; this completes the same-build comparison
+(v3.34 is behavior-identical to the v3.33 of the paired runs, comments
+only)
 (no-install boots / install black-screens twice). Its purpose is solely
 to confirm the split still holds on the build carrying the framebuffer
 removal — nothing else. Do not restart the other four; no missing result
