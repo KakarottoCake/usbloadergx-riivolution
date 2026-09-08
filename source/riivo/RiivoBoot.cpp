@@ -180,6 +180,29 @@ namespace Riivo
 	//! PrepareFragList, cleared wherever modOffsets is cleared.
 	static std::vector<RegRecord> modRecords;
 
+	//! The game's DOL section table, read off the disc in PrepareFileRedirects
+	//! (same window as the FST: partition open, devices mounted). The loaded
+	//! range list carries RAM addresses only; this is what traces a range
+	//! back to its DOL section and disc offset - and tells BSS (zero-filled,
+	//! no disc bytes) apart from disc-read data. Reset per boot in
+	//! SetBootContext; empty when the header could not be read.
+	//! Slots keep their DOL section numbers even when empty, so a section's
+	//! reported number is always its real one, never a compacted position.
+	struct DolSection
+	{
+		u32 fileOff; // offset within the DOL image, not the partition
+		u32 addr;
+		u32 size;
+		u32 index;   // 0-6 text, 7-17 data
+		bool text;
+	};
+	static DolSection dolSections[18];
+	static u32 dolSectionCount = 0; // non-empty sections (for the log line)
+	static u32 dolBssAddr = 0, dolBssSize = 0;
+	//! Partition byte offset of the DOL image itself: section file offsets
+	//! are relative to it, so the absolute disc offset is base + fileOff.
+	static u32 dolImageBase = 0;
+
 	//! Per-disc table-build failures from PrepareFileRedirects: the redirect
 	//! existed but the entry never made it into the rebuilt table (the table
 	//! refused it, or the external file failed to stat between phases).
@@ -391,6 +414,9 @@ namespace Riivo
 		modSkips.clear();
 		modMissing.clear();
 		modAddFails.clear();
+		dolSectionCount = 0;
+		dolBssAddr = dolBssSize = 0;
+		dolImageBase = 0;
 		installFailCode = 0;
 		//! No loading bar, and no marker to turn one on. Two separate GUI
 		//! draws on this path were confirmed on hardware to stop the boot -
@@ -763,11 +789,16 @@ namespace Riivo
 	}
 
 	//! Read the FST off the currently open partition. Caller frees *outData.
-	static bool ReadDiscFst(u8 **outData, u32 *outSize, u32 *outOffset, std::string &err)
+	//! Also returns the DOL's disc offset, so the section table can be read
+	//! next: naming which DOL section an apploader-loaded range came from is
+	//! how a range like "the 8 KB below the FST" gets traced to its purpose.
+	static bool ReadDiscFst(u8 **outData, u32 *outSize, u32 *outOffset,
+							 u32 *outDolOffset, std::string &err)
 	{
 		*outData = 0;
 		*outSize = 0;
 		*outOffset = 0;
+		*outDolOffset = 0;
 
 		//! boot.bin: 0x420 dol offset, 0x424 FST offset, 0x428 FST size.
 		//! All three are stored >>2 on a Wii disc.
@@ -807,7 +838,87 @@ namespace Riivo
 		*outData = fst;
 		*outSize = fstSize;
 		*outOffset = fstOffset;
+		*outDolOffset = be32(hdr) << 2;
 		return true;
+	}
+
+	//! Read the DOL header (18 section records + BSS + entry, 0xE4 bytes off
+	//! the disc) so loaded ranges can be traced to their section and disc
+	//! offset later. One small aligned read in a phase already doing disc
+	//! IO; a failure just leaves the table empty and the evidence block
+	//! says so.
+	static void ReadDolSections(u32 dolOffset, std::string &out)
+	{
+		dolSectionCount = 0;
+		dolBssAddr = dolBssSize = 0;
+		dolImageBase = 0;
+		if (dolOffset == 0)
+		{
+			out += "disc DOL : no offset in boot.bin, section table unavailable\n";
+			return;
+		}
+		static u8 dolHdr[0x100] ATTRIBUTE_ALIGN(32);
+		if (WDVD_Read(dolHdr, sizeof(dolHdr), dolOffset) < 0)
+		{
+			out += "disc DOL : header unreadable, section table unavailable\n";
+			return;
+		}
+		for (u32 i = 0; i < 18; ++i)
+		{
+			dolSections[i].fileOff = be32(dolHdr + 4 * i);
+			dolSections[i].addr = be32(dolHdr + 0x48 + 4 * i);
+			dolSections[i].size = be32(dolHdr + 0x90 + 4 * i);
+			dolSections[i].index = i;
+			dolSections[i].text = (i < 7);
+			if (dolSections[i].size > 0)
+				++dolSectionCount;
+		}
+		dolBssAddr = be32(dolHdr + 0xD8);
+		dolBssSize = be32(dolHdr + 0xDC);
+		dolImageBase = dolOffset;
+		Addf(out, "disc DOL : offset 0x%08x, %u section(s), BSS [%08x, %08x)\n",
+			 dolOffset, dolSectionCount, dolBssAddr, dolBssAddr + dolBssSize);
+	}
+
+	//! BSS occupancy for placement: absent (size zero, normal), valid, or
+	//! invalid header values. An invalid non-empty BSS is a malformed entry
+	//! like any other - placement must not claim clearance it cannot check.
+	enum BssState { BSS_ABSENT, BSS_VALID, BSS_INVALID };
+	static BssState CheckBss(u32 &lo, u32 &hi)
+	{
+		lo = hi = 0;
+		if (dolBssSize == 0)
+			return BSS_ABSENT;
+		if (dolBssAddr < MEM1_BASE || dolBssSize > MEM1_END - dolBssAddr)
+			return BSS_INVALID;
+		lo = dolBssAddr;
+		hi = dolBssAddr + dolBssSize;
+		return BSS_VALID;
+	}
+
+	//! Which DOL section fully contains [lo,hi), or -1. Sets isBss when the
+	//! range sits inside BSS instead - zero-filled by the apploader, so it
+	//! has an address but no disc offset. Anything else (apploader scratch,
+	//! a range no section claims) is neither.
+	static int FindDolSection(u32 lo, u32 hi, bool &isBss)
+	{
+		isBss = false;
+		for (u32 i = 0; i < sizeof(dolSections) / sizeof(dolSections[0]); ++i)
+		{
+			if (dolSections[i].size == 0)
+				continue;
+			const u32 sLo = dolSections[i].addr;
+			const u32 sHi = sLo + dolSections[i].size;
+			if (sHi < sLo)
+				continue;
+			if (lo >= sLo && hi <= sHi)
+				return (int) dolSections[i].index;
+		}
+		if (dolBssSize > 0 && lo >= dolBssAddr
+			&& hi <= dolBssAddr + dolBssSize
+			&& dolBssAddr + dolBssSize >= dolBssAddr)
+			isBss = true;
+		return -1;
 	}
 
 	static bool ByPlacedOffset(const PlacedFile &a, const PlacedFile &b)
@@ -1316,10 +1427,10 @@ namespace Riivo
 			   "applied and the game boots untouched.\n\n";
 
 		u8 *fstData = 0;
-		u32 fstSize = 0, fstOffset = 0;
+		u32 fstSize = 0, fstOffset = 0, dolOffset = 0;
 		std::string err;
 		LogStep("reading the game's file table");
-		if (!ReadDiscFst(&fstData, &fstSize, &fstOffset, err))
+		if (!ReadDiscFst(&fstData, &fstSize, &fstOffset, &dolOffset, err))
 		{
 			Addf(out, "FAILED: %s\n", err.c_str());
 			AppendLog(out);
@@ -1339,6 +1450,11 @@ namespace Riivo
 			AppendLog(out);
 			return;
 		}
+
+		//! Section table for tracing loaded ranges (see the statics). After
+		//! the parse so a garbage FST never spends a disc read on sections
+		//! nothing will use.
+		ReadDolSections(dolOffset, out);
 
 		Addf(out, "patches  : %u <file>, %u <folder>\n\n",
 			 (unsigned) bootSet->files.size(), (unsigned) bootSet->folders.size());
@@ -2543,7 +2659,7 @@ namespace Riivo
 	//! shutdown and only reaches USB Gecko - this card-log block is the
 	//! persistent record.
 	static void AppendRelocationEvidence(std::string &out, const FstPlacement &place,
-										 u32 want)
+										 u32 want, BssState bss, u32 bssLo, u32 bssHi)
 	{
 		out += "\nRelocation evidence (observations only - installation decisions unchanged)\n";
 		out += "--------------------------------------------------------------------\n";
@@ -2631,10 +2747,32 @@ namespace Riivo
 				continue;
 			}
 			const bool hit = place.ok && RangesOverlap(lo, hi, destLo, destHi);
+			//! Where the chunk came from: its DOL section and disc offset,
+			//! BSS (an address with no disc bytes), or neither. Decided by
+			//! containment - a chunk straddling sections matches none and
+			//! says so rather than naming the wrong one.
+			char src[96];
+			if (dolSectionCount == 0 && dolBssAddr == 0)
+				snprintf(src, sizeof(src), " (section table unavailable)");
+			else
+			{
+				bool isBss = false;
+				const int si = FindDolSection(lo, hi, isBss);
+				if (si >= 0)
+					snprintf(src, sizeof(src), " disc 0x%010llx (%s %d)",
+							 (unsigned long long) dolImageBase
+							 + dolSections[si].fileOff + (lo - dolSections[si].addr),
+							 dolSections[si].text ? "text" : "data",
+							 dolSections[si].text ? si : si - 7);
+				else if (isBss)
+					snprintf(src, sizeof(src), " (BSS, zero-filled - no disc bytes)");
+				else
+					snprintf(src, sizeof(src), " (no section match)");
+			}
 			if (dolLines < 40)
 			{
-				Addf(out, "    [%08x, %08x) %d bytes%s\n", lo, hi, l,
-					 hit ? "  <-- OVERLAPS planned destination" : "");
+				Addf(out, "    [%08x, %08x) %d bytes%s%s\n", lo, hi, l,
+					 hit ? "  <-- OVERLAPS planned destination" : "", src);
 				++dolLines;
 			}
 			if (dolValid == 0) { dolMin = lo; dolMax = hi; }
@@ -2691,6 +2829,13 @@ namespace Riivo
 			else
 				Addf(out, "    game ranges vs destination: UNKNOWN (%d invalid chunk(s))\n",
 					 dolInvalid);
+			if (bss == BSS_VALID)
+				Addf(out, "    BSS [%08x, %08x): held as a placement obstacle above\n",
+					 bssLo, bssHi);
+			else if (bss == BSS_INVALID)
+				out += "    BSS: INVALID header values (counts as malformed input)\n";
+			else
+				out += "    BSS: absent (size zero)\n";
 			if (!brkOk)
 				out += "    heap extent: UNKNOWN (break failed validation)\n";
 			else if (brk > destLo)
@@ -2745,7 +2890,38 @@ namespace Riivo
 		}
 
 		const ArenaInfo arena = ReadArenaInfo();
-		const FstPlacement place = PlaceFst(arena, want, 32);
+		//! The apploader's loaded ranges, as obstacles for a grown table.
+		//! The COMPLETE list, unfiltered: every dolList entry goes in raw
+		//! (even malformed ones - PlaceFst counts those and refuses grown
+		//! placement on them rather than steering around guesses), plus the
+		//! BSS range when the header names one. Capped at nothing: the list
+		//! is short and silently dropping entries is exactly the defect
+		//! being removed. Validated the same way as the evidence block
+		//! below validates them.
+		std::vector<OccupiedRange> occ;
+		const int dolN = RiivoGetDOLCount();
+		occ.reserve(dolN > 0 ? (size_t) dolN + 1 : 1);
+		for (int i = 0; i < dolN; ++i)
+		{
+			u8 *d = RiivoGetDOLDst(i);
+			int l = RiivoGetDOLLen(i);
+			OccupiedRange r;
+			if (d && l > 0)
+			{
+				r.lo = (u32) d;
+				r.hi = r.lo + (u32) l;
+			}
+			occ.push_back(r);
+		}
+		u32 bssLo = 0, bssHi = 0;
+		const BssState bss = CheckBss(bssLo, bssHi);
+		if (bss == BSS_VALID)
+			occ.push_back(OccupiedRange(bssLo, bssHi));
+		else if (bss == BSS_INVALID)
+			occ.push_back(OccupiedRange()); // malformed marker: forces refusal
+		const FstPlacement place = PlaceFst(arena, want, 32,
+											occ.empty() ? 0 : &occ[0],
+											(u32) occ.size());
 
 		std::string out;
 		out += "\n\nWhere the rebuilt table would go\n";
@@ -2789,6 +2965,12 @@ namespace Riivo
 					 place.reserved / 1024, MAX_BLIND_DROP / 1024);
 			}
 		}
+		if (place.ok)
+			Addf(out, "  loaded ranges kept clear : %u considered, %u ignored "
+					  "(stale-table space), %u malformed; BSS %s\n",
+				 (unsigned) occ.size(), place.ignoredRanges, place.malformedRanges,
+				 bss == BSS_VALID ? "held as an obstacle"
+				 : bss == BSS_INVALID ? "INVALID header values" : "absent");
 		if (relocOrig)
 		{
 			//! Self-check for the diagnostic: without a real relocation this
@@ -2804,7 +2986,7 @@ namespace Riivo
 		//! Evidence first, verdicts never: the block runs for in-place
 		//! installs too, where the same geometry is a control. It costs log
 		//! lines plus the timing/stack/layout perturbation stated above.
-		AppendRelocationEvidence(out, place, want);
+		AppendRelocationEvidence(out, place, want, bss, bssLo, bssHi);
 
 		//! This is the step that actually points the game at the mod. It only
 		//! runs when the fragment list, the read-back check and the cIOS hook

@@ -73,17 +73,42 @@ namespace Riivo
 		u32 newArenaHi;    // what arena high becomes
 		u32 reserved;      // bytes taken out of the game's heap (0 when inPlace)
 		u32 heapLeft;      // heap the game still has afterwards
+		u32 ignoredRanges; // occupied ranges skipped as stale-table space
+		u32 malformedRanges; // occupied entries too broken to interpret
 		std::string why;   // populated only when !ok
 
 		FstPlacement()
 			: ok(false), inPlace(false), fstAddr(0), newArenaHi(0), reserved(0),
-			  heapLeft(0) {}
+			  heapLeft(0), ignoredRanges(0), malformedRanges(0) {}
+	};
+
+	//! A RAM range the apploader loaded and the game will read: a DOL chunk,
+	//! never the file-table reservation itself (that is the stale table being
+	//! replaced, so growing over it is the whole point). A grown table must
+	//! not be written over any of these.
+	struct OccupiedRange
+	{
+		u32 lo; // first byte, inclusive
+		u32 hi; // one past the last byte, exclusive
+
+		OccupiedRange() : lo(0), hi(0) {}
+		OccupiedRange(u32 l, u32 h) : lo(l), hi(h) {}
 	};
 
 	//! Work out where a rebuilt table of `fstSize` bytes can live, given what
 	//! the apploader left behind. `align` is applied to the chosen address.
-	//! Does not touch memory - call Install() for that.
-	FstPlacement PlaceFst(const ArenaInfo &info, u32 fstSize, u32 align);
+	//! `occ` lists RAM the game will read (DOL chunks); a table that has to
+	//! grow is moved down past every entry it would overwrite. Entries
+	//! inside the stale-table reservation are the expected overlap and are
+	//! skipped (counted in FstPlacement::ignoredRanges). Malformed entries
+	//! are counted in FstPlacement::malformedRanges and refuse a GROWN
+	//! placement outright - steering around ranges that cannot be read is
+	//! guessing, and the caller must hand over the complete list, never a
+	//! capped or pre-filtered one. An in-place table never consults the
+	//! list and is unaffected by either count. Does not touch memory - call
+	//! Install() for that.
+	FstPlacement PlaceFst(const ArenaInfo &info, u32 fstSize, u32 align,
+						  const OccupiedRange *occ = 0, u32 occCount = 0);
 
 	//! Half-open interval overlap: [aLo,aHi) against [bLo,bHi). An empty or
 	//! inverted interval overlaps nothing, so a zero length always reads

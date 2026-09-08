@@ -198,6 +198,117 @@ int main()
 		   "live stack fully above the span reads clear");
 	}
 
+	printf("9. grown tables move past apploader-loaded ranges (SB4E01 T0)\n");
+	{
+		//! Straight off the v3.35 T0 log: arena high and the table at
+		//! 0x817da740 with 153792 bytes reserved, arena low unset, and an
+		//! 8 KB apploader-loaded block [0x817d8740, 0x817da740) ending
+		//! exactly where the table begins. A 153934-byte rebuild wants to
+		//! start at 0x817da6a0 - inside that block's final 160 bytes.
+		ArenaInfo a;
+		a.arenaLo    = 0x00000000;
+		a.arenaHi    = 0x817da740;
+		a.fstAddr    = 0x817da740;
+		a.fstMaxSize = 153792;
+		const u32 want = 153934;
+		const OccupiedRange block(0x817d8740, 0x817da740);
+
+		//! Without the range, the old behaviour: planned overwrite.
+		FstPlacement before = PlaceFst(a, want, 32);
+		ck(before.ok && !before.inPlace, "T0 grows");
+		ck(before.fstAddr == 0x817da6a0, "old placement starts at 0x817da6a0");
+		ck(RangesOverlap(before.fstAddr, before.fstAddr + want,
+						 block.lo, block.hi),
+		   "and that overlaps the 8 KB block (the defect)");
+
+		//! With the range, the table moves below it.
+		FstPlacement p = PlaceFst(a, want, 32, &block, 1);
+		ck(p.ok, "placement still possible");
+		ck(!p.inPlace, "still a relocation");
+		ck(p.fstAddr == 0x817b2de0, "table starts below the block");
+		ck(p.newArenaHi == 0x817b2de0, "arena follows it down");
+		ck(p.reserved == 0x27960, "heap cost is 162912 bytes");
+		ck(p.ignoredRanges == 0, "the block itself is not ignored");
+		ck(p.malformedRanges == 0, "nothing malformed");
+		ck(!RangesOverlap(p.fstAddr, p.fstAddr + want, block.lo, block.hi),
+		   "destination no longer touches the block");
+
+		//! The stale table's own reservation is the expected overlap, not
+		//! an obstacle: a range inside it changes nothing.
+		const OccupiedRange stale(0x817da800, 0x817da900);
+		FstPlacement q = PlaceFst(a, want, 32, &stale, 1);
+		ck(q.ok && q.fstAddr == 0x817da6a0, "reservation overlap does not move the table");
+		ck(q.ignoredRanges == 1, "and it is counted as ignored");
+
+		//! A range straddling the reservation boundary is NOT just stale
+		//! table: its part below the reservation is game image, so the
+		//! table moves below all of it.
+		const OccupiedRange span(0x817da700, 0x817da800);
+		FstPlacement r = PlaceFst(a, want, 32, &span, 1);
+		ck(r.ok && r.fstAddr == 0x817b4da0, "straddling range moves the table below it");
+		ck(r.ignoredRanges == 0, "and is not counted as ignored");
+
+		//! Touching is packing, not overlap: a range ending exactly where
+		//! the destination begins changes nothing.
+		const OccupiedRange abut(0x817d6740, 0x817da6a0);
+		FstPlacement s = PlaceFst(a, want, 32, &abut, 1);
+		ck(s.ok && s.fstAddr == 0x817da6a0, "abutting range does not move the table");
+
+		//! Two obstacles: the lower one pulls the top below both at once.
+		const OccupiedRange two[2] = { block, OccupiedRange(0x817c0000, 0x817c1000) };
+		FstPlacement t = PlaceFst(a, want, 32, two, 2);
+		ck(t.ok && t.fstAddr == 0x8179a6a0, "lower obstacle moves the table below both");
+
+		//! In-place installs never consult the list: nothing moves, so
+		//! nothing outside the reservation can be hit.
+		FstPlacement u = PlaceFst(a, 1000, 32, &block, 1);
+		ck(u.ok && u.inPlace && u.fstAddr == a.fstAddr, "in-place path ignores obstacles");
+
+		//! Malformed entries refuse grown placement: steering around ranges
+		//! that cannot be read is guessing. The counts still say what was
+		//! seen, so the refusal names its cause instead of going anonymous.
+		const OccupiedRange bad(0, 0);
+		FstPlacement v = PlaceFst(a, want, 32, &bad, 1);
+		ck(!v.ok, "malformed range refuses grown placement");
+		ck(v.why.find("validation") != std::string::npos, "and says coverage is why");
+		ck(v.malformedRanges == 1, "malformed count reported on refusal");
+		ck(v.ignoredRanges == 0, "nothing counted as stale-table space");
+
+		//! An in-place table never consults the list, so malformed entries
+		//! cannot touch it - but they are still reported.
+		FstPlacement w = PlaceFst(a, 1000, 32, &bad, 1);
+		ck(w.ok && w.inPlace, "in-place install ignores a malformed list");
+		ck(w.malformedRanges == 1, "still reported");
+
+		//! BSS is occupancy like any loaded range: a BSS block the cascade
+		//! would land in moves the table below it.
+		const OccupiedRange tbb[2] = { block, OccupiedRange(0x817d0000, 0x817d2000) };
+		FstPlacement x = PlaceFst(a, want, 32, tbb, 2);
+		ck(x.ok && x.fstAddr == 0x817aa6a0, "BSS in the way moves the table below the BSS");
+
+		//! BSS inside the stale reservation is expected overlap, like the
+		//! table bytes themselves.
+		const OccupiedRange bssIn(0x817db000, 0x817dc000);
+		FstPlacement y = PlaceFst(a, want, 32, &bssIn, 1);
+		ck(y.ok && y.fstAddr == 0x817da6a0, "BSS inside the reservation is ignored");
+		ck(y.ignoredRanges == 1, "and counted");
+
+		//! Capacity: far more ranges than any fixed buffer ever held are all
+		//! processed - 150 valid ranges below plus the T0 block last.
+		OccupiedRange many[151];
+		for (u32 m = 0; m < 150; ++m)
+			many[m] = OccupiedRange(0x80100000 + m * 0x10000,
+									 0x80100000 + m * 0x10000 + 0x1000);
+		many[150] = block;
+		FstPlacement z = PlaceFst(a, want, 32, many, 151);
+		ck(z.ok && z.fstAddr == 0x817b2de0, "a 151-entry list still moves past the block");
+		ck(z.ignoredRanges == 0 && z.malformedRanges == 0, "with clean counts");
+
+		//! No room anywhere below: refused, not wrapped or squeezed.
+		const OccupiedRange all(MEM1_BASE, 0x817da740);
+		ck(!PlaceFst(a, want, 32, &all, 1).ok, "a fully covered heap is refused");
+	}
+
 	printf("\n%d checks, %d failure(s)\n", checks, failures);
 	return failures ? 1 : 0;
 }
