@@ -143,8 +143,17 @@ Corrections applied after review, all in code+comments, not just here:
 Validated: full host suite green (test_fstinstall 57 checks, 0 fail);
 edited TU syntax-checked with the Makefile's own PPC flags (local gcc
 16.1 — syntax/types only, NOT the CI toolchain). CI build/link
-validation: branch pushed, `main.yml` builds every branch — run status
-below. No tag, no release from this.
+validation: branch `diag/reloc-evidence` commit `16c02b34`, run
+34211117708 — `make release -j2` on `devkitppc:20250527` COMPLETED
+SUCCESS. Weak stack symbols + all APIs link under the exact toolchain.
+No tag, no release from this.
+Preservation gap: main.yml upload steps SKIPPED (`ALLOW_UPLOADS` not
+true for branch builds), so this run kept no DOL/ELF/map. The boot.map
+plumbing in the diff is workflow-valid (run parsed and executed) but
+unproven end-to-end until a build with uploads enabled. Exact rebuild
+stays available on demand: commit `16c02b34` + image
+`devkitpro/devkitppc:20250527`. Next tag build (release.yml, ungated)
+attaches DOL+ELF+MAP automatically.
 
 Stack bounds, validated against libogc v2.11.0 (May 25 2025 — the CI
 image `devkitppc:20250527` vintage): main-thread stack is
