@@ -6,18 +6,27 @@ them were wrong and are corrected here.
 
 ## The one thing that blocks everything
 
-**The tester's USB drive is probably damaged. Nothing else can be trusted until that
-is settled.** Two independent signs, both from v3.30:
+**The tester's USB setup is the prime suspect, but its guilt is not established.
+Do not clear the loader and do not blame the drive solely on the evidence below.**
+Two independent signs, both from v3.30:
 
 1. A boot log came back as **26 exact copies of one 512-byte sector** (13466 bytes
    total, high entropy, not our text). The file *length* was right, so the directory
-   entry updated correctly and the data did not.
-2. A later boot of the **same test on the same build** died in `get_frag_list()` —
-   stock USB Loader GX code that reads the *game backup's* cluster chain out of the
-   FAT, before any Riivolution code runs at all.
+   entry updated correctly and the data did not. This confirms the *file* is
+   corrupt, not where the corruption happened: failing flash, a bad enclosure or
+   cable, the FAT driver misreading, or the cIOS miswriting all fit. No local
+   copy of the damaged file exists to re-examine; preserve it off the drive
+   before any repair is attempted.
+2. A later boot of the **same test on the same build** produced no "Boot progress"
+   section at all. That is consistent with dying in `get_frag_list()` — stock USB
+   Loader GX code that reads the *game backup's* cluster chain out of the
+   FAT, before any Riivolution code runs — but the early return was never observed
+   with its return value, so a hang or crash in that window fits too. An
+   unobserved return identifies nothing on its own.
 
-Same build, same test, two completely different failure points is a failing
-filesystem, not a bug.
+Same build, same test, two completely different failure points points at the
+filesystem/drive layer rather than a single code bug — but the origin is not
+established by the light or the logs currently in hand.
 
 **Do first:** `chkdsk X: /f` on that drive. Better: a different drive with a fresh copy
 of the game and the test pack. Then re-baseline from scratch — no mod selected at all,
@@ -45,9 +54,11 @@ is broken right now, the drive is confirmed.
 ## Not confirmed — do not repeat these as fact
 
 - **Whether SB4E01 can boot with a mod live.** The one clean run of the whole pipeline
-  ended in a black screen on a drive that is probably damaged.
-- **`nofstinstall.txt` has never actually run.** Boot 2 died in `get_frag_list` before
-  it mattered. That comparison — table/install fault vs hook/fragment fault — is still
+  ended in a black screen on a setup whose drive layer is suspect (see top).
+- **`nofstinstall.txt` has never actually run.** Boot 2 produced no "Boot progress"
+  section at all, which is consistent with `get_frag_list` failing before Riivolution
+  code runs — but the return value was never observed, so that identification is
+  provisional. That comparison — table/install fault vs hook/fragment fault — is still
   the right next test and is still unrun.
 - **Part 2 (real file replacement on SB4E01) has never been run.** `matched on disc: 0`
   in every log to date. It is still the only thing that proves the feature on this game.
@@ -84,14 +95,18 @@ screen never appeared, and it was the only reason the boot survived. v3.23's
 
 - **Fast, irregular blinking** = alive and working. `LogStep` flips it, plus a pulse
   through the 13.6M-word IOS scan and one per apploader section.
-- **Light out** = `EndLightPulse()` ran, which is the last statement before the jump.
-  Light out + black screen means the game got the console and *it* failed.
+- **Light out** = `EndLightPulse()` ran, which is the last statement before the jump
+  call. It proves the loader reached the jump — not that the game executed a single
+  instruction. A broken jump sequence, or a game crashing before its own video init,
+  follows the same dark light.
 - **Light on and static** = hung before the jump.
 - **Slow deliberate blinks** = a refusal code. `RiivoBlinkCode`: 700 ms pause, then
   *n* blinks at 350 ms on / 350 ms off, n ∈ 1..7. Countable by design. "Too fast to
   count" is never a refusal code.
   - 1 nothing staged · 2 staged checksum · 3 install bounds · 4 installed bytes ·
-    5 low-memory pointers · 6 cIOS not beta3 · 7 code-handler collision
+    5 low-memory pointers · 6 BootPartition returned a null entry point ·
+    7 code-handler collision (Hooktype nonzero AND a protected mod range overlapping
+    0x80001000..0x80003000; the unguarded skip-flag query blinks nothing)
 - **Back at the loader with no blinks** = `SetupDisc()` returned < 0
   (`GameBooter.cpp:823`). No blink, no log line. `get_frag_list` failing lands here.
 

@@ -390,11 +390,6 @@ s32 Disc_JumpToEntrypoint(s32 hooktype, u32 dolparameter)
 	/* Set an appropiate video mode */
 	Disc_SetVMode();
 
-	/* Captured while IOS is still up: VIDEO_GetPreferredMode reads SYSCONF,
-	 * which is gone once the subsystems below are shut down. */
-	GXRModeObj *riivoMarkMode = VIDEO_GetPreferredMode(NULL);
-	void *riivoMarkFb = VIDEO_GetCurrentFramebuffer();
-
 	/* Set time */
 	__Disc_SetTime();
 
@@ -403,22 +398,6 @@ s32 Disc_JumpToEntrypoint(s32 hooktype, u32 dolparameter)
 	u32 level = IRQ_Disable();
 	__IOS_ShutdownSubsystems();
 	__exception_closeall();
-
-	/* Paint the screen so that a black screen after this point means one
-	 * thing instead of two. Nothing can be logged from here - the card is
-	 * already gone - and Disc_SetVMode above has blanked the display, so
-	 * black is currently what BOTH of these look like: dying before the
-	 * jump, and jumping into a game that jams before its own video init.
-	 * White separates them. The game overwrites it as soon as it configures
-	 * video, so a booting game never shows it. Threads are dead by here, so
-	 * nothing repaints over it.
-	 */
-	if (riivoMarkMode && riivoMarkFb)
-	{
-		VIDEO_ClearFrameBuffer(riivoMarkMode, riivoMarkFb, COLOR_WHITE);
-		VIDEO_SetNextFramebuffer(riivoMarkFb);
-		VIDEO_Flush();
-	}
 
 	 /* Originally from tueidj - taken from NeoGamme (thx) */
 	*(vu32*)0xCC003024 = dolparameter != 0 ? dolparameter : 1;
