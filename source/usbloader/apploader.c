@@ -79,8 +79,17 @@ s32 Apploader_Run(entry_point *entry, char * dolpath, u8 alternatedol, u32 alter
 	{
 		RiivoPulseLight();
 
-		/* Read data from DVD */
-		WDVD_Read(dst, len, (u64) (offset << 2));
+		/* Read data from DVD. The return value is checked like the header
+		   and image reads above: a failed chunk must refuse loudly below,
+		   never boot on stale or partial bytes. WDVD_Read reports 0 on
+		   success, negative codes otherwise (see wdvd.c). */
+		ret = WDVD_Read(dst, len, (u64) (offset << 2));
+		if (ret < 0)
+		{
+			RiivoLogChunkFailure((unsigned int) (uintptr_t) dst, (unsigned int) len,
+								 ((unsigned int) offset << 2), (int) ret);
+			return ret;
+		}
 
 		RegisterDOL((u8 *) dst, len);
 		//! Same request, with its source offset kept: RegisterDOL records
