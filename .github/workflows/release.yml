@@ -95,7 +95,9 @@ jobs:
           cd package && zip -r "../USBLoaderGX-Riivolution-${TAG}.zip" apps && cd ..
           cp package/apps/usbloader_gx/boot.dol .
           cp elf/boot.elf .
-          cp elf/boot.elf.map .
+          # Multi-path artifacts keep directory structure, so the map
+          # arrives nested: elf/build/boot.elf.map, not elf/boot.elf.map.
+          cp elf/build/boot.elf.map ./boot.elf.map
 
       - name: Create release
         uses: softprops/action-gh-release@v2
