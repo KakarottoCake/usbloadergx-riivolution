@@ -1,4 +1,4 @@
-# Handoff — 2026-09-08 (updated: v3.39 released + binary-gated; T0 run live)
+# Handoff — 2026-09-08 (updated: LAN collector assessed unusable, lights stand)
 
 State of the SB4E01 (Super Mario Galaxy 2) debugging effort. Read the
 "Latest evidence" section first — it supersedes the drive-blocker framing
@@ -186,6 +186,41 @@ placement defect, now fixed:
   expected `817b2de0` address). Tester for this round is the repo owner
   (new console/drive vs all prior rounds - do not mix results across
   testers without saying so). T2 stays separate.
+
+## LAN collector assessment: dead before shutdown, not at it (no code changed)
+
+Transport: blocking TCP (`RiivoNetSock.c`, libogc net_*), no timeouts,
+fail-latched dead. Findings, in dependency order:
+- `AppCleanUp` (BootGame, unconditional, before `SetBootContext`) calls
+  `DeinitNetwork` → lwIP torn down, flag false. Nothing on the boot
+  path re-inits it (`WII_Initialize` is video/pads, not net).
+- The network thread either self-suspended at menu init (stays down,
+  deterministic) or still loops (DHCP-seconds race vs the boot window,
+  nondeterministic). Either way `OpenCollector` faces down-or-racing
+  network and latches dead. The collector is inert on the boot path
+  TODAY - not "dying at shutdown" as the code comments claim (those
+  comments describe intent; `RiivoBoot.cpp` overstates its lifetime).
+- Nothing in `ShutDownDevices` touches net either way; no IOS reload on
+  the same-slot path; `__IOS_ShutdownSubsystems` only at the jump.
+  USB-medium testers are an open variable (`USB_Deinitialize` vs
+  USB-Ethernet unexamined - and unreachable, see above).
+Last usable point, unchanged code: NONE reliably - there is no point in
+the window where the channel is deterministically alive, pre- or
+post-shutdown. The 5 checkpoints (entered / CRC / copied / verified /
+pre-jump) therefore cannot ride it without FIRST resurrecting it
+(deterministic re-init after `AppCleanUp`: seconds of DHCP on every mod
+boot) AND extending socket lifetime past shutdown (blocking-write wedge
+risk moves into the install window; first stall wedges indistinguishably
+from install failure). Both perturb the failing path for a channel whose
+tester end (listener? WiFi?) is unconfirmed.
+Recommendation: do not pursue. The 3x/solid-second light protocol
+answers install-vs-launch with zero new init, zero new traffic, and no
+listener - observe it first; revisit the collector only if lights prove
+insufficient AND WiFi + listener are confirmed on the test rig. SD log
+stays the persistent baseline throughout (untouched by all options).
+Not proposed: moving install earlier (reintroduces the heap-overwrite
+hazard the late install exists to avoid), keeping SD/USB mounted (game
+boot requires the teardown), non-blocking rewrite (bigger, unmeasured).
 
 ## v3.36 post-mortem: tagged before the code was committed
 
