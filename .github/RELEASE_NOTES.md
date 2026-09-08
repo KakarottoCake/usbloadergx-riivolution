@@ -37,6 +37,12 @@ on. Without that file nothing changes and the build behaves exactly like v3.10.
 It has never run on a console. Expect it to fail; the log and a USB Gecko trace are the
 point of it. Leave the file off for normal use.
 
+## Changed in v3.40
+
+- The apploader-struct block now leads with each chunk's own recorded source: every loaded range carries the disc offset its read came from, and the struct bytes are compared against their actual source first, the image second. A difference from either source proves post-source change only - never a live reference, never a reason to patch.
+- If you are on the SB4E01 round: run one T0 with THIS build (no bypass markers), video the ending if possible, and send the log.
+- 146,897 automated checks, all passing.
+
 ## Changed in v3.39
 
 - New log section for the `0x81201b90` question: the placement report dumps the 8 words around the apploader-staged address that matched the original FST pointer, checks each against the same bytes fresh off the disc, verifies the address sits inside the loaded apploader image, and logs whether the loader heap could have reached it. Read-only - nothing is updated, no placement changed.
@@ -85,9 +91,5 @@ point of it. Leave the file off for normal use.
 ## Changed in v3.32
 
 - The white flash in the jump sequence is gone. The launch path is back to stock code; a black screen after the light goes out means the game itself never came up.
-
-## Changed in v3.31
-
-- The loading bar and the pre-jump result screen are gone entirely, along with the markers that turned them on. Nothing is drawn during a mod boot; the disc light is the whole progress signal.
 
 Older versions: [CHANGELOG.md](CHANGELOG.md)
