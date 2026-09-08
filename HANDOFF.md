@@ -65,7 +65,31 @@ placement defect, now fixed:
   abut/multi/no-room/in-place/malformed cases). Full host suite green
   (77 checks in fstinstall, 0 failures everywhere); edited TU
   syntax-checked under the Makefile's PPC flags.
-- Next hardware run: T0 with a build of this branch. T2 stays separate.
+- Next hardware run: T0 with v3.37 (NOT v3.36 - see below), pack
+  GXDiag-SB4E01-v5.zip (same 8 probes, docs point at v3.37 + the
+  expected `817b2de0` address). T2 stays separate.
+
+## v3.36 post-mortem: tagged before the code was committed
+
+v3.36's binary (sha256 `191670a5…`) does NOT contain the placement fix:
+downloaded and string-checked - v3.37-era strings absent, `RIIVO_COMMIT`
+reads `0d987d2` (the notes commit, which predates the uncommitted fix).
+Same sizes + identical map as v3.35 are then expected (layout unchanged;
+only the commit string and per-build bytes differ). The pipeline built
+exactly what the tag pointed at; the sequencing error was tagging
+before committing. Institutional fix: every release's boot.dol is now
+downloaded and grepped for the new code strings + commit BEFORE
+announcing. v3.36 is void for the fix (v3.35 + docs); superseded, not
+deleted. Verify ancestry (`merge-base --is-ancestor`) and binary strings
+before every future tag.
+
+## v3.37 (verified): obstacle-aware placement + tracing, binary-gated
+
+Run 34221022717 green. Assets: zip + boot.dol (`f2bbe27d…`, 5,132,480)
++ boot.elf (`7a13211a…`) + boot.elf.map (`4979f14d…`, 5,151,873 - all
+sizes shifted vs v3.36, as new code requires). Binary gate passed on
+the published bits: all fix strings present, commit `8e051e8` present,
+digest matches. THIS is the T0 build.
 
 ## Reference review: Project+ FilePatchCode.asm (analysis only, NO code taken)
 
