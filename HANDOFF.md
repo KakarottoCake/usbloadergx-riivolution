@@ -30,11 +30,24 @@ T1 (`v3.34`) installs its rebuilt table IN PLACE at `0x817da740` — no
 relocation, no heap change — with hook and fragments live and a real
 redirect for TitleLogo.arc, and boots. So the install write itself,
 same-address pointer/size updates, and a live redirected read path do
-not break the boot. Relocation stands convicted by the relocorig run
-(verbatim bytes died on the move); table content stands unindicted
-(a rebuilt serializer table boots when it stays put). What T1 does NOT
+not break the boot. What T1 does NOT
 prove: that the game consumed our bytes — the copy is identical, so a
 boot that ignored the redirect looks the same. That is T2's job.
+
+## Collision demoted: fixed defect, not the cause
+
+T0 with obstacle-aware placement (table below the 8 KB block, verified
+in the log) STILL black-screens. The overwrite was real and is still
+guarded against, but it is not the established cause — stopped being
+treated as one. Relocated-vs-in-place differences that remain suspects:
+pointer/arena value changes, heap given up, relocation-only checks.
+Ruled out as consumers of the changed words: the IOS hook (reads no
+boot words), the jump sequence (reads none, wipes only loader BSS),
+everything between placement and install (no writer to `0x80000030-3C`
+outside apploader/InstallFst). Remaining consumer: game startup itself.
+The 8 KB block reports "no section match" (table WAS read, so this is
+absence, not a failed read) — purpose still unknown, and avoidance
+cannot exclude references it may hold to the original table.
 
 ## Planned overwrite found in the v3.35 T0 log (branch, unpublished fix)
 
