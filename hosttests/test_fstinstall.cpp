@@ -309,6 +309,60 @@ int main()
 		ck(!PlaceFst(a, want, 32, &all, 1).ok, "a fully covered heap is refused");
 	}
 
+	printf("10. word-reference scan for the evidence block\n");
+	{
+		//! Aligned u32 backing throughout: the scanner skips unaligned head
+		//! bytes, so plain byte buffers would make expectations depend on
+		//! stack alignment. Buffers are filled with memcpy so writer and
+		//! scanner agree on any host endianness.
+		u32 wbuf[16] = { 0 };
+		const u32 needle = 0x817da740;
+		wbuf[3] = needle;   // bytes 12..15
+		wbuf[10] = needle;  // bytes 40..43
+		u32 hits[8] = { 0 };
+		const u8 *buf = (const u8 *) wbuf;
+		ck(FindWordRefs(buf, sizeof(wbuf), &needle, 1, hits, 8) == 2,
+		   "two occurrences found");
+		ck(hits[0] == 12 && hits[1] == 40, "offsets recorded");
+
+		//! Base one past alignment: the head byte is skipped, words at
+		//! relative 11 and 23 (absolute 12 and 24) still found.
+		u32 words[8] = { 0 };
+		words[3] = needle;
+		words[6] = needle;
+		ck(FindWordRefs((const u8 *) words + 1, 27, &needle, 1, hits, 8) == 2,
+		   "unaligned base still finds aligned words");
+		ck(hits[0] == 11 && hits[1] == 23, "offsets relative to the given base");
+
+		//! A trailing partial word is not read.
+		u8 tail[66] = { 0 };
+		memcpy(tail + 12, &needle, 4);
+		memcpy(tail + 62, &needle, 2);
+		ck(FindWordRefs(tail, sizeof(tail), &needle, 1, hits, 8) == 1,
+		   "partial tail word ignored");
+
+		ck(FindWordRefs(buf, sizeof(wbuf), &needle, 0, hits, 8) == 0,
+		   "no values means no hits");
+		ck(FindWordRefs(0, sizeof(wbuf), &needle, 1, hits, 8) == 0,
+		   "null base reads nothing");
+		ck(FindWordRefs(buf, 0, &needle, 1, hits, 8) == 0,
+		   "empty range reads nothing");
+
+		const u32 multi[2] = { 0x817da740, 0x000258c0 };
+		memcpy(tail + 4, &multi[1], 4);
+		ck(FindWordRefs(tail, sizeof(tail), multi, 2, hits, 8) == 2,
+		   "several values match");
+
+		//! Twenty hits, room for five: returns 20, records the first 5.
+		u32 manyw[24] = { 0 };
+		for (u32 i = 0; i < 20; ++i)
+			manyw[i] = needle;
+		u32 few[5] = { 0 };
+		ck(FindWordRefs((const u8 *) manyw, 80, &needle, 1, few, 5) == 20,
+		   "total reported past the cap");
+		ck(few[0] == 0 && few[4] == 16, "first hits recorded in order");
+	}
+
 	printf("\n%d checks, %d failure(s)\n", checks, failures);
 	return failures ? 1 : 0;
 }

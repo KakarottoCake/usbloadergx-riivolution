@@ -2658,7 +2658,38 @@ namespace Riivo
 	//! logged again at InstallPendingFst, but that runs after device
 	//! shutdown and only reaches USB Gecko - this card-log block is the
 	//! persistent record.
-	static void AppendRelocationEvidence(std::string &out, const FstPlacement &place,
+	//! Report every boot-word hit inside one resident range, capped. listed
+	//! and total accumulate across ranges so the caller can close with an
+	//! "N more unlisted" line instead of implying absence.
+	static void ReportWordHits(std::string &out, const char *label, u32 lo, u32 hi,
+							   const u32 *vals, const char *const *names, u32 nvals,
+							   u32 &listed, u32 &total)
+	{
+		if (hi <= lo)
+			return;
+		u32 ho[16];
+		const u32 found = FindWordRefs((const u8 *) (uintptr_t) lo, hi - lo,
+									   vals, nvals, ho, sizeof(ho) / sizeof(ho[0]));
+		total += found;
+		for (u32 k = 0; k < found && k < 16 && listed < 16; ++k, ++listed)
+		{
+			u32 w = 0;
+			memcpy(&w, (const void *) (uintptr_t) (lo + ho[k]), 4);
+			const char *role = "?";
+			for (u32 v = 0; v < nvals; ++v)
+			{
+				if (vals[v] == w)
+				{
+					role = names[v];
+					break;
+				}
+			}
+			Addf(out, "    word %08x (= %s) at %s +0x%x\n", w, role, label, ho[k]);
+		}
+	}
+
+	static void AppendRelocationEvidence(std::string &out, const ArenaInfo &arena,
+										 const FstPlacement &place,
 										 u32 want, BssState bss, u32 bssLo, u32 bssHi)
 	{
 		out += "\nRelocation evidence (observations only - installation decisions unchanged)\n";
@@ -2843,6 +2874,62 @@ namespace Riivo
 			else
 				out += "    newlib break is below the destination: heap extent clear (floor cited, not verified)\n";
 		}
+
+		//! Table references: words anywhere resident that already equal the
+		//! boot words. A moved table breaks such references even where no
+		//! byte is overwritten, so avoidance alone cannot exclude them.
+		//! Snapshots at placement time, like everything else here.
+		out += "  table references (words already equal to the boot words) :\n";
+		u32 refVals[5];
+		const char *refNames[5];
+		u32 refN = 0;
+		if (arena.fstAddr) { refVals[refN] = arena.fstAddr; refNames[refN++] = "FST address"; }
+		if (arena.fstMaxSize) { refVals[refN] = arena.fstMaxSize; refNames[refN++] = "FST max size"; }
+		if (arena.arenaHi) { refVals[refN] = arena.arenaHi; refNames[refN++] = "arena high"; }
+		if (arena.arenaLo) { refVals[refN] = arena.arenaLo; refNames[refN++] = "arena low"; }
+		if (arena.fstAddr && arena.fstMaxSize
+			&& arena.fstAddr + arena.fstMaxSize > arena.fstAddr)
+		{
+			refVals[refN] = arena.fstAddr + arena.fstMaxSize;
+			refNames[refN++] = "reservation top";
+		}
+		u32 listed = 0, total = 0, scanned = 0;
+		if (refN == 0)
+			out += "    (no nonzero boot words to match)\n";
+		else
+		{
+			char lbl[32];
+			for (int i = 0; i < dolN; ++i)
+			{
+				u8 *d = RiivoGetDOLDst(i);
+				int l = RiivoGetDOLLen(i);
+				if (!d || l <= 0)
+					continue;
+				const u32 lo = (u32) d, hi = lo + (u32) l;
+				if (hi <= lo || lo < MEM1_BASE || hi > MEM1_END)
+					continue;
+				snprintf(lbl, sizeof(lbl), "chunk %d", i);
+				ReportWordHits(out, lbl, lo, hi, refVals, refNames, refN,
+							   listed, total);
+				++scanned;
+			}
+			if (bss == BSS_VALID)
+			{
+				ReportWordHits(out, "BSS", bssLo, bssHi, refVals, refNames, refN,
+							   listed, total);
+				++scanned;
+			}
+			if (place.ok && !place.inPlace && destLo < arena.fstAddr)
+			{
+				ReportWordHits(out, "sliver below reservation", destLo, arena.fstAddr,
+							   refVals, refNames, refN, listed, total);
+				++scanned;
+			}
+			if (total == 0)
+				Addf(out, "    none observed in %u scanned range(s)\n", scanned);
+			else if (total > listed)
+				Addf(out, "    ... and %u more hit(s) unlisted\n", total - listed);
+		}
 	}
 
 	void ReportFstPlacement()
@@ -2986,7 +3073,7 @@ namespace Riivo
 		//! Evidence first, verdicts never: the block runs for in-place
 		//! installs too, where the same geometry is a control. It costs log
 		//! lines plus the timing/stack/layout perturbation stated above.
-		AppendRelocationEvidence(out, place, want, bss, bssLo, bssHi);
+		AppendRelocationEvidence(out, arena, place, want, bss, bssLo, bssHi);
 
 		//! This is the step that actually points the game at the mod. It only
 		//! runs when the fragment list, the read-back check and the cIOS hook
