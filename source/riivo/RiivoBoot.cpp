@@ -921,6 +921,55 @@ namespace Riivo
 		return -1;
 	}
 
+	//! Apploader-retained words around 0x81201b80, where the reference scan
+	//! found the original FST address at +0x10. 0x81200000 is where this
+	//! loader puts the apploader image (apploader.c), so anything in that
+	//! window is either a disc-static constant of the image or a global the
+	//! apploader wrote while running: nothing else stores there, and our
+	//! tree reads nothing back from it. Comparing RAM against the same
+	//! bytes fresh off the disc tells the two apart while the card log is
+	//! still writable. Read-only on purpose: whether relocation must also
+	//! update +0x10 depends on a consumer no static audit can name (the
+	//! apploader itself is dead post-run; game startup is unobservable
+	//! from here), so that decision waits on this log - not on a global
+	//! word replace, which is explicitly not done.
+	static void AppendApploaderStructEvidence(std::string &out)
+	{
+		//! Measured offsets, not protocol: the struct address comes from
+		//! the T0 reference scan, the image base from apploader.c, the disc
+		//! base from APPLDR_OFFSET (0x2440) plus the 0x20 header.
+		static const u32 ramBase = 0x81201b40;   // struct - 0x40
+		static const u32 discBase = 0x2460 + 0x1b40;
+		static u8 disc[0x100] ATTRIBUTE_ALIGN(32);
+
+		out += "\nApploader struct around 81201b80 (read-only - nothing updated)\n";
+		out += "--------------------------------------------------------------\n";
+
+		//! The 8 words at the struct, as the CPU reads them. Neighbors name
+		//! the shape: boot words beside +0x10 would read as the apploader's
+		//! working copy of what it wrote to low memory; code bytes around
+		//! it would read as an embedded constant instead. The marker is
+		//! re-checked live against low memory rather than assumed from T0.
+		const u32 fstNow = *(vu32 *) 0x80000038;
+		for (u32 i = 0; i < 8; ++i)
+		{
+			const u32 w = *(const volatile u32 *) (uintptr_t) (ramBase + 0x40 + 4 * i);
+			Addf(out, "  +0x%02x : %08x%s\n", 4 * i, w,
+				 (4 * i == 0x10 && w == fstNow)
+				 ? "  <-- equals the FST address right now" : "");
+		}
+
+		if (WDVD_Read(disc, sizeof(disc), discBase) < 0)
+		{
+			out += "  disc compare unavailable (apploader bytes unreadable)\n";
+			return;
+		}
+		if (memcmp(disc + 0x40, (const void *) (uintptr_t) (ramBase + 0x40), 0x20) == 0)
+			out += "  same 8 words fresh off disc: IDENTICAL - a disc-static constant\n";
+		else
+			out += "  same 8 words fresh off disc: DIFFERENT - written while running\n";
+	}
+
 	static bool ByPlacedOffset(const PlacedFile &a, const PlacedFile &b)
 	{
 		return a.offset < b.offset;
@@ -3074,6 +3123,10 @@ namespace Riivo
 		//! installs too, where the same geometry is a control. It costs log
 		//! lines plus the timing/stack/layout perturbation stated above.
 		AppendRelocationEvidence(out, arena, place, want, bss, bssLo, bssHi);
+
+		//! Apploader-struct evidence rides with the relocation block: same
+		//! window (card alive, apploader done), same read-only terms.
+		AppendApploaderStructEvidence(out);
 
 		//! This is the step that actually points the game at the mod. It only
 		//! runs when the fragment list, the read-back check and the cIOS hook
