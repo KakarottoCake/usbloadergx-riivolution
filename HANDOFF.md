@@ -4,56 +4,41 @@ State of the SB4E01 (Super Mario Galaxy 2) debugging effort. Read the
 "Latest evidence" section first — it supersedes the drive-blocker framing
 below, which is kept for the steps it still requires.
 
-## Latest evidence: paired T0 runs on v3.33, same build `07dfade1`
+## Latest evidence: install split confirmed on v3.34, same build throughout
 
 | Run | Table staged | Result |
 |---|---|---|
-| Normal T0 | Rebuilt, 153,934 bytes at `0x817da6a0` | Black screen |
-| T0 + `relocorig.txt` | Verbatim original + 160 zero bytes, 153,952 bytes, same address | Black screen |
-| Earlier T0 + `nofstinstall.txt` | Install skipped | Game boots |
+| T0 (`v3.33`) | Rebuilt, 153,934 bytes at `0x817da6a0` | Black screen |
+| T0 + `relocorig.txt` (`v3.33`) | Verbatim original + 160 zero bytes, 153,952 bytes, same address | Black screen |
+| T0 + `nofstinstall.txt` (`v3.34`, behavior-identical to v3.33) | Install skipped | Game boots |
 
 Both installs target `0x817da6a0`, 160 bytes below the original table.
 Both pass file read checks and report an intact staging checksum before
 shutdown. Neither persistent log proves the late install completed.
 
-Reading: the hook/fragment half is exonerated (again — `nofstinstall`
-boots with hook and fragments live). Original entries do not rescue the
-boot, so the serializer is deprioritized; the shared staging/install
-path is now the suspect, not table content.
+Reading: install (either table) black-screens, skipped install boots, on
+behavior-identical builds. The hook/fragment half is exonerated with the
+hook and fragments live — but note the scope precisely: the game boots
+with the ORIGINAL table installed, so this proves nothing about the game
+consuming mod files. Serializer-only explanations are insufficient (the
+verbatim original died too). The suspect is the shared path both failing
+runs take and the passing run skips: late staging checks, the FST copy,
+install verification, and the pointer/size/arena updates.
 
-Open, provisional: the tester reported two flashes then darkness on the
-`relocorig` run, possibly refusal code 2 (staged checksum mismatch at
-the late copy). Ordinary progress flicker looks similar, so the count
-alone confirms nothing — the pattern must be pause-then-two-slow-flashes
-(~350 ms on/off). Established: the console stayed black (no HBC/menu),
-so re-asking black-versus-returned settles nothing further.
-If code 2 is confirmed, only this is established: the pre-copy checksum
-comparison failed and `InstallFst` was not reached. It would NOT establish
-MEM2 lifetime as the cause — buffer contents, expected CRC, pointer, or
-size could each be wrong, unranked until evidence distinguishes them.
-Ruling out intended frees and writers eliminates those ordinary paths,
-not corruption. If code 2 is ruled out, destination ownership and the
-installed pointer/size/arena values stay open. A post-shutdown refusal
-returning visibly is itself unproven: the return runs after device
-teardown and may die silently, which would also present as black screen.
+Dropped as leading assumption: refusal code 2. The same two-flash
+signature appears on runs that then enter the game successfully, so the
+flashes are consistent with ordinary progress flicker. A code-2 reading
+would additionally require the pause-then-two-slow-flashes pattern,
+which was never established. The install-verification sub-cases (bytes,
+pointers, staging metadata) stay unranked.
 
-Design constraints for any staged-header diagnostic (not a boot fix):
-it still depends on a trustworthy pointer and bounded size; preserve the
-original checksum independently and never recompute-and-accept a new
-baseline; validate bounds before reading header or payload. Next work
-distinguishes changed payload versus changed staging metadata first,
-then identifies the first intervening operation responsible.
-
-Next run, one only: v3.34 T0 with `nofstinstall.txt`. The no-install
-result on record is from v3.32; this completes the same-build comparison
-(v3.34 is behavior-identical to the v3.33 of the paired runs, comments
-only)
-(no-install boots / install black-screens twice). Its purpose is solely
-to confirm the split still holds on the build carrying the framebuffer
-removal — nothing else. Do not restart the other four; no missing result
-there would resolve anything new. Record the light throughout regardless
-of outcome, and capture video of the final flashes plus the ensuing
-screen.
+Next run, one only: v3.34 T1 Identity. A same-size single-file replace
+installs IN PLACE (no relocation, no heap change), with hook and
+fragments live and the game reading our bytes for a title-screen file.
+Boots identical: relocation convicted, runtime reads work. Black screen:
+the install write itself — or any FST change at all — is broken, and
+relocation was never the question. Either outcome retires a whole
+branch with zero new code. T2 follows only if T1 boots.
 
 ## The one thing that blocks everything
 
