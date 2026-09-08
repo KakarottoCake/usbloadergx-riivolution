@@ -37,6 +37,13 @@ on. Without that file nothing changes and the build behaves exactly like v3.10.
 It has never run on a console. Expect it to fail; the log and a USB Gecko trace are the
 point of it. Leave the file off for normal use.
 
+## Changed in v3.42
+
+- Slimmed the post-apploader diagnostics after the v3.41 log stopped inside them: the struct disc reads and full-range memory sweeps are out; checkpoints, checked reads, per-chunk source offsets and the placement protection are unchanged. Installation decisions unchanged.
+- New host integration fixture (36 checks) running planning through installation against the captured SB4E01 layout in simulated memory.
+- If you are on the SB4E01 round: run T0 with THIS build (no bypass markers) - game boot is the acceptance test. Video the ending if possible, and send the log.
+- 146,933 automated checks, all passing.
+
 ## Changed in v3.41
 
 - Apploader chunk reads are now checked like the header and image reads: a failed chunk records destination, length, disc offset and return code in the log, then refuses through the existing path instead of booting a half-loaded game image silently.
@@ -84,12 +91,6 @@ point of it. Leave the file off for normal use.
 - `boot.elf.map` (linker map) now ships with every release next to `boot.elf`, so each build's exact memory layout is on record.
 - If you are on the SB4E01 round: run T0 with this build and send the log - the new section is the evidence the relocation question needs.
 - 146,876 automated checks, all passing.
-
-## Changed in v3.34
-
-- Removed the last leftover text of the deleted result screen. Nothing is drawn on the boot path.
-- Fixed comments that overstated what light-out proves, to match the blink-code table.
-- 146,865 automated checks, all passing.
 
 ## Changed in v3.33
 
