@@ -357,6 +357,10 @@ and permanent silence, and a write failure drops the socket rather than retrying
 - test_netlog: 23 checks on the address parsing, the half that fails quietly.
 - 146,353 automated checks, all passing.
 
+## Changed in v3.29
+
+- The loading bar is off again by default, and no longer forced to draw immediately. Turn it on with `riivolution/loadingbar.txt` (it replaces `noloadingbar.txt`).
+
 ## Changed in v3.28
 
 - The staged-table checkpoint now says when no table was staged instead of reporting a checksum it never took.
