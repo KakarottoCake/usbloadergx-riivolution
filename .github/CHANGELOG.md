@@ -357,6 +357,38 @@ and permanent silence, and a write failure drops the socket rather than retrying
 - test_netlog: 23 checks on the address parsing, the half that fails quietly.
 - 146,353 automated checks, all passing.
 
+## Changed in v3.24
+
+- Long prompt messages no longer draw on top of the prompt's own title.
+- The missing-files warning is shorter.
+
+## Changed in v3.23
+
+- The loading screen no longer waits half a second before appearing, so short phases actually show it. *(Reverted in v3.29 - the wait was what kept it from drawing, and drawing stopped boots.)*
+
+## Changed in v3.22
+
+- The disc light pulses while the mod is being prepared and goes out when the game takes over. If it is dark and the screen is still black after 20 seconds, it is stuck.
+- The loading bar is now on by default (`riivolution/noloadingbar.txt` turns it off). *(Reverted in v3.29 - drawing it stopped boots.)*
+- The disc light now works for warnings and blink codes even if you have the disc light turned off in settings.
+
+## Changed in v3.21
+
+- A mod on the SD card now warns you when you pick it, and again before launch.
+
+## Changed in v3.20
+
+- Files the mod names but the card does not have are now listed by path, in the log and on screen before launch.
+- Missing created files named instead of phantom additions.
+- Dolphin reference byte-diff for FST rebuilds.
+- Deliberate returns to the loader blink a distinct drive-light code.
+- Every mod boot briefly shows its result before launching.
+- The last boot's outcome is shown when you launch that game again.
+- Mods pack at the drive's sector size, leaving no unmapped gaps between files.
+- The rebuilt file table is verified after install; a bad install refuses instead of black-screening.
+- Tail-recovered files are matched against their registration records instead of withholding the whole mod.
+- 146,865 automated checks, all passing.
+
 ## Changed in v3.19
 
 - Drive-light blink codes name each launch refusal.
