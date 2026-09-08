@@ -1117,8 +1117,10 @@ int GameBooter::BootGame(struct discHdr *gameHdr, const s8 useOcarina)
 	//! GUI draws on this path were each confirmed on hardware to stop the
 	//! boot - the result screen that used to sit here, and the loading bar
 	//! one phase earlier. The drive light carries the whole signal now: it
-	//! pulses on every logged step and goes out immediately before the jump,
-	//! so light-out plus a black screen means the game got the console.
+	//! pulses on every logged step and goes out immediately before the jump.
+	//! Light-out proves the loader reached the jump call, not that the game
+	//! executed: a broken jump sequence or a game dead before its own video
+	//! init follows the same dark light.
 	//! Jump to the entrypoint of the game - the last function of the USB Loader
 	//! LAST. The table lands at the top of MEM1, which is also inside the
 	//! loader's own heap, and everything above here - ShutDownDevices,

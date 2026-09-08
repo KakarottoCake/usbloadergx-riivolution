@@ -37,6 +37,12 @@ on. Without that file nothing changes and the build behaves exactly like v3.10.
 It has never run on a console. Expect it to fail; the log and a USB Gecko trace are the
 point of it. Leave the file off for normal use.
 
+## Changed in v3.34
+
+- Removed the last leftover text of the deleted result screen. Nothing is drawn on the boot path.
+- Fixed comments that overstated what light-out proves, to match the blink-code table.
+- 146,865 automated checks, all passing.
+
 ## Changed in v3.33
 
 - New diagnostic: `riivolution/relocorig.txt` installs the verbatim original table, relocated, instead of the rebuilt one - to separate a relocation fault from new-table content. Do not combine it with `nofstinstall.txt`.

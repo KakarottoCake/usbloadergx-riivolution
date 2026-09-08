@@ -173,3 +173,10 @@ screen. **A log only says the loader did not record an error. Always ask what th
 screen did, and what the drive light did.** The control boot — the do-nothing
 configuration — should come before any theory; it would have found the
 `ShowPreJumpSummary` bug several rounds earlier.
+
+## Session protocol
+
+Two agents share this worktree and have collided silently before. Whoever
+starts work writes `usbloadergx/.agent-lock` with agent, UTC time and task,
+and deletes it when done. A lock older than a day is stale — its owner is
+gone, remove it and carry on. Never commit the lock file.
