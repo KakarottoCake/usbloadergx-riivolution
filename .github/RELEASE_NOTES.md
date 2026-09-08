@@ -37,6 +37,13 @@ on. Without that file nothing changes and the build behaves exactly like v3.10.
 It has never run on a console. Expect it to fail; the log and a USB Gecko trace are the
 point of it. Leave the file off for normal use.
 
+## Changed in v3.36
+
+- Fixed the SB4E01 relocation overwrite: a grown file table is now moved down past every apploader-loaded range it would hit, instead of assuming the space below the old table is free. The stale table's own space is still reused (that overlap is expected); malformed range data refuses the grown install rather than guessing around it.
+- Every file-mod boot now logs each loaded range with its DOL section and disc offset (or BSS), and the placement names the ranges it kept clear.
+- If you are on the SB4E01 round: run T0 with this build and send the log - the table should land below the game's 8 KB block this time.
+- 146,886 automated checks, all passing.
+
 ## Changed in v3.35
 
 - New diagnostic for the SB4E01 relocation failure: every file-mod boot now logs a "Relocation evidence" block naming the planned table address, the loaded game ranges one by one, the thread stack bounds, and the heap extent, with an overlap reading for each. Installation itself is unchanged - same decisions, same refusals, no new blink codes.
@@ -77,13 +84,5 @@ point of it. Leave the file off for normal use.
 ## Changed in v3.27
 
 - The pre-jump result screen is now off unless `riivolution/showlog.txt` exists. Drawing it after the drives were released stopped games booting - confirmed on hardware: a boot with no patches at all black-screened with it on and starts with it off.
-
-## Changed in v3.26
-
-- The log now records whether the staged file table is still intact at device shutdown, so a refused install says when it broke.
-
-## Changed in v3.25
-
-- The disc light keeps pulsing through the apploader instead of freezing for the last three seconds of the boot.
 
 Older versions: [CHANGELOG.md](CHANGELOG.md)
