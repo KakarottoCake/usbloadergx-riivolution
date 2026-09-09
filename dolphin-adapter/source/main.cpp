@@ -1,8 +1,7 @@
 /****************************************************************************
- * fstadapter v3 - the PRODUCTION InstallPendingFst under GDB.
+ * fstadapter v4 - production install + probe jump.
  *
- * v2 mirrored the late-install caller. A mirror that passes proves the
- * model, not the code. v3 links the REAL RiivoBoot.cpp TU (compiled
+ * v3 linked the REAL RiivoBoot.cpp TU (compiled unmodified,
  * unmodified, garbage-collected at link so only InstallPendingFst's
  * closure is retained) and calls the REAL Riivo::InstallPendingFst()
  * for both modes. The file-static staging state (pendingFst,
@@ -40,8 +39,14 @@ static void *xfb = NULL;
 static GXRModeObj *rmode = NULL;
 
 //! GDB rendezvous (globals, nm-visible): poke staging, set adGo=1.
+//! adPhase removes all timing races: the harness publishes which wait it
+//! sits in (1=unchanged done, 2=mode wait, 4=finished) and GDB polls it
+//! with waitmem instead of sleeping. (A sleep-synced round once executed
+//! the in-place install in the reloc slot after adGo was cleared by a
+//! wait the script had not seen yet - same bytes, wrong label.)
 volatile u32 adGo = 0;
 volatile u32 adModeDone = 0;
+volatile u32 adPhase = 0;
 
 static const u32 CAP_ARENA_LO = 0;
 static const u32 CAP_ARENA_HI = 0x817DA740;
@@ -84,6 +89,38 @@ static inline u32 rbe32(const u8 *p)
 static u8 *mem2Bump = 0;
 static u32 mem2Lo = 0, mem2Hi = 0;
 
+//! Probe "game" (source/probe.S): absolute-address consumer entered by
+//! branch-to-CTR after cache maintenance, modeling the entry jump. Uses
+//! no stack/TOC/nonvolatiles, returns the entry count (0 = reject) and
+//! fills a result block at 0x80000180 for GDB.
+extern "C" u8 probe_start[], probe_end[];
+static const u32 PROBE_ADDR = 0x80004000;
+static const u32 PROBE_RESULT = 0x80000180;
+
+static void InstallProbe(void)
+{
+	const u32 n = (u32) (probe_end - probe_start);
+	memcpy((void *) PROBE_ADDR, probe_start, n);
+	DCFlushRange((void *) PROBE_ADDR, n);
+	ICInvalidateRange((void *) PROBE_ADDR, n);
+	__asm__ volatile ("sync; isync" ::: "memory");
+}
+
+//! Branch to the probe and take back its r3. Clobbers are the volatile
+//! set the probe is allowed; TOC/stack/nonvolatiles survive by
+//! construction (probe.S never touches them).
+static u32 JumpProbe(void)
+{
+	u32 st;
+	DCFlushRange((void *) 0x80000030, 0x20);
+	__asm__ volatile ("sync; isync" ::: "memory");
+	__asm__ volatile ("mtctr %1; bctrl; mr %0,3"
+					  : "=r"(st) : "r"(PROBE_ADDR)
+					  : "ctr", "lr", "cc", "r0",
+						"r3", "r4", "r5", "r6", "r7", "r8", "r9",
+						"r10", "r11", "r12", "memory");
+	return st;
+}
 static u8 *Mem2Stage(u32 size)
 {
 	size = (size + 31) & ~31u;
@@ -100,7 +137,7 @@ static u8 *Mem2Stage(u32 size)
 	return p;
 }
 
-static u32 BuildMiniFst(u8 *buf, u32 size)
+static u32 BuildMiniFst(u8 *buf, u32 size, char tag)
 {
 	u32 n = (size - 16 - 13) / 19;
 	if (n < 2)
@@ -122,7 +159,7 @@ static u32 BuildMiniFst(u8 *buf, u32 size)
 	u32 at = 1;
 	for (u32 i = 1; i <= n; ++i)
 	{
-		snprintf(name, sizeof(name), "f%05u", (unsigned) (i - 1));
+		snprintf(name, sizeof(name), "%c%05u", tag, (unsigned) (i - 1));
 		const u32 l = (u32) strlen(name) + 1;
 		memcpy(str + at, name, l);
 		at += l;
@@ -212,6 +249,19 @@ static void PrintPoke(const char *tag, const Riivo::FstPlacement &place,
 	printf("\n");
 }
 
+//! Jump to the probe consumer and check it consumed the intended table:
+//! magic + count + CRC equality with the staged bytes + arena record.
+static void ConsumeCheck(const char *tag, u32 expCount, u32 expCrc)
+{
+	const u32 got = JumpProbe();
+	const vu32 *res = (const vu32 *) PROBE_RESULT;
+	printf("  %s probe: r3=%u magic=%08x count=%u crc=%08x arena=%08x\n",
+		   tag, got, res[0], res[1], res[2], res[3]);
+	Check(res[0] == 0x50524F42u, "probe accepted the table");
+	Check(got == expCount && res[1] == expCount, "probe entry count matches");
+	Check(res[2] == expCrc, "probe CRC matches the staged table");
+}
+
 int main(int argc, char **argv)
 {
 	(void) argc;
@@ -230,25 +280,32 @@ int main(int argc, char **argv)
 	if (rmode->viTVMode & VI_NON_INTERLACE)
 		VIDEO_WaitVSync();
 	printf("\x1b[2;0H");
-	printf("fstadapter v3: PRODUCTION InstallPendingFst\n");
-	printf("==========================================\n");
+	printf("fstadapter v4: production install + probe jump\n");
+	printf("=============================================\n");
 
 	printf("live boot words (saved, context only):\n  %08x %08x %08x %08x\n",
 		   *(vu32 *) 0x80000030, *(vu32 *) 0x80000034,
 		   *(vu32 *) 0x80000038, *(vu32 *) 0x8000003C);
 
+	InstallProbe();
+
 	u8 *stageReloc = Mem2Stage(RELOC_WANT);
 	u8 *stageInplace = Mem2Stage(INPLACE_WANT);
-	Check(stageReloc && stageInplace, "MEM2 staging allocated");
+	u8 *stageBase = Mem2Stage(INPLACE_WANT);
+	Check(stageReloc && stageInplace && stageBase, "MEM2 staging allocated");
 	Check((u32) stageReloc >= mem2Lo, "stages live in Arena2, not MEM1");
-	BuildMiniFst(stageReloc, RELOC_WANT);
-	BuildMiniFst(stageInplace, INPLACE_WANT);
+	BuildMiniFst(stageReloc, RELOC_WANT, 'f');
+	BuildMiniFst(stageInplace, INPLACE_WANT, 'f');
+	BuildMiniFst(stageBase, INPLACE_WANT, 'g');
 	DCFlushRange(stageReloc, RELOC_WANT);
 	DCFlushRange(stageInplace, INPLACE_WANT);
+	DCFlushRange(stageBase, INPLACE_WANT);
 	const u32 crcR = Riivo::Crc32(stageReloc, RELOC_WANT);
 	const u32 crcI = Riivo::Crc32(stageInplace, INPLACE_WANT);
+	const u32 crcB = Riivo::Crc32(stageBase, INPLACE_WANT);
 	printf("  reloc stage %08x crc %08x\n", (u32) stageReloc, crcR);
 	printf("  inplace stage %08x crc %08x\n", (u32) stageInplace, crcI);
+	printf("  base stage %08x crc %08x\n", (u32) stageBase, crcB);
 
 	// Inter-phase heap churn (labeled stand-in, as v2).
 	void *live1 = malloc(8192), *live2 = malloc(65536);
@@ -284,6 +341,25 @@ int main(int argc, char **argv)
 		  "in-place plan is the known answer");
 	WriteMailbox(stageReloc, crcR, stageInplace, crcI, placeR, placeI);
 
+	// UNCHANGED: the apploader-loaded original, modeled by placing the
+	// synthetic base table where the apploader would have put the real
+	// one. PROD-DELTA: base bytes are synthetic ('g' scheme) because the
+	// real SB4E01 FST is AES-locked without the console key; the shape
+	// (address, size, words, jump, consume) is the production shape.
+	printf("================ UNCHANGED (base at %08x) ================\n",
+		   CAP_FST_ADDR);
+	memcpy((void *) CAP_FST_ADDR, stageBase, INPLACE_WANT);
+	DCFlushRange((void *) CAP_FST_ADDR, INPLACE_WANT);
+	WriteBootWords(CAP_ARENA_LO, CAP_ARENA_HI, CAP_FST_ADDR, CAP_FST_MAX);
+	ConsumeCheck("UNCHANGED", 8093, crcB);
+	// Rendezvous so GDB can read the unchanged result block before the
+	// relocated install overwrites MEM1 state. GDB sets adGo=2; the
+	// mode loop below resets it to 0 first.
+	printf("UNCHANGED done; waiting for adGo=2...\n");
+	adPhase = 1;
+	while (adGo != 2)
+		__asm__ volatile ("" ::: "memory");
+
 	const struct { const char *tag; u32 want; u32 exp; } modes[2] = {
 		{ "RELOC", RELOC_WANT, EXP_RELOC },
 		{ "INPLACE", INPLACE_WANT, EXP_INPLACE },
@@ -299,6 +375,7 @@ int main(int argc, char **argv)
 		printf("%s: waiting for poke (set adGo=1)...\n", modes[m].tag);
 		adGo = 0;
 		adModeDone = 0;
+		adPhase = 2;
 		// Busy spin, never VIDEO_WaitVSync: under Dolphin's Null video
 		// backend VI interrupts may never arrive, which would park this
 		// thread in the OS wait queue past the poke. The barrier forces
@@ -317,14 +394,24 @@ int main(int argc, char **argv)
 		printf("  consumer: %u entries through repointed words\n", count);
 		Check(count > 0, "installed table parses through new pointer");
 		Check(ptr == modes[m].exp, "pointer word is the expected address");
+		ConsumeCheck(modes[m].tag, m == 0 ? 8101 : 8093,
+					 m == 0 ? crcR : crcI);
 		adModeDone = 1;
+		// Two-way rendezvous: GDB must ack (adGo=2) before the next mode
+		// may even reset adGo. No evidence window can be missed and no
+		// script timing can poison a later poke: nothing proceeds until
+		// both sides have seen this mode complete.
+		adGo = 0;
+		while (adGo != 2)
+			__asm__ volatile ("" ::: "memory");
 	}
 
 	free(live1);
 	free(live2);
-	printf("==========================================\n");
+	adPhase = 4;
+	printf("=============================================\n");
 	if (checksFailed == 0)
-		printf("RESULT: PASS (production call verifies both modes)\n");
+		printf("RESULT: PASS (unchanged + both production installs consumed)\n");
 	else
 		printf("RESULT: FAIL (%d check(s))\n", checksFailed);
 	printf("halting in place for debugger inspection.\n");

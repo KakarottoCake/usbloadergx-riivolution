@@ -1,4 +1,4 @@
-# Handoff — 2026-09-08 (updated: production InstallPendingFst verifies both modes in Dolphin; freeze was a harness bug; no tester run asked)
+# Handoff — 2026-09-08 (updated: 3-way probe consumption proven at byte level; missing input named; no tester run asked)
 
 State of the SB4E01 (Super Mario Galaxy 2) debugging effort. Read the
 "Latest evidence" section first — it supersedes the drive-blocker framing
@@ -45,19 +45,44 @@ Result: code 0 both modes, relocated + in-place spans dump byte-exact
 (153934 + 153792 bytes, 0 mismatches). Omitted-ops prioritization
 delivered: the biggest omitted piece - the actual caller - is now in.
 NO production defect found in InstallPendingFst/InstallFst on these
-inputs. Queued, not done: real-serializer bytes (FstBuilder + Spectral
-XML; needs a base FST we cannot fabricate without the disc), disc-backend
-probe-jump for pointer consumption, unlisted-block mechanism experiment.
+inputs.
+
+v4 adds the probe jump: absolute-address consumer entered by branch
+after cache maintenance, reading the table through the repointed words
+exactly like game startup would. Three-way result, all GDB-visible:
+UNCHANGED consumes the modeled base (8093 entries, base CRC, arena
+kept), RELOCATED consumes the production-installed grown table (8101
+entries, staged CRC, arena lowered to `0x817B2DE0`), IN-PLACE consumes
+the production-installed same-size table (8093 entries, staged CRC,
+arena kept). Both installed spans re-dumped byte-exact afterwards. The
+three consumptions are identical in shape - no differing read,
+exception, or overwrite between them in emulation.
+
+Missing input, named once: the Wii common key (16 bytes, console-OTP
+derived). The authorized SB4E01 backup is local
+(`D:/Games/Wii/Super Mario Galaxy 2 (USA) (En,Fr,Es).iso`, header
+verified SB4E01; partition map parsed), but its content partition is
+AES-CBC locked and no keys.bin exists anywhere on this PC (Dolphin
+dirs, bios, RetroBat user, Documents all swept; NAND backups do not
+contain OTP). The key unblocks BOTH halves at once: real base-FST bytes
+for byte-exact T0 serialization (host driver `test_t0serializer`
+already asserts +144 delta and gates 153934 exact when T0_BASE_FST is
+set), and real DOL/apploader/game startup under Dolphin's normal disc
+backend. A Wii-side 153792-byte FST dump would unblock the serializer
+half only. Wii testing stays paused - this is queued, not asked.
 
 Harness postmortem (do not repeat): a mid-round "freeze" in the pre-copy
 CRC was MY 52-vs-60 struct-size overrun poisoning size+crc through the
 GDB poke - GPR forensics (marching cursor, clobbered bound) + byte-exact
 RAM reads proved it, mailbox bloblen fixed it, small-size success is
-explained (later overrides repaired the two words). Stub protocol that
-survived 12+ runs: p/m/M/Z anytime, run-control ONLY from stopped,
-doprod+pokes verified by RAM re-reads, GDB reads bypass dcache
-(unflushed `placeOk` reads stale). Full ledger in
-`dolphin-adapter/BYPASSES.md`. No tester run asked or needed.
+explained (later overrides repaired the two words). Classified: harness
+defect, illustrating a failure mechanism, NOT evidence of production
+corruption. A sleep-synced round later executed an install in the wrong
+labeled slot; rendezvous is now two-way (adPhase/adModeDone + acks, no
+sleeps-as-sync). Stub protocol that survived 12+ runs: p/m/M/Z anytime,
+run-control ONLY from stopped, doprod+pokes verified by RAM re-reads,
+GDB reads bypass dcache (unflushed `placeOk` reads stale). Full ledger
+in `dolphin-adapter/BYPASSES.md`. No tester run asked or needed.
 
 v1 (isolated copy) and v2 (caller mirror) are superseded by v3 above
 and kept for the record in `dolphin-adapter/BYPASSES.md`. The v2-era
