@@ -1,4 +1,4 @@
-# Handoff — 2026-09-08 (updated: adapter v2 in-place+relocated PASS; menu claim qualified; no tester run asked)
+# Handoff — 2026-09-08 (updated: production InstallPendingFst verifies both modes in Dolphin; freeze was a harness bug; no tester run asked)
 
 State of the SB4E01 (Super Mario Galaxy 2) debugging effort. Read the
 "Latest evidence" section first — it supersedes the drive-blocker framing
@@ -34,29 +34,35 @@ not break the boot. What T1 does NOT
 prove: that the game consumed our bytes — the copy is identical, so a
 boot that ignored the redirect looks the same. That is T2's job.
 
-## Dolphin reproduction: adapter v2 in-place + relocated PASS (2026-09-08+UTC)
+## Dolphin reproduction: PRODUCTION InstallPendingFst verifies both modes (2026-09-08+UTC)
 
-v1 proved the isolated copy. v2 executes the actual late-install caller
-as a line-referenced mirror of `Riivo::InstallPendingFst`
-(RiivoBoot.cpp:2196-2328, same order, same fail codes) around the REAL
-`InstallFst`/`PlaceFst`/`Crc32`, plus the launch-tail shape (inter-phase
-heap churn, consumer reads through repointed words, pre-jump re-read),
-RELOCATED then IN-PLACE as two separately-modeled boots. Staging lives
-in Arena2 across churn with a stage-time CRC (the pendingFst lifetime);
-boot words are reset to captured per mode.
+Retraction first: "the divergence is not in this path" overstated what a
+mirror + synthetic state can claim. v3 answers it properly: the REAL
+RiivoBoot.cpp TU links under emulation (gc-sections keeps only
+InstallPendingFst's closure) and the REAL `InstallPendingFst` runs for
+both modes with GDB-poked staging (no production seam, no logic copy).
+Result: code 0 both modes, relocated + in-place spans dump byte-exact
+(153934 + 153792 bytes, 0 mismatches). Omitted-ops prioritization
+delivered: the biggest omitted piece - the actual caller - is now in.
+NO production defect found in InstallPendingFst/InstallFst on these
+inputs. Queued, not done: real-serializer bytes (FstBuilder + Spectral
+XML; needs a base FST we cannot fabricate without the disc), disc-backend
+probe-jump for pointer consumption, unlisted-block mechanism experiment.
 
-GDB result: write watchpoint on `[0x817B2DE0, +153934)` fires inside the
-real `InstallFst` memcpy (PC `memcpy`+0x88, LR `InstallFst`+0x80); no
-churn-phase writer touches the span; late-install caller verifies code 0
-in BOTH modes; relocated lands `0x817B2DE0` + arena lowered, in-place
-lands `0x817DA740` + arena kept; full-span dumps byte-exact (153934 +
-153792 bytes, 0 mismatches); consumer parses 8101/8093 entries through
-the repointed words; pre-jump re-read matches staged CRC. The in-place
-vs relocated difference now executes end-to-end in emulation with
-identical success - the divergence (Wii-only: stack position, game
-read-back, apploader/cIOS inputs) is NOT in this path. Bypass ledger in
-`dolphin-adapter/BYPASSES.md` extended (Arena2-bump staging, stand-in
-churn sizes, synthetic FST heads labeled). No tester run asked or needed.
+Harness postmortem (do not repeat): a mid-round "freeze" in the pre-copy
+CRC was MY 52-vs-60 struct-size overrun poisoning size+crc through the
+GDB poke - GPR forensics (marching cursor, clobbered bound) + byte-exact
+RAM reads proved it, mailbox bloblen fixed it, small-size success is
+explained (later overrides repaired the two words). Stub protocol that
+survived 12+ runs: p/m/M/Z anytime, run-control ONLY from stopped,
+doprod+pokes verified by RAM re-reads, GDB reads bypass dcache
+(unflushed `placeOk` reads stale). Full ledger in
+`dolphin-adapter/BYPASSES.md`. No tester run asked or needed.
+
+v1 (isolated copy) and v2 (caller mirror) are superseded by v3 above
+and kept for the record in `dolphin-adapter/BYPASSES.md`. The v2-era
+sentence claiming the divergence "is NOT in this path" is retracted -
+a mirror cannot clear the production path.
 
 ## Menu claim qualified: forward progress yes, functioning menu no
 

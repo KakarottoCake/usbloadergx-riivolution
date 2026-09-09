@@ -36,15 +36,34 @@ repointed words, pre-jump re-read), in-place and relocated back-to-back.
 - v1: `PlaceFst` reaches the known answer (`0x817B2DE0`, 162912 bytes
   reserved); `InstallFst` memcpy+flush+repoint lands all 153934 bytes
   (0 mismatches) with no DSI; write watchpoint fires exactly on the span.
-- v2: the full late-install caller verifies code 0 in BOTH modes;
-  relocated (`0x817B2DE0`, arena lowered) and in-place (`0x817DA740`,
-  arena kept) each install byte-exact (0 mismatches over 153934 +
-  153792 bytes); the watchpoint fires inside the real `InstallFst`
-  memcpy (LR = `InstallFst`+0x80); no churn-phase writer touches the
-  span; consumer reads parse 8101/8093 entries through the repointed
-  words; pre-jump re-read matches the staged CRC.
+- v2: the mirrored late-install caller verifies code 0 in BOTH modes;
+  consumer reads parse 8101/8093 entries; pre-jump re-read matches.
+  Mirror only - superseded by v3, kept for the record.
+- v3: the PRODUCTION `InstallPendingFst` (real TU, GDB-poked staging,
+  no mirror) verifies code 0 in BOTH modes: relocated and in-place
+  spans dump byte-exact (153934 + 153792 bytes, 0 mismatches).
+  GPR forensics confirmed the call path (cursor marching, place
+  registers intact). No production defect found on these inputs.
 - A passing simulated install narrows the investigation to the Wii-only
   list below; it does not clear the full Wii installation path.
+
+## Harness postmortem (read before trusting any adapter result)
+
+- An 8-byte struct-size assumption (`FstPlacement` 60 vs actual 52
+  under this libstdc++) once overran the GDB-poked place blob into the
+  neighboring staging words (`size` <- `0x817DA740`, `crc` <- junk),
+  producing a deterministic "freeze" in the pre-copy CRC that looked
+  exactly like a production defect. Lesson: the blob length travels in
+  the mailbox (`+144`), and every GDB-poked word is read back from RAM
+  before the call. Never trust a freeze without register-level proof.
+- GDB reads bypass the data cache: `pendingPlaceOk=false` (plain
+  unflushed store) still reads 1 after a verified install, while the
+  flushed words and table bytes read correctly. Flushed state is truth;
+  unflushed BSS is not.
+- Stub run-control rule (12+ runs): p/m/M/Z anytime; `c`/`\x03` ONLY
+  from stopped - sent while running they wedge the stub's command loop
+  (total silence after). Drive multi-phase flows with writes + target
+  waits + watch-stops, never with cont-then-halt.
 
 ## Still reserved for Wii hardware
 
