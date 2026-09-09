@@ -72,14 +72,16 @@ repointed words, pre-jump re-read), in-place and relocated back-to-back.
 - Rendezvous discipline: sleeps never synchronize. The harness publishes
   `adPhase` (1=unchanged done, 2=mode wait, 4=finished) and per-mode
   `adModeDone`, and waits for GDB acks before advancing - a sleep-synced
-  round once executed an install in the wrong labeled slot. GDB polls
-  with waitmem; pokes happen only in the matching wait.
-- Open observability debt (not a production signal): after a verified
-  mode-1 install (span dumps byte-exact), the result-block re-read once
-  showed the previous mode's values. Suspects are a stale mem reply vs a
-  mid-flight read; queued fix is a per-probe nonce in the result block
-  plus transition-logging polls. Byte-level dumps are the verdict until
-  then.
+  round once executed an install in the wrong labeled slot, and several
+  rounds "lost" acks that were actually consumed by waits the script had
+  not seen. GDB polls with waitmem (equality) and memdiff (change from a
+  prior value); pokes happen only in the matching wait. A read is trusted
+  iff it differs from all previous reads of that address.
+- Resolved observability scare: per-probe nonces (1/2/3) in the result
+  block proved every "stale read" was a script-early read - the harness
+  simply had not advanced yet. With transition-gated scripting, all three
+  consumptions verify in one run. No stub read-caching exists; the earlier
+  suspicion is withdrawn.
 
 ## Still reserved for Wii hardware
 

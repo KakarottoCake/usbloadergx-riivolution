@@ -1,4 +1,4 @@
-# Handoff — 2026-09-08 (updated: 3-way probe consumption proven at byte level; missing input named; no tester run asked)
+# Handoff — 2026-09-08 (updated: gated 3-way consumption complete, nonces 1-2-3; key named once; no tester run asked)
 
 State of the SB4E01 (Super Mario Galaxy 2) debugging effort. Read the
 "Latest evidence" section first — it supersedes the drive-blocker framing
@@ -57,6 +57,15 @@ the production-installed same-size table (8093 entries, staged CRC,
 arena kept). Both installed spans re-dumped byte-exact afterwards. The
 three consumptions are identical in shape - no differing read,
 exception, or overwrite between them in emulation.
+
+Gated re-run closes it watertight: two-way rendezvous (adPhase/adModeDone
++ acks, transition-gated, no sleeps-as-sync), per-probe nonces 1/2/3 all
+verified fresh in one run, both spans byte-exact again. Every earlier
+"stale read" re-explained as script-early reads - no stub read-caching;
+the nonce + memdiff-change rule stands as the trust criterion. The
+sleep-synced misalignment and the "lost ack" sagas were both script
+protocol bugs (pokes/resets landing in unseen waits); the harness and
+the production code were never at fault in those rounds.
 
 Missing input, named once: the Wii common key (16 bytes, console-OTP
 derived). The authorized SB4E01 backup is local
