@@ -1,4 +1,4 @@
-# Handoff — 2026-09-08 (updated: v3.42 released + binary-gated; T0 acceptance live)
+# Handoff — 2026-09-08 (updated: Dolphin reproduction live, adapter PASS; T0 acceptance live)
 
 State of the SB4E01 (Super Mario Galaxy 2) debugging effort. Read the
 "Latest evidence" section first — it supersedes the drive-blocker framing
@@ -33,6 +33,34 @@ same-address pointer/size updates, and a live redirected read path do
 not break the boot. What T1 does NOT
 prove: that the game consumed our bytes — the copy is identical, so a
 boot that ignored the redirect looks the same. That is T2's job.
+
+## Dolphin reproduction: adapter PASS (2026-09-08+UTC, developer-side)
+
+GX `v3.42` `boot.dol` boots under Dolphin 5.0-18995 (`-b`, Null video, no
+disc) to a running menu: after 25-30 s PC advances `0x80B00000` ->
+`0x80DD5D58` (`memcmp`, caller `wd_fix_partition_table` +0x80 per the
+`v3.42` map) / `0x80D43FDC`, MSR `0x9032`, SP `0x8108E8B8`/`0x8108EA40`.
+Ceiling confirmed: no cIOS, so no disc mount, no apploader, no FST path
+on hardware-equivalent inputs. Old RetroBat 5.0-14344 stub is unreliable
+(accepts then silent); 18995 answers `p/g/m/M/Z` correctly.
+
+`dolphin-adapter/` (new, sibling of `source/`, NOT in the loader build)
+compiles the REAL `RiivoFstInstall.cpp` unmodified with captured SB4E01
+T0 inputs (arena `{0, 0x817DA740, 0x817DA740, 153792}`, want 153934,
+block `[0x817D8740, 0x817DA740)`, BSS `[0x80728680, 0x807E3188)`, one
+synthetic stale sample). Under GDB: write watchpoint on
+`[0x817B2DE0, +153934)` fires exactly once inside `memcpy`
+(LR=`InstallFst`+0x80); after completion `0x80000034/38/3C` read
+`817B2DE0/817B2DE0/0002594E`; full-span RSP dump (153934 B) verifies
+byte-identical, 0 mismatches, sentinels intact. Proven: real PPC
+`PlaceFst` reaches the known answer and real `InstallFst`
+memcpy+flush+repoint lands every byte in emulated MEM1 with no DSI.
+NOT proven (reserved for Wii): real apploader layout, live loader-stack
+position (model A/B), game read-back, cIOS reads. BYPASSES.md holds the
+ledger. Post-run CPU parks in `KThreadIdleMain` (SP reads 0) - idle
+thread, not a crash. Harness: Temp `rsp.py` (ack-less, single session,
+`OK` vs `O`, length-checked `m` replies); build needs a space-free path
+(GNU make limitation, README documents staging).
 
 ## Collision demoted: fixed defect, not the cause
 
