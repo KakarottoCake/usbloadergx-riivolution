@@ -832,13 +832,19 @@ namespace Riivo
 	//! Also returns the DOL's disc offset, so the section table can be read
 	//! next: naming which DOL section an apploader-loaded range came from is
 	//! how a range like "the 8 KB below the FST" gets traced to its purpose.
+	//! And the reservation size from boot.bin+0x42C (same sector, no extra
+	//! read): the apploader reserves exactly that many bytes for the table,
+	//! so a rebuild that fits it can stay in place instead of relocating
+	//! below into memory the game's startup clears (measured on SB4E01).
 	static bool ReadDiscFst(u8 **outData, u32 *outSize, u32 *outOffset,
-							 u32 *outDolOffset, std::string &err)
+							 u32 *outDolOffset, u32 *outMaxSize, std::string &err)
 	{
 		*outData = 0;
 		*outSize = 0;
 		*outOffset = 0;
 		*outDolOffset = 0;
+		if (outMaxSize)
+			*outMaxSize = 0;
 
 		//! boot.bin: 0x420 dol offset, 0x424 FST offset, 0x428 FST size.
 		//! All three are stored >>2 on a Wii disc.
@@ -852,6 +858,10 @@ namespace Riivo
 
 		const u32 fstOffset = be32(hdr + 0x04) << 2;
 		const u32 fstSize = be32(hdr + 0x08) << 2;
+		//! Reservation the apploader will set aside (0x42C, same >>2 units).
+		//! Zero or insane means unknown, never zero room: the caller then
+		//! behaves exactly as before this value existed.
+		const u32 fstMax = be32(hdr + 0x0C) << 2;
 
 		if (fstOffset == 0 || fstSize == 0 || fstSize > 0x00800000)
 		{
@@ -879,6 +889,11 @@ namespace Riivo
 		*outSize = fstSize;
 		*outOffset = fstOffset;
 		*outDolOffset = be32(hdr) << 2;
+		//! A reservation smaller than the table it reserves is nonsense;
+		//! cap it at unknown rather than refuse a boot that worked before.
+		if (outMaxSize)
+			*outMaxSize = (fstMax >= fstSize && fstMax <= 0x00800000)
+						  ? fstMax : 0;
 		return true;
 	}
 
@@ -1524,10 +1539,10 @@ namespace Riivo
 			   "applied and the game boots untouched.\n\n";
 
 		u8 *fstData = 0;
-		u32 fstSize = 0, fstOffset = 0, dolOffset = 0;
+		u32 fstSize = 0, fstOffset = 0, dolOffset = 0, fstReserve = 0;
 		std::string err;
 		LogStep("reading the game's file table");
-		if (!ReadDiscFst(&fstData, &fstSize, &fstOffset, &dolOffset, err))
+		if (!ReadDiscFst(&fstData, &fstSize, &fstOffset, &dolOffset, &fstReserve, err))
 		{
 			Addf(out, "FAILED: %s\n", err.c_str());
 			AppendLog(out);
@@ -1850,6 +1865,39 @@ namespace Riivo
 		else
 			Addf(out, "  independent FST walk: REFUSED: %s\n",
 				 expectedComplete ? walkError.c_str() : "a mod path has no registered placement");
+		//! Suffix-compacted variant of the same tree (same entries, paths,
+		//! offsets and sizes; shared string tails stored once). If the plain
+		//! table outgrows the apploader's reservation but the compacted one
+		//! fits, stage the compacted bytes instead: they install in place,
+		//! out of reach of the startup clearing below the reservation that
+		//! kills relocated tables on SB4E01. Anything else keeps today's
+		//! bytes exactly - unknown reservation, fitting plain table, failed
+		//! build, failed walk, or still-overflowing compaction.
+		bool useCompact = false;
+		if (fstReserve > 0 && fstWalkOK && newFst.size() > fstReserve)
+		{
+			std::vector<u8> compactFst;
+			std::string compactWhy;
+			bool compactOK = builder.SerializeCompacted(compactFst, true);
+			std::string cwErr;
+			FstWalk cw;
+			if (compactOK)
+				compactOK = !compactFst.empty() &&
+					cw.Open(&compactFst[0], compactFst.size(), true, &cwErr) &&
+					cw.Check(expectedFst, &cwErr);
+			if (!compactOK && cwErr.empty())
+				cwErr = "build failed";
+			useCompact = compactOK && compactFst.size() <= fstReserve;
+			Addf(out, "  compacted table    : %u bytes (%s), reservation %u: %s\n",
+				 compactOK ? (unsigned) compactFst.size() : 0,
+				 compactOK ? "walk passed" : ("REFUSED: " + cwErr).c_str(),
+				 fstReserve,
+				 useCompact ? "STAGED instead of the plain table" : "kept plain table");
+			if (useCompact)
+				newFst.swap(compactFst);
+			else
+				builder.Serialize(newFst, true); // restore plain stats below
+		}
 		const FstBuildStats &st = builder.Stats();
 		plannedFstSize = st.fstSize;
 

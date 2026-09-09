@@ -16,6 +16,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
 #include <vector>
 #include <string>
 #include "riivo/RiivoFstBuild.hpp"
@@ -145,6 +146,56 @@ int main()
 	const FstFile *fb = c.FindFile("/gxdiagprobe/b0123456789abcdef0123456789abcdef0123456789.bin");
 	ck(fa && fa->length == kT0ASize, "a.bin entry, real size");
 	ck(fb && fb->length == kT0BSize, "b.bin entry, real size");
+
+	printf("2. suffix-compacted serialization of the same tree\n");
+	{
+		FstBuilder b2;
+		ck(b2.Parse(&base[0], (u32) base.size(), true), "base re-parses");
+		ck(ApplyT0(b2), "T0 redirects re-apply");
+		u64 region2 = (b2.OriginalExtent() + 32767) & ~(u64) 32767;
+		if (region2 < 0x1000000) region2 = 0x1000000;
+		b2.Layout(region2, 32768);
+		std::vector<u8> plain, compact;
+		b2.Serialize(plain, true);
+		clock_t t0 = clock();
+		bool okc = b2.SerializeCompacted(compact, true);
+		clock_t t1 = clock();
+		ck(okc, "compacted serializes");
+		printf("  plain %u -> compacted %u (saved %d, %.2fs)\n",
+			   (unsigned) plain.size(), (unsigned) compact.size(),
+			   (int) plain.size() - (int) compact.size(),
+			   (double) (t1 - t0) / CLOCKS_PER_SEC);
+		ck(compact.size() <= plain.size(), "never bigger than plain");
+		Fst p, q;
+		ck(p.Parse(&plain[0], (u32) plain.size(), true), "plain parses");
+		ck(q.Parse(&compact[0], (u32) compact.size(), true), "compacted parses");
+		ck(p.FileCount() == q.FileCount(), "same entry count");
+		bool same = (p.FileCount() == q.FileCount());
+		for (u32 i = 0; same && i < p.FileCount(); ++i)
+		{
+			const FstFile &a = p.FileAt(i);
+			const FstFile &b = q.FileAt(i);
+			same = (a.path == b.path && a.offset == b.offset &&
+					a.length == b.length);
+		}
+		ck(same, "every path, offset and length identical");
+		if (basePath && basePath[0]) {
+			ck(compact.size() <= 153792,
+			   "compacted T0 fits the original reservation");
+			const char *od = getenv("OUT");
+			std::string dst = od ? od : "/tmp";
+			dst += "/t0-rebuilt-compact.fst";
+			FILE *f = fopen(dst.c_str(), "wb");
+			ck(f != 0, "compacted table written to disk");
+			if (f) {
+				ck(fwrite(&compact[0], 1, compact.size(), f) == compact.size(),
+				   "compacted table fully written");
+				fclose(f);
+				printf("  wrote %s CRC32 %08x\n", dst.c_str(),
+					   Crc32(&compact[0], (u32) compact.size()));
+			}
+		}
+	}
 
 	printf("t0serializer: %d checks, %d failures\n", checks, failures);
 	return failures ? 1 : 0;

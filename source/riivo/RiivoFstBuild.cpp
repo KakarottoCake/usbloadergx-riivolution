@@ -388,6 +388,112 @@ namespace Riivo
 		st->fstSize = (u32) out.size();
 	}
 
+	//! Names in Emit order (child, then its subtree before the next
+	//! sibling), so precomputed offsets line up with emission.
+	static void CollectNames(const FstNode &dir, std::vector<std::string> &out)
+	{
+		for (size_t i = 0; i < dir.children.size(); ++i)
+		{
+			out.push_back(dir.children[i].name);
+			if (dir.children[i].isDir)
+				CollectNames(dir.children[i], out);
+		}
+	}
+
+	//! Assign each name a string-table offset, reusing a slot wherever the
+	//! name (with its NUL) already occurs in the bytes emitted so far. The
+	//! first occurrence always starts at a real name boundary by
+	//! construction, so every decoded name reads exactly as before.
+	static void PlanStrings(const std::vector<std::string> &names,
+							std::vector<u32> &offs, std::string &blob)
+	{
+		blob.clear();
+		blob += '\0'; // offset 0: the root's empty name, as in Serialize
+		offs.clear();
+		offs.reserve(names.size());
+		for (size_t i = 0; i < names.size(); ++i)
+		{
+			const std::string key = names[i] + '\0';
+			size_t pos = blob.find(key);
+			if (pos == std::string::npos)
+			{
+				pos = blob.size();
+				blob += key;
+			}
+			offs.push_back((u32) pos);
+		}
+	}
+
+	//! Emit with precomputed name offsets instead of appending. Every other
+	//! byte is identical to Emit: same order, same entries, same values.
+	static void EmitPlanned(const FstNode &dir, u32 self, std::vector<u8> &entries,
+							const std::vector<u32> &offs, size_t *at, bool shifted)
+	{
+		for (size_t i = 0; i < dir.children.size(); ++i)
+		{
+			const FstNode &c = dir.children[i];
+
+			const u32 here = (u32) (entries.size() / 12);
+			const u32 nameOff = offs[*at];
+			++(*at);
+
+			entries.resize(entries.size() + 12);
+			u8 *e = &entries[here * 12];
+			e[0] = c.isDir ? 1 : 0;
+			wr24(e + 1, nameOff);
+
+			if (c.isDir)
+			{
+				wr32(e + 4, self);
+				wr32(e + 8, 0);
+				EmitPlanned(c, here, entries, offs, at, shifted);
+				const u32 end = (u32) (entries.size() / 12);
+				wr32(&entries[here * 12] + 8, end);
+			}
+			else
+			{
+				const u64 off = shifted ? (c.offset >> 2) : c.offset;
+				wr32(e + 4, (u32) off);
+				wr32(e + 8, c.length);
+			}
+		}
+	}
+
+	bool FstBuilder::SerializeCompacted(std::vector<u8> &out, bool shifted) const
+	{
+		const u32 total = CountNodes(root) + 1;
+		std::vector<std::string> names;
+		CollectNames(root, names);
+		if (names.size() + 1 != total)
+			return false;
+		std::vector<u32> offs;
+		std::string blob;
+		PlanStrings(names, offs, blob);
+
+		std::vector<u8> entries;
+		entries.resize(12);
+		size_t at = 0;
+		EmitPlanned(root, 0, entries, offs, &at, shifted);
+		if (at != offs.size())
+			return false;
+
+		u8 *r = &entries[0];
+		r[0] = 1;
+		wr24(r + 1, 0);
+		wr32(r + 4, 0);
+		wr32(r + 8, total);
+
+		out.clear();
+		out.reserve(entries.size() + blob.size());
+		out.insert(out.end(), entries.begin(), entries.end());
+		out.insert(out.end(), blob.begin(), blob.end());
+
+		FstBuildStats *st = const_cast<FstBuildStats *>(&stats);
+		st->entryCount = total;
+		st->fstSize = (u32) out.size();
+		return true;
+	}
+
 	// --------------------------------------------------------------------
 	// Lookup
 	// --------------------------------------------------------------------
