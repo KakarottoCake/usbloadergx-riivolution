@@ -1,10 +1,36 @@
-# Handoff — 2026-09-08 (updated: compaction repair verified in real game; wiper evidence bundle; no tester run asked)
+# Handoff — 2026-09-09 (updated: hardware pack staged with CI build fd7bbc84; MEM2 surveyed+HELD; no hardware time asked)
 
 State of the SB4E01 (Super Mario Galaxy 2) debugging effort. Read the
 "Latest evidence" section first — it supersedes the drive-blocker framing
 below, which is kept for the steps it still requires.
 
-## Repair candidate 1, VERIFIED in real startup: in-place compaction
+## Hardware pack staged (build fd7bbc84, CI green) - NOT sent for runs
+
+- `pkg-t0-6099af11/`: exact CI DOL of the compaction commit (SHA-256
+  verified against the CI manifest) + T0-once instructions (markers
+  removed). Developer-side T0 re-ran clean in Dolphin (birth install,
+  TitleLogo consumer hit, full-span dump identical).
+- `pkg-hw7/`: one build (compaction live + MEM2 behind `mem2fst.txt`),
+  `gx7many.xml` (N6 option only) + 500-file overflow workload
+  (plain 164313 / compacted 154702, both over 153792 - mechanically
+  selects MEM2), CHECKLIST-7 (N1..N7 with expected results), MARKERS.md
+  (all markers must be absent except held N6), RESULTS-7 (sheet incl.
+  MEM2 pre-shutdown / post-shutdown / title / level checkpoints).
+  Logs: rename-after-each to `01-..-07-..log` (loader truncates per
+  boot by design; checklist-enforced, following GXDiag convention).
+- MEM2 Dolphin verdict (Test 6 HELD, gate unmet): game MEM2 grows
+  bottom-up from `0x90000000` (sparse first MB at 90 s); reads above
+  ~`0x93700000` fault post-boot (outside game mapping); `0x92000000`
+  chosen on use+margins, NOT zeros. Consumer checks negative: top site
+  faults the game+stub dark; mid site installs land but the game never
+  reads the table (no TitleLogo hit in 200 s+) and parks. Mechanics
+  (real PlaceFstMem2/InstallFst/probe in emulated MEM2) pass in the
+  adapter. No MEM2 site passes game-consumption - nothing validated is
+  substituted; the marker ships dormant and Test 6 documents its
+  re-entry criteria instead of a run.
+- Developer-side validation is complete (host suite, CI pinned build,
+  adapter mechanics, real-game compaction proof, wiper forensics);
+  hardware time is NOT requested by this handoff.
 
 `FstBuilder::SerializeCompacted` (new, pure, host-tested): same entries,
 paths, offsets and sizes as `Serialize`; shared string tails stored once
