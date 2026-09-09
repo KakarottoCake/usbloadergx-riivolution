@@ -363,6 +363,44 @@ int main()
 		ck(few[0] == 0 && few[4] == 16, "first hits recorded in order");
 	}
 
+	printf("11. experimental MEM2 placement is surveyed, capped and flat\n");
+	{
+		ArenaInfo a;
+		a.arenaLo = 0;
+		a.arenaHi = 0x817da740;
+		a.fstAddr = 0x817da740;
+		a.fstMaxSize = 153792;
+		FstPlacement p = PlaceFstMem2(a, 153934, 32);
+		ck(p.ok, "accepted");
+		ck(!p.inPlace, "reported as grown");
+		ck(p.fstAddr == 0x92000000, "surveyed base address");
+		ck((p.fstAddr & 31) == 0, "aligned");
+		ck(p.newArenaHi == a.arenaHi, "MEM1 arena untouched");
+		ck(p.reserved == 0, "nothing taken from the MEM1 heap");
+		ck(p.fstAddr + 153934 <= MEM2_END, "inside MEM2");
+
+		//! Garbage arena in, refusal out - placing on unreadable words
+		//! is guessing, even though MEM2 ignores the arena otherwise.
+		ArenaInfo bad;
+		bad.arenaHi = 0;
+		bad.fstAddr = 0x817da740;
+		FstPlacement q = PlaceFstMem2(bad, 153934, 32);
+		ck(!q.ok, "garbage arena refused");
+
+		//! The cap, the empty table and bad alignment all refuse.
+		FstPlacement r = PlaceFstMem2(a, MEM2_FST_CAP + 1, 32);
+		ck(!r.ok, "over-capacity refused");
+		FstPlacement s = PlaceFstMem2(a, 0, 32);
+		ck(!s.ok, "empty table refused");
+		FstPlacement t = PlaceFstMem2(a, 153934, 24);
+		ck(!t.ok, "non-power-of-two alignment refused");
+
+		//! A MEM2 span is not MEM1: the MEM1 overlap test must not see it.
+		ck(!RangesOverlap(p.fstAddr, p.fstAddr + 153934,
+						  0x817da740, 0x81800000),
+		   "MEM2 span disjoint from the MEM1 reservation");
+	}
+
 	printf("\n%d checks, %d failure(s)\n", checks, failures);
 	return failures ? 1 : 0;
 }

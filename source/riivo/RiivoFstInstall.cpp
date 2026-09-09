@@ -45,7 +45,6 @@ namespace Riivo
 	{
 		if (align == 0)
 			align = 32;
-		//! A power of two is assumed by the masking below.
 		if (align & (align - 1))
 			return Refuse("alignment is not a power of two");
 
@@ -199,6 +198,45 @@ namespace Riivo
 		return p;
 	}
 
+	//! True when an address range sits entirely inside MEM2.
+	static bool InMem2(u32 addr, u32 size)
+	{
+		return size > 0 && addr >= MEM2_BASE && size <= MEM2_END - addr;
+	}
+
+	FstPlacement PlaceFstMem2(const ArenaInfo &info, u32 fstSize, u32 align)
+	{
+		if (align == 0)
+			align = 32;
+		if (align & (align - 1))
+			return Refuse("alignment is not a power of two");
+
+		if (fstSize == 0)
+			return Refuse("the rebuilt table is empty");
+		if (fstSize > MEM2_FST_CAP)
+			return Refuse("the rebuilt table is larger than the MEM2 experiment allows");
+
+		//! The arena passes through untouched, but it must still be sane:
+		//! placing anything on garbage boot words is guessing.
+		if (info.arenaHi <= MEM1_BASE || info.arenaHi > MEM1_END)
+			return Refuse("arena high is outside MEM1");
+		if (info.fstAddr < MEM1_BASE || info.fstAddr >= MEM1_END)
+			return Refuse("the file table is not in MEM1 - has the apploader run?");
+
+		u32 addr = (MEM2_FST_BASE + align - 1) & ~(align - 1);
+		if (!InMem2(addr, fstSize) || addr + fstSize > MEM2_FST_BASE + MEM2_FST_CAP)
+			return Refuse("the rebuilt table does not fit the MEM2 window");
+
+		FstPlacement p;
+		p.ok = true;
+		p.inPlace = false;
+		p.fstAddr = addr;
+		p.newArenaHi = info.arenaHi; // untouched: MEM1 heap gives up nothing
+		p.reserved = 0;
+		p.heapLeft = 0; // not measured here; MEM1 heap is unchanged
+		return p;
+	}
+
 #ifdef GEKKO
 
 	ArenaInfo ReadArenaInfo()
@@ -224,10 +262,21 @@ namespace Riivo
 		//! PlaceFst has already proved this lands inside MEM1, but this write
 		//! goes into the running game's memory, so check it again here rather
 		//! than trust a struct that could have been built any number of ways.
-		if (place.fstAddr < MEM1_BASE || place.fstAddr >= MEM1_END)
-			return false;
-		if ((u64) place.fstAddr + size > MEM1_END)
-			return false;
+		//! A MEM2 placement (experimental path) is checked against MEM2 the
+		//! same way; anything in neither range is refused outright.
+		const bool mem2 = place.fstAddr >= MEM2_BASE;
+		if (mem2)
+		{
+			if (!InMem2(place.fstAddr, size))
+				return false;
+		}
+		else
+		{
+			if (place.fstAddr < MEM1_BASE || place.fstAddr >= MEM1_END)
+				return false;
+			if ((u64) place.fstAddr + size > MEM1_END)
+				return false;
+		}
 
 		memcpy((void *) place.fstAddr, fst, size);
 		DCFlushRange((void *) place.fstAddr, size);

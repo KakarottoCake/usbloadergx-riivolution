@@ -34,12 +34,30 @@
 #include <string.h>
 #include <string>
 #include <vector>
+#include "RiivoMem2Reserve.hpp" // MEM2_BASE/MEM2_TOP live there; reused, not redefined
 
 namespace Riivo
 {
 	//! MEM1, as the game sees it. The boot-info fields must land inside this.
 	static const u32 MEM1_BASE = 0x80000000;
 	static const u32 MEM1_END  = 0x81800000;
+
+	//! MEM2's end, matching RiivoMem2Reserve's MEM2_TOP (which owns the
+	//! MEM2_BASE/MEM2_TOP pair - reused here, not redefined).
+	static const u32 MEM2_END = MEM2_TOP;
+
+	//! Experimental MEM2 table base, surveyed on SB4E01 under Dolphin: the
+	//! game grows its MEM2 heap bottom-up from 0x90000000 (sparse use over
+	//! the first megabyte in 90 s idle) while the top faults post-boot
+	//! (outside the game's mapping), so the mid window has the most margin
+	//! on both sides. NOT a derived safe address - a per-title surveyed
+	//! one. Never the default; only the mem2fst.txt marker selects it.
+	static const u32 MEM2_FST_BASE = 0x92000000;
+
+	//! Largest table the experimental MEM2 path accepts. Way above any
+	//! real rebuild (T0: 153934, big conversions: single-digit MB at most)
+	//! and small enough to keep tens of megabytes of margin everywhere.
+	static const u32 MEM2_FST_CAP = 1024 * 1024;
 
 	//! Never squeeze the game's heap below this. A Wii game that cannot get
 	//! 4 MB of MEM1 is going to fail anyway, and failing here - before anything
@@ -110,7 +128,17 @@ namespace Riivo
 	//! list and is unaffected by either count. Does not touch memory - call
 	//! Install() for that.
 	FstPlacement PlaceFst(const ArenaInfo &info, u32 fstSize, u32 align,
-						  const OccupiedRange *occ = 0, u32 occCount = 0);
+						 const OccupiedRange *occ = 0, u32 occCount = 0);
+
+	//! Experimental MEM2 placement for a table that cannot stay in MEM1:
+	//! grown past the reservation on a game whose startup clears below it
+	//! (measured on SB4E01). Takes the arena only to pass its high word
+	//! through untouched (nothing is taken from the MEM1 heap, so there is
+	//! nothing to deduct) and to refuse garbage input. No occupied list:
+	//! MEM2 obstacles are not scanned, they are surveyed (see MEM2_FST_BASE),
+	//! which is exactly why this stays behind the mem2fst.txt marker and
+	//! refuses anything above MEM2_FST_CAP. Pure arithmetic, host-tested.
+	FstPlacement PlaceFstMem2(const ArenaInfo &info, u32 fstSize, u32 align);
 
 	//! Half-open interval overlap: [aLo,aHi) against [bLo,bHi). An empty or
 	//! inverted interval overlaps nothing, so a zero length always reads
