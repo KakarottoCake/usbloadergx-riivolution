@@ -53,9 +53,14 @@ repointed words, pre-jump re-read), in-place and relocated back-to-back.
   under this libstdc++) once overran the GDB-poked place blob into the
   neighboring staging words (`size` <- `0x817DA740`, `crc` <- junk),
   producing a deterministic "freeze" in the pre-copy CRC that looked
-  exactly like a production defect. Lesson: the blob length travels in
-  the mailbox (`+144`), and every GDB-poked word is read back from RAM
-  before the call. Never trust a freeze without register-level proof.
+  exactly like a production defect. **Classified: harness defect. It
+  illustrates a failure mechanism (wrong loop bound from corrupted
+  staging metadata) but is NOT evidence that production staging
+  metadata is corrupted** - production builds its own place struct and
+  CRC in one binary; nothing crosses a debugger there. Lesson: the blob
+  length travels in the mailbox (`+144`), and every GDB-poked word is
+  read back from RAM before the call. Never trust a freeze without
+  register-level proof.
 - GDB reads bypass the data cache: `pendingPlaceOk=false` (plain
   unflushed store) still reads 1 after a verified install, while the
   flushed words and table bytes read correctly. Flushed state is truth;
@@ -64,6 +69,17 @@ repointed words, pre-jump re-read), in-place and relocated back-to-back.
   from stopped - sent while running they wedge the stub's command loop
   (total silence after). Drive multi-phase flows with writes + target
   waits + watch-stops, never with cont-then-halt.
+- Rendezvous discipline: sleeps never synchronize. The harness publishes
+  `adPhase` (1=unchanged done, 2=mode wait, 4=finished) and per-mode
+  `adModeDone`, and waits for GDB acks before advancing - a sleep-synced
+  round once executed an install in the wrong labeled slot. GDB polls
+  with waitmem; pokes happen only in the matching wait.
+- Open observability debt (not a production signal): after a verified
+  mode-1 install (span dumps byte-exact), the result-block re-read once
+  showed the previous mode's values. Suspects are a stale mem reply vs a
+  mid-flight read; queued fix is a per-probe nonce in the result block
+  plus transition-logging polls. Byte-level dumps are the verdict until
+  then.
 
 ## Still reserved for Wii hardware
 

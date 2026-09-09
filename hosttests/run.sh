@@ -35,6 +35,12 @@ build_run test_fstbuild "$SRC/riivo/RiivoFstBuild.cpp" "$SRC/riivo/RiivoFst.cpp"
 # The same rebuilder at the size of a real game: a 3920-file table.
 build_run test_scale "$SRC/riivo/RiivoFstBuild.cpp" "$SRC/riivo/RiivoFst.cpp"
 
+# The exact GXDiag T0 workload (two created files, real sizes) through the
+# real serializer: delta-only on a synthetic base by default; with
+# T0_BASE_FST set, asserts the rebuilt table is exactly the 153934 bytes
+# the T0 card log reports and writes t0-rebuilt.fst.
+build_run test_t0serializer "$SRC/riivo/RiivoFstBuild.cpp" "$SRC/riivo/RiivoFst.cpp"
+
 # The seam RiivoBoot walks on the console: FST -> BuildRedirects -> FstBuilder.
 # Needs RiivoConfig (for JoinPath) and hence pugixml.
 build_run test_pipeline "$SRC/riivo/RiivoFstBuild.cpp" "$SRC/riivo/RiivoFst.cpp" \
