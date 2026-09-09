@@ -92,10 +92,10 @@ static u32 mem2Lo = 0, mem2Hi = 0;
 //! Probe "game" (source/probe.S): absolute-address consumer entered by
 //! branch-to-CTR after cache maintenance, modeling the entry jump. Uses
 //! no stack/TOC/nonvolatiles, returns the entry count (0 = reject) and
-//! fills a result block at 0x80000180 for GDB.
+//! fills a result block at 0x80000200 for GDB.
 extern "C" u8 probe_start[], probe_end[];
 static const u32 PROBE_ADDR = 0x80004000;
-static const u32 PROBE_RESULT = 0x80000180;
+static const u32 PROBE_RESULT = 0x80000200;
 
 static void InstallProbe(void)
 {
@@ -251,8 +251,13 @@ static void PrintPoke(const char *tag, const Riivo::FstPlacement &place,
 
 //! Jump to the probe consumer and check it consumed the intended table:
 //! magic + count + CRC equality with the staged bytes + arena record.
+//! A per-jump nonce in word 4 tells a fresh block from a stale re-read.
+static u32 probeNonce = 0;
+
 static void ConsumeCheck(const char *tag, u32 expCount, u32 expCrc)
 {
+	*(vu32 *) (PROBE_RESULT + 16) = ++probeNonce;
+	DCFlushRange((void *) PROBE_RESULT, 20);
 	const u32 got = JumpProbe();
 	const vu32 *res = (const vu32 *) PROBE_RESULT;
 	printf("  %s probe: r3=%u magic=%08x count=%u crc=%08x arena=%08x\n",

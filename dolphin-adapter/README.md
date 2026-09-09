@@ -22,36 +22,29 @@ contains spaces, stage to a space-free directory instead: copy `source/`,
 hashes), and change the `RIIVOSRC`/`ADAPTSHIM` lines to point at the
 staged copies.
 
-## Run (v3: PRODUCTION InstallPendingFst, both modes)
+## Run (v4: production install + probe jump, three consumptions)
 
 Boot `fstadapter.dol` in Dolphin (`-b` batch works; Null video is fine).
-The harness prints a GDB mailbox at `0x80000100`
-(`stageR crcR stageI crcI sizeR sizeI blobR blobI blobLen@+144`) -
-read it, poke the file-static staging words (addresses from
-`powerpc-eabi-nm`: `pendingFst pendingPlace pendingFstCrc
-pendingFstSize pendingPlaceOk fileWorkLive skipFstInstall
-installFailCode`), set `adGo=1`:
+The harness runs UNCHANGED (modeled base table + probe jump) on its own,
+then waits per poked mode. It publishes `adPhase` (1=unchanged done,
+2=mode wait, 4=finished) and per-mode `adModeDone`; GDB polls with
+`waitmem`, pokes, releases with `adGo=1`, and acks completion with
+`adGo=2` - no sleeps-as-sync anywhere (a sleep-synced round once ran an
+install in the wrong labeled slot). Static addresses come from
+`powerpc-eabi-nm` (re-check after any rebuild; BSS moves). The mailbox
+at `0x80000100` carries the poke values plus the place-blob length at
+`+144` (the struct size is toolchain-dependent - assuming it once
+poisoned neighboring staging words).
 
-```
-halt                                   # entry, stopped: arming is safe here
-watch 0x817B2DE0 153934 write          # relocated span (optional)
-go                                     # THE run-control for this boot
-sleep 10                               # harness reaches the mode wait
-doprod 0 <8 static addrs>              # poke RELOC staging from mailbox
-wmem adGo 00000001
-sleep 15                               # production call runs; watch may stop it
-mem 0x80000030 16                      # boot words
-mem installFailCode 4                  # expect 0
-unwatch ...                            # only while stopped or before go
-go                                     # valid ONLY while stopped
-...
-```
+The probe returns the entry count in r3 and fills a result block at
+`0x80000200` (magic, count, CRC, arena, nonce) for GDB. The block sits
+clear of the mailbox (ends `0x80000194`); the per-jump nonce tells a
+fresh block from a stale re-read.
 
-Read back every poked word from RAM before trusting a result, and
-re-check `nm` after any rebuild (BSS moves). `placeOk` reads stale-1
-after success (unflushed store vs cache-bypassing GDB reads) - the
-flushed words and dumped bytes are the verdict, confirmed byte-exact
-for both modes (153934 + 153792 bytes, 0 mismatches).
+Read back every poked word from RAM before trusting a result.
+`placeOk` reads stale-1 after success (unflushed store vs
+cache-bypassing GDB reads) - the flushed words, result blocks, and
+dumped bytes are the verdict.
 
 ## GDB-stub quirks found (Dolphin 5.0-18995, single-session stub)
 
