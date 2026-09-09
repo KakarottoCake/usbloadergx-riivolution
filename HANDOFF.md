@@ -1,4 +1,4 @@
-# Handoff — 2026-09-08 (updated: Dolphin reproduction live, adapter PASS; T0 acceptance live)
+# Handoff — 2026-09-08 (updated: adapter v2 in-place+relocated PASS; menu claim qualified; no tester run asked)
 
 State of the SB4E01 (Super Mario Galaxy 2) debugging effort. Read the
 "Latest evidence" section first — it supersedes the drive-blocker framing
@@ -33,6 +33,44 @@ same-address pointer/size updates, and a live redirected read path do
 not break the boot. What T1 does NOT
 prove: that the game consumed our bytes — the copy is identical, so a
 boot that ignored the redirect looks the same. That is T2's job.
+
+## Dolphin reproduction: adapter v2 in-place + relocated PASS (2026-09-08+UTC)
+
+v1 proved the isolated copy. v2 executes the actual late-install caller
+as a line-referenced mirror of `Riivo::InstallPendingFst`
+(RiivoBoot.cpp:2196-2328, same order, same fail codes) around the REAL
+`InstallFst`/`PlaceFst`/`Crc32`, plus the launch-tail shape (inter-phase
+heap churn, consumer reads through repointed words, pre-jump re-read),
+RELOCATED then IN-PLACE as two separately-modeled boots. Staging lives
+in Arena2 across churn with a stage-time CRC (the pendingFst lifetime);
+boot words are reset to captured per mode.
+
+GDB result: write watchpoint on `[0x817B2DE0, +153934)` fires inside the
+real `InstallFst` memcpy (PC `memcpy`+0x88, LR `InstallFst`+0x80); no
+churn-phase writer touches the span; late-install caller verifies code 0
+in BOTH modes; relocated lands `0x817B2DE0` + arena lowered, in-place
+lands `0x817DA740` + arena kept; full-span dumps byte-exact (153934 +
+153792 bytes, 0 mismatches); consumer parses 8101/8093 entries through
+the repointed words; pre-jump re-read matches staged CRC. The in-place
+vs relocated difference now executes end-to-end in emulation with
+identical success - the divergence (Wii-only: stack position, game
+read-back, apploader/cIOS inputs) is NOT in this path. Bypass ledger in
+`dolphin-adapter/BYPASSES.md` extended (Arena2-bump staging, stand-in
+churn sizes, synthetic FST heads labeled). No tester run asked or needed.
+
+## Menu claim qualified: forward progress yes, functioning menu no
+
+"GX reached a running menu" overstated. What Dolphin establishes (v3.42
+boot.dol, 18995, no disc): five `regs`-polls over ~50 s of execution show
+PC `0x80D43FDC` -> `memcmp` (via `wd_fix_partition_table`) -> inside
+`wd_fix_partition_table` -> `0x80D2FD4C`, SP migrating `0x8108E8B8` ->
+`0x8108EA40` -> `0x8118C238` (second stack = thread activity), MSR EE on.
+That is sustained execution through loader code, not a wedge at entry or
+an exception spin. It is NOT a functioning menu (no input/render check
+under Null video). Correction: without any GDB session the CPU sits at
+entry (stub force-pause) - earlier "booted to menu" runs all had a
+`cont`. Stub method that works: `go` + `regs`/`mem` polling; halting a
+running CPU is flaky on this stub.
 
 ## Dolphin reproduction: adapter PASS (2026-09-08+UTC, developer-side)
 
