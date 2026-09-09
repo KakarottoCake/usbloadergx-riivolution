@@ -363,6 +363,10 @@ and permanent silence, and a write failure drops the socket rather than retrying
 - Fixed comments that overstated what light-out proves, to match the blink-code table.
 - 146,865 automated checks, all passing.
 
+## Changed in v3.33
+
+- New diagnostic: `riivolution/relocorig.txt` installs the verbatim original table, relocated, instead of the rebuilt one - to separate a relocation fault from new-table content. Do not combine it with `nofstinstall.txt`.
+
 ## Changed in v3.32
 
 - The white flash in the jump sequence is gone. The launch path is back to stock code; a black screen after the light goes out means the game itself never came up.

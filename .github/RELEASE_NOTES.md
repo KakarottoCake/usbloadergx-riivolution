@@ -37,6 +37,13 @@ on. Without that file nothing changes and the build behaves exactly like v3.10.
 It has never run on a console. Expect it to fail; the log and a USB Gecko trace are the
 point of it. Leave the file off for normal use.
 
+## Changed in v3.43
+
+- Fixed the SB4E01 relocation failure without relocating: rebuilt tables now share string tails (`SerializeCompacted`), so T0's table shrinks from 153,934 to 144,323 bytes and fits the apploader's existing 153,792-byte reservation - it installs in place, out of reach of the startup clearing below it. Staged only when the plain table overflows and the compacted one fits and verifies; every path, offset and size is identical between the two serializations (host-checked over all 4496 entries).
+- Experimental MEM2 placement behind a `riivolution/mem2fst.txt` marker: grown tables that still cannot fit go to surveyed MEM2 (`0x92000000`) instead of the MEM1 cascade, with the MEM1 arena untouched. Refusal-first, fully logged, never the default. Dolphin screening has NOT cleared a MEM2 site for real game consumption yet - do not create the marker; it is documented for a held test only.
+- If you are on the SB4E01 round: run T0 with THIS build (no bypass markers). The log should show "compacted table ... STAGED instead of the plain table" and an in-place install ("fits in the room"), then the game booting. Video the ending if possible, and send the log.
+- 146,982 automated checks, all passing.
+
 ## Changed in v3.42
 
 - Slimmed the post-apploader diagnostics after the v3.41 log stopped inside them: the struct disc reads and full-range memory sweeps are out; checkpoints, checked reads, per-chunk source offsets and the placement protection are unchanged. Installation decisions unchanged.
@@ -91,9 +98,5 @@ point of it. Leave the file off for normal use.
 - `boot.elf.map` (linker map) now ships with every release next to `boot.elf`, so each build's exact memory layout is on record.
 - If you are on the SB4E01 round: run T0 with this build and send the log - the new section is the evidence the relocation question needs.
 - 146,876 automated checks, all passing.
-
-## Changed in v3.33
-
-- New diagnostic: `riivolution/relocorig.txt` installs the verbatim original table, relocated, instead of the rebuilt one - to separate a relocation fault from new-table content. Do not combine it with `nofstinstall.txt`.
 
 Older versions: [CHANGELOG.md](CHANGELOG.md)
