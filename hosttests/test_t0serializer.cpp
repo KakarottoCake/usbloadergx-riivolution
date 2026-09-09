@@ -125,8 +125,16 @@ int main()
 		std::string dst = od ? od : "/tmp";
 		dst += "/t0-rebuilt.fst";
 		FILE *f = fopen(dst.c_str(), "wb");
-		if (f) { fwrite(&out[0], 1, out.size(), f); fclose(f); }
-		printf("  wrote %s\n", dst.c_str());
+		ck(f != 0, "rebuilt table written to disk");
+		if (f) {
+			ck(fwrite(&out[0], 1, out.size(), f) == out.size(),
+			   "rebuilt table fully written");
+			fclose(f);
+			printf("  wrote %s\n", dst.c_str());
+		} else {
+			printf("  FAIL: cannot open %s (create OUT dir first)\n",
+				   dst.c_str());
+		}
 	} else {
 		ck(st.fstSize == (u32) base.size() + 144, "delta is exactly +144");
 	}
