@@ -1,8 +1,53 @@
-# Handoff — 2026-09-08 (updated: gated 3-way consumption complete, nonces 1-2-3; key named once; no tester run asked)
+# Handoff — 2026-09-08 (updated: T0 failure REPRODUCED in real SMG2 startup; below-reservation is a clear zone; no tester run asked)
 
 State of the SB4E01 (Super Mario Galaxy 2) debugging effort. Read the
 "Latest evidence" section first — it supersedes the drive-blocker framing
 below, which is kept for the steps it still requires.
+
+## Real SMG2 startup: T0 failure reproduced, mechanism identified
+
+Correction first: the missing-key claim was wrong. Dolphin carries the
+retail common key built in (`IOSC::LoadDefaultEntries`, verified in
+source), unwraps the ticket's title key, and decrypts internally - no
+keys.bin needed. What actually blocked the ISO was a spaced-path
+argument split (dialog: file "D:/Games/Wii/Super" not found), caught by
+screenshotting the hidden Warning dialog. With quoting fixed, the
+authorized backup (header SB4E01, partition map + tickets + both TMDs
+parsed sane, data title 00010000-53423445) boots: apploader entry
+`0x80004050`, then game code, no keys anywhere on the PC.
+
+What runs, with GDB installed at game birth (12s halt, heap empty):
+- UNCHANGED: baseline idle (`0x805BCCB0`, 3 rotating stacks, words
+  untouched). ARENALIE (arenaHi lowered only): identical baseline -
+  the game ignores arenaHi for behavior. IN-PLACE rewrite (150KB via
+  GDB, words untouched): baseline, table intact - the write path is
+  harmless, methodology exonerated.
+- RELOCATED grown T0 table (real serializer bytes, 153934, verified
+  pre-go) and VERBATIM-relocated (stock bytes moved): identical failure
+  - table zeroed across its full span within seconds of entry, game
+  parked at `0x805B2B14` (EE off, frozen SP, scheduler spin) while boot
+  words stay intact. Content is innocent (verbatim dies too); position
+  is everything.
+- Apploader-time layout (halted snapshot): `[0x817B0000, 0x817D8740)`
+  is 165,696 zero bytes; the 8KB block holds 4 stray bytes; the cascade
+  target is a zero desert. Post-wipe diff: installed bytes -> zeros
+  across the whole span, plus the 4 strays cleared.
+- Marker control (clean words, 32B planted post-boot): cleared within
+  ~25s while the game behaves baseline. The wipe is ROUTINE game
+  behavior on that span, not a reaction to our words - with original
+  arenaHi the span is inside the game's own heap/clear zone, and a
+  lowered arenaHi does not move the clearer (fixed-range startup
+  clearing below the reservation, <4s after entry).
+
+Consequences: below-reservation placement is dead for SMG2 no matter
+what the arena words say - the cascade-down fix steered into a clear
+zone. In-place stays the only proven-safe MEM1 region. Two fix tracks:
+(1) suffix-compacted string tables to fit T0-sized growth in place
+(needs ~142B; whole-table suffix overlap should yield KBs); (2)
+MEM2-resident grown tables (outside MEM1 clearing entirely; needs a
+game-MEM2-avoidance survey, queued in Dolphin). Open reference: where
+official Riivolution / riivolution-to-iso puts grown FSTs. Unlisted-block
+experiment stays deferred (nothing left unaccounted that needs it).
 
 ## Latest evidence: install split confirmed on v3.34, same build throughout
 
@@ -482,8 +527,10 @@ placement defect, now fixed:
 
 - `PlaceFst` takes the loaded ranges as obstacles and cascades a grown
   table below every one it would overwrite (T0 now plans
-  `0x817b2de0`, heap cost 162,912 bytes). Ranges inside the stale-table
-  reservation are the expected overlap and are skipped + counted
+  `0x817b2de0`, heap cost 162,144 bytes (`0x27960` - an old 162,912 figure
+  in earlier notes was bad hand-hex; code always computed from addresses).
+  Ranges inside the stale-table reservation are the expected overlap and
+  are skipped + counted
   (`ignoredRanges`); straddlers and malformed entries are obstacles and
   skips respectively, never silent. No room anywhere → refused.
 - Tracing: the DOL section table + BSS come off the disc in the same

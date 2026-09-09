@@ -33,7 +33,7 @@ repointed words, pre-jump re-read), in-place and relocated back-to-back.
 
 ## What it validates (real PPC code, real emulated MEM1)
 
-- v1: `PlaceFst` reaches the known answer (`0x817B2DE0`, 162912 bytes
+- v1: `PlaceFst` reaches the known answer (`0x817B2DE0`, 162144 bytes
   reserved); `InstallFst` memcpy+flush+repoint lands all 153934 bytes
   (0 mismatches) with no DSI; write watchpoint fires exactly on the span.
 - v2: the mirrored late-install caller verifies code 0 in BOTH modes;
@@ -89,6 +89,25 @@ repointed words, pre-jump re-read), in-place and relocated back-to-back.
 - Whether the live loader stack overlaps the destination (model A vs B).
 - Whether the game reads the relocated table back correctly.
 - Whether cIOS reads deliver the bytes the plan assumed.
+
+## Real-game counterpart (Dolphin disc backend, SB4E01 backup)
+
+The adapter's modeled cases are now cross-checked against actual SMG2
+startup in Dolphin (retail ISO boots keyless - the common key is built
+into Dolphin's IOSC; an early "missing key" claim was wrong, and the
+real blocker was a spaced-path split caught via dialog screenshot).
+Method: halt at game birth (`0x80004050`, heap empty), GDB-install bytes
++ words (mirrors loader timing - installing minutes later smashes live
+heap and proves nothing), `go`, trace PC/SP/words/bytes:
+- Unchanged / arena-lie / in-place-rewrite: baseline idle, untouched.
+- Relocated (grown T0 bytes AND verbatim stock bytes): full-span wipe
+  to zeros within seconds of entry + park at `0x805B2B14` (EE off).
+  Position kills, content is innocent, arenaHi is irrelevant.
+- Apploader-time snapshot: below-reservation is a zero desert; the wipe
+  is routine game clearing of that zone (marker control), not a reaction.
+Conclusion carried to production: below-reservation placement is dead
+for SMG2; in-place is the only proven-safe MEM1 region; fix tracks are
+suffix-compacted in-place tables and MEM2-resident grown tables.
 
 ## Inputs ledger
 

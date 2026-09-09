@@ -227,7 +227,7 @@ int main()
 		ck(!p.inPlace, "still a relocation");
 		ck(p.fstAddr == 0x817b2de0, "table starts below the block");
 		ck(p.newArenaHi == 0x817b2de0, "arena follows it down");
-		ck(p.reserved == 0x27960, "heap cost is 162912 bytes");
+		ck(p.reserved == 0x27960, "heap cost is 162144 bytes");
 		ck(p.ignoredRanges == 0, "the block itself is not ignored");
 		ck(p.malformedRanges == 0, "nothing malformed");
 		ck(!RangesOverlap(p.fstAddr, p.fstAddr + want, block.lo, block.hi),
