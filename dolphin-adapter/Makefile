@@ -1,7 +1,10 @@
-# fstadapter: Dolphin-side known-answer harness for the REAL Riivo
-# RiivoFstInstall.cpp. Modeled on the devkitPPC wii application template.
-# Adds one explicit rule compiling the production TU unmodified; nothing
-# from usbloadergx/ is copied or forked here.
+# fstadapter: Dolphin-side harness for the REAL Riivo install path.
+# Modeled on the devkitPPC wii application template. Adds explicit rules
+# compiling the production TUs unmodified (RiivoFstInstall.cpp always;
+# RiivoBoot.cpp for the v3+ production-caller harness, garbage-collected
+# at link so only InstallPendingFst's closure is retained); nothing from
+# the loader is copied or forked here. probe.S in source/ builds with the
+# template's own SFILES rule.
 .SUFFIXES:
 ifeq ($(strip $(DEVKITPPC)),)
 $(error "Please set DEVKITPPC in your environment. export DEVKITPPC=<path to>devkitPPC")
@@ -18,7 +21,7 @@ INCLUDES	:=	shim
 CFLAGS	= -g -O2 -Wall $(MACHDEP) $(INCLUDE)
 CXXFLAGS	=	$(CFLAGS)
 
-LDFLAGS	=	-g $(MACHDEP) -Wl,-Map,$(notdir $@).map
+LDFLAGS	=	-g $(MACHDEP) -Wl,-Map,$(notdir $@).map -Wl,--gc-sections
 
 LIBS	:=	-logc -lm
 LIBDIRS	:=
@@ -42,15 +45,21 @@ export LD	:=	$(CXX)
 
 export OFILES_BIN	:=	$(addsuffix .o,$(BINFILES))
 export OFILES_SOURCES := $(CPPFILES:.cpp=.o) $(CFILES:.c=.o) $(sFILES:.s=.o) $(SFILES:.S=.o)
-export OFILES := $(OFILES_BIN) $(OFILES_SOURCES) RiivoFstInstall.o
+export OFILES := $(OFILES_BIN) $(OFILES_SOURCES) RiivoFstInstall.o RiivoBoot.o
 
 export HFILES := $(addsuffix .h,$(subst .,_,$(BINFILES)))
+
+# GXSRC is the loader source tree (relative, in-repo). RiivoBoot.cpp's
+# broad GX includes resolve through it; the shim still shadows gecko.h
+# via -iquote order.
+export GXSRC := $(CURDIR)/../source
 
 export INCLUDE	:=	$(foreach dir,$(INCLUDES), -iquote $(CURDIR)/$(dir)) \
 					$(foreach dir,$(LIBDIRS),-I$(dir)/include) \
 					-I$(CURDIR)/$(BUILD) \
 					-I$(LIBOGC_INC) \
-					-I$(CURDIR)/../source/riivo
+					-I$(CURDIR)/../source/riivo \
+					-I"$(GXSRC)" -I"$(GXSRC)/riivo"
 
 export LIBPATHS	:= -L$(LIBOGC_LIB) $(foreach dir,$(LIBDIRS),-L$(dir)/lib)
 
@@ -82,6 +91,16 @@ $(OFILES_SOURCES) : $(HFILES)
 RiivoFstInstall.o : $(RIIVOSRC)/RiivoFstInstall.cpp
 	@echo $(notdir $<)
 	$(CXX) $(CXXFLAGS) -I$(RIIVOSRC) -iquote $(ADAPTSHIM) -c $< -o $@
+
+# Production caller TU, compiled unmodified. Section-per-function so the
+# linker keeps only InstallPendingFst's closure. The .d file is deleted,
+# not included (dependency paths are only space-safe on some make
+# versions).
+RiivoBoot.o : $(RIIVOSRC)/RiivoBoot.cpp
+	@echo $(notdir $<)
+	$(CXX) $(CXXFLAGS) -ffunction-sections -fdata-sections -I$(RIIVOSRC) \
+		-iquote $(ADAPTSHIM) -I"$(GXSRC)" -I"$(GXSRC)/riivo" -c $< -o $@
+	@rm -f RiivoBoot.d
 
 -include $(DEPENDS)
 

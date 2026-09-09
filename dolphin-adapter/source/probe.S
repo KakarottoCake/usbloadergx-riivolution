@@ -2,7 +2,10 @@
 // Pure absolute-address assembly: no TOC (r2 untouched), no stack use,
 // nonvolatiles untouched, interrupts untouched. Safe to memcpy anywhere
 // executable and enter with mtctr/bctr; returns via blr with the entry
-// count in r3 (0 = reject) and a result block at 0x80000180 for GDB.
+// count in r3 (0 = reject) and a result block at 0x80000200 for GDB.
+// (0x80000200 sits clear of the 0x80000100 GDB mailbox, which ends at
+// 0x80000194 - an earlier 0x80000180 address collided with it and ate
+// the blob-length word, failing loudly in doprod.)
 //
 // Result block: [0]=magic ('PROB' ok / 'FAIL'), [1]=entry count,
 // [2]=CRC32 over [ptr,ptr+max), [3]=arena word. The CRC matches the
@@ -60,7 +63,7 @@ probe_start:
 	b	1b
 2:	nor	10,10,10	// not r10 (xori cannot take -1)
 	lis	11,0x8000
-	ori	11,11,0x0180
+	ori	11,11,0x0200
 	lis	12,0x5052	// 'PR'
 	ori	12,12,0x4F42	// 'OB'
 	stw	12,0(11)
@@ -71,7 +74,7 @@ probe_start:
 	blr
 fail:
 	lis	11,0x8000
-	ori	11,11,0x0180
+	ori	11,11,0x0200
 	lis	12,0x4641	// 'FA'
 	ori	12,12,0x494C	// 'IL'
 	stw	12,0(11)
