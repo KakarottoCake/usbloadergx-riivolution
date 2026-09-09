@@ -1,24 +1,28 @@
-# Handoff — 2026-09-09 (updated: hardware pack staged with CI build fd7bbc84; MEM2 surveyed+HELD; no hardware time asked)
+# Handoff — 2026-09-09 (updated: v3.43 pre-release published + gated; GXDiag v9; hw7 pack staged, hardware not asked)
 
 State of the SB4E01 (Super Mario Galaxy 2) debugging effort. Read the
 "Latest evidence" section first — it supersedes the drive-blocker framing
 below, which is kept for the steps it still requires.
 
-## Hardware pack staged (build fd7bbc84, CI green) - NOT sent for runs
+## v3.43 pre-release (published, gated) + GXDiag v9 + hw7 pack
 
-- `pkg-t0-6099af11/`: exact CI DOL of the compaction commit (SHA-256
-  verified against the CI manifest) + T0-once instructions (markers
-  removed). Developer-side T0 re-ran clean in Dolphin (birth install,
-  TitleLogo consumer hit, full-span dump identical).
-- `pkg-hw7/`: one build (compaction live + MEM2 behind `mem2fst.txt`),
-  `gx7many.xml` (N6 option only) + 500-file overflow workload
-  (plain 164313 / compacted 154702, both over 153792 - mechanically
-  selects MEM2), CHECKLIST-7 (N1..N7 with expected results), MARKERS.md
-  (all markers must be absent except held N6), RESULTS-7 (sheet incl.
-  MEM2 pre-shutdown / post-shutdown / title / level checkpoints).
-  Logs: rename-after-each to `01-..-07-..log` (loader truncates per
-  boot by design; checklist-enforced, following GXDiag convention).
-- MEM2 Dolphin verdict (Test 6 HELD, gate unmet): game MEM2 grows
+- `v3.43-riivo-compact`: pre-release (not draft, no Latest badge), 4
+  assets. boot.dol SHA-256
+  `218B5F178C6E673A5D2F5137CCF15C68C80259ACF849EE37A39777EA306E3F0C`,
+  binary-gated (commit `c7d6d27a` in strings + compaction/MEM2 log
+  strings present; ancestry of fix commits verified pre-tag, avoiding a
+  repeat of the v3.36 mistag).
+- `GXDiag-SB4E01-v9.zip` (12 entries, probes byte-identical to v8):
+  CHECKLIST/README rewritten for compaction (T0 must show "compacted
+  table ... STAGED" + "fits in the room", never "extended downwards";
+  three-chapter history retold). Workspace working copy synced.
+- `pkg-t0-6099af11/`: exact CI DOL + manifest + T0-once instructions
+  (markers removed).
+- `pkg-hw7/`: one CI build (`fd7bbc84`, verified strings) + gx7many
+  (N6 option + 500-file overflow workload) + CHECKLIST-7/RESULTS-7/
+  MARKERS.md. N1-N5+N7 runnable; N6 HELD (no passing MEM2 site).
+  Developer-side validation complete; hardware time NOT requested.
+  MEM2 Dolphin verdict (Test 6 HELD, gate unmet): game MEM2 grows
   bottom-up from `0x90000000` (sparse first MB at 90 s); reads above
   ~`0x93700000` fault post-boot (outside game mapping); `0x92000000`
   chosen on use+margins, NOT zeros. Consumer checks negative: top site
@@ -28,9 +32,8 @@ below, which is kept for the steps it still requires.
   adapter. No MEM2 site passes game-consumption - nothing validated is
   substituted; the marker ships dormant and Test 6 documents its
   re-entry criteria instead of a run.
-- Developer-side validation is complete (host suite, CI pinned build,
-  adapter mechanics, real-game compaction proof, wiper forensics);
-  hardware time is NOT requested by this handoff.
+
+## Repair candidate 1, VERIFIED in real startup: in-place compaction
 
 `FstBuilder::SerializeCompacted` (new, pure, host-tested): same entries,
 paths, offsets and sizes as `Serialize`; shared string tails stored once
