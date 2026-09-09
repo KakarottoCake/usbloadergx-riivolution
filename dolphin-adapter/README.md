@@ -22,33 +22,36 @@ contains spaces, stage to a space-free directory instead: copy `source/`,
 hashes), and change the `RIIVOSRC`/`ADAPTSHIM` lines to point at the
 staged copies.
 
-## Run (v2: late-install caller, both modes)
+## Run (v3: PRODUCTION InstallPendingFst, both modes)
 
-Boot `fstadapter.dol` in Dolphin (`-b` batch works; Null video is fine —
-the verdict is checkable over GDB). With the GDB stub on port 9090:
+Boot `fstadapter.dol` in Dolphin (`-b` batch works; Null video is fine).
+The harness prints a GDB mailbox at `0x80000100`
+(`stageR crcR stageI crcI sizeR sizeI blobR blobI blobLen@+144`) -
+read it, poke the file-static staging words (addresses from
+`powerpc-eabi-nm`: `pendingFst pendingPlace pendingFstCrc
+pendingFstSize pendingPlaceOk fileWorkLive skipFstInstall
+installFailCode`), set `adGo=1`:
 
 ```
-halt                                   # entry 0x80003F00
-watch 0x817B2DE0 153934 write          # relocated destination span
-go                                     # async continue; sleeps are client-side
-sleep 12
-mem 0x80000030 16                      # boot words mid-run
-unwatch 0x817B2DE0 153934 write        # before the run proceeds
-go
-sleep 25                               # both modes complete, parked in wait loop
-mem 0x80000030 16                      # expect in-place final words (ran last)
-dump 0x817B2DE0 153934 destR.bin       # relocated span, byte-exact
-dump 0x817DA740 153792 destI.bin       # in-place span, byte-exact
+halt                                   # entry, stopped: arming is safe here
+watch 0x817B2DE0 153934 write          # relocated span (optional)
+go                                     # THE run-control for this boot
+sleep 10                               # harness reaches the mode wait
+doprod 0 <8 static addrs>              # poke RELOC staging from mailbox
+wmem adGo 00000001
+sleep 15                               # production call runs; watch may stop it
+mem 0x80000030 16                      # boot words
+mem installFailCode 4                  # expect 0
+unwatch ...                            # only while stopped or before go
+go                                     # valid ONLY while stopped
+...
 ```
 
-A watchpoint hit stops the CPU (the stop packet surfaces on the next
-command); the hit PC inside `memcpy` with LR inside `InstallFst`
-identifies the install write. `go`+`regs`-polling is the reliable way to
-sample a running target — `\x03`-halting a running CPU is flaky on this
-stub, and `OK`/`O`, `$#00`, and `E`-prefix replies need the handling
-noted below. Each staged table is a synthetic valid mini-FST (real U8
-entries + strings) with a marker pad
-(`0xA5 ^ (i&FF) ^ ((i>>8)&FF)` from the header end).
+Read back every poked word from RAM before trusting a result, and
+re-check `nm` after any rebuild (BSS moves). `placeOk` reads stale-1
+after success (unflushed store vs cache-bypassing GDB reads) - the
+flushed words and dumped bytes are the verdict, confirmed byte-exact
+for both modes (153934 + 153792 bytes, 0 mismatches).
 
 ## GDB-stub quirks found (Dolphin 5.0-18995, single-session stub)
 
