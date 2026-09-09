@@ -111,8 +111,19 @@ namespace Riivo
 			//! so a non-zero answer must be treated as a refusal.
 			u32 LayoutFrom(const std::map<std::string, u64> &byDiscPath);
 
-			//! Serialise back to the on-disc format. `shifted` must match Parse.
-			void Serialize(std::vector<u8> &out, bool shifted) const;
+		//! Serialise back to the on-disc format. `shifted` must match Parse.
+		void Serialize(std::vector<u8> &out, bool shifted) const;
+
+		//! Same table, suffix-compacted string table: a name that already
+		//! occurs in the emitted bytes (with its NUL) is referenced in
+		//! place instead of stored again. Entry order, names, offsets and
+		//! lengths are identical to Serialize - only string storage
+		//! overlaps, which the on-disc format allows (offsets are
+		//! arbitrary). Returns false on an internal mismatch, in which
+		//! case `out` is untouched and the caller must keep Serialize's
+		//! result. Used to fit small growth into the apploader's existing
+		//! reservation instead of relocating below it.
+		bool SerializeCompacted(std::vector<u8> &out, bool shifted) const;
 
 			//! Look up the offset assigned to a modded file, or false.
 			bool FindAssigned(const std::string &discPath, u64 *outOffset, u32 *outLength) const;

@@ -109,6 +109,14 @@ Conclusion carried to production: below-reservation placement is dead
 for SMG2; in-place is the only proven-safe MEM1 region; fix tracks are
 suffix-compacted in-place tables and MEM2-resident grown tables.
 
+Scope note (narrowed per review): established ONLY (i) lowered arenaHi
+with no table changes nothing observable here, and (ii) the wipe is
+identical with arenaHi lowered or original. arenaHi's wider role is
+untested - and the game's entry code writes the word itself
+(`0x80004148`), so it is actively managed, not ignored. MEM2 relocation
+is a separate unimplemented track (game MEM2-avoidance question open);
+no unverified address is substituted anywhere on this evidence.
+
 ## Inputs ledger
 
 - CAPTURED (SB4E01 T0 card logs, v3.36+): arena `{0, 0x817DA740,

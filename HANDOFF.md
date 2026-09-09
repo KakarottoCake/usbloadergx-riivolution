@@ -1,8 +1,29 @@
-# Handoff — 2026-09-08 (updated: T0 failure REPRODUCED in real SMG2 startup; below-reservation is a clear zone; no tester run asked)
+# Handoff — 2026-09-08 (updated: compaction repair verified in real game; wiper evidence bundle; no tester run asked)
 
 State of the SB4E01 (Super Mario Galaxy 2) debugging effort. Read the
 "Latest evidence" section first — it supersedes the drive-blocker framing
 below, which is kept for the steps it still requires.
+
+## Repair candidate 1, VERIFIED in real startup: in-place compaction
+
+`FstBuilder::SerializeCompacted` (new, pure, host-tested): same entries,
+paths, offsets and sizes as `Serialize`; shared string tails stored once
+(offsets are arbitrary in U8, so overlap is format-legal). T0 workload:
+153934 -> 144323 bytes (9611 saved in 0.03s), every one of 4496
+paths/offsets/sizes byte-identical between variants. Production
+(RiivoBoot.cpp) stages the compacted bytes when plain overflows the
+boot.bin reservation but compacted fits - single staged table, zero
+pending-state plumbing changes, refusal-preserving (unknown reservation,
+failed build/walk, or still-overflowing compaction all keep today's
+bytes exactly).
+
+Real-game result (birth-installed, GDB): compacted table at the original
+address, words `0x817DA740/144323/arena kept` - game reaches the
+baseline idle signature, table fully intact post-run, and the TitleLogo
+entry fires the IDENTICAL consumer (same function, same thread stack) as
+the unmodified baseline. Milestone equivalence, not just idle PC:
+same consumer, same trajectory, surviving table. Full suite green
+(t0serializer gates both the 153934 plain and the fit).
 
 ## Real SMG2 startup: T0 failure reproduced, mechanism identified
 
@@ -35,9 +56,29 @@ What runs, with GDB installed at game birth (12s halt, heap empty):
 - Marker control (clean words, 32B planted post-boot): cleared within
   ~25s while the game behaves baseline. The wipe is ROUTINE game
   behavior on that span, not a reaction to our words - with original
-  arenaHi the span is inside the game's own heap/clear zone, and a
-  lowered arenaHi does not move the clearer (fixed-range startup
-  clearing below the reservation, <4s after entry).
+  arenaHi the span is inside the game's own heap/clear zone.
+- Wiper regression evidence (all GDB/RAM-grade, no other channel):
+  full-span diff (installed 153934 real bytes -> zeros, plus 4 stray
+  block bytes cleared); timing under 4s after game entry (first poll
+  already dead+frozen); trigger matrix (verbatim-relocated dies,
+  lying-arena+relocated dies, arenalie-only lives, in-place lives);
+  frozen spin disassembled (scheduler spin + queue-walk caller at
+  `0x805B6390`, retry-bounded); entry-page disassembly shows the game's
+  own BSS/relocation loop, an `arenaHi` store at `0x80004148`, and a
+  `DCFlushRange` utility at `0x800041C0`. NOT captured: the exact
+  dynamic clearing instruction (CPU-store watchpoints never fire -
+  dcbz/DMA-shaped suspect list open) and the wipe's lower bound below
+  `0x81600000` (sentinels dead from there up). No placement address is
+  substituted on this evidence; MEM2 relocation stays a separate,
+  unimplemented track with its own open question (game MEM2 usage).
+- SCOPE CORRECTION (was overstated): what the experiments establish is
+  narrow - (i) lowering arenaHi with no table changes nothing observable
+  in this window (arenalie control); (ii) the wipe proceeds identically
+  whether arenaHi is lowered or left original (lying-table run). That is
+  all. arenaHi's broader contract role (heap bounds elsewhere, other
+  games, later phases) is UNTESTED, and the entry-page code shows the
+  game WRITES arenaHi itself at `0x80004148` - it actively manages the
+  word. No claim beyond (i)-(ii).
 
 Consequences: below-reservation placement is dead for SMG2 no matter
 what the arena words say - the cascade-down fix steered into a clear
