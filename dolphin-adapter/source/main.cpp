@@ -413,10 +413,47 @@ int main(int argc, char **argv)
 
 	free(live1);
 	free(live2);
+
+	// MEM2 mechanics (v5): the REAL PlaceFstMem2 + InstallFst on the real
+	// code path, fully harness-driven (no poked statics needed - the
+	// function takes explicit arguments). Proves the MEM2 copy, flush,
+	// words and probe consumption work in emulated MEM2. What it does NOT
+	// prove: game behavior with an MEM2 table (survey: 0x92000000 reads
+	// fine pre-boot but the game never consumed there - Test 6 held).
+	printf("================ MEM2 (experimental mechanics) ================\n");
+	{
+		Riivo::ArenaInfo arena2;
+		arena2.arenaLo = CAP_ARENA_LO;
+		arena2.arenaHi = CAP_ARENA_HI;
+		arena2.fstAddr = CAP_FST_ADDR;
+		arena2.fstMaxSize = CAP_FST_MAX;
+		const Riivo::FstPlacement pm =
+			Riivo::PlaceFstMem2(arena2, RELOC_WANT, 32);
+		printf("  plan: ok=%d inPlace=%d addr=%08x arenaHi=%08x\n",
+			   (int) pm.ok, (int) pm.inPlace, pm.fstAddr, pm.newArenaHi);
+		Check(pm.ok, "MEM2 placement accepted");
+		Check(!pm.inPlace, "MEM2 placement is grown");
+		Check(pm.fstAddr == 0x92000000u, "MEM2 surveyed base address");
+		Check(pm.newArenaHi == CAP_ARENA_HI, "MEM1 arena passes through");
+		Check(pm.reserved == 0, "nothing taken from MEM1");
+		const u32 dLo = pm.fstAddr, dHi = pm.fstAddr + RELOC_WANT;
+		Check(!Riivo::RangesOverlap(dLo, dHi, (u32) stageReloc,
+									(u32) (stageReloc + RELOC_WANT)),
+			  "MEM2 destination clear of its stage");
+		WriteBootWords(CAP_ARENA_LO, CAP_ARENA_HI, pm.fstAddr, RELOC_WANT);
+		const bool ok = Riivo::InstallFst(pm, stageReloc, RELOC_WANT);
+		Check(ok, "MEM2 InstallFst returned true");
+		Check(memcmp((const void *) dLo, stageReloc, RELOC_WANT) == 0,
+			  "MEM2 destination bytes read back identical");
+		Check(*(vu32 *) 0x80000038 == pm.fstAddr, "word 0x38 points at MEM2");
+		Check(*(vu32 *) 0x80000034 == CAP_ARENA_HI, "word 0x34 kept");
+		ConsumeCheck("MEM2", 8101, crcR);
+	}
 	adPhase = 4;
 	printf("=============================================\n");
 	if (checksFailed == 0)
-		printf("RESULT: PASS (unchanged + both production installs consumed)\n");
+		printf("RESULT: PASS (unchanged + both production installs +\n"
+			   "               MEM2 mechanics consumed)\n");
 	else
 		printf("RESULT: FAIL (%d check(s))\n", checksFailed);
 	printf("halting in place for debugger inspection.\n");

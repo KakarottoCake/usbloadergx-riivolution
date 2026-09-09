@@ -20,13 +20,23 @@ probe_start:
 	lwz	4,0x38(3)	// ptr = *0x80000038
 	lwz	5,0x3C(3)	// max = *0x8000003C
 	lwz	6,0x34(3)	// arena = *0x80000034
-	// ptr inside MEM1, max sane (unsigned compares throughout)
+	// ptr inside MEM1 or MEM2, max sane (unsigned compares throughout).
+	// MEM2 matters: the experimental placement lives there, and the
+	// consumer must accept it - an MEM1-only check here once rejected a
+	// perfectly good MEM2 install and misreported the mechanics.
 	lis	0,0x8000
 	cmplw	0,4
 	bgt	fail		// ptr < 0x80000000
 	lis	0,0x8180
 	cmplw	4,0
-	bge	fail		// ptr >= 0x81800000
+	blt	memok		// MEM1 range
+	lis	0,0x9000
+	cmplw	0,4
+	bgt	fail		// between MEM1 end and MEM2 base
+	lis	0,0x9400
+	cmplw	4,0
+	bge	fail		// ptr >= MEM2 end
+memok:
 	cmpwi	5,64
 	blt	fail		// max < 64
 	lis	0,0x0080

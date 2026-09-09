@@ -325,6 +325,18 @@ namespace Riivo
 	static bool relocOrig = false;
 	static std::vector<u8> relocOrigRaw;
 
+	//! Experimental split (riivolution/mem2fst.txt): place a grown table in
+	//! MEM2 instead of cascading below the MEM1 reservation. MEM1 below the
+	//! reservation is cleared by game startup on SB4E01 no matter what the
+	//! arena words say, so the cascade steers into a clear zone there. MEM2
+	//! has no apploader reservation at all: the address is surveyed, not
+	//! derived (see PlaceFstMem2), which is why this stays behind a marker
+	//! and only ever applies to tables that must grow. In-place tables,
+	//! unknown reservations, and refused MEM2 placements all behave exactly
+	//! as without the marker. Do not combine with nofstinstall.txt (which
+	//! wins: nothing installs).
+	static bool mem2Fst = false;
+
 	//! The game's id, needed to ask which partition it lives on.
 	static u8 bootGameId[8] = { 0 };
 
@@ -516,6 +528,16 @@ namespace Riivo
 			{
 				relocOrig = true;
 				fclose(r);
+			}
+		}
+		mem2Fst = false;
+		if (!device.empty())
+		{
+			FILE *m = fopen((device + "/riivolution/mem2fst.txt").c_str(), "rb");
+			if (m)
+			{
+				mem2Fst = true;
+				fclose(m);
 			}
 		}
 		//! Optional: "addr:port" of a listener on the LAN. Absent for
@@ -3099,27 +3121,65 @@ namespace Riivo
 			 arena.fstAddr, arena.fstMaxSize);
 		Addf(out, "  rebuilt size : %u bytes\n\n", want);
 
-		if (!place.ok)
+		//! Experimental MEM2 destination (riivolution/mem2fst.txt): when the
+		//! table has to grow and the marker asks for it, try MEM2 instead of
+		//! the MEM1 cascade below the reservation - game startup clears that
+		//! zone on SB4E01 no matter what arenaHi says. In-place tables never
+		//! consult the marker. A refused MEM2 placement falls back to the
+		//! MEM1 answer (logged), never to a guess. Everything below books
+		//! and reports the EFFECTIVE placement.
+		FstPlacement effPlace = place;
+		if (mem2Fst && place.ok && !place.inPlace)
 		{
-			Addf(out, "  REFUSED: %s\n", place.why.c_str());
+			const FstPlacement mp = PlaceFstMem2(arena, want, 32);
+			Addf(out, "\n  MEM2 experiment (mem2fst.txt present):\n");
+			if (mp.ok)
+			{
+				Addf(out, "  MEM2 table at    : %08x, %u bytes; MEM1 arena untouched\n",
+					 mp.fstAddr, want);
+				out += "  Basis (SB4E01 Dolphin survey, NOT a derivation): game MEM2\n"
+					   "  grows bottom-up from 0x90000000 (sparse first megabyte at\n"
+					   "  90 s idle); reads above ~0x93700000 fault post-boot (outside\n"
+					   "  the game's mapping); 0x92000000 sits ~31 MB above observed\n"
+					   "  use and ~23 MB below the mapping end, clear of loader MEM2\n"
+					   "  staging (low). Dolphin consumer checks at this address did\n"
+					   "  NOT pass (no table reads observed) - hardware Test 6 stays\n"
+					   "  held until a site does. This boot proceeds so its log\n"
+					   "  records MEM2 mechanics, not a validation.\n";
+				effPlace = mp;
+			}
+			else
+				Addf(out, "  MEM2 refused (%s); kept MEM1 answer\n",
+					 mp.why.c_str());
+		}
+
+		if (!effPlace.ok)
+		{
+			Addf(out, "  REFUSED: %s\n", effPlace.why.c_str());
 			out += "\n  Nothing would be written. Refusing is the right outcome here -\n"
 				   "  a wrong address writes over the running game and shows up as a\n"
 				   "  hang with nothing on screen.\n";
 		}
-		else if (place.inPlace)
+		else if (effPlace.inPlace)
 		{
 			Addf(out, "  fits in the room the apploader already set aside (%u bytes spare)\n",
 				 arena.fstMaxSize - plannedFstSize);
 			out += "  Nothing would move and the game's heap would be untouched.\n";
 		}
+		else if (effPlace.fstAddr >= MEM2_BASE)
+		{
+			Addf(out, "  would go at  : %08x  (MEM2 experimental placement)\n",
+				 effPlace.fstAddr);
+			Addf(out, "  arena high   : %08x (unchanged)\n", arena.arenaHi);
+		}
 		else
 		{
-			Addf(out, "  would go at  : %08x  (extended downwards)\n", place.fstAddr);
-			Addf(out, "  arena high   : %08x -> %08x\n", arena.arenaHi, place.newArenaHi);
-			Addf(out, "  taken from the game's heap : %u KB\n", place.reserved / 1024);
-			if (place.heapLeft)
+			Addf(out, "  would go at  : %08x  (extended downwards)\n", effPlace.fstAddr);
+			Addf(out, "  arena high   : %08x -> %08x\n", arena.arenaHi, effPlace.newArenaHi);
+			Addf(out, "  taken from the game's heap : %u KB\n", effPlace.reserved / 1024);
+			if (effPlace.heapLeft)
 				Addf(out, "  heap the game still has    : %u MB\n",
-					 place.heapLeft / (1024 * 1024));
+					 effPlace.heapLeft / (1024 * 1024));
 			else
 			{
 				//! Arena low was never set, so there is no floor to measure
@@ -3127,14 +3187,14 @@ namespace Riivo
 				//! is the blind-drop limit; print how much of it this takes.
 				Addf(out, "  heap the game still has    : unknown (arena low not set)\n");
 				Addf(out, "  blind-drop cap used        : %u of %u KB\n",
-					 place.reserved / 1024, MAX_BLIND_DROP / 1024);
+					 effPlace.reserved / 1024, MAX_BLIND_DROP / 1024);
 			}
 		}
-		if (place.ok)
+		if (effPlace.ok)
 			Addf(out, "  loaded ranges kept clear : %u considered, %u ignored "
 					  "(stale-table space), %u malformed; BSS %s\n",
-				 (unsigned) occ.size(), place.ignoredRanges, place.malformedRanges,
-				 bss == BSS_VALID ? "held as an obstacle"
+				 (unsigned) occ.size(), effPlace.ignoredRanges, effPlace.malformedRanges,
+				 bss == BSS_VALID ? "held as a placement obstacle"
 				 : bss == BSS_INVALID ? "INVALID header values" : "absent");
 		//! Persisted here, not only at the end: everything above is pure
 		//! computation over words already read, while everything below
@@ -3147,7 +3207,7 @@ namespace Riivo
 			//! Self-check for the diagnostic: without a real relocation this
 			//! run tests nothing. An in-place original is exactly a vanilla
 			//! boot, still worth running, but say so plainly.
-			out += place.inPlace ?
+			out += effPlace.inPlace ?
 				   "\n  relocorig.txt active but the table fit in place: relocation\n"
 				   "  NOT exercised, this run is a vanilla boot, not a test.\n" :
 				   "\n  relocorig.txt active: verbatim original staged for a real\n"
@@ -3157,7 +3217,7 @@ namespace Riivo
 		//! Evidence first, verdicts never: the block runs for in-place
 		//! installs too, where the same geometry is a control. It costs log
 		//! lines plus the timing/stack/layout perturbation stated above.
-		AppendRelocationEvidence(out, place, want, bss, bssLo, bssHi);
+		AppendRelocationEvidence(out, effPlace, want, bss, bssLo, bssHi);
 
 		//! Apploader-struct evidence rides with the relocation block: same
 		//! window (card alive, apploader done), same read-only terms.
@@ -3174,12 +3234,12 @@ namespace Riivo
 		//! runs when the fragment list, the read-back check and the cIOS hook
 		//! all succeeded earlier - otherwise pendingFst was never filled in, and
 		//! the game boots with its own table exactly as it always did.
-		if (pendingFst && pendingFstSize && place.ok)
+		if (pendingFst && pendingFstSize && effPlace.ok)
 		{
 			//! Booked, not written - see pendingPlace. The only thing that could
 			//! still refuse it is the bounds re-check inside InstallFst, and that
 			//! is decided by this placement, which is already known good.
-			pendingPlace = place;
+			pendingPlace = effPlace;
 			pendingPlaceOk = true;
 			fileWorkLive = true;
 			out += "\n  Ready. The table goes in last, immediately before the\n"
