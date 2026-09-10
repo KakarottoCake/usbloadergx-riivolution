@@ -141,8 +141,10 @@ clearing), not a track proven by elimination.
   sampling round already fully zero + parked). Agent still open.
 - NOT the C-runtime BSS init: entry `bl` chain (`__init_registers`,
   BSS/ROM-copy table walks at `0x800042a0`) was disassembled from a
-  live dump; every BSS range is MEM1 (`[0x80006EA0,+0x63CE78)` is the
-  big one). No `dcbz`, no `lis 0x9000` in `[0x80004000,0x80044000)`.
+  live dump; every BSS range in the examined tables is MEM1
+  (`[0x80006EA0,+0x63CE78)` is the big one). (Scope: the examined
+  initialization paths only - not a claim about the whole runtime.)
+  No `dcbz`, no `lis 0x9000` in `[0x80004000,0x80044000)`.
   Entry prologue confirmed to write `0x80000034` (arenaHi) itself at
   `0x80004144` and to apply relocations; it never reads `0x80000038`.
 - The park is a DELIBERATE hang, not a crash: `0x805B2B10` is
@@ -169,6 +171,42 @@ clearing), not a track proven by elimination.
   `riivolution/mem2fst.txt` marker (default off); no hardware run
   uses it. Compaction remains the working path; the Spectral
   preparation stop is a separate investigation.
+
+## Reinstall + fatal-caller recovery (Sep 2026)
+
+- Wipe is ONE-SHOT, not continuous: a table reinstalled at T+8s
+  (after wipe+hang) survives 30 s+ verified-intact. Late installs
+  surviving is consistent with this, not with ongoing clearing.
+- ROUND-1 (T+3 s) already shows wipe+park complete: both events live
+  inside the first 3 s post-birth. Their causal order is NOT
+  determined (erasure-before-first-access vs failure-during-handling
+  both fit; polling cannot separate them).
+- Fatal-caller stack (32 KB park-stack dump, back-chain walked):
+  hang `0x805B2B14` <- queue-walk `0x805B636C` <- `0x806FA220/30`,
+  `0x80727A68`, `0x804B2000`, `0x804B1DF4/0x804B1DB8`. Message
+  fragments in-stack: the ASCII address `'805bd060'` (matches a
+  pointer word also present: hex-dump-style reporting, not prose)
+  and the path `'/AudioRes/SMR.szs'` - an open-by-name for a
+  Spectral-replaced file was in flight around the failure. Args at
+  the park are park-loop regs (useless); call args need the frames
+  above, partially recovered. Direct caller of the dump (naming the
+  failing subsystem) is NOT yet disassembled.
+- Dolphin-hang caveat: with mod-region offsets no local backend can
+  serve the resulting DVD reads (no cIOS), so the hang itself is
+  expected here and says nothing about hardware viability. The
+  hardware-relevant facts are the wipe (pre-read, game code) and the
+  pointer left untouched.
+- Tooling status: NO trap of any kind has fired on this stub. Z0
+  (exec breakpoint) is UNPROVEN - both attempts were confounded
+  (resume-PC suppression pattern untested either way) - and Z2 is
+  proven dead by control. All timing/state claims above rest on
+  halt/poll/dump primitives only.
+- Later-install design space (undecided): cIOS-hook on-demand AND
+  game-side hook are both architectural options; neither is chosen.
+  Both require, first: wipe-T bounds (have: one-shot, <8 s),
+  first-read-T (unknown), and a truly owned execution point between
+  them - plus, for any MEM2 site, surviving the wipe. No timed
+  delays.
 
 Scope note (narrowed per review): established ONLY (i) lowered arenaHi
 with no table changes nothing observable here, and (ii) the wipe is
