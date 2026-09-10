@@ -420,34 +420,50 @@ no unverified address is substituted anywhere on this evidence.
 
 ## Causal order established (dev build, Sep 2026)
 
-- Install-vs-publication: HLE install (pre-entry) PRECEDES the
-  one-shot async publication (~1 s post-entry, non-CPU writer),
-  which CLOBBERS custom words to stock. Repoint-after-waitmem
-  restores them instantly; they then stick (no second clobber).
-- Unmodified control: words arrive with no trapped CPU store
-  (validated channel) - host-side writer; valid stock boot state
-  confirmed separately (idle, stock-table parse reads flowing at
-  `pc=805D153C`, same instruction as below).
-- Candidate region `[0x90DB4800, 0x935E0000)` is OWNED, not free:
-  streaming-module reads (`pc=80502940` et al, 17 lines) and writes
-  (669k `stpc` lines, `val` chains incl. self-pointers) - free-list
-  / buffer traffic. Closed as a reservation.
-- FIRST TABLE READ, observed: `read pc=805D153C sp=807F2CD0
-  ea=92000008 len=4` - the stock parser (same PC/SP as its stock
-  parse) reading OUR repointed table's root-count word. Exactly
-  ONE span read in the run, then nothing: the word was zeros
-  (wipe first), parse aborted, hang followed. Read-hook validity
-  is behavioral and in-run (candidate reads flow through it).
-- ORDER (all pieces): install -> publication (clobbers words) ->
-  repoint -> WIPE (dcbz, traced) -> first read (zeros) -> parse
-  abort -> fatal DVD-path hang. No CPU read precedes the wipe;
-  no DMA copy is consistent with the single direct read either
-  (a parsed copy would show zero span reads AND successful boot
-  progress - neither observed).
-- Consequence: the parser DOES read through a repointed pointer
-  (consumption path works); the table is dead before first use.
-  Hardware needs the table alive at first read - the wipe, not
-  the pointer, not serving, is the blocker. No GX/Wii changes.
+- PUBLISHER IDENTIFIED (direct instrumentation, not silence):
+  `bootwrite cpu pc=812011D0 lr=812007E4 ea=80000038 val=817DA740`
+  (+`3C` sibling) - the apploader's own PPC stores, also seen at
+  the HW tap with `dr=1`. No host-side writer ever touches the
+  words in any run. The "host-side publisher" theory is withdrawn.
+- PROFILE ARTIFACT CORRECTED: the "unset at birth / async
+  publication ~1 s post-entry" sequence appears ONLY with
+  `AccurateCPUCache=True` (dcache emulation: CPU view valid,
+  host view stale-zero until flush). With `AccurateCPUCache=False`
+  (fastmem still off, dcbz hook intact) host==cpu==valid at every
+  phase (`phase after-close`, `entry host38=cpu38=817DA740`).
+  Birth install races nothing; wait-for-words was a workaround
+  for the tracing profile. HLE publication is synchronous
+  apploader CPU stores - keep the CUSTOM pre-entry install
+  (host CopyToEmu+words) marked as emulator-specific until
+  compared with GX's real apploader handoff on hardware.
+- ROOT-COUNT VALUE (verbatim-stock at MEM2, converged profile):
+  exactly one table-span read,
+  `read pc=805D153C sp=807F2CD0 ea=92000008 len=4 val=00000000`,
+  vs stock control's `val=0000118D` (4493) at the same PC/SP.
+  Zero is proven, not inferred.
+- ABORT BRANCH (disassembled `/tmp/parser.bin`): `0x805D153C`
+  `lwz r4,8(r3)` loads the count; the entry loop
+  (`0x805D1550`-`0x805D1638`, 12 B stride, bound `cmplw r3,r4`)
+  fails on the first compare with count 0, returns -1
+  (`0x805D163C`), and the caller takes its failure leg
+  (`0x805D1680 cmpwi / 0x805D1684 blt-`). One read, then
+  nothing - matches the trace exactly.
+- ORDER (corrected): apploader publishes (CPU) -> HLE install
+  overwrites words (deterministic, pre-entry) -> entry, words
+  valid -> WIPE dcbz `[0x90000800, 0x935E0000)` -> first read
+  (zeros) -> parse abort (-1) -> fatal DVD-path hang. No CPU
+  read precedes the wipe; DMA-copy excluded by the single
+  direct span read plus absent boot progress.
+- Candidate region `[0x90DB4800, 0x935E0000)` stays OWNED and
+  CLOSED (streaming reads+writes, free-list traffic) - and no
+  late pointer update is proposed as a fix. Any future
+  reservation must be respected by BOTH the startup clear and
+  the streaming allocator, with ownership proven; none is
+  identified. The occupied region is not overwritten.
+- Consequence, bounded: the parser reads through a repointed
+  pointer and the wipe precedes first use - but the wipe is one
+  established fact in the chain, not a certified primary
+  blocker. No GX/Wii changes.
 
 ## Inputs ledger
 
