@@ -512,10 +512,25 @@ no unverified address is substituted anywhere on this evidence.
   to a loader-planted trampoline (`lwz/addis/blr`, +`0x40000`)
   in a code cave. ONE getter feeds clearer, heap, and narrower
   alike (traced), so a single 4-byte branch + 12-byte trampoline
-  narrows all three coherently; the streaming TOP write is
+  narrows all three coherently; the   streaming TOP write is
   untouched. Loader-applicable post-apploader pre-entry (same
   verified point and DOL-patch machinery as table install).
   SMG2-specific addresses; needs cave survey + patch code + test.
+- TRAMPOLINE AUDIT (static DOL + dynamic traces): BASE getter
+  `0x805B4E70` (`lwz r3,-27068(r13); blr`) has 12 call sites;
+  surveyed uses are subf-differences, single adds, and compares
+  - no site sums two getter results, so a uniform +C preserves
+  every relation (clearer start/end, heap base, narrower math).
+  NO direct slot readers exist outside the getters (static scan
+  of text for `lwz *,-27068(r13)`/`-3228(r13)` finds only the
+  getters; dynamic traces across multi-minute runs show only
+  known getter/setter PCs). Setters fire once (init) plus the
+  TOP narrowing - no later BASE rewrite, so no double-adjust
+  path exists in the traced behavior. ABI: trampoline
+  (`lwz/addis/blr`) touches only r3, preserves LR/CR/stack/r13
+  by construction. Cave ownership through gameplay NOT yet
+  proven (12 B paddings abundant in text; need birth/idle/+min
+  reads of the chosen cave) - the patch stays unexecuted.
 - SPECTRAL TABLE: 1238 valid reads (root `0x19DA`, entry/name
   bytes), ZERO dcbz lines inside the reservation, then a
   content-stage wedge (stub unresponsive <20 s) - expected: mod
@@ -535,6 +550,25 @@ no unverified address is substituted anywhere on this evidence.
   reads flow. Save selection + playable level need input
   driving (movie/input poke - planned, not done); Wii stays
   paused until that integrated run passes.
+- INTEGRATED RUN (base ISO + GX Spectral table at reservation +
+  redirect + GX-offset backend): configuration PROVEN in-run
+  (words `0x90000800/0x382BC`, GX table head `0x19DA`, redirect
+  logged, backend map loaded) - but the game wedges in table
+  parsing (1240 reads, last `ea=900171B8`, stub unresponsive)
+  BEFORE any content read, so the backend never fires
+  (`gxserved.log` empty). Integrated-to-title NOT achieved.
+- CONTROL kills the serializer theory: Dolphin's OWN 230076-byte
+  table at the reservation wedges IDENTICALLY (1764 reads, 112
+  distinct, same string-compare PCs, same dead park) - while the
+  stock 153792-byte table idles. Byte-diff of the two 230076
+  tables: same 6618 paths, but 191KB differ (GX appends new
+  content at end + leading-NUL strings; Dolphin alpha-inserts).
+  The wedge tracks grown size/count (6618 entries), not
+  serializer, offsets, or content. Mechanism open (parse-abort
+  vs fault on a specific entry; exact trigger unidentified) -
+  and it re-scopes everything below: reservation + survival +
+  backend are proven, but a grown table does not parse in MEM2
+  regardless of who built it.
 - HLE PUBLICATION STATUS: our pre-entry host install (CopyToEmu
   + words overwriting apploader-published stock words) stays
   marked emulator-specific until compared with GX's actual
