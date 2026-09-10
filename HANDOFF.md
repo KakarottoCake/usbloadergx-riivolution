@@ -26,37 +26,53 @@ below, which is kept for the steps it still requires.
   allocator demand and desktop timings are not Wii execution time -
   they show the approximate workload completes locally, nothing about
   the hardware path. Both framings corrected (were overstated).
-- v6 PPC MEASUREMENTS (production allocator via -wrap mem2.cpp,
-  MEM2_init(48), scripted histories, real TUs, GDB mailbox): T0-scale
-  regression PASSES (in-place, consumed, failOp=0); Spectral-scale
-  (4500+2148) completes with failOp=0 on clean heap, over retained
-  listing-like history, and down the consumption ladder to ~229 KB
-  MEM2 free. NO throwing op found in any state. Window demand is
-  ~1-2 MB transient against 35 MB hardware-free. OOM DOWNGRADED to
-  unlikely (totals 7 MB vs 35 MB free; survives fragmentation +
-  consumption scripts). It is not fully dead (contiguity/shape gaps
-  below), but it is no longer the lead.
-- v6 ANOMALY, stated open (harness fidelity, not production): the 64 KB
-  hog loop stopped after ~3 MB retained per slot although MEM2 showed
-  room - MEM2 sizing under Dolphin DOL boot vs Wii loader boot is not
-  established, so consumption depth is bounded by what the harness
-  could retain, not by the window failing. Numbers verbatim in
-  dolphin-adapter notes; do not over-read them.
-- MIRROR GAPS, stated: synthetic tree is FLAT (real tree nests 12
-  deep); LayoutFrom/modOffsets path not mirrored (Layout used);
-  CollectPlaced/FindSkips/PlanFragRegion/DescribeProbe tail not
-  mirrored (covered by the extended guard, unmeasured). The
-  discriminating next measurement is a deep-tree twin at exact scale.
-- Catch-hole FIXED (minimal, this round only): reserves can themselves
-  throw, so the catch now works with ACTUALLY-EXISTING capacity
-  (checked, not assumed) plus a C-only direct persist independent of
-  `out`. "Never another bare serialised line" RETRACTED to the bounded
-  claim: worst case is now a complete refusal log, then possibly a
-  stop in a later phase - diagnosable, not silent.
-- Remaining candidates for the hardware stop: deep-tree/wild-pointer
-  shape gap, non-memory hang in/around the window (card/fopen path in
-  LogStep/AppendLog is unmeasured), other. Compaction path preserved
-  throughout (T0 regression green in-harness).
+- v7 DEEP MIRROR, GREEN (production allocator, real TUs, GDB mailbox):
+  depth-matched synthetic tree (15/45/40 dirs, ~4480 entries, stems +
+  shared extensions), real USA mappings (1916 paths), 232 pad dummies
+  to the log's exact 2148, LayoutFrom(REAL), Serialize, reserve-in-try,
+  Walk(REAL), Compact+Walk(REAL), CollectPlaced/ToExtents(MIRROR
+  copies), FindSkips(REAL), PlanFragRegion(REAL), stage+CRC, gate eval.
+  Clean heap: plain 234922, compacted 224729, walk 2148/2148, gate
+  walk=1 plan=1 unplaced=0. Same under MEM2-true-exhaustion (50 MB
+  retained, ~2.5 KB free), MEM1 pressure, and dual pressure (MEM2
+  ~2.5 KB + MEM1 ~512 KB): failOp=0 everywhere, gate green everywhere.
+  Dual-NULL stops in the pre-window with preFail=99 recorded (guard
+  mechanics work; nothing completed to refuse). T0 regression green
+  in the same binary (in-place, consumed). A mirror placement bug of
+  my own (pad sizes missing from the cursor vector -> wrapped offsets)
+  was caught BY the mirror's own walk+plan checks - the checks work.
+- OOM-TOTALS DEAD (not downgraded): window demand ~1.5 MB transient;
+  hardware 35 MB free; first-fit + merge + monotonic growth cannot
+  strand 35 MB below a 600 KB run; pressured states to ~2.5 KB free
+  still verify. Remaining OOM sliver (MEM1-loader-heap size unknown,
+  fallback-path fault) is unmeasured speculation, not a lead.
+- HARNESS CRASHES ROOT-CAUSED (environment, not production): runs died
+  at random points with an IntCPU unknown-instruction panic at
+  PC=0x508 (the external-interrupt vector) - the harness never installs
+  IRQ handlers and runs with EE on. EE cleared at main() entry; three
+  subsequent full runs clean, one to phase 99 in 153 s. Lesson: single
+  TCP session per boot (second connect is refused - several "stub
+  wedges" were my own multi-connection scripts), and reads during
+  minutes-long interpreter-tight-loops time out (patience, not failure).
+- Hog/fragmentation observation, correctly read at last: 64 KB hogs
+  failing while FreeSize reads high is EXPECTED under churn (no large
+  contiguous run left) - it is what fragmentation looks like, not an
+  anomaly. The window's own big allocs succeeding alongside it shows
+  first-fit still finding runs where it counts. Auxiliary mailbox
+  words (f1pre tiny, stray 0x80000A00-pattern values) are recorded
+  verbatim and NOT interpreted - open harness-telemetry puzzle, no
+  verdict depends on them.
+- Logging guarantee, corrected once more: the stack-built message makes
+  CONSTRUCTION reliable; DELIVERY still needs fopen+fwrite to succeed,
+  so persistent OOM can in principle leave no refusal line. Worst case
+  is now a complete refusal log (when the card takes it) then possibly
+  a later-phase stop - bounded and diagnosable, never asserted silent.
+- Remaining candidates for the hardware stop, in order: (a) exact-
+  content wild-pointer/DSI (synthetic names/depths can't exclude it -
+  needs real bytes); (b) non-memory hang in/around the window, esp.
+  the card/fopen path in LogStep/AppendLog (unmeasured); (c) other.
+  Compaction path preserved throughout (T0 + RMGE01 hardware, T0
+  in-harness green).
 - PEAK MEASURED at exact scale (host RSS deltas): tree+apply +2.5 MB,
   serialize +3.2, expectations +3.2, walk +4.9, compact-build +5.8,
   compact-walk +6.8, stage +7.0 MB total. Largest single contiguous:

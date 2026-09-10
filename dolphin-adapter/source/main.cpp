@@ -275,6 +275,20 @@ int main(int argc, char **argv)
 	(void) argc;
 	(void) argv;
 
+	//! External interrupts OFF for the whole session. This harness never
+	//! installs IRQ handlers (no USB, no timers, no audio), and an
+	//! external interrupt into uninstalled vectors kills the run at a
+	//! random point (observed: IntCPU unknown-instruction panic at
+	//! PC=0x508, the external-interrupt vector, LR stale in _free_r).
+	//! Production runs with the loader's IRQ state; this only isolates
+	//! compute/allocator measurement from async-interrupt noise.
+	{
+		u32 msr = 0;
+		__asm__ volatile ("mfmsr %0" : "=r"(msr));
+		msr &= ~(u32) 0x8000;
+		__asm__ volatile ("mtmsr %0" :: "r"(msr));
+	}
+
 	VIDEO_Init();
 	rmode = VIDEO_GetPreferredMode(NULL);
 	xfb = MEM_K0_TO_K1(SYS_AllocateFramebuffer(rmode));

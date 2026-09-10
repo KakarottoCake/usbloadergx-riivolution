@@ -50,7 +50,7 @@ export LD	:=	$(CXX)
 
 export OFILES_BIN	:=	$(addsuffix .o,$(BINFILES))
 export OFILES_SOURCES := $(CPPFILES:.cpp=.o) $(CFILES:.c=.o) $(sFILES:.s=.o) $(SFILES:.S=.o)
-export OFILES := $(OFILES_BIN) $(OFILES_SOURCES) RiivoFstInstall.o RiivoBoot.o RiivoFstBuild.o RiivoFst.o RiivoFstWalk.o mem2.o mem2alloc.o
+export OFILES := $(OFILES_BIN) $(OFILES_SOURCES) RiivoFstInstall.o RiivoBoot.o RiivoFstBuild.o RiivoFst.o RiivoFstWalk.o RiivoFragPlan.o mem2.o mem2alloc.o
 
 export HFILES := $(addsuffix .h,$(subst .,_,$(BINFILES)))
 
@@ -118,6 +118,11 @@ RiivoFst.o : $(RIIVOSRC)/RiivoFst.cpp
 	$(CXX) $(CXXFLAGS) -I$(RIIVOSRC) -iquote $(ADAPTSHIM) -c $< -o $@
 
 RiivoFstWalk.o : $(RIIVOSRC)/RiivoFstWalk.cpp
+	@echo $(notdir $<)
+	$(CXX) $(CXXFLAGS) -I$(RIIVOSRC) -iquote $(ADAPTSHIM) -c $< -o $@
+
+# Pure frag-region planner for the v7 deep mirror (REAL TU).
+RiivoFragPlan.o : $(RIIVOSRC)/RiivoFragPlan.cpp
 	@echo $(notdir $<)
 	$(CXX) $(CXXFLAGS) -I$(RIIVOSRC) -iquote $(ADAPTSHIM) -c $< -o $@
 
