@@ -16,6 +16,24 @@
 //   bytes - then the log ends: the stop is inside ValidateTable.
 // Deltas between that log and this run name the version gap between
 // the tester's newer pack and this local v11 tree.
+//
+// VERDICT DISCIPLINE (record, not conclusion): this run covers the
+// 2143-path LOCAL input; hardware runs 2148 paths. The 5-path gap is
+// localised to CustomCode/ (tester 15 files, local 10) and is UNTESTED:
+// nothing here says the inputs do or do not explain the stop until
+// those five files' relative paths and sizes are reproduced and the
+// 230076-byte plain table is confirmed. Their contents are never read
+// by the exercised path (table bytes come from names/offsets/sizes
+// only); paths+sizes reproduce, hashes identify.
+// A passing exact-input run still would not isolate fragmentation.
+// Open differences vs hardware, in decreasing order of suspicion:
+// production allocation history (13 s of placement/fragment mapping
+// precede the window), MEM2 fragmentation state at window entry (log
+// shows 36920 KB free - free, not contiguous), device I/O during
+// matching, card logging, interrupts, and prior heap corruption.
+// Related: the log's "492235142 bytes" is MAPPED DISC PAYLOAD (offset
+// accounting), not RAM - the window itself holds single-digit MB
+// (printed below). Never compare the two as if both were memory.
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -264,11 +282,27 @@ int main()
 	ValidateResult vres;
 	int trace = -1;
 	ValidateTable(vreq, vres, &trace);
-	printf("  window: oom=%d walk=%d compact=%d staged=%u plan=%d "
-		   "skips=%u trace=%d\n",
-		   (int) vres.oom, (int) vres.fstWalkOK, (int) vres.compactOK,
+	// RAM the window actually holds (vs the mapped disc payload):
+	// plain + staged + expectations + placements. Single-digit MB;
+	// the log's 492 MB figure is offset accounting, not memory.
+	u64 payload = 0;
+	for (std::map<std::string, u32>::const_iterator it = modSizes.begin();
+		 it != modSizes.end(); ++it)
+		payload += it->second;
+	printf("  mapped payload: %llu bytes (hardware log: 492235142)\n",
+		   (unsigned long long) payload);
+	printf("  window: oom=%d walk=%d paths=%u compact=%d staged=%u "
+		   "plan=%d placed=%u skips=%u trace=%d\n",
+		   (int) vres.oom, (int) vres.fstWalkOK, vres.expectedPaths,
+		   (int) vres.compactOK,
 		   (unsigned) vres.staged.size(), (int) vres.plan.ok,
+		   (unsigned) vres.placed.size(),
 		   (unsigned) vres.modSkips.size(), trace);
+	printf("  window RAM: plain %u + staged %u + expectations %u x %uB + "
+		   "placed %u x %uB\n",
+		   (unsigned) plain.size(), (unsigned) vres.staged.size(),
+		   vres.expectedPaths, (unsigned) sizeof(FstWalkExpectation),
+		   (unsigned) vres.placed.size(), (unsigned) sizeof(PlacedFile));
 	if (!vres.fstWalkOK) printf("  walkError: %s\n", vres.walkError.c_str());
 	if (!vres.plan.ok) printf("  planWhy: %s\n", vres.plan.why.c_str());
 	if (!vres.modSkips.empty())
