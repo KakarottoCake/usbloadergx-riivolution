@@ -52,38 +52,33 @@
 // by the exercised path (table bytes come from names/offsets/sizes
 // only); paths+sizes reproduce, hashes identify.
 // A passing exact-input run still would not isolate fragmentation.
-// Open differences vs hardware, in decreasing order of suspicion:
+// Open differences vs hardware (UNRANKED - no evidence orders them):
 // production allocation history (13 s of placement/fragment mapping
 // precede the window), MEM2 fragmentation state at window entry (log
 // shows 36920 KB free - free, not contiguous), device I/O during
-// matching, card logging, interrupts, and prior heap corruption.
-//
-// OOM RANKING (evidence, not habit): heap exhaustion INSIDE the
-// window is disfavored - the exact-shape input (names and counts
-// exact, 230076-byte table) runs the real function end to end holding
-// ~1 MB, trace clean, while hardware showed 36920 KB free at window
-// entry. Do not lead with OOM. What stays open is heap-STATE-
-// dependent behavior (the 13 s of allocation history the window
-// inherits, which no host run reproduces), the card/logging boundary
-// (phase completion vs log delivery are indistinguishable in a log
-// that ends), interrupts, and prior corruption - in that order.
+// matching, card logging, interrupts, and prior heap corruption. The
+// one evidence-backed statement: heap exhaustion INSIDE the window is
+// disfavored - the v11a-shaped input (counts exact, 230076-byte table)
+// runs the real function end to end holding ~1 MB, trace clean, while
+// hardware showed 36920 KB free at window entry. That disfavors one
+// tested OOM scenario; it establishes no ranking among the rest.
 // Related: the log's "492235142 bytes" is MAPPED DISC PAYLOAD (offset
 // accounting), not RAM - the window itself holds single-digit MB
 // (printed below). Never compare the two as if both were memory.
 //
 // V11A REPLAY (J:/Backup/.../super-mario-spectral_v11a_dd08f): the 5
 // missing files are LoaderSB4{E,J,K,P,W}.bin (2308 B each) plus renamed
-// code files (CustomCode_SB4*.bin/.map). With that tree every count is
-// EXACT: 267+1881=2148 planned, plain table 230076, placed 2088,
+// code files (CustomCode_SB4*.bin/.map). With that tree every COUNT is
+// exact: 267+1881=2148 planned, plain table 230076, placed 2088,
 // compact attempt 211016 (still over the 153792 reservation, so plain
-// is kept - a decision that depends on names only, hence exact), all
-// 12 listing lines identical, trace clean, no OOM. Remaining delta:
-// mapped payload 491715020 vs 492235142 (+520122 tester-side): file
-// SIZES differ somewhere with identical names. Sizes never change
-// allocation SHAPE (counts and names fix every buffer size, including
-// the 211016 compact build) - only offset VALUES, i.e. table content.
-// So the window's allocation behavior is exactly reproduced; closing
-// the last 520122 bytes needs the tester's sizes, not their contents.
+// is kept), all 12 listing lines identical, trace clean, no OOM.
+// NOT established: identical filenames. Equal counts plus equal
+// serialized size do not prove equal names - only a manifest
+// comparison does, and it is pending. The +520122 tester-side payload
+// delta (491715020 vs 492235142) sits OUTSIDE the verified subset, so
+// the manifest request covers ALL Spectral files, not just CustomCode.
+// Until names are proven, "allocation shape exact" is CONDITIONAL on
+// them; sizes alone never change buffer sizes, only offset values.
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -439,8 +434,27 @@ int main()
 	b.Serialize(plain, true);
 	printf("  plain table: %u bytes (hardware log: 230076)\n",
 		   (unsigned) plain.size());
+	// Raw table bytes for target-side probes (SPECTRAL_TABLE_OUT names
+	// the file): the exact buffer ValidateTable walks below. Contents
+	// are the rebuilt entries/names/offsets - the probe installs them
+	// verbatim, mirroring InstallFst timing.
+	{
+		const char *tout = getenv("SPECTRAL_TABLE_OUT");
+		if (tout && *tout)
+		{
+			FILE *f = fopen(tout, "wb");
+			ck(f != 0, "table output opens");
+			if (f)
+			{
+				ck(fwrite(&plain[0], 1, plain.size(), f) == plain.size(),
+				   "table fully written");
+				fclose(f);
+				printf("  wrote %s\n", tout);
+			}
+		}
+	}
 
-	std::map<std::string, SkipReason> addFails;
+		std::map<std::string, SkipReason> addFails;
 	ValidateRequest vreq;
 	vreq.builder = &b;
 	vreq.fst = &disc;
