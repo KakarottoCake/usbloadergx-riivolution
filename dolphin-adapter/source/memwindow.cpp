@@ -32,14 +32,14 @@ extern "C" void gprintf(const char *str, ...);
 
 static int mwFailed = 0;
 
-static void MwCheck(bool cond, const char *what)
+void MwCheck(bool cond, const char *what)
 {
 	printf("  [mw %s] %s\n", cond ? "ok" : "FAIL", what);
 	if (!cond)
 		++mwFailed;
 }
 
-static inline void MwW32(u32 addr, u32 v)
+void MwW32(u32 addr, u32 v)
 {
 	*(vu32 *) addr = v;
 }
@@ -49,13 +49,13 @@ static inline void MwW32(u32 addr, u32 v)
 //! mem1delta, mem2pre, mem2post.
 static const u32 MWMAIL = 0x80000300;
 
-static u32 MwMem1Free(void)
+u32 MwMem1Free(void)
 {
 	struct mallinfo mi = mallinfo();
 	return (u32) mi.fordblks;
 }
 
-static void MwSlot(u32 slot, u32 a, u32 b, u32 c, u32 d, u32 e, u32 f,
+void MwSlot(u32 slot, u32 a, u32 b, u32 c, u32 d, u32 e, u32 f,
 				 u32 g, u32 h)
 {
 	u32 base = MWMAIL + 4 + slot * 32;
@@ -70,7 +70,7 @@ static void MwSlot(u32 slot, u32 a, u32 b, u32 c, u32 d, u32 e, u32 f,
 	DCFlushRange((void *) base, 32);
 }
 
-static void MwPhase(u32 p)
+void MwPhase(u32 p)
 {
 	MwW32(MWMAIL, p);
 	DCFlushRange((void *) MWMAIL, 4);
@@ -352,35 +352,8 @@ static void MwRun(u32 slot, int nBase, int nMod, int hogMode, u32 hogParam,
 	(void) f2post;
 }
 
-//! Retained-history script: mimics the boot's retained small structures
-//! (listing records, redirect entries, maps) that fragment the heap
-//! before the window. Returns bytes retained.
-static u32 MwHistory(int kind)
-{
-	std::vector<void *> *keep = new std::vector<void *>();
-	u32 total = 0;
-	if (kind == 1)
-	{
-		for (int i = 0; i < 2400; ++i)
-		{
-			const u32 s = 64 + (u32) (i % 7) * 64;
-			void *p = malloc(s);
-			if (!p)
-				break;
-			memset(p, 0xA5 + (i & 7), s);
-			keep->push_back(p);
-			total += s;
-			if (i % 3 == 2) // free every third: Swiss-cheese the heap
-			{
-				free(keep->back());
-				keep->pop_back();
-			}
-		}
-	}
-	// Intentionally leaked for the session: this IS the history.
-	(void) keep;
-	return total;
-}
+//! v7 deep mirror driver (source/memdeep_run.cpp).
+void RunDeepWindow(void);
 
 void RunMemWindow(void)
 {
@@ -399,23 +372,7 @@ void RunMemWindow(void)
 	MwCheck(mwLastConsumed == 1, "T0-scale install consumed");
 	MwPhase(20);
 
-	// Slot 1: Spectral-scale, clean heap.
-	MwRun(1, 4500, 2148, 0, 0, false, 0);
-	MwPhase(30);
-
-	// Slot 2: Spectral-scale over retained listing-like history.
-	{
-		const u32 h = MwHistory(1);
-		printf("  history retained %u bytes\n", h);
-		MwRun(2, 4500, 2148, 0, 0, false, 0);
-	}
-	MwPhase(40);
-
-	// Slots 3-6: Spectral-scale down the free ladder (failure boundary).
-	MwRun(3, 4500, 2148, 2, 2 * 1024 * 1024, false, 0);
-	MwRun(4, 4500, 2148, 2, 1 * 1024 * 1024, false, 0);
-	MwRun(5, 4500, 2148, 2, 512 * 1024, false, 0);
-	MwRun(6, 4500, 2148, 2, 256 * 1024, false, 0);
-	MwPhase(99);
-	printf("================ v6 memwindow done ================\n");
+	// Slots 1-4: v7 deep full-prep-path mirror (supersedes the flat
+	// ladder above, whose transcription noise is discarded).
+	RunDeepWindow(); // phases 30-99
 }
