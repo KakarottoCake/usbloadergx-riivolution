@@ -161,12 +161,50 @@ clearing), not a track proven by elimination.
   stores never fired across 10 s of subsequent execution. Trap
   silence (read or write) therefore means nothing - neither
   dcbz-blindness nor no-access can be inferred from it. Proven working:
-  halt/regs/mem/mem_write/loadbin/dump/go-polling; halt reliably lands
+  halt/regs/mem/write/dump/go-polling; halt reliably lands
   on birth (`0x80004050`) at +20-30 s; explicit-quote CLI needed for
   spaced ISO paths (bare array elements split at the first space and
   strand Dolphin on a Warning dialog with no stub).
-- Ordering vs first FST lookup: still open. Traps can't time it;
-  static hunt continues into the OS/DVD region above `0x80440000`.
+- Ordering vs first FST lookup: still open (traps can't time it;
+  first READ unobserved by any means; wipe time-bounded <3 s only).
+
+## Tooling verdict (debugger implementation, Sep 2026)
+- Scope: Dolphin 5.0-18995, GDB stub, JIT default config. "Traps
+  dead" verdicts below cover exactly this configuration - not all
+  trapping everywhere.
+- Source (upstream master, inspected): the stub implements Z0-Z4
+  into ONE shared backend (`PowerPC::BreakPoints` /
+  `PowerPC::MemChecks`, same structures the native debugger feeds),
+  with JIT invalidation on add. So a native-UI attempt would most
+  likely fail identically - but that is a prediction from shared
+  code, not a test (no automation path exists for the Qt UI).
+- Exec breakpoints (Z0): silent in JIT dual-core, JIT single-core
+  (`CPUThread=False` retest), and interpreter (`JitOff=True`),
+  including a clean test (halted pre-execution, bp ahead at
+  certain-execution `0x80004058`, demonstrably executed past).
+- Write watch (Z2): silent in JIT both thread modes. ONE exception:
+  under the interpreter, a Z2 write-watch on adapter-mailbox RAM
+  FIRED (SIGTRAP stop precisely at the faulting `stw` inside
+  memset, verified against the .elf) - so trapping CAN work outside
+  the JIT. Yet game MEM2 Z2/Z3 stay silent in the same interpreter
+  while the wipe provably happens. Best current hypothesis: MEM2 /
+  EXRAM accesses (and/or dcbz, which owns a separate opcode path)
+  bypass the hooked access paths. Unconfirmed - needs dev-build
+  instrumentation or the static agent ID.
+- One ambiguous data point: an interpreter Z2 on entry-store
+  `0x80000044` stopped the core seconds later at `0x805B99D0` -
+  genuine second store or spurious stop, UNDECIDED (decidable by
+  disassembling that function; region undumped). The earlier
+  `0x80000034` control is VOID (conditional store, likely skipped),
+  not negative.
+- `step` is not single-step on this stub (jumps, then stalls);
+  file logging writes nothing in batch mode. `JitOff=True`
+  ([Debug]) is the working interpreter switch; birth still lands
+  at +20-30 s (IOS boot is engine-independent).
+- REMAINING ROUTE: developer build with targeted EXRAM/dcbz
+  logging (unstarted - toolchain + hours, stated so nobody
+  re-attempts polling first). NO further address polling until a
+  working trap or log identifies the operation.
 - Hardware gating (unchanged): the MEM2 path stays behind the
   `riivolution/mem2fst.txt` marker (default off); no hardware run
   uses it. Compaction remains the working path; the Spectral
@@ -231,12 +269,13 @@ clearing), not a track proven by elimination.
   remain unidentified - do not cite a subsystem.
 - VERBATIM-STOCK CONTROL (all reads servable): stock SB4E01 table at
   `0x92000000`, birth install, repoint - IDENTICAL wipe (post-mortem
-  all zeros) + dead park `0x805B2B14`/EE-off, pointer untouched. So
-  the hang needs no mod content and the wipe is content-blind. What
-  this does NOT separate: wipe-first vs MEM2-reads-broken (a wiped
-  table preempts both). MEM2-read viability is still open - and with
-  traps dead, ordering work continues via install-timing variants +
-  static code, not watchpoints.
+  all zeros) + dead park `0x805B2B14`/EE-off, pointer untouched. What
+  this excludes: missing replacement payload as a NECESSARY cause of
+  that run (servable content hangs the same). What it does NOT
+  exclude: every other content-related explanation - and MEM2-read
+  viability stays open, since a wiped table preempts both. The wipe
+  may precede failure or result from error handling; it is NOT
+  established as the primary blocker.
 - Standing consequence: a birth-installed MEM2 table is dead before
   use either way. The wipe is THE blocker; viability questions
   beyond it stay moot until a table survives it.
@@ -252,8 +291,10 @@ clearing), not a track proven by elimination.
   below `0x91000000`, deliberately untouched).
 - SITE LEDGER (current knowledge): low = live heap (collision);
   mid (`0x91000000-0x93000000`) = startup-wiped; high (`0x93400000+`)
-  = unreadable post-boot. NO viable MEM2 site identified.
-  Reserve-and-preserve has nowhere to go today.
+  = unreadable post-boot. NO TESTED MEM2 ADDRESS WORKS. That does
+  not establish post-wipe installation as the only remaining design
+  - it only closes the tested placements; reservation-timing and
+  startup-behavior changes are untested.
 - CONSUMPTION probe with hang neutered (verbatim stock table): game
   reaches normal idle with pointer aimed at MEM2 and stock MEM1
   zeroed - no pointer-range validation park exists. But idle proves
