@@ -1,4 +1,4 @@
-# Handoff — 2026-09-09 (updated: 4 hardware logs triaged; compaction live on 3 titles; regressions encoded; questions pending, no runs asked)
+# Handoff — 2026-09-09 (updated: T0 + Gravity CONFIRMED booting in game on hardware; compaction repair verified end-to-end)
 
 State of the SB4E01 (Super Mario Galaxy 2) debugging effort. Read the
 "Latest evidence" section first — it supersedes the drive-blocker framing
@@ -12,9 +12,10 @@ as the host driver predicted wherever it was tried:
 - T0 P1 (SB4E01, gxdiag): plain 153934 -> compacted 144323 (walk passed),
   STAGED instead of plain, in place with 9469 spare, OUTCOME FST_STAGED,
   staged checksum intact at shutdown. Byte-exact match with the local
-  serializer run (153934/144323). Screen outcome: ASKED, not yet known.
+  serializer run (153934/144323). CONFIRMED 2026-09-09: boots in game.
 - Gravity Demo (SB4E01, 151 files, 33 repl + 166 add): plain 158968 ->
-  compacted 147769 STAGED in place, shutdown checksum intact. Screen: ASKED.
+  compacted 147769 STAGED in place, shutdown checksum intact.
+  CONFIRMED 2026-09-09: boots in game.
 - RMGE01 Daredevil (17 repl, 0 add): plain 81309 -> compacted 79993
   STAGED in place. (Prior batch; same mechanism, third title.)
 - Newer SMNP01 (PAL, 1100 files, 104 repl + 996 add): plain 63274,
