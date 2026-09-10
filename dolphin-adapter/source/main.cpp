@@ -86,6 +86,9 @@ static inline u32 rbe32(const u8 *p)
 		   ((u32) p[2] << 8) | (u32) p[3];
 }
 
+//! v6 allocation-measurement window (source/memwindow.cpp).
+void RunMemWindow(void);
+
 static u8 *mem2Bump = 0;
 static u32 mem2Lo = 0, mem2Hi = 0;
 
@@ -285,12 +288,17 @@ int main(int argc, char **argv)
 	if (rmode->viTVMode & VI_NON_INTERLACE)
 		VIDEO_WaitVSync();
 	printf("\x1b[2;0H");
-	printf("fstadapter v4: production install + probe jump\n");
-	printf("=============================================\n");
+	printf("fstadapter v6: production install + probe jump + memwindow\n");
+	printf("==========================================================\n");
 
 	printf("live boot words (saved, context only):\n  %08x %08x %08x %08x\n",
 		   *(vu32 *) 0x80000030, *(vu32 *) 0x80000034,
 		   *(vu32 *) 0x80000038, *(vu32 *) 0x8000003C);
+
+	//! v6 runs first on a clean heap: allocation measurements, then the
+	//! established install/consume flows below (which re-verify under the
+	//! production allocator routing).
+	RunMemWindow();
 
 	InstallProbe();
 

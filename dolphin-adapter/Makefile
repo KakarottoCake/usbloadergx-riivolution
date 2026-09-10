@@ -21,7 +21,12 @@ INCLUDES	:=	shim
 CFLAGS	= -g -O2 -Wall $(MACHDEP) $(INCLUDE)
 CXXFLAGS	=	$(CFLAGS)
 
-LDFLAGS	=	-g $(MACHDEP) -Wl,-Map,$(notdir $@).map -Wl,--gc-sections
+# Production allocator routing: every malloc/free/realloc in this binary
+# (including libstdc++'s, which is what vector/string use) goes through
+# memory/mem2.cpp's two-heap chain, exactly like the loader. That is the
+# point of the v6 memwindow: same allocator, same MEM2_init(48), same
+# big-allocations-to-MEM2 policy as hardware boot.
+LDFLAGS	=	-g $(MACHDEP) -Wl,-Map,$(notdir $@).map -Wl,--gc-sections -Wl,-wrap,malloc,-wrap,free,-wrap,memalign,-wrap,calloc,-wrap,realloc,-wrap,malloc_usable_size
 
 LIBS	:=	-logc -lm
 LIBDIRS	:=
@@ -45,7 +50,7 @@ export LD	:=	$(CXX)
 
 export OFILES_BIN	:=	$(addsuffix .o,$(BINFILES))
 export OFILES_SOURCES := $(CPPFILES:.cpp=.o) $(CFILES:.c=.o) $(sFILES:.s=.o) $(SFILES:.S=.o)
-export OFILES := $(OFILES_BIN) $(OFILES_SOURCES) RiivoFstInstall.o RiivoBoot.o
+export OFILES := $(OFILES_BIN) $(OFILES_SOURCES) RiivoFstInstall.o RiivoBoot.o RiivoFstBuild.o RiivoFst.o RiivoFstWalk.o mem2.o mem2alloc.o
 
 export HFILES := $(addsuffix .h,$(subst .,_,$(BINFILES)))
 
@@ -79,6 +84,7 @@ else
 # Production TU, compiled unmodified. Paths are relative to $(BUILD);
 # the adapter root is one level up, the repo root two.
 RIIVOSRC	:=	$(CURDIR)/../../source/riivo
+MEMSRC		:=	$(CURDIR)/../../source/memory
 ADAPTSHIM	:=	$(CURDIR)/../shim
 
 DEPENDS	:=	$(OFILES:.o=.d)
@@ -101,6 +107,29 @@ RiivoBoot.o : $(RIIVOSRC)/RiivoBoot.cpp
 	$(CXX) $(CXXFLAGS) -ffunction-sections -fdata-sections -I$(RIIVOSRC) \
 		-iquote $(ADAPTSHIM) -I"$(GXSRC)" -I"$(GXSRC)/riivo" -c $< -o $@
 	@rm -f RiivoBoot.d
+
+# Production serializer + walker TUs for the v6 memwindow (real ops).
+RiivoFstBuild.o : $(RIIVOSRC)/RiivoFstBuild.cpp
+	@echo $(notdir $<)
+	$(CXX) $(CXXFLAGS) -I$(RIIVOSRC) -iquote $(ADAPTSHIM) -c $< -o $@
+
+RiivoFst.o : $(RIIVOSRC)/RiivoFst.cpp
+	@echo $(notdir $<)
+	$(CXX) $(CXXFLAGS) -I$(RIIVOSRC) -iquote $(ADAPTSHIM) -c $< -o $@
+
+RiivoFstWalk.o : $(RIIVOSRC)/RiivoFstWalk.cpp
+	@echo $(notdir $<)
+	$(CXX) $(CXXFLAGS) -I$(RIIVOSRC) -iquote $(ADAPTSHIM) -c $< -o $@
+
+# Production allocator, compiled unmodified (same two-heap chain the
+# loader boots with; see LDFLAGS -wrap above).
+mem2.o : $(MEMSRC)/mem2.cpp
+	@echo $(notdir $<)
+	$(CXX) $(CXXFLAGS) -I$(MEMSRC) -iquote $(ADAPTSHIM) -I"$(GXSRC)" -c $< -o $@
+
+mem2alloc.o : $(MEMSRC)/mem2alloc.cpp
+	@echo $(notdir $<)
+	$(CXX) $(CXXFLAGS) -I$(MEMSRC) -iquote $(ADAPTSHIM) -I"$(GXSRC)" -c $< -o $@
 
 -include $(DEPENDS)
 

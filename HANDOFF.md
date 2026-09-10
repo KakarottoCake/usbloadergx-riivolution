@@ -19,19 +19,44 @@ below, which is kept for the steps it still requires.
   is in this window. It does NOT confirm the mechanism: crash,
   infinite loop, silent abort and card stall all end the file the same
   way. "Crash confirmed" was overstated; retracted.
-- INPUTS RECONCILED (was: local 222674 vs log 230076): the gap was two
-  mapping bugs in the repro, not a different workload. Local tree is
-  1915 files; full USA mappings are English->UsEnglish+UsSpanish,
-  French->UsFrench, and NO German rule (a 19-vs-20-char compare bug had
-  mapped German to bogus paths). Corrected: 1916 real mapped paths (74
-  German skipped, as production would). Tester's tree holds 232 more
-  real files (newer Spectral than local v11) - padded with
-  length-tuned dummies to the log's exact 2148 applied paths. Result:
-  plain 229969 vs 230076 (-107 B, -0.05%), same ops, walk 5816 paths,
-  compacted 216714. The serial delta decomposed entirely into
-  path-count + name lengths; no structural difference remains. This is
-  now the exact failing workload for allocation purposes (content of
-  the 232 pad entries is dummy - stated).
+- INPUTS: the padded tree is a SCALE-MATCHED APPROXIMATION, not the
+  failing workload. Dummy names change string allocation sizes, sort
+  order and suffix-sharing ratios; 2148 paths and -0.05% bytes do not
+  reproduce allocation behavior exactly. Likewise host RSS is not Wii
+  allocator demand and desktop timings are not Wii execution time -
+  they show the approximate workload completes locally, nothing about
+  the hardware path. Both framings corrected (were overstated).
+- v6 PPC MEASUREMENTS (production allocator via -wrap mem2.cpp,
+  MEM2_init(48), scripted histories, real TUs, GDB mailbox): T0-scale
+  regression PASSES (in-place, consumed, failOp=0); Spectral-scale
+  (4500+2148) completes with failOp=0 on clean heap, over retained
+  listing-like history, and down the consumption ladder to ~229 KB
+  MEM2 free. NO throwing op found in any state. Window demand is
+  ~1-2 MB transient against 35 MB hardware-free. OOM DOWNGRADED to
+  unlikely (totals 7 MB vs 35 MB free; survives fragmentation +
+  consumption scripts). It is not fully dead (contiguity/shape gaps
+  below), but it is no longer the lead.
+- v6 ANOMALY, stated open (harness fidelity, not production): the 64 KB
+  hog loop stopped after ~3 MB retained per slot although MEM2 showed
+  room - MEM2 sizing under Dolphin DOL boot vs Wii loader boot is not
+  established, so consumption depth is bounded by what the harness
+  could retain, not by the window failing. Numbers verbatim in
+  dolphin-adapter notes; do not over-read them.
+- MIRROR GAPS, stated: synthetic tree is FLAT (real tree nests 12
+  deep); LayoutFrom/modOffsets path not mirrored (Layout used);
+  CollectPlaced/FindSkips/PlanFragRegion/DescribeProbe tail not
+  mirrored (covered by the extended guard, unmeasured). The
+  discriminating next measurement is a deep-tree twin at exact scale.
+- Catch-hole FIXED (minimal, this round only): reserves can themselves
+  throw, so the catch now works with ACTUALLY-EXISTING capacity
+  (checked, not assumed) plus a C-only direct persist independent of
+  `out`. "Never another bare serialised line" RETRACTED to the bounded
+  claim: worst case is now a complete refusal log, then possibly a
+  stop in a later phase - diagnosable, not silent.
+- Remaining candidates for the hardware stop: deep-tree/wild-pointer
+  shape gap, non-memory hang in/around the window (card/fopen path in
+  LogStep/AppendLog is unmeasured), other. Compaction path preserved
+  throughout (T0 regression green in-harness).
 - PEAK MEASURED at exact scale (host RSS deltas): tree+apply +2.5 MB,
   serialize +3.2, expectations +3.2, walk +4.9, compact-build +5.8,
   compact-walk +6.8, stage +7.0 MB total. Largest single contiguous:
@@ -71,8 +96,8 @@ below, which is kept for the steps it still requires.
   no-op when unconfigured; AppendLog's fopen failure returns handled;
   gprintf uses a static buffer / early-returns - no C++ allocations in
   the sink. Worst case on persistent OOM: a COMPLETE refusal log, then
-  possibly a stop in a later phase - bounded and diagnosable, never a
-  bare serialised line again. Compaction bytes/decisions untouched.
+  possibly a stop in a later phase - bounded and diagnosable (the
+  earlier "never another bare serialised line" is retracted to this).
 - BOUNDED INTERPRETATION (the discriminator): an OOM-refusal line
   confirms allocation failure in THAT run only - never retrospective.
   A stop WITH "checking the mod's files through the hook" persisted
@@ -90,9 +115,9 @@ below, which is kept for the steps it still requires.
   Spectral log showing the workspace MEM2 line + either the
   OOM-refusal line (hypothesis confirmed for that run - then fix =
   peak reduction) or "checking..." (window passed - hypothesis dead
-  for that run, re-bisect). Either is decisive for that run only.
-  point (hypothesis dead, re-bisect). Either is decisive; both need
-  only a volunteered run, never a round.
+  for that run, re-bisect). Either is decisive for that run only;
+  both need only a volunteered run, never a round. Compaction
+  bytes/decisions untouched throughout.
 
 - Light reading: `PulseLight()` TOGGLES per LogStep, handover goes dark
   after 1 s, refusals blink groups + menu. Solid ON persisting 20 min is

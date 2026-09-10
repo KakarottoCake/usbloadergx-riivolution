@@ -2211,11 +2211,32 @@ namespace Riivo
 			//! Allocation failure inside validation: refuse with a reason
 			//! instead of stopping silent. newFst is untouched (the swap
 			//! only happens on the success path), so the refusal below
-			//! is clean. The append is in-capacity (reserved up front).
+			//! is clean.
+			//! The reserves above may THEMSELVES have been the throw: spare
+			//! capacity that was never obtained cannot be spent. So the
+			//! catch works only with capacity that ACTUALLY exists (checked,
+			//! not assumed), and the record goes out through a C-only
+			//! persist that allocates nothing, independent of `out`.
 			fstWalkOK = false;
-			Addf(out, "  independent FST walk: REFUSED: out of memory during validation (%u paths, MEM2 free %u KB)\n",
+			char oomLine[192];
+			snprintf(oomLine, sizeof(oomLine),
+				 "  independent FST walk: REFUSED: out of memory during validation (%u paths, MEM2 free %u KB)\n",
 				 (unsigned) expectedFst.size(),
 				 (unsigned) (MEM2_freesize() / 1024));
+			const size_t oomLen = strlen(oomLine);
+			if (out.capacity() - out.size() > oomLen)
+				out += oomLine;
+			if (!bootLogPath.empty())
+			{
+				FILE *f = fopen(bootLogPath.c_str(), "a");
+				if (f)
+				{
+					fwrite(oomLine, 1, oomLen, f);
+					fclose(f);
+				}
+				else
+					gprintf("Riivo: OOM refusal (log unwritable)\n");
+			}
 		}
 		out += "\nSwitching it on\n";
 		out += "---------------\n";
