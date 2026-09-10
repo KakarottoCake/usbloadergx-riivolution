@@ -4,9 +4,35 @@
 // FstBuilder -> ValidateTable with opTrace). No synthetic files, no
 // padding, no mirrors.
 //
-// Needs SPECTRAL_FST (153792-byte SB4E01 FST), SPECTRAL_XML (the USA
-// xml) and SPECTRAL_MOD (the mod root holding e.g. AudioRes/,
+// Needs SPECTRAL_FST (SB4E01 base FST), SPECTRAL_XML (the USA xml)
+// and SPECTRAL_MOD (the mod root holding e.g. AudioRes/,
 // LocalizeData/, ...). Without all three it SKIPS (CI-safe).
+//
+// BASE PROVENANCE (do not substitute): SPECTRAL_FST must be the
+// 153792-byte file table dumped 2026-09-09 from the live game running
+//   D:/Games/Wii/Super Mario Galaxy 2 (USA) (En,Fr,Es).iso  (= SB4E01,
+//   verified by wit ID; retail key via IOSC, no keys.bin)
+// under Dolphin 5.0-18995 via the GDB stub (FST bytes read from the
+// running game's memory at the apploader handoff).
+//   size 153792, 4493 entries (3935 files), SHA-256
+//   b487a6a14f727c7b89d13362c4c1782e8dfeea416acd233df9ce62cb746c3c20
+// The D:/Games/Wii/Spectral.iso and Spectral Classic.iso files are a
+// DIFFERENT game (SBZE01, verified by wit ID) and have never fed any
+// SMG2 reproduction - similar names only.
+//
+// Optional SPECTRAL_EXTRA: manifest-replay for files absent from the
+// local tree (e.g. the tester's 5 extra CustomCode files). Text file,
+// one entry per line:
+//
+//   <mod-root-relative path> <bytes> [sha256]
+//
+// e.g. "CustomCode/extra.bin 123456 9f2c...". An entry that exists
+// locally has its size CHECKED against the manifest (full-listing
+// verification); a missing one is applied with the manifest size and
+// reported as manifest-only. Contents are never needed: the exercised
+// path reads names, offsets and sizes, never file bytes. Hashes
+// identify entries and are recorded, not verified, until contents
+// arrive. With the exact manifest the run must print plain 230076.
 //
 // Reference: the tester's hardware log at
 //   Downloads/Spectral_usbloadergx_riivo_SB4E01.log
@@ -135,8 +161,11 @@ int main()
 
 	std::vector<u8> base;
 	ck(ReadFile(fstPath, base), "base FST reads");
+	ck(base.size() == 153792, "base is the 153792-byte SB4E01 table");
 	Fst disc;
 	ck(disc.Parse(&base[0], (u32) base.size(), true), "base parses");
+	printf("  disc baseline: %u files\n", (unsigned) disc.FileCount());
+	ck(disc.FileCount() == 3935, "baseline has the 3935 SB4E01 files");
 
 	Disc parsed;
 	std::string perr;
@@ -171,9 +200,79 @@ int main()
 	printf("  (hardware log: 267 replacements, 1881 additions)\n");
 	ck(redirects.size() + created.size() > 0, "non-empty applied set");
 
-	// External sizes (production stats the card here): stat the host
-	// tree through the same prefix mapping. A miss is a phantom
-	// addition, exactly the confusion missingCreated exists to avoid.
+	// Manifest replay (SPECTRAL_EXTRA, see header): entries the local
+	// tree lacks are applied with manifest sizes; entries it has are
+	// size-checked (full-listing verification). Contents never matter
+	// downstream, so sizes+names are the complete replay input.
+	std::map<std::string, u32> extraSizes; // external -> manifest size
+	u32 manifestOnly = 0, manifestVerified = 0;
+	{
+		const char *mp = getenv("SPECTRAL_EXTRA");
+		if (mp && *mp)
+		{
+			FILE *f = fopen(mp, "r");
+			ck(f != 0, "manifest opens");
+			char mline[512];
+			while (f && fgets(mline, sizeof(mline), f))
+			{
+				char rel[384], hash[130];
+				unsigned long msz = 0;
+				rel[0] = hash[0] = 0;
+				int nf = sscanf(mline, "%383s %lu %129s", rel, &msz,
+								hash);
+				if (nf < 2 || rel[0] == '#') continue;
+				std::string external = lister.cardPrefix + "/" + rel;
+				bool claimed = false;
+				for (size_t i = 0; i < redirects.size() && !claimed; ++i)
+					claimed = redirects[i].external == external;
+				for (size_t i = 0; i < created.size() && !claimed; ++i)
+					claimed = created[i].external == external;
+				bool ok = false;
+				u32 local = HostSize(lister.cardPrefix, lister.modRoot,
+									 external, ok);
+				if (claimed && ok)
+				{
+					ck(local == (u32) msz, "manifest size matches local file");
+					++manifestVerified;
+				}
+				else if (!claimed && !ok)
+				{
+					std::string discPath =
+						NormaliseDiscPath(std::string("/") + rel);
+					const FstFile *e = disc.FindFile(discPath);
+					if (e)
+					{
+						RedirectSpec r;
+						r.disc = e->path;
+						r.external = external;
+						r.length = (u32) msz;
+						redirects.push_back(r);
+					}
+					else
+					{
+						CreatedFile c;
+						c.disc = discPath;
+						c.external = external;
+						created.push_back(c);
+					}
+					++manifestOnly;
+				}
+				else
+					printf("  manifest note: %s claimed=%d local=%d "
+						   "(unclaimed both sides, no table effect)\n",
+						   rel, (int) claimed, (int) ok);
+				extraSizes[external] = (u32) msz;
+			}
+			if (f) fclose(f);
+			printf("  manifest: %u verified, %u manifest-only applied\n",
+				   manifestVerified, manifestOnly);
+		}
+	}
+
+	// External sizes (production stats the card here): manifest sizes
+	// first, else stat the host tree through the same prefix mapping.
+	// A miss is a phantom addition, exactly the confusion
+	// missingCreated exists to avoid.
 	FstBuilder b;
 	ck(b.Parse(&base[0], (u32) base.size(), true), "builder parses base");
 	std::map<std::string, u32> modSizes;
@@ -181,7 +280,16 @@ int main()
 	for (size_t i = 0; i < redirects.size(); ++i)
 	{
 		bool ok = false;
-		u32 sz = HostSize(lister.cardPrefix, lister.modRoot,
+		u32 sz = 0;
+		std::map<std::string, u32>::const_iterator mx =
+			extraSizes.find(redirects[i].external);
+		if (mx != extraSizes.end())
+		{
+			sz = mx->second;
+			ok = true;
+		}
+		else
+			sz = HostSize(lister.cardPrefix, lister.modRoot,
 						  redirects[i].external, ok);
 		std::string key = NormaliseDiscPath(redirects[i].disc);
 		if (!ok) { ++missing; continue; }
@@ -197,7 +305,16 @@ int main()
 	for (size_t i = 0; i < created.size(); ++i)
 	{
 		bool ok = false;
-		u32 sz = HostSize(lister.cardPrefix, lister.modRoot,
+		u32 sz = 0;
+		std::map<std::string, u32>::const_iterator mx =
+			extraSizes.find(created[i].external);
+		if (mx != extraSizes.end())
+		{
+			sz = mx->second;
+			ok = true;
+		}
+		else
+			sz = HostSize(lister.cardPrefix, lister.modRoot,
 						  created[i].external, ok);
 		std::string key = NormaliseDiscPath(created[i].disc);
 		if (!ok) { ++missing; continue; }
