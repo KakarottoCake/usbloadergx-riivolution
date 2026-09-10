@@ -4,7 +4,69 @@ State of the SB4E01 (Super Mario Galaxy 2) debugging effort. Read the
 "Latest evidence" section first — it supersedes the drive-blocker framing
 below, which is kept for the steps it still requires.
 
-## Spectral solid-ON 20 min: hung pre-handover, window timed clear locally
+## Spectral solid-ON 20 min: stop confirmed in window, mechanism OPEN
+
+- Light reading: `PulseLight()` TOGGLES per LogStep, handover goes dark
+  after 1 s, refusals blink groups + menu. Solid ON persisting 20 min is
+  none of playing (dark+flicker), handed-over (dark), or refused
+  (groups). It is a stop with the toggle left ON - pre-handover.
+  (Caveat: a multi-minute hook phase would also sit static; but the
+  card shows no "checking..." line, so it never got there.)
+- Window (card-persisted boundaries): after "table serialised", before
+  "checking the mod's files through the hook". Contents: expectations
+  build, FstWalk open+check, compaction + walk, stats, report text,
+  gate eval. All pure CPU, no IOS, no card. Both Spectral files END at
+  the serialised line (USA 230076, PAL 239688) - that confirms the STOP
+  is in this window. It does NOT confirm the mechanism: crash,
+  infinite loop, silent abort and card stall all end the file the same
+  way. "Crash confirmed" was overstated; retracted.
+- Timed LOCALLY at full Spectral shape (real base + real 1912-file
+  tree, 5610 expectations): 0.00 + 0.00 + 0.02 + 0.06 + 0.00 s. No
+  algorithmic hang at that shape - but that clears the algorithm, not
+  the heap: same ops, unbounded memory.
+- Heap-exhaustion HYPOTHESIS (status: unconfirmed): ~6300-path
+  expectations + two FST walks + 209 KB compaction buffer on a MEM2
+  heap fragmented by 2300+ small file entries, 35 MB free at
+  serialise. 35 MB neither proves nor excludes it (fragmentation kills
+  on contiguity, not totals). USA/PAL dying at the same line does NOT
+  separate scale from content (they share both) - also retracted.
+- Allocator audit (code-reading): the `-wrap` chain in mem2.cpp
+  returns NULL when both heaps are out (`CMEM2Alloc::allocate` returns
+  0 - no spin, no abort); no `operator new` override in tree; no
+  `-fno-exceptions` in the loader Makefile or wii_rules, so `operator
+  new` throws `std::bad_alloc` on NULL. Runtime proof below.
+- PPC PROOF under Dolphin (Temp excprobe, prod flags): throw/catch
+  smoke caught (t1=1, unwinding works); 32 MB vector growth threw a
+  CAUGHT bad_alloc (no abort/hang); the exact catch-handler shape
+  (fixed-buffer format + append to pre-reserved string) completed under
+  a pre-consumed heap with its line landing (t3=1). Allocation failure
+  on this toolchain throws catchably - established, not assumed.
+- HOST proof on the exact components (Temp mirror, REAL failures via
+  RLIMIT_AS, real base + real tree): unarmed PROCEEDs; at 10 MB AS the
+  walk passes 5610 paths, then the compaction buffer throws, the catch
+  logs "REFUSED: out of memory during validation", clean
+  WITHHELD-OOM, exit 0. The refusal AND its logging both work under
+  real memory pressure. (`--wrap malloc` is unusable under this
+  MSYS2/Cygwin g++ - wrapped binaries exit silent-0; rlimit used.)
+- Committed (branch, no release): `expectedFst.reserve()` (churn
+  reduction ONLY - explicitly not a fix claim), try/catch(bad_alloc)
+  around the window that withholds with a memory reading instead of
+  stopping silent, catch-handler allocation-free by construction
+  (`out.reserve(+512)` up front, proven by the pressure test), plus a
+  "validation workspace" MEM2 line on every log. A later successful
+  run would show progress, NOT identify the cause - said plainly.
+  Compaction bytes/decisions untouched.
+- Inputs preserved (no game bytes in repo): `sb4e01-fst.bin` (153792,
+  GDB dump at game birth, re-extractable by the documented method),
+  local Spectral tree (`D:/Games/Wii/Riivolution/
+  super-mario-spectral_v_11_5f1b2/Spectral`, 1912 files), the 12 USA-XML
+  folder mappings (transcribed in the Temp repro drivers), base serial
+  222674/compacted 209016 reference outputs.
+- What confirms/refutes from here (no run asked): a future Spectral log
+  showing the workspace MEM2 line + either the OOM-refusal line
+  (hypothesis confirmed, then fix = peak reduction) or a stop at a NEW
+  point (hypothesis dead, re-bisect). Either is decisive; both need
+  only a volunteered run, never a round.
 
 - Light reading: `PulseLight()` TOGGLES per LogStep, handover goes dark
   after 1 s, refusals blink groups + menu. Solid ON persisting 20 min is
@@ -17,27 +79,12 @@ below, which is kept for the steps it still requires.
   Contents: expectations build, FstWalk open+check, compaction +
   walk, stats, report text, gate eval. All pure CPU, no IOS, no card.
 - Timed LOCALLY at full Spectral shape (real base + real 1912-file
-  tree, 5610 expectations): 0.00 + 0.00 + 0.02 + 0.06 + 0.00 s. No
-  algorithmic hang exists in that window. Remaining: silent crash/
-  exception there, or the paste ends where the file does not.
-- Decider, zero cost: does `usbloadergx_riivo_SB4E01.log` END at
-  "table serialised: 239688 bytes"? ANSWERED 2026-09-10: YES, and the
-  USA file ends at 230076 the same way. Crash CONFIRMED in the window,
-  both regions, same line. Local timing already cleared algorithms
-  (0.00-0.06 s at full shape), so the remaining shape is heap
-  exhaustion on the Wii (35 MB free at serialise, ~6300-path
-  expectations + two FST walks + 209 KB compaction buffer landing on a
-  heap fragmented by 2300+ small file entries) - a silent
-  terminate, which matches "no log, frozen light" exactly. Committed
-  (branch, no release): `expectedFst.reserve()` up front, the whole
-  window under try/catch(bad_alloc) that withholds with
-  "REFUSED: out of memory during validation (N paths, MEM2 free X KB)"
-  instead of dying silent, plus a "validation workspace" MEM2 line on
-  every log so the next run reads the memory pressure directly.
-  Compaction path itself untouched - same bytes, same decisions.
-  Note: PAL XML ran on a USA disc (German locale in the listing); both
-  regions die identically, so this is scale, not content - but USA XML
-  for USA discs going forward.
+  tree, 5610 expectations): 0.00 + 0.00 + 0.02 + 0.06 + 0.00 s -
+  algorithm cleared, heap not. Decider was the file end: ANSWERED
+  2026-09-10 (both files end at the serialised line). Full adjudication
+  incl. retractions, allocator audit, PPC + host OOM proofs and the
+  hardening lives in the "mechanism OPEN" section above - this older
+  paragraph is superseded by it, kept for the timeline.
 - Yoshi CONFIRMED 2026-09-10 (rerun, slot 252 beta3): 7 replacements,
   plain table 153790 vs 153792 (2 spare, IN PLACE, no compaction
   needed), hook 7/7, preflight 3/3, FST_STAGED, shutdown checksum

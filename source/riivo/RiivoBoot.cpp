@@ -1868,8 +1868,16 @@ namespace Riivo
 		// Reserved up front: at Spectral scale this is ~6300 paths, and
 		// growing it by repeated reallocation fragments the loader's MEM2
 		// heap right before the two FST walks and the compaction buffer.
+		// (Churn reduction only - not a fix claim for anything.)
 		std::vector<FstWalkExpectation> expectedFst;
 		expectedFst.reserve(fst.FileCount() + expectedModSizes.size());
+		//! Room for the refusal line below, reserved while the heap is at
+		//! its freest in this window: the catch handler appends to `out`,
+		//! and that append must not itself allocate (a throw inside the
+		//! handler would terminate). With this capacity held, the catch
+		//! path is allocation-free: stack buffer, size read, free-size
+		//! read, in-capacity append.
+		out.reserve(out.size() + 512);
 		bool expectedComplete = true;
 		//! Validation workspace guard: everything from here through the
 		//! compaction decision is pure-CPU validation that must never kill
