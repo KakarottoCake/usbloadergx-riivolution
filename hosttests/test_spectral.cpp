@@ -57,6 +57,16 @@
 // precede the window), MEM2 fragmentation state at window entry (log
 // shows 36920 KB free - free, not contiguous), device I/O during
 // matching, card logging, interrupts, and prior heap corruption.
+//
+// OOM RANKING (evidence, not habit): heap exhaustion INSIDE the
+// window is disfavored - the exact-shape input (names and counts
+// exact, 230076-byte table) runs the real function end to end holding
+// ~1 MB, trace clean, while hardware showed 36920 KB free at window
+// entry. Do not lead with OOM. What stays open is heap-STATE-
+// dependent behavior (the 13 s of allocation history the window
+// inherits, which no host run reproduces), the card/logging boundary
+// (phase completion vs log delivery are indistinguishable in a log
+// that ends), interrupts, and prior corruption - in that order.
 // Related: the log's "492235142 bytes" is MAPPED DISC PAYLOAD (offset
 // accounting), not RAM - the window itself holds single-digit MB
 // (printed below). Never compare the two as if both were memory.
@@ -344,6 +354,43 @@ int main()
 	printf("  table entries planned: %u (%u rejected, %u missing)\n",
 		   planned, rejected, missing);
 	printf("  (hardware log: planned 2148, 0 rejected)\n");
+	// Full path/size manifest of the REPRODUCED input (SPECTRAL_MANIFEST
+	// names the output file): "disc size external" per applied entry,
+	// sorted by disc. Diff this against the tester's listing when it
+	// arrives; names feed the table, sizes feed the offsets.
+	{
+		const char *mout = getenv("SPECTRAL_MANIFEST");
+		if (mout && *mout)
+		{
+			std::map<std::string, std::string> extOf;
+			for (size_t i = 0; i < redirects.size(); ++i)
+				extOf[NormaliseDiscPath(redirects[i].disc)] =
+					redirects[i].external;
+			for (size_t i = 0; i < created.size(); ++i)
+				extOf[NormaliseDiscPath(created[i].disc)] =
+					created[i].external;
+			FILE *f = fopen(mout, "w");
+			ck(f != 0, "manifest output opens");
+			u32 dumped = 0;
+			if (f)
+			{
+				for (std::map<std::string, u32>::const_iterator it =
+						 modSizes.begin();
+					 it != modSizes.end(); ++it)
+				{
+					std::map<std::string, std::string>::const_iterator e =
+						extOf.find(it->first);
+					fprintf(f, "%s %u %s\n", it->first.c_str(),
+							it->second,
+							e == extOf.end() ? "?" : e->second.c_str());
+					++dumped;
+				}
+				fclose(f);
+			}
+			printf("  manifest dumped: %u entries -> %s\n", dumped, mout);
+			ck(dumped == planned, "manifest covers every planned entry");
+		}
+	}
 
 	// Production-shaped early placement: 32 KB-aligned cursor from the
 	// mod region start (harness value; the exact gameEnd-derived start
