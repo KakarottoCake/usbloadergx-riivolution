@@ -5,7 +5,6 @@ State of the SB4E01 (Super Mario Galaxy 2) debugging effort. Read the
 below, which is kept for the steps it still requires.
 
 ## Spectral solid-ON 20 min: stop confirmed in window, mechanism OPEN
-
 - Light reading: `PulseLight()` TOGGLES per LogStep, handover goes dark
   after 1 s, refusals blink groups + menu. Solid ON persisting 20 min is
   none of playing (dark+flicker), handed-over (dark), or refused
@@ -20,16 +19,31 @@ below, which is kept for the steps it still requires.
   is in this window. It does NOT confirm the mechanism: crash,
   infinite loop, silent abort and card stall all end the file the same
   way. "Crash confirmed" was overstated; retracted.
-- Timed LOCALLY at full Spectral shape (real base + real 1912-file
-  tree, 5610 expectations): 0.00 + 0.00 + 0.02 + 0.06 + 0.00 s. No
-  algorithmic hang at that shape - but that clears the algorithm, not
-  the heap: same ops, unbounded memory.
-- Heap-exhaustion HYPOTHESIS (status: unconfirmed): ~6300-path
-  expectations + two FST walks + 209 KB compaction buffer on a MEM2
-  heap fragmented by 2300+ small file entries, 35 MB free at
-  serialise. 35 MB neither proves nor excludes it (fragmentation kills
-  on contiguity, not totals). USA/PAL dying at the same line does NOT
-  separate scale from content (they share both) - also retracted.
+- INPUTS RECONCILED (was: local 222674 vs log 230076): the gap was two
+  mapping bugs in the repro, not a different workload. Local tree is
+  1915 files; full USA mappings are English->UsEnglish+UsSpanish,
+  French->UsFrench, and NO German rule (a 19-vs-20-char compare bug had
+  mapped German to bogus paths). Corrected: 1916 real mapped paths (74
+  German skipped, as production would). Tester's tree holds 232 more
+  real files (newer Spectral than local v11) - padded with
+  length-tuned dummies to the log's exact 2148 applied paths. Result:
+  plain 229969 vs 230076 (-107 B, -0.05%), same ops, walk 5816 paths,
+  compacted 216714. The serial delta decomposed entirely into
+  path-count + name lengths; no structural difference remains. This is
+  now the exact failing workload for allocation purposes (content of
+  the 232 pad entries is dummy - stated).
+- PEAK MEASURED at exact scale (host RSS deltas): tree+apply +2.5 MB,
+  serialize +3.2, expectations +3.2, walk +4.9, compact-build +5.8,
+  compact-walk +6.8, stage +7.0 MB total. Largest single contiguous:
+  expectedFst 292 KB, gameWalk entries ~600 KB, tables ~230/217 KB.
+  Against 35 MB Wii-free, TOTALS do not explain a stop - if OOM, it
+  must be contiguity/fragmentation (unproven; host cannot reproduce
+  Wii heap shape). Timed 0.00-0.06 s per phase: algorithm cleared too.
+  Remaining: unproven fragmentation-OOM vs wild-pointer/DSI vs other.
+- Heap-exhaustion status: HYPOTHESIS, unconfirmed. USA/PAL same-line
+  stops do NOT separate scale from content (they share both) -
+  retracted. `reserve()` is churn reduction, not a fix claim -
+  retracted as evidence. A later success shows progress, not cause.
 - Allocator audit (code-reading): the `-wrap` chain in mem2.cpp
   returns NULL when both heaps are out (`CMEM2Alloc::allocate` returns
   0 - no spin, no abort); no `operator new` override in tree; no
@@ -42,29 +56,41 @@ below, which is kept for the steps it still requires.
   a pre-consumed heap with its line landing (t3=1). Allocation failure
   on this toolchain throws catchably - established, not assumed.
 - HOST proof on the exact components (Temp mirror, REAL failures via
-  RLIMIT_AS, real base + real tree): unarmed PROCEEDs; at 10 MB AS the
-  walk passes 5610 paths, then the compaction buffer throws, the catch
-  logs "REFUSED: out of memory during validation", clean
+  RLIMIT_AS, exact 2148-path twin): unarmed PROCEEDs; at 11-12 MB AS
+  the walk passes 5816 paths, then the compaction buffer throws, the
+  catch logs "REFUSED: out of memory during validation", clean
   WITHHELD-OOM, exit 0. The refusal AND its logging both work under
   real memory pressure. (`--wrap malloc` is unusable under this
   MSYS2/Cygwin g++ - wrapped binaries exit silent-0; rlimit used.)
-- Committed (branch, no release): `expectedFst.reserve()` (churn
-  reduction ONLY - explicitly not a fix claim), try/catch(bad_alloc)
-  around the window that withholds with a memory reading instead of
-  stopping silent, catch-handler allocation-free by construction
-  (`out.reserve(+512)` up front, proven by the pressure test), plus a
-  "validation workspace" MEM2 line on every log. A later successful
-  run would show progress, NOT identify the cause - said plainly.
-  Compaction bytes/decisions untouched.
+- Committed hardening (branch, no release): reserves INSIDE the guard
+  (their own throw is caught too), guard extended through everything
+  the gate reads (FragPlan defaults !ok, so a skipped region check
+  still refuses), `withholdStage.reserve(32)` at boot reset,
+  `out.reserve(+12288)` covering the whole tail to its persist, catch
+  path allocation-free by construction. Sink audit: SendCollector is a
+  no-op when unconfigured; AppendLog's fopen failure returns handled;
+  gprintf uses a static buffer / early-returns - no C++ allocations in
+  the sink. Worst case on persistent OOM: a COMPLETE refusal log, then
+  possibly a stop in a later phase - bounded and diagnosable, never a
+  bare serialised line again. Compaction bytes/decisions untouched.
+- BOUNDED INTERPRETATION (the discriminator): an OOM-refusal line
+  confirms allocation failure in THAT run only - never retrospective.
+  A stop WITH "checking the mod's files through the hook" persisted
+  means the window was passed (no OOM there that run). A stop WITHOUT
+  it is inconclusive (OOM or other). "Stop elsewhere disproves OOM"
+  only with the checking line present.
 - Inputs preserved (no game bytes in repo): `sb4e01-fst.bin` (153792,
   GDB dump at game birth, re-extractable by the documented method),
   local Spectral tree (`D:/Games/Wii/Riivolution/
-  super-mario-spectral_v_11_5f1b2/Spectral`, 1912 files), the 12 USA-XML
-  folder mappings (transcribed in the Temp repro drivers), base serial
-  222674/compacted 209016 reference outputs.
-- What confirms/refutes from here (no run asked): a future Spectral log
-  showing the workspace MEM2 line + either the OOM-refusal line
-  (hypothesis confirmed, then fix = peak reduction) or a stop at a NEW
+  super-mario-spectral_v_11_5f1b2/Spectral`, 1915 files), the 12 USA-XML
+  folder mappings + German-exclusion + pad recipe (232 length-tuned
+  dummies to 2148 paths / 230076 bytes), reference outputs (plain
+  229969, compacted 216714, peak +7.0 MB).
+- What confirms/refutes from here (no run asked): a volunteered
+  Spectral log showing the workspace MEM2 line + either the
+  OOM-refusal line (hypothesis confirmed for that run - then fix =
+  peak reduction) or "checking..." (window passed - hypothesis dead
+  for that run, re-bisect). Either is decisive for that run only.
   point (hypothesis dead, re-bisect). Either is decisive; both need
   only a volunteered run, never a round.
 
@@ -78,13 +104,12 @@ below, which is kept for the steps it still requires.
   (41558 ms), before "checking the mod's files through the hook".
   Contents: expectations build, FstWalk open+check, compaction +
   walk, stats, report text, gate eval. All pure CPU, no IOS, no card.
-- Timed LOCALLY at full Spectral shape (real base + real 1912-file
-  tree, 5610 expectations): 0.00 + 0.00 + 0.02 + 0.06 + 0.00 s -
-  algorithm cleared, heap not. Decider was the file end: ANSWERED
-  2026-09-10 (both files end at the serialised line). Full adjudication
-  incl. retractions, allocator audit, PPC + host OOM proofs and the
-  hardening lives in the "mechanism OPEN" section above - this older
-  paragraph is superseded by it, kept for the timeline.
+- Timed LOCALLY (exact 2148-path twin, peak +7.0 MB - algorithm and
+  totals both cleared; contiguity open). Decider was the file end:
+  ANSWERED 2026-09-10 (both files end at the serialised line). Full
+  adjudication incl. retractions, allocator audit, PPC + host OOM
+  proofs and the hardening lives in the "mechanism OPEN" section above
+  - this older paragraph is superseded by it, kept for the timeline.
 - Yoshi CONFIRMED 2026-09-10 (rerun, slot 252 beta3): 7 replacements,
   plain table 153790 vs 153792 (2 spare, IN PLACE, no compaction
   needed), hook 7/7, preflight 3/3, FST_STAGED, shutdown checksum

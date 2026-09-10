@@ -462,6 +462,11 @@ namespace Riivo
 		sumPlaced = 0;
 		sumFailed = 0;
 		withholdStage.clear();
+		//! Every refusal in this boot assigns a short literal here; hold
+		//! capacity once, while the heap is fresh, so a late out-of-memory
+		//! withhold cannot throw inside its own assignment (libstdc++
+		//! strings always heap-allocate, even for short literals).
+		withholdStage.reserve(32);
 		modRecords.clear();
 		modSkips.clear();
 		modMissing.clear();
@@ -1865,31 +1870,44 @@ namespace Riivo
 		LogStep("table serialised: %u bytes", (unsigned) newFst.size());
 		// Expectations come from the original disc and external-file sizes,
 		// not from reparsing the builder's result with the builder itself.
-		// Reserved up front: at Spectral scale this is ~6300 paths, and
-		// growing it by repeated reallocation fragments the loader's MEM2
-		// heap right before the two FST walks and the compaction buffer.
-		// (Churn reduction only - not a fix claim for anything.)
-		std::vector<FstWalkExpectation> expectedFst;
-		expectedFst.reserve(fst.FileCount() + expectedModSizes.size());
-		//! Room for the refusal line below, reserved while the heap is at
-		//! its freest in this window: the catch handler appends to `out`,
-		//! and that append must not itself allocate (a throw inside the
-		//! handler would terminate). With this capacity held, the catch
-		//! path is allocation-free: stack buffer, size read, free-size
-		//! read, in-capacity append.
-		out.reserve(out.size() + 512);
 		bool expectedComplete = true;
 		//! Validation workspace guard: everything from here through the
 		//! compaction decision is pure-CPU validation that must never kill
-		//! the boot silently. Spectral-scale runs die in this window (log
+		//! the boot silently. Spectral-scale runs stop in this window (log
 		//! ends at "table serialised", light frozen) while the same work
 		//! times at ~0.1 s on host - the shape of heap exhaustion on the
 		//! Wii, not a loop. An allocation failure now withholds with a
-		//! named reason instead of freezing with no log.
+		//! named reason instead of stopping silent.
 		bool validationOom = false;
 		bool fstWalkOK = false;
+		//! Declared outside the guard: the catch block reports the path
+		//! count and the gate reads the plan/placements. Declaration alone
+		//! allocates nothing; every fill stays inside the guard.
+		std::vector<FstWalkExpectation> expectedFst;
+		FragPlan plan;
+		std::vector<ModExtent> extents;
+		std::vector<PlacedFile> placed;
+		//! Stats reference for the report tail and the final gprintf: bound
+		//! before the guard (a reference allocates nothing). Serialize
+		//! already ran, so plain-table stats are in place even if the
+		//! guard below withholds.
+		const FstBuildStats &st = builder.Stats();
 		try
 		{
+		//! Reserved up front, INSIDE the guard: at Spectral scale this is
+		//! ~6300 paths, and growing it by repeated reallocation fragments
+		//! the loader's MEM2 heap right before the two FST walks and the
+		//! compaction buffer. (Churn reduction only - not a fix claim for
+		//! anything.) Inside the try so its own throw is caught too.
+		expectedFst.reserve(fst.FileCount() + expectedModSizes.size());
+		//! Room for everything this function still appends to `out` (the
+		//! refusal line, the report tail, the frag-region check, the probe
+		//! report, the gate block: ~8 KB worst case), reserved while the
+		//! heap is at its freest in this window: every later append must
+		//! not allocate, because a throw past the catch - including inside
+		//! the gate's own assignments - would terminate with the refusal
+		//! unpersisted.
+		out.reserve(out.size() + 12288);
 		for (size_t i = 0; i < fst.FileCount(); ++i) {
 			const FstFile &original = fst.FileAt(i);
 			if (expectedModSizes.find(original.path) == expectedModSizes.end())
@@ -1927,7 +1945,6 @@ namespace Riivo
 		if (fstReserve > 0 && fstWalkOK && newFst.size() > fstReserve)
 		{
 			std::vector<u8> compactFst;
-			std::string compactWhy;
 			bool compactOK = builder.SerializeCompacted(compactFst, true);
 			std::string cwErr;
 			FstWalk cw;
@@ -1948,26 +1965,6 @@ namespace Riivo
 			else
 				builder.Serialize(newFst, true); // restore plain stats below
 		}
-		} // end try: validation workspace
-		catch (const std::bad_alloc &)
-		{
-			validationOom = true;
-		}
-		catch (const std::exception &)
-		{
-			validationOom = true;
-		}
-		if (validationOom)
-		{
-			//! Allocation failure inside validation: refuse with a reason
-			//! instead of dying silent. newFst is untouched (the swap only
-			//! happens on the success path), so the refusal below is clean.
-			fstWalkOK = false;
-			Addf(out, "  independent FST walk: REFUSED: out of memory during validation (%u paths, MEM2 free %u KB)\n",
-				 (unsigned) expectedFst.size(),
-				 (unsigned) (MEM2_freesize() / 1024));
-		}
-		const FstBuildStats &st = builder.Stats();
 		plannedFstSize = st.fstSize;
 
 		Addf(out, "  entries planned    : %u  (%u rejected)\n", planned, rejected);
@@ -2006,9 +2003,8 @@ namespace Riivo
 		out += "\nRoom on the virtual disc\n";
 		out += "------------------------\n";
 
-		FragPlan plan;
-		std::vector<ModExtent> extents;
-		std::vector<PlacedFile> placed;
+		//! plan/extents/placed are declared before the guard (they feed the
+		//! gate after it); only their fills live in here.
 
 		//! Which drive everything is on. The cIOS serves the whole list from
 		//! one device, so a mismatch here reads the mod's sector numbers off
@@ -2197,6 +2193,30 @@ namespace Riivo
 		// ------------------------------------------------------------------
 		// Switch it on, but only if every single check above came back clean.
 		// ------------------------------------------------------------------
+		} // end try: validation workspace (extended through CollectPlaced,
+		  // the frag-region check and the probe report: everything the
+		  // gate below reads. FragPlan defaults to !ok, so a throw that
+		  // skips PlanFragRegion still refuses; Activate is only called
+		  // on the all-clean path, where every structure completed.)
+		catch (const std::bad_alloc &)
+		{
+			validationOom = true;
+		}
+		catch (const std::exception &)
+		{
+			validationOom = true;
+		}
+		if (validationOom)
+		{
+			//! Allocation failure inside validation: refuse with a reason
+			//! instead of stopping silent. newFst is untouched (the swap
+			//! only happens on the success path), so the refusal below
+			//! is clean. The append is in-capacity (reserved up front).
+			fstWalkOK = false;
+			Addf(out, "  independent FST walk: REFUSED: out of memory during validation (%u paths, MEM2 free %u KB)\n",
+				 (unsigned) expectedFst.size(),
+				 (unsigned) (MEM2_freesize() / 1024));
+		}
 		out += "\nSwitching it on\n";
 		out += "---------------\n";
 
