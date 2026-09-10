@@ -224,11 +224,11 @@ clearing), not a track proven by elimination.
   plans are void; the earlier "unproven" verdicts collapse to dead.
 - Dump-caller identified (static, from park-stack frames): `0x804B1D70`
   is an async request dispatcher - busy-waits on a request state
-  word, GQR (streaming-I/O) setup prologue, per-state handlers, with
-  the queue-dump/hang as its failure leg. Shape fits a media-stream
-  (DVD/audio) request path; the error it reports is a request that
-  never completes. Subsystem naming stays a lead pending the direct
-  caller's disassembly.
+  word, streaming-I/O (GQR) setup prologue, per-state handlers, with
+  the queue-dump/hang as its failure leg. SUGGESTIVE ONLY: the shape
+  fits a media-stream (DVD/audio) request path and SMR.szs was in
+  flight, but the exact outstanding request and the failure reason
+  remain unidentified - do not cite a subsystem.
 - VERBATIM-STOCK CONTROL (all reads servable): stock SB4E01 table at
   `0x92000000`, birth install, repoint - IDENTICAL wipe (post-mortem
   all zeros) + dead park `0x805B2B14`/EE-off, pointer untouched. So
@@ -240,6 +240,31 @@ clearing), not a track proven by elimination.
 - Standing consequence: a birth-installed MEM2 table is dead before
   use either way. The wipe is THE blocker; viability questions
   beyond it stay moot until a table survives it.
+
+## Bounds + viability verdict (Sep 2026)
+
+- WIPE TOP: high markers (own 16 B writes to game-untouched regions
+  only) at `0x924/28/2C/3000000` all read zeros after 60 s of stock
+  boot; `0x93400000` reads E00 FAULT post-boot (readable+writable at
+  birth). So the clear covers at least through `0x93000000`, and the
+  game withdraws high-MEM2 readability after boot (matches the old
+  survey: top faults post-boot). Lower bound unknown (live heap
+  below `0x91000000`, deliberately untouched).
+- SITE LEDGER (current knowledge): low = live heap (collision);
+  mid (`0x91000000-0x93000000`) = startup-wiped; high (`0x93400000+`)
+  = unreadable post-boot. NO viable MEM2 site identified.
+  Reserve-and-preserve has nowhere to go today.
+- CONSUMPTION probe with hang neutered (verbatim stock table): game
+  reaches normal idle with pointer aimed at MEM2 and stock MEM1
+  zeroed - no pointer-range validation park exists. But idle proves
+  no post-boot reads happened to need serving, so MEM2 reads remain
+  neither proven nor opposed. The neuter also voids that run for
+  failure analysis (any failure masked by design).
+- REMAINING MEM2 SHAPE (only one left): install AFTER the one-shot
+  wipe into mid-MEM2 (above live-heap reach), which needs a truly
+  owned post-startup execution point (cIOS hook or game-side hook -
+  both undecided, both need first-read timing + ownership). No
+  timed-delay installs; no production changes from polling alone.
 
 Scope note (narrowed per review): established ONLY (i) lowered arenaHi
 with no table changes nothing observable here, and (ii) the wipe is
