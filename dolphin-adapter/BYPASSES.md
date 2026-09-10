@@ -210,6 +210,46 @@ clearing), not a track proven by elimination.
   uses it. Compaction remains the working path; the Spectral
   preparation stop is a separate investigation.
 
+## Dev build: dcbz trace + controls (Sep 2026, master 66d8a89220)
+
+- Built `DolphinNoGUI.exe` (VS2022 17.14, NoGUI-only, patch in
+  `MMU::ClearDCacheLine` + span-filtered `MMU::Read`). Provenance:
+  shallow master @ `a2efdf1`, checked out to pre-VS2026-gate parent
+  `66d8a89220` (gate `ed25d5649b`, 2026-08-05). Build notes that bit:
+  msys cmake/gcc must NOT drive it (SFML Unix errors); native
+  portable CMake + native ninja + vcvars MSVC required.
+- VALIDATED, both controls, before any game result was trusted:
+  deliberate dcbz fill logs 32/32 contiguous lines with exact
+  PC/EA/sp (no false positives on the stw/memset buffers);
+  deliberate stw fill trips GDB Z2 and deliberate lwz trips GDB Z3
+  in the same build/profile (validates the GDB channels too).
+- Trace sink: `C:\dolphin-trace\trace.log` (host-side file, flushed
+  per line, line cap). NoGUI starts paused: every run needs the GDB
+  halt/go handshake or nothing executes. Spaced ISO paths need the
+  single-string CLI form (array form strands NoGUI pre-emulation
+  with no stub - same bug class as the GUI Warning dialog).
+- FIRST OVERLAPPING WRITE (verbatim stock table, JIT): dcbz,
+  pc=`0x805B551C` (DCZeroRange leaf), lr=`0x805B32E8` (arena-clear
+  caller via lo/hi getters), span `[0x90000800, 0x935E0000)` =
+  1,765,312 lines x 32 B (~54 MB, ONE call), plus two small
+  DVD-work-buffer events nearby (`lr=0x804DBC0C/70`). Validated Z2
+  silence on the span means NO CPU store touched it: the wipe is
+  exclusively dcbz.
+- FIRST FST READ: none observed. Validated Z3 silence + span-hooked
+  MMU reads at zero across full runs (fastmem off to funnel JIT
+  loads). CPU-load scope only: DVD DMA never passes that path.
+- POINTER REWRITE (open lead, not game behavior): under this
+  NoGUI/master build the boot-info FST words read UNSET at
+  birth-halt (`0/0x817FEC60/0/0`) and arrive later
+  (`0/0x817DA740/0x817DA740/153792`) with NO CPU store trapped on
+  the validated Z2 channel - consistent with async/host-side HLE
+  apploader completion clobbering words (and racing installs).
+  GUI-18995 showed words set at birth; hardware T0 proves the
+  synchronous timing model. Protocol fix going forward:
+  wait-for-words before installing under this build.
+- 0x805B99D0 interpreter stop: singular spurious sample at an IRQ
+  helper (no watch there); unresolved, claimed for nothing.
+
 ## Reinstall + fatal-caller recovery (Sep 2026)
 
 - Wipe is ONE-SHOT, not continuous: a table reinstalled at T+8s
