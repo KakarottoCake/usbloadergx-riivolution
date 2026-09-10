@@ -46,6 +46,31 @@ Read back every poked word from RAM before trusting a result.
 cache-bypassing GDB reads) - the flushed words, result blocks, and
 dumped bytes are the verdict.
 
+## Run (v6: memwindow under the production allocator + prior flows)
+
+`make` links `memory/mem2.cpp` + `mem2alloc.cpp` with the loader's own
+`-wrap` allocator flags and calls `MEM2_init(48)`, so every malloc in
+the binary (including libstdc++'s) routes through the production
+two-heap chain. `RunMemWindow()` (source/memwindow.cpp) executes first,
+automatically: T0-scale regression (slot 0, must be in-place +
+consumed), Spectral-scale mirror-window (slots 1-2, clean + history),
+and consumption-ladder runs (slots 3+, hog-to-level with retained
+blocks). Each slot reports plain/compacted sizes, path count, first
+throwing op (0 = none), install/consume flags and MEM1/MEM2 figures to
+the mailbox at `0x80000300` (8 words/slot: plain, compact, paths,
+failOp|crc, inPlace|consumed, mem1delta, mem2pre, hogKept; word 0 is
+the phase, 99 = done). GDB polls phase 99, then dumps slots. The v4/v5
+poked production-installer flows follow unchanged and re-verify under
+the new routing.
+
+v6 results (18995, Null video): all slots failOp=0 down to ~229 KB
+MEM2 free - no throwing op found; T0 regression green. The 64 KB hog
+loop retained only ~3 MB/slot although MEM2 showed room (adapter MEM2
+sizing vs Wii loader layout unestablished - harness-fidelity limit,
+not a production signal). Mirror gaps: synthetic tree is flat, not
+12-deep; modOffsets/LayoutFrom path not mirrored; tail
+(CollectPlaced/FindSkips/PlanFragRegion/DescribeProbe) unmirrored.
+
 ## GDB-stub quirks found (Dolphin 5.0-18995, single-session stub)
 
 - One TCP session per boot; `detach` is unsupported — close and reconnect
