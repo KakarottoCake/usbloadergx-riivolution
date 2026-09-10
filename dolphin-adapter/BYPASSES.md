@@ -476,6 +476,13 @@ no unverified address is substituted anywhere on this evidence.
 
 ## Reservation experiment (SMG2-specific, in progress)
 
+- FIT: reservation `[0x90000800, 0x90040800)` (256 KiB,
+  32 B-aligned both ends) holds every table: stock 153792
+  (spare 108352), T0 plain 153934, T0 compact 144323, Spectral
+  plain 230076 (spare 32068), Spectral compact 211016. End
+  misalignment is irrelevant (clear starts on the aligned end;
+  no straddling line touches the tail).
+
 - CONTRACT (exact, file-order from the converged trace): entry
   zeroes TOP (`pc=800046C0`) -> setter writes BASE=`0x90000800`
   (`pc=805B4ED0 lr=805B399C`) and TOP=`0x935E0000`
@@ -497,12 +504,37 @@ no unverified address is substituted anywhere on this evidence.
   (`ea=90000808 val=0000118D`), normal idle (not the dead park),
   pointer intact, narrowing + streaming traffic intact.
   Survival, lookup, and allocator activity all proven locally.
+- PRODUCTION SHAPE (identified, unexecuted): pokes proved the
+  setter clamp keeps raw incoming when the floor is raised
+  (BASE stayed `0x90000800`, wipe proceeded) - so the floor
+  immediates are NOT the patch site. Identified instead: patch
+  the BASE getter (`0x805B4E70`, 8-byte `lwz/blr`) with a branch
+  to a loader-planted trampoline (`lwz/addis/blr`, +`0x40000`)
+  in a code cave. ONE getter feeds clearer, heap, and narrower
+  alike (traced), so a single 4-byte branch + 12-byte trampoline
+  narrows all three coherently; the streaming TOP write is
+  untouched. Loader-applicable post-apploader pre-entry (same
+  verified point and DOL-patch machinery as table install).
+  SMG2-specific addresses; needs cave survey + patch code + test.
 - SPECTRAL TABLE: 1238 valid reads (root `0x19DA`, entry/name
   bytes), ZERO dcbz lines inside the reservation, then a
   content-stage wedge (stub unresponsive <20 s) - expected: mod
   offsets have no serving backend here. Survival + lookup
   proven; file CONTENT needs a replacement-file backend the
   stock control cannot provide.
+- WRITE-SILENCE (boot-to-extended-idle, ~4.5 min, 4.4M-line
+  trace): ZERO `reservewrite` + ZERO dcbz inside the reservation;
+  game alive across code regions, narrowing intact. Level-loading
+  coverage rides the backend run below.
+- BACKEND (Dolphin Riivolution DirectoryBlob, native): v11a
+  descriptor boots to idle with modded FST (`w38=0x817C7D40`
+  `w3c=230076` - same 230076 bytes as GX's plain build, cross
+  implementation agreement); `replacements.log` maps 2088 files
+  (CustomCode 15 incl. 5 LoaderSB4, 267+1881 shape) with
+  disc offsets/lengths and disc fallback; 299k stock-site parse
+  reads flow. Save selection + playable level need input
+  driving (movie/input poke - planned, not done); Wii stays
+  paused until that integrated run passes.
 - HLE PUBLICATION STATUS: our pre-entry host install (CopyToEmu
   + words overwriting apploader-published stock words) stays
   marked emulator-specific until compared with GX's actual
