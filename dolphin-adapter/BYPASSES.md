@@ -391,6 +391,33 @@ no unverified address is substituted anywhere on this evidence.
   DMA, host-side HLE writes, and IOS-side writes are outside both
   and not excluded.
 
+## Install boundary + execution order (dev build, Sep 2026)
+
+- HLE boundary works: `install.fst` loads to `0x92000000` with words
+  set, verified, and logged synchronously pre-entry
+  (`install dest=92000000 size=153792 verified=1`); no GDB race
+  possible. GDB relegated to post-hoc observation.
+- ORDERED RECORD (file order = execution order, verbatim-stock run):
+  install -> apploader/entry zeroes TOP slot (`pc=800046C0`) ->
+  init sets BASE=`0x90000800` (`lr=805B399C`) -> init sets
+  TOP=`0x935E0000` (`lr=805B39B0`) -> stack clear -> arena clear
+  `[0x90000800, 0x935E0000)` 1.77M dcbz, one call (`lr=805B32E8`)
+  -> ... -> TOP NARROWED to `0x90DB4800` (`lr=804BCDE4`,
+  streaming module, near end of the clear storm) -> DVD
+  work-buffer clears. Setter-before-clear holds by
+  value-consistency AND now by order.
+- RESERVATION, corrected wording: NO TESTED reservation survives
+  (overwritten slots + the wipes above close the tested placements;
+  reservation-timing/startup-behavior changes are untested).
+  Located candidate (NOT a proposal): `[0x90DB4800, 0x935E0000)`
+  (~4.6 MB) is cleared once, then heap-excluded by the narrowing -
+  mapped post-boot, fits the table easily. Prerequisites, all open:
+  heap-cap reliability, an owned post-clear install point, and
+  first-read timing.
+- First FST READ still unobserved (validated-silent CPU channels;
+  DMA excluded by design). Pointer words arrive post-entry with no
+  trapped CPU store (HLE-async lead stands).
+
 ## Inputs ledger
 
 - CAPTURED (SB4E01 T0 card logs, v3.36+): arena `{0, 0x817DA740,
