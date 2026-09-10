@@ -21,7 +21,9 @@
 #include <string>
 #include "riivo/RiivoFstBuild.hpp"
 #include "riivo/RiivoFst.hpp"
+#include "riivo/RiivoFstWalk.hpp"
 #include "riivo/RiivoReconcile.hpp"
+#include "riivo/RiivoValidate.hpp"
 
 using namespace Riivo;
 
@@ -194,6 +196,95 @@ int main()
 				printf("  wrote %s CRC32 %08x\n", dst.c_str(),
 					   Crc32(&compact[0], (u32) compact.size()));
 			}
+		}
+	}
+
+	printf("3. production ValidateTable over the same workload\n");
+	{
+		// Rebuild the T0 tree exactly as section 1 did, then drive the
+		// REAL production window (not a mirror of it).
+		FstBuilder b;
+		ck(b.Parse(&base[0], (u32) base.size(), true), "base re-parses");
+		ck(ApplyT0(b), "T0 redirects re-apply");
+		u64 regionStart = 0x0180000000ULL;
+		const u32 align = 32768;
+		u64 cursor = regionStart;
+		const u64 mask = (u64) align - 1;
+		std::map<std::string, u64> modOffsets;
+		std::map<std::string, u32> modSizes;
+		std::vector<RedirectSpec> redirects;
+		std::vector<CreatedFile> created;
+		std::vector<RegRecord> records;
+		const char *paths[2] = { kT0A, kT0B };
+		u32 sizes[2] = { kT0ASize, kT0BSize };
+		char lower[160];
+		for (int i = 0; i < 2; ++i)
+		{
+			snprintf(lower, sizeof(lower), "%s", paths[i]);
+			for (char *c = lower; *c; ++c)
+				if (*c >= 'A' && *c <= 'Z')
+					*c += 32;
+			cursor = (cursor + mask) & ~mask;
+			modOffsets[lower] = cursor;
+			cursor += (sizes[i] + mask) & ~mask;
+			modSizes[lower] = sizes[i];
+			CreatedFile c;
+			c.disc = lower;
+			c.external = "usb1:/riivolution/gxdiag/T0/x.bin";
+			created.push_back(c);
+			RegRecord r;
+			r.disc = lower;
+			r.external = c.external;
+			r.offset = modOffsets[lower];
+			r.length = sizes[i];
+			records.push_back(r);
+		}
+		ck(b.LayoutFrom(modOffsets) == 0, "early placement clean");
+		std::vector<u8> plain;
+		b.Serialize(plain, true);
+		std::map<std::string, SkipReason> addFails;
+		ValidateRequest vreq;
+		vreq.builder = &b;
+		{
+			// The disc baseline for expectations: parse the same base.
+			static Fst discFst;
+			ck(discFst.Parse(&base[0], (u32) base.size(), true),
+			   "disc baseline parses");
+			vreq.fst = &discFst;
+		}
+		vreq.plainFst = &plain;
+		vreq.modOffsets = &modOffsets;
+		vreq.expectedModSizes = &modSizes;
+		vreq.fstReserve = (basePath && basePath[0]) ? 153792 : 0;
+		vreq.region = regionStart;
+		vreq.modRegionStart = regionStart;
+		vreq.redirects = &redirects;
+		vreq.created = &created;
+		vreq.modRecords = &records;
+		vreq.modAddFails = &addFails;
+		vreq.imageBytes = 4685037568ULL;
+		vreq.sectorSize = 512;
+		vreq.usedFrags = 3;
+		ValidateResult vres;
+		int trace = -1;
+		ValidateTable(vreq, vres, &trace);
+		ck(!vres.oom, "no OOM flag");
+		ck(vres.fstWalkOK, "production walk passes");
+		ck(vres.plan.ok, "production region plan passes");
+		ck(vres.placed.size() == 2, "both files placed");
+		ck(vres.modSkips.empty(), "no skips");
+		ck(trace == VOP_NONE, "trace runs to completion");
+		if (basePath && basePath[0])
+		{
+			ck(vres.useCompact, "production stages compacted");
+			ck(vres.staged.size() == 144323,
+			   "production staged bytes are the 144323-byte table");
+			ck(vres.stats.fstSize == 144323, "stats match staged bytes");
+		}
+		else
+		{
+			ck(!vres.useCompact, "unknown reservation keeps plain");
+			ck(vres.staged.empty(), "no extra staged copy on plain path");
 		}
 	}
 

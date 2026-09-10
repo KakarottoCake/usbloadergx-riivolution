@@ -36,14 +36,17 @@ build_run test_fstbuild "$SRC/riivo/RiivoFstBuild.cpp" "$SRC/riivo/RiivoFst.cpp"
 build_run test_scale "$SRC/riivo/RiivoFstBuild.cpp" "$SRC/riivo/RiivoFst.cpp"
 
 # The exact GXDiag T0 workload (two created files, real sizes) through the
-# real serializer: delta-only on a synthetic base by default; with
-# T0_BASE_FST set, asserts the rebuilt table is exactly the 153934 bytes
-# the T0 card log reports and writes t0-rebuilt.fst.
-build_run test_t0serializer "$SRC/riivo/RiivoFstBuild.cpp" "$SRC/riivo/RiivoFst.cpp"
+# real serializer AND the real production validation window: delta-only on
+# a synthetic base by default; with T0_BASE_FST set, asserts the rebuilt
+# table is exactly the 153934 bytes the T0 card log reports and that
+# ValidateTable stages the 144323-byte compacted table.
+build_run test_t0serializer "$SRC/riivo/RiivoFstBuild.cpp" "$SRC/riivo/RiivoFst.cpp" \
+	"$SRC/riivo/RiivoFstWalk.cpp" "$SRC/riivo/RiivoFragPlan.cpp" "$SRC/riivo/RiivoValidate.cpp"
 
 # The seam RiivoBoot walks on the console: FST -> BuildRedirects -> FstBuilder.
 # Needs RiivoConfig (for JoinPath) and hence pugixml.
 build_run test_pipeline "$SRC/riivo/RiivoFstBuild.cpp" "$SRC/riivo/RiivoFst.cpp" \
+	"$SRC/riivo/RiivoFstWalk.cpp" "$SRC/riivo/RiivoFragPlan.cpp" "$SRC/riivo/RiivoValidate.cpp" \
 	"$SRC/riivo/RiivoFile.cpp" "$SRC/riivo/RiivoConfig.cpp" "$SRC/xml/pugixml.cpp"
 
 # Where the rebuilt table gets written into the running game's memory. Mostly
@@ -200,24 +203,24 @@ build_run test_resolvemerge "$SRC/riivo/RiivoConfig.cpp"
 # manifest extents, chained into BuildManifestV1 + ValidateManifestV1.
 # Needs the file planner plus the manifest, config, FST and pugixml, mirroring
 # test_pipeline's link set.
-build_run test_manifest_extents "$SRC/riivo/RiivoFile.cpp" "$SRC/riivo/RiivoManifest.cpp" "$SRC/riivo/RiivoConfig.cpp" "$SRC/riivo/RiivoFst.cpp" "$SRC/xml/pugixml.cpp"
+build_run test_manifest_extents "$SRC/riivo/RiivoFstBuild.cpp" "$SRC/riivo/RiivoFst.cpp" "$SRC/riivo/RiivoFstWalk.cpp" "$SRC/riivo/RiivoFragPlan.cpp" "$SRC/riivo/RiivoValidate.cpp" "$SRC/riivo/RiivoFile.cpp" "$SRC/riivo/RiivoManifest.cpp" "$SRC/riivo/RiivoConfig.cpp" "$SRC/xml/pugixml.cpp"
 
 # Two-phase reconciliation (Newer SMBW fix): early registration records
 # against late placement, skip reasons, recovered-offset matching, and the
 # previous-boot outcome parser. Header-only reconcile plus the FST builder
 # (last-wins), the file planner (size-cache reuse) and the resolver.
-build_run test_reconcile "$SRC/riivo/RiivoFstBuild.cpp" "$SRC/riivo/RiivoFst.cpp" "$SRC/riivo/RiivoFile.cpp" "$SRC/riivo/RiivoConfig.cpp"
+build_run test_reconcile "$SRC/riivo/RiivoFstBuild.cpp" "$SRC/riivo/RiivoFst.cpp" "$SRC/riivo/RiivoFstWalk.cpp" "$SRC/riivo/RiivoFragPlan.cpp" "$SRC/riivo/RiivoValidate.cpp" "$SRC/riivo/RiivoFile.cpp" "$SRC/riivo/RiivoConfig.cpp"
 
 # Byte-diff against Dolphin's reference FST serializer and file-patch
 # semantics: extracted DirectoryBlob/RiivolutionPatcher logic (host-only
 # reference copy, see the file header) runs against the same trees and
 # patches as our builder. Needs the file planner link set for the manifest
 # half of the comparison.
-build_run test_dolphinfst "$SRC/riivo/RiivoFstBuild.cpp" "$SRC/riivo/RiivoFst.cpp" "$SRC/riivo/RiivoFile.cpp" "$SRC/riivo/RiivoManifest.cpp" "$SRC/riivo/RiivoConfig.cpp" "$SRC/xml/pugixml.cpp"
+build_run test_dolphinfst "$SRC/riivo/RiivoFstBuild.cpp" "$SRC/riivo/RiivoFst.cpp" "$SRC/riivo/RiivoFstWalk.cpp" "$SRC/riivo/RiivoFragPlan.cpp" "$SRC/riivo/RiivoValidate.cpp" "$SRC/riivo/RiivoFile.cpp" "$SRC/riivo/RiivoManifest.cpp" "$SRC/riivo/RiivoConfig.cpp" "$SRC/xml/pugixml.cpp"
 
 # The pre-launch check for files a mod names but the card does not have.
 # The existence test is injected, so this runs with no filesystem: path
 # joining, partial packs, duplicate claims and the <folder> exemption.
-build_run test_preflight "$SRC/riivo/RiivoFile.cpp" "$SRC/riivo/RiivoConfig.cpp" "$SRC/riivo/RiivoFst.cpp" "$SRC/xml/pugixml.cpp"
+build_run test_preflight "$SRC/riivo/RiivoFstBuild.cpp" "$SRC/riivo/RiivoFstWalk.cpp" "$SRC/riivo/RiivoFragPlan.cpp" "$SRC/riivo/RiivoValidate.cpp" "$SRC/riivo/RiivoFile.cpp" "$SRC/riivo/RiivoConfig.cpp" "$SRC/riivo/RiivoFst.cpp" "$SRC/xml/pugixml.cpp"
 
 printf '\nall suites passed\n'
