@@ -175,8 +175,10 @@ clearing), not a track proven by elimination.
 ## Reinstall + fatal-caller recovery (Sep 2026)
 
 - Wipe is ONE-SHOT, not continuous: a table reinstalled at T+8s
-  (after wipe+hang) survives 30 s+ verified-intact. Late installs
-  surviving is consistent with this, not with ongoing clearing.
+  (after wipe+hang) survives 30 s+ verified-intact. CONDITION on that
+  claim: the game was already parked; a parked game may simply never
+  run the clearer again. One-shot DURING NORMAL STARTUP is not
+  established by this - only that nothing re-wipes a parked game.
 - ROUND-1 (T+3 s) already shows wipe+park complete: both events live
   inside the first 3 s post-birth. Their causal order is NOT
   determined (erasure-before-first-access vs failure-during-handling
@@ -207,6 +209,37 @@ clearing), not a track proven by elimination.
   first-read-T (unknown), and a truly owned execution point between
   them - plus, for any MEM2 site, surviving the wipe. No timed
   delays.
+
+## Validity + control + Z0 verdict (Sep 2026)
+
+- TEST-VALIDITY CORRECTION: the Spectral-probe hang cannot speak to
+  MEM2 viability. Its table carries mod-region offsets no local
+  backend serves (installing the table never reproduced GX's cIOS
+  fragment mapping), so the fatal path there is an expected
+  missing-data failure. The SMR.szs pathname is a lead, not proof
+  of the failing request.
+- Z0 PROVEN DEAD (clean control): halted at birth, exec breakpoint
+  set one call ahead at certain-execution `0x80004058`, continue -
+  game demonstrably ran past it to idle with no stop. All trap-based
+  plans are void; the earlier "unproven" verdicts collapse to dead.
+- Dump-caller identified (static, from park-stack frames): `0x804B1D70`
+  is an async request dispatcher - busy-waits on a request state
+  word, GQR (streaming-I/O) setup prologue, per-state handlers, with
+  the queue-dump/hang as its failure leg. Shape fits a media-stream
+  (DVD/audio) request path; the error it reports is a request that
+  never completes. Subsystem naming stays a lead pending the direct
+  caller's disassembly.
+- VERBATIM-STOCK CONTROL (all reads servable): stock SB4E01 table at
+  `0x92000000`, birth install, repoint - IDENTICAL wipe (post-mortem
+  all zeros) + dead park `0x805B2B14`/EE-off, pointer untouched. So
+  the hang needs no mod content and the wipe is content-blind. What
+  this does NOT separate: wipe-first vs MEM2-reads-broken (a wiped
+  table preempts both). MEM2-read viability is still open - and with
+  traps dead, ordering work continues via install-timing variants +
+  static code, not watchpoints.
+- Standing consequence: a birth-installed MEM2 table is dead before
+  use either way. The wipe is THE blocker; viability questions
+  beyond it stay moot until a table survives it.
 
 Scope note (narrowed per review): established ONLY (i) lowered arenaHi
 with no table changes nothing observable here, and (ii) the wipe is
