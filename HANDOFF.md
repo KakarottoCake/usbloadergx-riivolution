@@ -1,8 +1,46 @@
-# Handoff — 2026-09-09 (updated: T0 + Gravity CONFIRMED booting in game on hardware; compaction repair verified end-to-end)
+# Handoff — 2026-09-09 (updated: Spectral 20-min + yom/SOME01 triage; phase-timed locally; questions only, no runs)
 
 State of the SB4E01 (Super Mario Galaxy 2) debugging effort. Read the
 "Latest evidence" section first — it supersedes the drive-blocker framing
 below, which is kept for the steps it still requires.
+
+## Spectral 20-min + yom/SOME01 triage (light frozen ON = hung, not playing)
+
+- Spectral PAL (2378 files, 15 folders): log ends at "table serialised:
+  239688", light solid ON 20 min. Solid-ON-persisting rules out handover
+  (1 s then dark), refusal (blink groups + menu) and play (dark+flicker):
+  hung pre-handover with the light frozen. Card log ends before the next
+  persist, so the hang is in [expectations, FstWalk, compaction, report,
+  gate] - all pure CPU. Timed LOCALLY at full scale (real base + real
+  1912-file tree: 1675 add/237 repl, same shape as the log's 2141/267):
+  expectations 0.00 s, walk-open 0.00 s, walk-check 0.02 s, compacted
+  209016 in 0.06 s, staging memcpy+CRC 0.00 s; plain 222674 vs log's
+  230076 (version drift, same order). NO algorithmic hang at this scale.
+  Verdict: not a CPU loop - crash/exception in that window, or card-side
+  stall; needs the file tail (does it end at serialised?) to localize.
+  Late installation stays unproven by design (card gone) - stated.
+- Yoshi (7 replacements, table 153790 IN PLACE): relocation exonerated.
+  cIOS 249 = beta1, and the "cannot be served" verdict is LOGGED but
+  consumed NOWHERE - fragments register and hook reads proceed against
+  an incapable cIOS. Log ends inside hook verification = hung-WDVD_Read
+  shape. SOME01's empty-mod beta1 run is the control (clean WITHHELD,
+  nothing read). Suspected missing gate (withhold file work on negative
+  verdict): proposal only. Needs: log tail + screen + (config, minimal)
+  a beta3-slot run.
+- SOME01 resolved: folder path resolves but EMPTY (populate or fix XML)
+  + all slots beta1 (use beta3). As-run = correct no-mod boot, nothing
+  broken if that was the intent.
+- Newer 24 mismatches: USA-vs-PAL revision drift, correctly skipped,
+  do-not-force stands. SMNP01 §12 regression green (incl. a self-caught
+  hand-arithmetic slip the test now guards).
+- Generality ledger: compaction live on SB4E01 x2 + RMGE01; grown path
+  preserved on SMNP01/Spectral-shape; refusals intact; preflight caught
+  USA/PAL drift. MEM2 marker dormant throughout.
+
+Open, no new runs (tails of existing files + outcomes):
+1. Spectral file: does it end at "table serialised"? Screen/light
+   during the 20 min (already answered: solid ON - hung, recorded).
+2. yom file tail (from "checking...") + screen? 3. Yoshi on beta3 slot?
 
 ## Hardware round on v3.43 (c7d6d27a): 4 logs, compaction live on 3 titles
 
