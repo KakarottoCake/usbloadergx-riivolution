@@ -60,6 +60,20 @@
 // Related: the log's "492235142 bytes" is MAPPED DISC PAYLOAD (offset
 // accounting), not RAM - the window itself holds single-digit MB
 // (printed below). Never compare the two as if both were memory.
+//
+// V11A REPLAY (J:/Backup/.../super-mario-spectral_v11a_dd08f): the 5
+// missing files are LoaderSB4{E,J,K,P,W}.bin (2308 B each) plus renamed
+// code files (CustomCode_SB4*.bin/.map). With that tree every count is
+// EXACT: 267+1881=2148 planned, plain table 230076, placed 2088,
+// compact attempt 211016 (still over the 153792 reservation, so plain
+// is kept - a decision that depends on names only, hence exact), all
+// 12 listing lines identical, trace clean, no OOM. Remaining delta:
+// mapped payload 491715020 vs 492235142 (+520122 tester-side): file
+// SIZES differ somewhere with identical names. Sizes never change
+// allocation SHAPE (counts and names fix every buffer size, including
+// the 211016 compact build) - only offset VALUES, i.e. table content.
+// So the window's allocation behavior is exactly reproduced; closing
+// the last 520122 bytes needs the tester's sizes, not their contents.
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -408,10 +422,10 @@ int main()
 		payload += it->second;
 	printf("  mapped payload: %llu bytes (hardware log: 492235142)\n",
 		   (unsigned long long) payload);
-	printf("  window: oom=%d walk=%d paths=%u compact=%d staged=%u "
-		   "plan=%d placed=%u skips=%u trace=%d\n",
+	printf("  window: oom=%d walk=%d paths=%u compact=%d compactBytes=%u "
+		   "staged=%u plan=%d placed=%u skips=%u trace=%d\n",
 		   (int) vres.oom, (int) vres.fstWalkOK, vres.expectedPaths,
-		   (int) vres.compactOK,
+		   (int) vres.compactOK, vres.compactBytes,
 		   (unsigned) vres.staged.size(), (int) vres.plan.ok,
 		   (unsigned) vres.placed.size(),
 		   (unsigned) vres.modSkips.size(), trace);
