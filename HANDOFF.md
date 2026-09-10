@@ -21,19 +21,41 @@ below, which is kept for the steps it still requires.
   algorithmic hang exists in that window. Remaining: silent crash/
   exception there, or the paste ends where the file does not.
 - Decider, zero cost: does `usbloadergx_riivo_SB4E01.log` END at
-  "table serialised: 239688 bytes"? If yes: crash in the window above
-  (bisect-build with persists is the next step, not a broad round). If
-  it continues: paste from there. Same question stands for the USA
-  Spectral log (ends at 230076) and yom (ends at "checking...").
+  "table serialised: 239688 bytes"? ANSWERED 2026-09-10: YES, and the
+  USA file ends at 230076 the same way. Crash CONFIRMED in the window,
+  both regions, same line. Local timing already cleared algorithms
+  (0.00-0.06 s at full shape), so the remaining shape is heap
+  exhaustion on the Wii (35 MB free at serialise, ~6300-path
+  expectations + two FST walks + 209 KB compaction buffer landing on a
+  heap fragmented by 2300+ small file entries) - a silent
+  terminate, which matches "no log, frozen light" exactly. Committed
+  (branch, no release): `expectedFst.reserve()` up front, the whole
+  window under try/catch(bad_alloc) that withholds with
+  "REFUSED: out of memory during validation (N paths, MEM2 free X KB)"
+  instead of dying silent, plus a "validation workspace" MEM2 line on
+  every log so the next run reads the memory pressure directly.
+  Compaction path itself untouched - same bytes, same decisions.
+  Note: PAL XML ran on a USA disc (German locale in the listing); both
+  regions die identically, so this is scale, not content - but USA XML
+  for USA discs going forward.
+- Yoshi CONFIRMED 2026-09-10 (rerun, slot 252 beta3): 7 replacements,
+  plain table 153790 vs 153792 (2 spare, IN PLACE, no compaction
+  needed), hook 7/7, preflight 3/3, FST_STAGED, shutdown checksum
+  intact - and the game runs fine. Third successful hardware case
+  (T0, Gravity, Yoshi) + RMGE01 compaction. Pinned as host §14
+  (2-spare in-place; 1-over grows). The beta1 run's suspected missing
+  gate stands as an untriggered proposal only - beta3 consumes the
+  verdict path correctly (or rather, never trips it).
+- SOME01 CLOSED: tester on beta1 with no update path ("can't connect
+  Wii via internet"), struck from tests per owner. The log's verdict
+  stands on its own (empty folder + beta1 = correct no-mod boot); no
+  further SOME01 runs. Beta3-only requirement for file mods is now a
+  tester-selection criterion, not a per-run question.
 
-- Yoshi (7 replacements, table 153790 IN PLACE): relocation exonerated.
-  cIOS 249 = beta1, and the "cannot be served" verdict is LOGGED but
-  consumed NOWHERE - fragments register and hook reads proceed against
-  an incapable cIOS. Log ends inside hook verification = hung-WDVD_Read
-  shape. SOME01's empty-mod beta1 run is the control (clean WITHHELD,
-  nothing read). Suspected missing gate (withhold file work on negative
-  verdict): proposal only. Needs: log tail + screen + (config, minimal)
-  a beta3-slot run.
+- Yoshi beta1 run (superseded): verdict logged-but-unconsumed, log ended
+  inside hook verification (hung-read shape). Suspected missing gate was
+  a proposal only - the beta3 rerun never trips that path, so it stays
+  untriggered and uncommitted. No code changed for it.
 - SOME01 resolved: folder path resolves but EMPTY (populate or fix XML)
   + all slots beta1 (use beta3). As-run = correct no-mod boot, nothing
   broken if that was the intent.
@@ -44,10 +66,12 @@ below, which is kept for the steps it still requires.
   preserved on SMNP01/Spectral-shape; refusals intact; preflight caught
   USA/PAL drift. MEM2 marker dormant throughout.
 
-Open, no new runs (tails of existing files + one outcome):
-1. Spectral file: does it end at "table serialised"? (Light already
-   answered: solid ON = hung pre-handover, recorded.)
-2. yom file tail (from "checking...") + screen? 3. Yoshi on beta3 slot?
+Open, no runs asked (all current questions answered this round):
+- Spectral crash window: confirmed by file ends; OOM hardening committed
+  to branch (no release). Next Spectral run happens only if a tester
+  volunteers it - the build will then either withhold with a memory
+  reading or proceed further, both informative.
+- Yoshi: closed (boots on beta3). SOME01: closed (tester struck).
 
 ## Hardware round on v3.43 (c7d6d27a): 4 logs, compaction live on 3 titles
 
