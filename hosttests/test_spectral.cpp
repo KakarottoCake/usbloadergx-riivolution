@@ -402,6 +402,55 @@ int main()
 		modOffsets[it->first] = cursor;
 		cursor += it->second;
 	}
+	// Extent map for the Dolphin GX-offset backend (SPECTRAL_MAP_OUT):
+	// "<byte_offset> <length> <host_path>" per placed file, sorted by
+	// disc key (offsets are unique 32 KB-aligned starts). Offsets match
+	// the rebuilt table exactly (same modOffsets); host paths resolve
+	// through the same prefix mapping as the size stats above.
+	{
+		const char *mapOut = getenv("SPECTRAL_MAP_OUT");
+		if (mapOut && *mapOut)
+		{
+			std::map<std::string, std::string> extOf;
+			for (size_t i = 0; i < redirects.size(); ++i)
+				extOf[NormaliseDiscPath(redirects[i].disc)] =
+					redirects[i].external;
+			for (size_t i = 0; i < created.size(); ++i)
+				extOf[NormaliseDiscPath(created[i].disc)] =
+					created[i].external;
+			FILE *f = fopen(mapOut, "w");
+			ck(f != 0, "map output opens");
+			u32 dumped = 0;
+			if (f)
+			{
+				for (std::map<std::string, u64>::const_iterator it =
+						 modOffsets.begin();
+					 it != modOffsets.end(); ++it)
+				{
+					u32 len = 0;
+					std::map<std::string, u32>::const_iterator sz =
+						modSizes.find(it->first);
+					if (sz != modSizes.end())
+						len = sz->second;
+					std::string host;
+					std::map<std::string, std::string>::const_iterator e =
+						extOf.find(it->first);
+					if (e != extOf.end() &&
+						e->second.compare(0, lister.cardPrefix.size(),
+										  lister.cardPrefix) == 0)
+						host = lister.modRoot +
+							e->second.substr(lister.cardPrefix.size());
+					fprintf(f, "%llu %u %s\n",
+							(unsigned long long) it->second,
+							len, host.c_str());
+					++dumped;
+				}
+				fclose(f);
+			}
+			printf("  extent map: %u rows -> %s\n", dumped, mapOut);
+			ck(dumped == planned, "map covers every planned entry");
+		}
+	}
 	// Record discs must match the redirect set (FindSkips reads them).
 	for (size_t i = 0; i < redirects.size(); ++i)
 	{
