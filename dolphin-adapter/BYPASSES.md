@@ -109,6 +109,32 @@ Conclusion carried to production: below-reservation placement is dead
 for SMG2; in-place is the only proven-safe MEM1 region; fix tracks are
 suffix-compacted in-place tables and MEM2-resident grown tables.
 
+## MEM2 verdict (real Spectral table, birth timing, Sep 2026)
+
+Prior Test 6 ("mid site installs land but the game never reads the
+table and parks") is now explained - the cause is overwrite, not
+consumption. Method: halt at birth, GDB-install the REAL 230076-byte
+Spectral plain table (`e17e71a3`) at `0x92000000` plus canary markers
+at `0x91000000`/`0x92040000`, repoint `0x80000038/3C` as InstallFst
+would, verify twice halted, `go`, sample, full post-mortem dump:
+- Install verified (head + markers read back twice, identically).
+- Within 30 s of `go`: table head, both markers, and below/above
+  canaries ALL read zeros. Post-mortem dump of the full 230076 bytes:
+  zero nonzero bytes (`f051507b` is the CRC of 230076 zeros).
+- Pointer word never rewritten by the game (still `0x92000000`).
+- Park at `0x805B2B14` EE off - the SAME park as the relocated-MEM1
+  wipe. The park is the dead-table signature, not position-specific.
+First divergence from the in-place baseline is overwrite, before any
+read: game startup clears the MEM2 span covering at least
+`0x91000000-0x92040010`. Survival fails first, so consumption is moot
+until a surviving site is found. NOT established: the wipe's agent
+(game MEM2/arena init presumed, not fingerprinted) or its exact
+extent - the follow-up is a marker map across MEM2, not another
+consumption attempt. A prior late-install run's non-zero post-mortem
+pattern is consistent with post-clear heap reuse over minutes, not
+contradictory. MEM2 stays a candidate with a known blocker (startup
+clearing), not a track proven by elimination.
+
 Scope note (narrowed per review): established ONLY (i) lowered arenaHi
 with no table changes nothing observable here, and (ii) the wipe is
 identical with arenaHi lowered or original. arenaHi's wider role is
