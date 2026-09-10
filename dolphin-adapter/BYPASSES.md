@@ -135,6 +135,41 @@ pattern is consistent with post-clear heap reuse over minutes, not
 contradictory. MEM2 stays a candidate with a known blocker (startup
 clearing), not a track proven by elimination.
 
+## Clearing follow-up (disassembly + trap control, Sep 2026)
+
+- WHEN narrowed: wipe AND park both land within 10 s of birth (10 s
+  sampling round already fully zero + parked). Agent still open.
+- NOT the C-runtime BSS init: entry `bl` chain (`__init_registers`,
+  BSS/ROM-copy table walks at `0x800042a0`) was disassembled from a
+  live dump; every BSS range is MEM1 (`[0x80006EA0,+0x63CE78)` is the
+  big one). No `dcbz`, no `lis 0x9000` in `[0x80004000,0x80044000)`.
+  Entry prologue confirmed to write `0x80000034` (arenaHi) itself at
+  `0x80004144` and to apply relocations; it never reads `0x80000038`.
+- The park is a DELIBERATE hang, not a crash: `0x805B2B10` is
+  `sync/nop/li r3,0/nop/b .`, called from a bounded (16-iteration)
+  queue-walk that bails to it on empty/`-1`/overflow. Its caller chain
+  (`bl 0x805B6210` OSReport-style logging + `bl 0x805B5C50` queue-head)
+  reads like a fatal-error queue dump. MSR EE off at the park vs EE on
+  at normal idle.
+- Discriminator refined: `0x805BCCB0` (self-loop, EE on) IS the normal
+  stock idle - seen on an unmodified boot. `0x805B2B14` (EE off) is the
+  dead-table/fatal park. Do not confuse the two.
+- METHOD constraint: GDB memcheck traps are DEAD on this stub. A
+  write-watch on `0x80000034` that the entry sequence demonstrably
+  stores never fired across 10 s of subsequent execution. Trap
+  silence (read or write) therefore means nothing - neither
+  dcbz-blindness nor no-access can be inferred from it. Proven working:
+  halt/regs/mem/mem_write/loadbin/dump/go-polling; halt reliably lands
+  on birth (`0x80004050`) at +20-30 s; explicit-quote CLI needed for
+  spaced ISO paths (bare array elements split at the first space and
+  strand Dolphin on a Warning dialog with no stub).
+- Ordering vs first FST lookup: still open. Traps can't time it;
+  static hunt continues into the OS/DVD region above `0x80440000`.
+- Hardware gating (unchanged): the MEM2 path stays behind the
+  `riivolution/mem2fst.txt` marker (default off); no hardware run
+  uses it. Compaction remains the working path; the Spectral
+  preparation stop is a separate investigation.
+
 Scope note (narrowed per review): established ONLY (i) lowered arenaHi
 with no table changes nothing observable here, and (ii) the wipe is
 identical with arenaHi lowered or original. arenaHi's wider role is
