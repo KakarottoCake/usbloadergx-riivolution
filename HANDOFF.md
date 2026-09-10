@@ -1,8 +1,79 @@
-# Handoff — 2026-09-09 (updated: v3.43 pre-release published + gated; GXDiag v9; hw7 pack staged, hardware not asked)
+# Handoff — 2026-09-09 (updated: 4 hardware logs triaged; compaction live on 3 titles; regressions encoded; questions pending, no runs asked)
 
 State of the SB4E01 (Super Mario Galaxy 2) debugging effort. Read the
 "Latest evidence" section first — it supersedes the drive-blocker framing
 below, which is kept for the steps it still requires.
+
+## Hardware round on v3.43 (c7d6d27a): 4 logs, compaction live on 3 titles
+
+All builds current (c7d6d27a == v3.43 code). Compaction engaged exactly
+as the host driver predicted wherever it was tried:
+
+- T0 P1 (SB4E01, gxdiag): plain 153934 -> compacted 144323 (walk passed),
+  STAGED instead of plain, in place with 9469 spare, OUTCOME FST_STAGED,
+  staged checksum intact at shutdown. Byte-exact match with the local
+  serializer run (153934/144323). Screen outcome: ASKED, not yet known.
+- Gravity Demo (SB4E01, 151 files, 33 repl + 166 add): plain 158968 ->
+  compacted 147769 STAGED in place, shutdown checksum intact. Screen: ASKED.
+- RMGE01 Daredevil (17 repl, 0 add): plain 81309 -> compacted 79993
+  STAGED in place. (Prior batch; same mechanism, third title.)
+- Newer SMNP01 (PAL, 1100 files, 104 repl + 996 add): plain 63274,
+  compacted 60574 - BOTH overflow the 36712 reservation, so the grown
+  path is correctly preserved (planned 0x817E5940, verified against a
+  new host test with the log's exact arena/ranges). Compaction did not
+  eliminate relocation here; it was never expected to at +26 KB.
+- SMNP01 24 preflight mismatches: USA-built patch bytes vs PAL disc
+  bytes across 0x802f/0x8032/0x801b/0x800e/0x800b/0x8015 regions
+  (version tags, lis constants, branch-vs-load codegen, string data
+  where code was expected). Revision drift, correctly soft-skipped;
+  10 exact patches applied. DO NOT FORCE - writing USA opcodes over PAL
+  code is a crash. Fix belongs in a PAL-specific XML, not the loader.
+- Spectral (SB4E01, 2148 files, 503 memory patches): log ends at
+  "table serialised: 230076 bytes" (tail needed). Local reproduction
+  with the real base + real 1912-file local tree: 1912 applied (1675
+  add / 237 repl, ratio matches), plain 222674, compacted 209016
+  (0.06 s, parses, CRC logged) - both overflow, grown path stands.
+  Ops review Serialize->checkpoint: FstWalk.Check, report, FragPlan,
+  Activate (MEM2_alloc + memcpy + CRC), hook verification reads,
+  probe, ReportFstPlacement, shutdown, InstallPendingFst - nothing at
+  230 KB scale exceeds tested shapes (host scale suite covers 3920-file
+  tables; install mechanics proven to 153934 in Dolphin). Neither this
+  log nor Gravity's establishes late installation - structural: the
+  card is gone by then, so only blink codes or Gecko could, and neither
+  is in these logs. Stated, not overclaimed.
+- Yoshi (SB4E01, 7 replacements, table 153790 <= 153792: IN PLACE):
+  relocation exonerated by the numbers. Two findings: (1) cIOS slot 249
+  is beta1, not beta3 - verdict logged ("cannot be served") but consumed
+  NOWHERE downstream, so fragment registration + hook-verification reads
+  proceed against a cIOS that cannot serve them; the log ends inside
+  "checking the mod's files through the hook", the shape of a hung
+  WDVD_Read. SOME01's empty-mod run on non-beta3 is the control: with
+  nothing to read, the same verdict boots clean (WITHHELD NOT_SWITCHED).
+  Suspected missing gate (withhold file work on negative verdict) -
+  proposal only, no code changed. (2) Tail + screen needed to confirm.
+- SOME01 (grookeytambourine): folder path resolves but is EMPTY (0 files)
+  + all slots beta1 at the time -> correct WITHHELD NOT_SWITCHED no-mod
+  boot, dry run, game untouched. Resolution: populate the folder (or fix
+  the XML path) AND use a beta3 slot; if no-mod was intended, nothing is
+  broken - the log proves clean pass-through.
+
+Regressions encoded (host, CI): §12 SMNP01 exact-numbers placement
+(0x817E5940 + compacted-60574 variant), §13 T0-compacted-in-place
+consequence (144323 -> original address, arena untouched), t0serializer
+delta/compact/153934-gate, §9 T0 exact addresses (existing). Hardware
+pins recorded here: T0 153934/144323, Gravity 158968/147769,
+RMGE01 81309/79993, SMNP01 63274/60574->0x817E5940.
+
+Generality (not game-by-game): compaction live on SB4E01 x2 + RMGE01,
+grown path preserved on SMNP01/Spectral-shape, refusal paths intact
+(SOME01 empty, malformed rules), preflight caught USA/PAL drift on
+SMNP01. MEM2 marker path untouched by all of this (still dormant).
+
+Open, no new runs (questions on already-run tests + tails):
+1. T0 P1 screen outcome? 2. Gravity screen outcome?
+3. Spectral log tail (from "checking the mod's files") + screen?
+4. yom log tail (from "checking...") + screen? 5. Yoshi on a beta3
+slot (251/252 per the SB4E01 surveys) - config change, minimal.
 
 ## v3.43 pre-release (published, gated) + GXDiag v9 + hw7 pack
 
