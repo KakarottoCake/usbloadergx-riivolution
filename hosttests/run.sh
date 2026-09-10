@@ -218,6 +218,17 @@ build_run test_reconcile "$SRC/riivo/RiivoFstBuild.cpp" "$SRC/riivo/RiivoFst.cpp
 # half of the comparison.
 build_run test_dolphinfst "$SRC/riivo/RiivoFstBuild.cpp" "$SRC/riivo/RiivoFst.cpp" "$SRC/riivo/RiivoFstWalk.cpp" "$SRC/riivo/RiivoFragPlan.cpp" "$SRC/riivo/RiivoValidate.cpp" "$SRC/riivo/RiivoFile.cpp" "$SRC/riivo/RiivoManifest.cpp" "$SRC/riivo/RiivoConfig.cpp" "$SRC/xml/pugixml.cpp"
 
+# Exact-input Spectral reproduction: real USA XML + real mod tree + real
+# SB4E01 base through ParseFile -> Resolve -> BuildRedirects ->
+# ValidateTable. SKIPS unless SPECTRAL_FST/SPECTRAL_XML/SPECTRAL_MOD are
+# all set (the 2 GB tree is not CI material); with them, reports the
+# manifest deltas against the tester's hardware log
+# (Spectral_usbloadergx_riivo_SB4E01.log: 2148 found, 267+1881, 230076
+# bytes, stop inside ValidateTable) and the window outcome with opTrace.
+build_run test_spectral "$SRC/riivo/RiivoFstBuild.cpp" "$SRC/riivo/RiivoFst.cpp" \
+	"$SRC/riivo/RiivoFstWalk.cpp" "$SRC/riivo/RiivoFragPlan.cpp" "$SRC/riivo/RiivoValidate.cpp" \
+	"$SRC/riivo/RiivoFile.cpp" "$SRC/riivo/RiivoConfig.cpp" "$SRC/riivo/RiivoParser.cpp" "$SRC/xml/pugixml.cpp"
+
 # The pre-launch check for files a mod names but the card does not have.
 # The existence test is injected, so this runs with no filesystem: path
 # joining, partial packs, duplicate claims and the <folder> exemption.

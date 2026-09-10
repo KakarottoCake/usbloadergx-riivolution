@@ -10,9 +10,14 @@
 //   base mode (T0_BASE_FST=/path/to/153792-byte SB4E01 FST): parses the
 //     real base, applies the same redirects, and asserts the rebuilt
 //     table is EXACTLY 153934 bytes - the T0 card-log value. Writes
-//     $OUT/t0-rebuilt.fst plus CRC32. This is the gate the missing input
-//     (base FST bytes, AES-locked in the ISO without the console key)
-//     unblocks; see BYPASSES.md / HANDOFF.md.
+//     $OUT/t0-rebuilt.fst plus CRC32. Each buffer is hashed under its
+//     own label and pinned: plain 153934 = 13401a49, compacted 144323 =
+//     0409fd62. Section 3 drives the same workload through the REAL
+//     ValidateTable under mod-region placement (so its bytes differ
+//     from §1/§2) and requires the staged buffer to equal that tree's
+//     own re-compacted bytes - content identity, not just size.
+//     (The base FST bytes were the missing input, AES-locked in the ISO
+//     without the console key; see BYPASSES.md / HANDOFF.md.)
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -123,7 +128,9 @@ int main()
 	if (basePath && basePath[0]) {
 		ck(st.fstSize == 153934, "rebuilt is exactly 153934 (T0 log value)");
 		const u32 crc = Crc32(&out[0], (u32) out.size());
-		printf("  rebuilt CRC32: %08x\n", crc);
+		printf("  plain rebuilt CRC32: %08x\n", crc);
+		ck(crc == 0x13401a49,
+		   "plain buffer is the 13401a49 table (153934 bytes)");
 		const char *od = getenv("OUT");
 		std::string dst = od ? od : "/tmp";
 		dst += "/t0-rebuilt.fst";
@@ -193,8 +200,11 @@ int main()
 				ck(fwrite(&compact[0], 1, compact.size(), f) == compact.size(),
 				   "compacted table fully written");
 				fclose(f);
-				printf("  wrote %s CRC32 %08x\n", dst.c_str(),
-					   Crc32(&compact[0], (u32) compact.size()));
+				const u32 ccrc = Crc32(&compact[0], (u32) compact.size());
+				printf("  wrote %s compacted CRC32 %08x\n", dst.c_str(),
+					   ccrc);
+				ck(ccrc == 0x0409fd62,
+				   "compacted buffer is the 0409fd62 table (144323 bytes)");
 			}
 		}
 	}
@@ -280,6 +290,29 @@ int main()
 			ck(vres.staged.size() == 144323,
 			   "production staged bytes are the 144323-byte table");
 			ck(vres.stats.fstSize == 144323, "stats match staged bytes");
+			// Content identity, not just size: re-serialize THIS
+			// tree (§3 uses LayoutFrom mod-region placement, so its
+			// bytes legitimately differ from §1/§2's contiguous
+			// layout: plain 9390660a vs 13401a49) and require the
+			// staged buffer to BE that compacted table, byte for byte.
+			std::vector<u8> compact3;
+			ck(b.SerializeCompacted(compact3, true),
+			   "section-3 tree re-compacts");
+			const u32 plainCrc =
+				Crc32(&plain[0], (u32) plain.size());
+			const u32 stagedCrc =
+				Crc32(&vres.staged[0], (u32) vres.staged.size());
+			const u32 compact3Crc =
+				Crc32(&compact3[0], (u32) compact3.size());
+			printf("  §3 plain CRC32: %08x, staged CRC32: %08x, "
+				   "re-compacted CRC32: %08x\n",
+				   plainCrc, stagedCrc, compact3Crc);
+			ck(compact3.size() == vres.staged.size(),
+			   "staged size matches this tree's compacted size");
+			ck(compact3Crc == stagedCrc &&
+			   memcmp(&compact3[0], &vres.staged[0],
+					  vres.staged.size()) == 0,
+			   "staged buffer IS this tree's compacted table");
 		}
 		else
 		{
