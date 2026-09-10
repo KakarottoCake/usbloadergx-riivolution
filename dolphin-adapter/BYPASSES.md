@@ -237,15 +237,10 @@ clearing), not a track proven by elimination.
 - FIRST FST READ: none observed. Validated Z3 silence + span-hooked
   MMU reads at zero across full runs (fastmem off to funnel JIT
   loads). CPU-load scope only: DVD DMA never passes that path.
-- POINTER REWRITE (open lead, not game behavior): under this
-  NoGUI/master build the boot-info FST words read UNSET at
-  birth-halt (`0/0x817FEC60/0/0`) and arrive later
-  (`0/0x817DA740/0x817DA740/153792`) with NO CPU store trapped on
-  the validated Z2 channel - consistent with async/host-side HLE
-  apploader completion clobbering words (and racing installs).
-  GUI-18995 showed words set at birth; hardware T0 proves the
-  synchronous timing model. Protocol fix going forward:
-  wait-for-words before installing under this build.
+- POINTER REWRITE (RETIRED - profile artifact, see Causal-order
+  section): the "unset at birth / async arrival" sequence appears
+  only with AccurateCPUCache=True. Converged profile shows valid
+  words at birth; wait-for-words protocol withdrawn.
 - 0x805B99D0 interpreter stop: singular spurious sample at an IRQ
   helper (no watch there); unresolved, claimed for nothing.
 
@@ -372,13 +367,10 @@ no unverified address is substituted anywhere on this evidence.
   between setter and clear narrowing the bounds the allocator also
   reads - is prerequisites, not a proposal (setter/clear order and
   allocator-word identity both still open).
-- INSTALL BOUNDARY: under this NoGUI/master build the boot-info FST
-  words read UNSET at birth-halt and arrive later with no trapped
-  CPU store (validated channel) - consistent with async host-side
-  HLE apploader completion racing installs, NOT game behavior.
-  Protocol: wait-for-words before installing here; hardware timing
-  model unchanged (T0 boots). GUI-18995 showed words set - version
-  behavior difference, recorded, not explained.
+- INSTALL BOUNDARY (RETIRED - profile artifact): birth-unset words
+  and wait-for-words belonged to the AccurateCPUCache=True split
+  view. Converged profile: words valid at birth, install races
+  nothing. Hardware timing model was never affected.
 - TRAP-PC RELIABILITY WARNING: GDB trap stops do NOT reliably land
   on the faulting instruction (backing-state traps stopped at an
   `li` and an `mfmsr`-cluster instruction, neither a store).
@@ -464,6 +456,59 @@ no unverified address is substituted anywhere on this evidence.
   pointer and the wipe precedes first use - but the wipe is one
   established fact in the chain, not a certified primary
   blocker. No GX/Wii changes.
+
+## Reference reproduction (converged, preserved Sep 2026)
+
+- Profile: `gxtrace3` (`AccurateCPUCache=False`, `Fastmem=False`,
+  `FastmemArena=False`; dcbz slow-path hook intact, no dcache
+  split). Preserved as
+  `C:\dolphin-trace\reference\Dolphin.gxtrace3.ini`.
+- Stock control: unmodified boot, words valid at every phase,
+  stock parse reads (`pc=805D153C val=0000118D`) flowing, idle.
+  Preserved as `reference\trace-stock-converged.log`.
+- Install run: verbatim-stock table at MEM2 pre-entry, single
+  zero root-count read, abort, hang. Preserved as
+  `reference\trace-install-converged.log`.
+- Retired (profile artifacts, do not cite as behavior):
+  birth-unset words, async publication/clobber, wait-for-words
+  and repoint-after-waitmem, install-races-publication. All ran
+  under AccurateCPUCache=True host-stale reads.
+
+## Reservation experiment (SMG2-specific, in progress)
+
+- CONTRACT (exact, file-order from the converged trace): entry
+  zeroes TOP (`pc=800046C0`) -> setter writes BASE=`0x90000800`
+  (`pc=805B4ED0 lr=805B399C`) and TOP=`0x935E0000`
+  (`pc=805B4EA0 lr=805B39B0`) -> clearer reads BASE+TOP via
+  getters (`pc=805B4E70/805B4E40 lr=805B32BC/32C4/32B4`) then ONE
+  `DCZeroRange` call (`pc=805B551C lr=805B32E8`) -> streaming
+  narrower reads both (`lr=804BCDC4/CC`) and writes TOP only
+  (`lr=804BCDE4`, preserves BASE-relative size `0xDB4000`) ->
+  later consumer reads narrowed TOP (`lr=8059D08C`). All
+  consumers read the same two slots the setter writes.
+- MECHANISM (dev harness, SMG2-specific values): redirect the
+  BASE setter `0x90000800->0x90040800` (256 KB), install the
+  table at `0x90000800`. Clearer, heap, and narrower all consume
+  the patched value (traced); the streaming TOP write is
+  untouched, its ownership preserved. No address-skipping, no
+  occupied-region overwrite.
+- STOCK VALIDATION: byte-identical post-75 s dump (CRC
+  `36f2a321`), 494k valid parser reads
+  (`ea=90000808 val=0000118D`), normal idle (not the dead park),
+  pointer intact, narrowing + streaming traffic intact.
+  Survival, lookup, and allocator activity all proven locally.
+- SPECTRAL TABLE: 1238 valid reads (root `0x19DA`, entry/name
+  bytes), ZERO dcbz lines inside the reservation, then a
+  content-stage wedge (stub unresponsive <20 s) - expected: mod
+  offsets have no serving backend here. Survival + lookup
+  proven; file CONTENT needs a replacement-file backend the
+  stock control cannot provide.
+- HLE PUBLICATION STATUS: our pre-entry host install (CopyToEmu
+  + words overwriting apploader-published stock words) stays
+  marked emulator-specific until compared with GX's actual
+  apploader handoff (loader `InstallPendingFst` post-apploader
+  on hardware). Timing and context differ; the reservation
+  contract itself is game-side and would carry over.
 
 ## Inputs ledger
 
