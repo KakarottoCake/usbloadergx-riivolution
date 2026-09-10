@@ -401,6 +401,77 @@ int main()
 		   "MEM2 span disjoint from the MEM1 reservation");
 	}
 
+	printf("12. oversized grown table on SMNP01 hardware numbers\n");
+	{
+		//! Newer SMBW (SMNP01) grown rebuild, straight from a hardware log:
+		//! reservation 36712 at 0x817f7080, arena high unset-low, want
+		//! 63274. The loader planned 0x817e5940 there; pin it, plus the
+		//! refusal shape around it. Compaction (60574) still overflows, so
+		//! this workload keeps the grown path - the test guards the path,
+		//! not the outcome.
+		ArenaInfo a;
+		a.arenaLo = 0;
+		a.arenaHi = 0x817f7080;
+		a.fstAddr = 0x817f7080;
+		a.fstMaxSize = 36712;
+		const u32 want = 63274;
+		//! The log's 15 loaded ranges (dst,len pairs from the evidence
+		//! block), BSS from the DOL header. Well-formed, none malformed,
+		//! none fully inside the stale reservation.
+		const OccupiedRange occ[] = {
+			OccupiedRange(0x81201c60, 0x81201c80),
+			OccupiedRange(0x81201dc0, 0x81201de0),
+			OccupiedRange(0x817f5080, 0x817f7080),
+			OccupiedRange(0x81201c80, 0x81201d80),
+			OccupiedRange(0x80004000, 0x800066c0),
+			OccupiedRange(0x80006780, 0x802edce0),
+			OccupiedRange(0x800066c0, 0x80006720),
+			OccupiedRange(0x80006720, 0x80006780),
+			OccupiedRange(0x802edce0, 0x802edfc0),
+			OccupiedRange(0x802edfc0, 0x802edfe0),
+			OccupiedRange(0x802edfe0, 0x802fe6a0),
+			OccupiedRange(0x802fe6a0, 0x80351980),
+			OccupiedRange(0x80427980, 0x80429ea0),
+			OccupiedRange(0x8042b360, 0x8042fec0),
+			OccupiedRange(0x80351980, 0x8042ff1c), // BSS
+			OccupiedRange(0x817f7080, 0x81800000), // reservation chunk, as logged
+		};
+		FstPlacement p = PlaceFst(a, want, 32, occ,
+								  (u32)(sizeof(occ) / sizeof(occ[0])));
+		ck(p.ok, "accepted");
+		ck(!p.inPlace, "reported as grown");
+		ck(p.fstAddr == 0x817e5940, "hardware destination reproduced");
+		ck(p.newArenaHi == 0x817e5940, "arena follows down");
+		ck(p.malformedRanges == 0, "no malformed ranges");
+		ck(p.ignoredRanges == 0, "no stale-table overlap");
+		ck(p.reserved == a.arenaHi - p.fstAddr, "reserved is the drop");
+		//! Same layout, compacted size from the same log (60574): still
+		//! grown, still the same mechanics - compaction helps, not saves.
+		FstPlacement q = PlaceFst(a, 60574, 32, occ,
+								  (u32)(sizeof(occ) / sizeof(occ[0])));
+		ck(q.ok && !q.inPlace, "compacted still grown");
+		ck(q.fstAddr == 0x817e63e0, "smaller drop lands higher");
+	}
+
+	printf("13. compacted T0 size installs in place (repair consequence)\n");
+	{
+		//! The production repair stages compacted bytes whenever plain
+		//! overflows but compacted fits. For T0 that is 144323 bytes
+		//! against the 153792 reservation - and the placement must then be
+		//! in-place at the original address, never a cascade. Pins the
+		//! hardware-verified outcome (log: STAGED compacted, in place).
+		ArenaInfo a;
+		a.arenaLo = 0;
+		a.arenaHi = 0x817da740;
+		a.fstAddr = 0x817da740;
+		a.fstMaxSize = 153792;
+		FstPlacement p = PlaceFst(a, 144323, 32, 0, 0);
+		ck(p.ok && p.inPlace, "compacted size is in-place");
+		ck(p.fstAddr == 0x817da740, "address unchanged");
+		ck(p.newArenaHi == 0x817da740, "arena untouched");
+		ck(p.reserved == 0, "nothing taken from the heap");
+	}
+
 	printf("\n%d checks, %d failure(s)\n", checks, failures);
 	return failures ? 1 : 0;
 }
