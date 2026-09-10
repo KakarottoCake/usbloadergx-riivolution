@@ -9,7 +9,9 @@
 #include <sys/stat.h>
 #include <unistd.h>
 #include <algorithm>
+#include <exception>
 #include <map>
+#include <new>
 #include <gccore.h>
 #include <ogcsys.h>
 #include <ogc/lwp_watchdog.h>
@@ -1863,13 +1865,28 @@ namespace Riivo
 		LogStep("table serialised: %u bytes", (unsigned) newFst.size());
 		// Expectations come from the original disc and external-file sizes,
 		// not from reparsing the builder's result with the builder itself.
+		// Reserved up front: at Spectral scale this is ~6300 paths, and
+		// growing it by repeated reallocation fragments the loader's MEM2
+		// heap right before the two FST walks and the compaction buffer.
 		std::vector<FstWalkExpectation> expectedFst;
+		expectedFst.reserve(fst.FileCount() + expectedModSizes.size());
+		bool expectedComplete = true;
+		//! Validation workspace guard: everything from here through the
+		//! compaction decision is pure-CPU validation that must never kill
+		//! the boot silently. Spectral-scale runs die in this window (log
+		//! ends at "table serialised", light frozen) while the same work
+		//! times at ~0.1 s on host - the shape of heap exhaustion on the
+		//! Wii, not a loop. An allocation failure now withholds with a
+		//! named reason instead of freezing with no log.
+		bool validationOom = false;
+		bool fstWalkOK = false;
+		try
+		{
 		for (size_t i = 0; i < fst.FileCount(); ++i) {
 			const FstFile &original = fst.FileAt(i);
 			if (expectedModSizes.find(original.path) == expectedModSizes.end())
 				expectedFst.push_back(FstWalkExpectation(original.path, original.offset, original.length));
 		}
-		bool expectedComplete = true;
 		for (std::map<std::string, u32>::const_iterator it = expectedModSizes.begin();
 			 it != expectedModSizes.end(); ++it) {
 			std::map<std::string, u64>::const_iterator offset = modOffsets.find(it->first);
@@ -1878,7 +1895,7 @@ namespace Riivo
 		}
 		FstWalk gameWalk;
 		std::string walkError;
-		const bool fstWalkOK = expectedComplete && !newFst.empty() &&
+		fstWalkOK = expectedComplete && !newFst.empty() &&
 			gameWalk.Open(&newFst[0], newFst.size(), true, &walkError) &&
 			gameWalk.Check(expectedFst, &walkError);
 		if (fstWalkOK)
@@ -1887,6 +1904,9 @@ namespace Riivo
 		else
 			Addf(out, "  independent FST walk: REFUSED: %s\n",
 				 expectedComplete ? walkError.c_str() : "a mod path has no registered placement");
+		Addf(out, "  validation workspace : %u paths, MEM2 free %u KB\n",
+			 (unsigned) expectedFst.size(),
+			 (unsigned) (MEM2_freesize() / 1024));
 		//! Suffix-compacted variant of the same tree (same entries, paths,
 		//! offsets and sizes; shared string tails stored once). If the plain
 		//! table outgrows the apploader's reservation but the compacted one
@@ -1919,6 +1939,25 @@ namespace Riivo
 				newFst.swap(compactFst);
 			else
 				builder.Serialize(newFst, true); // restore plain stats below
+		}
+		} // end try: validation workspace
+		catch (const std::bad_alloc &)
+		{
+			validationOom = true;
+		}
+		catch (const std::exception &)
+		{
+			validationOom = true;
+		}
+		if (validationOom)
+		{
+			//! Allocation failure inside validation: refuse with a reason
+			//! instead of dying silent. newFst is untouched (the swap only
+			//! happens on the success path), so the refusal below is clean.
+			fstWalkOK = false;
+			Addf(out, "  independent FST walk: REFUSED: out of memory during validation (%u paths, MEM2 free %u KB)\n",
+				 (unsigned) expectedFst.size(),
+				 (unsigned) (MEM2_freesize() / 1024));
 		}
 		const FstBuildStats &st = builder.Stats();
 		plannedFstSize = st.fstSize;

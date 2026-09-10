@@ -472,6 +472,27 @@ int main()
 		ck(p.reserved == 0, "nothing taken from the heap");
 	}
 
+	printf("14. Yoshi 2-byte-spare table installs in place (hardware pin)\n");
+	{
+		//! Yoshi-over-Mario on SB4E01 (hardware log, beta3 slot): 7
+		//! replacements, no additions, plain table 153790 against the
+		//! 153792 reservation. Two bytes spare is still in-place - this
+		//! pins the exact boundary the passing hardware run took, so any
+		//! future off-by-one in the fit check fails loudly here first.
+		ArenaInfo a;
+		a.arenaLo = 0;
+		a.arenaHi = 0x817da740;
+		a.fstAddr = 0x817da740;
+		a.fstMaxSize = 153792;
+		FstPlacement p = PlaceFst(a, 153790, 32, 0, 0);
+		ck(p.ok && p.inPlace, "2-byte spare is in-place");
+		ck(p.fstAddr == 0x817da740, "address unchanged");
+		ck(p.newArenaHi == 0x817da740, "arena untouched");
+		//! One byte over must grow, never squeeze in.
+		FstPlacement q = PlaceFst(a, 153793, 32, 0, 0);
+		ck(q.ok && !q.inPlace, "one byte over is grown");
+	}
+
 	printf("\n%d checks, %d failure(s)\n", checks, failures);
 	return failures ? 1 : 0;
 }
