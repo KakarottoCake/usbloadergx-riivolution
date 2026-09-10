@@ -211,7 +211,6 @@ clearing), not a track proven by elimination.
   preparation stop is a separate investigation.
 
 ## Dev build: dcbz trace + controls (Sep 2026, master 66d8a89220)
-
 - Built `DolphinNoGUI.exe` (VS2022 17.14, NoGUI-only, patch in
   `MMU::ClearDCacheLine` + span-filtered `MMU::Read`). Provenance:
   shallow master @ `a2efdf1`, checked out to pre-VS2026-gate parent
@@ -354,6 +353,43 @@ untested - and the game's entry code writes the word itself
 (`0x80004148`), so it is actively managed, not ignored. MEM2 relocation
 is a separate unimplemented track (game MEM2-avoidance question open);
 no unverified address is substituted anywhere on this evidence.
+
+## Backing state + install boundary (Sep 2026)
+
+- Arena words at birth: TOP-slot `0x807D6684` = 0, BASE-slot
+  `0x807D0964` = `0xFFFFFFFF` (unset). Post-boot: TOP =
+  `0x935E0000`, BASE = `0x90000800`. The clear consumes them as
+  start=BASE, size=TOP-BASE (`subf` order verified in disassembly -
+  an earlier read had it backwards); the observed clear span
+  `[0x90000800, 0x935E0000)` matches the final values exactly, so
+  the setter precedes the clear (value-consistency ordering, not
+  trap PCs - see below).
+- RESERVATION ASSESSMENT: the slots are game-owned and overwritten
+  during init, so a loader-planted value does not survive; the same
+  words feed the allocator's heap (bottom-up reuse kills any
+  in-arena survivor - v1's pattern); above-TOP is unmapped. No
+  clean reservation exists. The only sketched shape - a hook
+  between setter and clear narrowing the bounds the allocator also
+  reads - is prerequisites, not a proposal (setter/clear order and
+  allocator-word identity both still open).
+- INSTALL BOUNDARY: under this NoGUI/master build the boot-info FST
+  words read UNSET at birth-halt and arrive later with no trapped
+  CPU store (validated channel) - consistent with async host-side
+  HLE apploader completion racing installs, NOT game behavior.
+  Protocol: wait-for-words before installing here; hardware timing
+  model unchanged (T0 boots). GUI-18995 showed words set - version
+  behavior difference, recorded, not explained.
+- TRAP-PC RELIABILITY WARNING: GDB trap stops do NOT reliably land
+  on the faulting instruction (backing-state traps stopped at an
+  `li` and an `mfmsr`-cluster instruction, neither a store).
+  Trap OCCURRENCE stands (values confirm the stores happened);
+  trap PCs do not identify instructions. dcbz-trace PCs are exact
+  (synchronous hook, disassembly-matched). The 0x805B99D0-cluster
+  stops stay unexplained-singular.
+- Exclusive-`dcbz` scoped to instrumented paths as required: the
+  trace sees CPU dcbz; GDB covers CPU stores/loads (validated);
+  DMA, host-side HLE writes, and IOS-side writes are outside both
+  and not excluded.
 
 ## Inputs ledger
 
