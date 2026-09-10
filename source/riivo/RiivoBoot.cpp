@@ -21,6 +21,7 @@
 #include "RiivoNet.hpp"
 #include "RiivoConfig.hpp"
 #include "RiivoReconcile.hpp"
+#include "RiivoValidate.hpp"
 #include "RiivoFst.hpp"
 #include "RiivoFile.hpp"
 #include "RiivoFstBuild.hpp"
@@ -1062,76 +1063,6 @@ namespace Riivo
 				 brk);
 	}
 
-	static bool ByPlacedOffset(const PlacedFile &a, const PlacedFile &b)
-	{
-		return a.offset < b.offset;
-	}
-
-	//! Ask the builder where each mod file ended up and hand the list back in
-	//! ascending offset order, which is what the fragment table and its lookup
-	//! index both assume. Files still sitting at their original disc offset were
-	//! never placed - their replacement was missing from the card - so they are
-	//! left out rather than dragged below the region and tripping the checks.
-	static void CollectPlaced(const FstBuilder &builder, u64 region,
-							  const std::vector<RedirectSpec> &redirects,
-							  const std::vector<CreatedFile> &created,
-							  std::vector<PlacedFile> &out)
-	{
-		out.clear();
-
-		//! Keyed by disc path, because the same disc file can legitimately be
-		//! claimed more than once: a mod with overlapping <folder> rules - Newer
-		//! SMBW has 38 of them - names some files twice. Both claims resolve to
-		//! the same assigned offset, so emitting both put two extents at the
-		//! same place and the whole plan was refused with "two files overlap".
-		//! Last one wins, matching how AddOrReplace resolved it when the table
-		//! was built, so the file that serves the read is the file the game's
-		//! table describes.
-		std::map<std::string, PlacedFile> byDisc;
-
-		for (size_t i = 0; i < redirects.size() + created.size(); ++i)
-		{
-			const bool isRedirect = i < redirects.size();
-			const std::string &disc = isRedirect
-									  ? redirects[i].disc
-									  : created[i - redirects.size()].disc;
-			const std::string &ext = isRedirect
-									 ? redirects[i].external
-									 : created[i - redirects.size()].external;
-			u64 off = 0;
-			u32 len = 0;
-			if (!builder.FindAssigned(disc, &off, &len))
-				continue;
-			if (len == 0 || off < region)
-				continue;
-			PlacedFile f;
-			f.offset = off;
-			f.length = len;
-			f.external = ext;
-			byDisc[disc] = f;
-		}
-
-		out.reserve(byDisc.size());
-		for (std::map<std::string, PlacedFile>::const_iterator it = byDisc.begin();
-			 it != byDisc.end(); ++it)
-			out.push_back(it->second);
-
-		std::sort(out.begin(), out.end(), ByPlacedOffset);
-	}
-
-	static void ToExtents(const std::vector<PlacedFile> &in,
-						  std::vector<ModExtent> &out)
-	{
-		out.clear();
-		out.reserve(in.size());
-		for (size_t i = 0; i < in.size(); ++i)
-		{
-			ModExtent e;
-			e.offset = in[i].offset;
-			e.length = in[i].length;
-			out.push_back(e);
-		}
-	}
 
 	//! The rebuilt table, waiting for the apploader to finish so it can be put
 	//! into the game's memory. Held in MEM2 on purpose: the apploader fills MEM1
@@ -1868,70 +1799,85 @@ namespace Riivo
 		std::vector<u8> newFst;
 		builder.Serialize(newFst, true);
 		LogStep("table serialised: %u bytes", (unsigned) newFst.size());
-		// Expectations come from the original disc and external-file sizes,
-		// not from reparsing the builder's result with the builder itself.
-		bool expectedComplete = true;
-		//! Validation workspace guard: everything from here through the
-		//! compaction decision is pure-CPU validation that must never kill
-		//! the boot silently. Spectral-scale runs stop in this window (log
-		//! ends at "table serialised", light frozen) while the same work
-		//! times at ~0.1 s on host - the shape of heap exhaustion on the
-		//! Wii, not a loop. An allocation failure now withholds with a
-		//! named reason instead of stopping silent.
-		bool validationOom = false;
-		bool fstWalkOK = false;
-		//! Declared outside the guard: the catch block reports the path
-		//! count and the gate reads the plan/placements. Declaration alone
-		//! allocates nothing; every fill stays inside the guard.
-		std::vector<FstWalkExpectation> expectedFst;
-		FragPlan plan;
-		std::vector<ModExtent> extents;
+		// The validation window now lives in RiivoValidate.cpp (pure TU,
+		// also linked by host tests and the Dolphin harness): same order,
+		// same checks, same outcomes. Device-derived inputs cross as
+		// parameters; the report text below is unchanged and still reads
+		// the same names, now bound to the result.
+		Riivo::ValidateRequest vreq;
+		vreq.builder = &builder;
+		vreq.fst = &fst;
+		vreq.plainFst = &newFst;
+		vreq.modOffsets = &modOffsets;
+		vreq.expectedModSizes = &expectedModSizes;
+		vreq.fstReserve = fstReserve;
+		vreq.region = region;
+		vreq.modRegionStart = modRegionStart;
+		vreq.redirects = &redirects;
+		vreq.created = &created;
+		vreq.modRecords = &modRecords;
+		vreq.modAddFails = &modAddFails;
+		vreq.imageBytes = gameDataEnd;
+		vreq.sectorSize = bootSectorSize;
+		vreq.usedFrags = fragStats.fragsBefore ? fragStats.fragsBefore
+					   : gameFrags->num;
+		Riivo::ValidateResult vres;
+		//! NULL trace: production records outcomes in the log, not op codes.
+		Riivo::ValidateTable(vreq, vres, 0);
+		const bool expectedComplete = vres.expectedComplete;
+		const bool fstWalkOK = vres.fstWalkOK;
+		const u32 walkPaths = vres.walkPaths;
+		const std::string &walkError = vres.walkError;
+		const bool useCompact = vres.useCompact;
+		const bool compactOK = vres.compactOK;
+		const u32 compactBytes = vres.compactBytes;
+		const std::string &cwErr = vres.compactWhy;
+		const FstBuildStats &st = vres.stats;
+		const FragPlan &plan = vres.plan;
 		std::vector<PlacedFile> placed;
-		//! Stats reference for the report tail and the final gprintf: bound
-		//! before the guard (a reference allocates nothing). Serialize
-		//! already ran, so plain-table stats are in place even if the
-		//! guard below withholds.
-		const FstBuildStats &st = builder.Stats();
-		try
+		placed.swap(vres.placed);
+		modSkips.swap(vres.modSkips);
+		const bool compactAttempted = fstReserve > 0 && fstWalkOK &&
+									newFst.size() > fstReserve;
+		if (vres.useCompact)
+			newFst.swap(vres.staged);
+		const bool validationOom = vres.oom;
+		if (validationOom)
 		{
-		//! Reserved up front, INSIDE the guard: at Spectral scale this is
-		//! ~6300 paths, and growing it by repeated reallocation fragments
-		//! the loader's MEM2 heap right before the two FST walks and the
-		//! compaction buffer. (Churn reduction only - not a fix claim for
-		//! anything.) Inside the try so its own throw is caught too.
-		expectedFst.reserve(fst.FileCount() + expectedModSizes.size());
-		//! Room for everything this function still appends to `out` (the
-		//! refusal line, the report tail, the frag-region check, the probe
-		//! report, the gate block: ~8 KB worst case), reserved while the
-		//! heap is at its freest in this window: every later append must
-		//! not allocate, because a throw past the catch - including inside
-		//! the gate's own assignments - would terminate with the refusal
-		//! unpersisted.
-		out.reserve(out.size() + 12288);
-		for (size_t i = 0; i < fst.FileCount(); ++i) {
-			const FstFile &original = fst.FileAt(i);
-			if (expectedModSizes.find(original.path) == expectedModSizes.end())
-				expectedFst.push_back(FstWalkExpectation(original.path, original.offset, original.length));
+			//! Allocation failure inside validation (refusal recorded in
+			//! vres by ValidateTable): refuse with a reason instead of
+			//! stopping silent. newFst is untouched on the compacted path
+			//! unless staging was chosen, so the refusal below is clean.
+			//! The append is capacity-checked and the record goes out
+			//! through a C-only persist independent of `out` - see below.
+			char oomLine[192];
+			snprintf(oomLine, sizeof(oomLine),
+					 "  independent FST walk: REFUSED: out of memory during validation (%u paths, MEM2 free %u KB)\n",
+					 (unsigned) walkPaths,
+					 (unsigned) (MEM2_freesize() / 1024));
+			const size_t oomLen = strlen(oomLine);
+			if (out.capacity() - out.size() > oomLen)
+				out += oomLine;
+			if (!bootLogPath.empty())
+			{
+				FILE *f = fopen(bootLogPath.c_str(), "a");
+				if (f)
+				{
+					fwrite(oomLine, 1, oomLen, f);
+					fclose(f);
+				}
+				else
+					gprintf("Riivo: OOM refusal (log unwritable)\n");
+			}
 		}
-		for (std::map<std::string, u32>::const_iterator it = expectedModSizes.begin();
-			 it != expectedModSizes.end(); ++it) {
-			std::map<std::string, u64>::const_iterator offset = modOffsets.find(it->first);
-			if (offset == modOffsets.end()) { expectedComplete = false; continue; }
-			expectedFst.push_back(FstWalkExpectation(it->first, offset->second, it->second));
-		}
-		FstWalk gameWalk;
-		std::string walkError;
-		fstWalkOK = expectedComplete && !newFst.empty() &&
-			gameWalk.Open(&newFst[0], newFst.size(), true, &walkError) &&
-			gameWalk.Check(expectedFst, &walkError);
 		if (fstWalkOK)
 			Addf(out, "  independent FST walk: %u paths passed (includes unchanged and empty files)\n",
-				 (unsigned)expectedFst.size());
+				 (unsigned)walkPaths);
 		else
 			Addf(out, "  independent FST walk: REFUSED: %s\n",
 				 expectedComplete ? walkError.c_str() : "a mod path has no registered placement");
 		Addf(out, "  validation workspace : %u paths, MEM2 free %u KB\n",
-			 (unsigned) expectedFst.size(),
+			 (unsigned) walkPaths,
 			 (unsigned) (MEM2_freesize() / 1024));
 		//! Suffix-compacted variant of the same tree (same entries, paths,
 		//! offsets and sizes; shared string tails stored once). If the plain
@@ -1941,30 +1887,12 @@ namespace Riivo
 		//! kills relocated tables on SB4E01. Anything else keeps today's
 		//! bytes exactly - unknown reservation, fitting plain table, failed
 		//! build, failed walk, or still-overflowing compaction.
-		bool useCompact = false;
-		if (fstReserve > 0 && fstWalkOK && newFst.size() > fstReserve)
-		{
-			std::vector<u8> compactFst;
-			bool compactOK = builder.SerializeCompacted(compactFst, true);
-			std::string cwErr;
-			FstWalk cw;
-			if (compactOK)
-				compactOK = !compactFst.empty() &&
-					cw.Open(&compactFst[0], compactFst.size(), true, &cwErr) &&
-					cw.Check(expectedFst, &cwErr);
-			if (!compactOK && cwErr.empty())
-				cwErr = "build failed";
-			useCompact = compactOK && compactFst.size() <= fstReserve;
+		if (!validationOom && compactAttempted)
 			Addf(out, "  compacted table    : %u bytes (%s), reservation %u: %s\n",
-				 compactOK ? (unsigned) compactFst.size() : 0,
+				 compactBytes,
 				 compactOK ? "walk passed" : ("REFUSED: " + cwErr).c_str(),
 				 fstReserve,
 				 useCompact ? "STAGED instead of the plain table" : "kept plain table");
-			if (useCompact)
-				newFst.swap(compactFst);
-			else
-				builder.Serialize(newFst, true); // restore plain stats below
-		}
 		plannedFstSize = st.fstSize;
 
 		Addf(out, "  entries planned    : %u  (%u rejected)\n", planned, rejected);
@@ -2003,8 +1931,7 @@ namespace Riivo
 		out += "\nRoom on the virtual disc\n";
 		out += "------------------------\n";
 
-		//! plan/extents/placed are declared before the guard (they feed the
-		//! gate after it); only their fills live in here.
+		//! plan/placed/modSkips arrive filled in vres (see above).
 
 		//! Which drive everything is on. The cIOS serves the whole list from
 		//! one device, so a mismatch here reads the mod's sector numbers off
@@ -2119,35 +2046,6 @@ namespace Riivo
 				Addf(out, "  %u modded entr%s no placement, so the table is unusable\n",
 					 unplaced, unplaced == 1 ? "y has" : "ies have");
 
-		//! Feed the placed files through the same checks that would gate a
-		//! fresh layout: ordering, alignment, the read ceiling, the table.
-		CollectPlaced(builder, modOffsets.empty() ? region : modRegionStart,
-					  redirects, created, placed);
-		ToExtents(placed, extents);
-
-		//! Registration records that never became placed entries, with
-		//! reasons. A tail-recovered offset landing on one of these is
-		//! verified through its retained record instead of refused
-		//! anonymously - nothing reads those offsets, so they are harmless,
-		//! but the bytes still get proven (see Activate).
-		{
-			std::vector<u64> lateOffsets;
-			lateOffsets.reserve(placed.size());
-			for (size_t i = 0; i < placed.size(); ++i)
-				lateOffsets.push_back(placed[i].offset);
-			std::map<std::string, char> hasRedirect;
-			for (size_t i = 0; i < redirects.size(); ++i)
-				hasRedirect[NormaliseDiscPath(redirects[i].disc)] = 1;
-			for (size_t i = 0; i < created.size(); ++i)
-				hasRedirect[NormaliseDiscPath(created[i].disc)] = 1;
-			FindSkips(modRecords, lateOffsets,
-					  modOffsets.empty() ? region : modRegionStart,
-					  hasRedirect, modAddFails, modSkips);
-		}
-
-			plan = PlanFragRegion(gameDataEnd, bootSectorSize,
-								  fragStats.fragsBefore ? fragStats.fragsBefore
-														: gameFrags->num, extents);
 
 			if (!plan.ok)
 			{
@@ -2193,51 +2091,6 @@ namespace Riivo
 		// ------------------------------------------------------------------
 		// Switch it on, but only if every single check above came back clean.
 		// ------------------------------------------------------------------
-		} // end try: validation workspace (extended through CollectPlaced,
-		  // the frag-region check and the probe report: everything the
-		  // gate below reads. FragPlan defaults to !ok, so a throw that
-		  // skips PlanFragRegion still refuses; Activate is only called
-		  // on the all-clean path, where every structure completed.)
-		catch (const std::bad_alloc &)
-		{
-			validationOom = true;
-		}
-		catch (const std::exception &)
-		{
-			validationOom = true;
-		}
-		if (validationOom)
-		{
-			//! Allocation failure inside validation: refuse with a reason
-			//! instead of stopping silent. newFst is untouched (the swap
-			//! only happens on the success path), so the refusal below
-			//! is clean.
-			//! The reserves above may THEMSELVES have been the throw: spare
-			//! capacity that was never obtained cannot be spent. So the
-			//! catch works only with capacity that ACTUALLY exists (checked,
-			//! not assumed), and the record goes out through a C-only
-			//! persist that allocates nothing, independent of `out`.
-			fstWalkOK = false;
-			char oomLine[192];
-			snprintf(oomLine, sizeof(oomLine),
-				 "  independent FST walk: REFUSED: out of memory during validation (%u paths, MEM2 free %u KB)\n",
-				 (unsigned) expectedFst.size(),
-				 (unsigned) (MEM2_freesize() / 1024));
-			const size_t oomLen = strlen(oomLine);
-			if (out.capacity() - out.size() > oomLen)
-				out += oomLine;
-			if (!bootLogPath.empty())
-			{
-				FILE *f = fopen(bootLogPath.c_str(), "a");
-				if (f)
-				{
-					fwrite(oomLine, 1, oomLen, f);
-					fclose(f);
-				}
-				else
-					gprintf("Riivo: OOM refusal (log unwritable)\n");
-			}
-		}
 		out += "\nSwitching it on\n";
 		out += "---------------\n";
 

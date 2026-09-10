@@ -7,16 +7,19 @@
  *   1 deep clean. 2 deep MEM2-drained. 3 deep MEM1-drained.
  *   4 deep both-pressured (MEM2 drained + MEM1 to ~512 KB free).
  *
- * Mirror coverage, per op: Parse / AddOrReplace / LayoutFrom(REAL) /
- * Serialize / expectations(+reserve-in-try) / Walk(REAL) /
- * Compact+Walk(REAL) / CollectPlaced(MIRROR copy) / ToExtents(MIRROR
- * copy) / FindSkips(REAL) / PlanFragRegion(REAL) / stage+CRC / gate
- * eval. NOT mirrored: BuildRedirects (card; applied set IS the
- * redirect set), DescribeProbe/IOS (IOS), Activate (cIOS; v4 flows).
- * failOp codes, window: 1 expectedFst.reserve, 6 out.reserve, 2 walk,
- * 3 compact, 4 compact-walk, 5 stage, 10 CollectPlaced, 11 FindSkips /
- * PlanFragRegion. Pre-window: 90 parse, 91 add/replace, 92 LayoutFrom,
- * 93 serialize.
+ * Window coverage: the REAL ValidateTable (this TU links
+ * RiivoValidate.cpp, so there are no per-op copies left to diverge).
+ * Pre-window (unguarded mirror): Parse / AddOrReplace / LayoutFrom(REAL)
+ * / Serialize / disc-image retain+parse. The guarded window builds only
+ * the auxiliary inputs production derives during redirect processing
+ * (modSizes/modRecords, normalised exactly like RiivoBoot.cpp) and then
+ * calls ValidateTable with opTrace attribution. NOT run here:
+ * BuildRedirects (card; the applied set IS the redirect set),
+ * DescribeProbe/IOS (IOS), Activate (cIOS; v4 flows). opTrace codes are
+ * production ValidateOp values: 1 expect-reserve, 2 walk, 3 compact,
+ * 4 compact-walk, 5 stage, 10 collect, 11 plan. Pre-window: 90 parse,
+ * 91 add/replace, 92 LayoutFrom, 93 serialize, 94 aux inputs,
+ * 95 disc-image retain+parse.
  ***************************************************************************/
 #include <map>
 #include <algorithm>
@@ -30,6 +33,7 @@
 #include "RiivoFragBuild.hpp" // PlacedFile (type only)
 #include "RiivoFragPlan.hpp"  // ModExtent, FragPlan, PlanFragRegion (REAL TU)
 #include "RiivoReconcile.hpp" // RegRecord/SkipRecord/FindSkips (REAL inline)
+#include "RiivoValidate.hpp" // ValidateTable (REAL TU)
 
 extern void MwW32(u32 addr, u32 v);
 extern u32 MwMem1Free(void);
@@ -45,63 +49,9 @@ extern void MwDeepBuild(std::vector<u8> &img,
 
 extern "C" void *__real_malloc(size_t);
 
-// --- MIRROR of RiivoBoot.cpp's static CollectPlaced (line-for-line) ---
-static bool MwByPlacedOffset(const Riivo::PlacedFile &a,
-							 const Riivo::PlacedFile &b)
-{
-	return a.offset < b.offset;
-}
-
-static void MwCollectPlaced(const Riivo::FstBuilder &builder, u64 region,
-							const std::vector<Riivo::RedirectSpec> &redirects,
-							const std::vector<Riivo::CreatedFile> &created,
-							std::vector<Riivo::PlacedFile> &out)
-{
-	out.clear();
-	std::map<std::string, Riivo::PlacedFile> byDisc;
-	for (size_t i = 0; i < redirects.size() + created.size(); ++i)
-	{
-		const bool isRedirect = i < redirects.size();
-		const std::string &disc = isRedirect
-								  ? redirects[i].disc
-								  : created[i - redirects.size()].disc;
-		const std::string &ext = isRedirect
-								 ? redirects[i].external
-								 : created[i - redirects.size()].external;
-		u64 off = 0;
-		u32 len = 0;
-		if (!builder.FindAssigned(disc, &off, &len))
-			continue;
-		if (len == 0 || off < region)
-			continue;
-		Riivo::PlacedFile f;
-		f.offset = off;
-		f.length = len;
-		f.external = ext;
-		byDisc[disc] = f;
-	}
-	out.reserve(byDisc.size());
-	for (std::map<std::string, Riivo::PlacedFile>::const_iterator it = byDisc.begin();
-		 it != byDisc.end(); ++it)
-		out.push_back(it->second);
-	std::sort(out.begin(), out.end(), MwByPlacedOffset);
-}
-
-// --- MIRROR of RiivoBoot.cpp's static ToExtents (line-for-line) ---
-static void MwToExtents(const std::vector<Riivo::PlacedFile> &in,
-						std::vector<Riivo::ModExtent> &out)
-{
-	out.clear();
-	out.reserve(in.size());
-	for (size_t i = 0; i < in.size(); ++i)
-	{
-		Riivo::ModExtent e;
-		e.offset = in[i].offset;
-		e.length = in[i].length;
-		out.push_back(e);
-	}
-}
-
+//! (Line-for-line CollectPlaced/ToExtents copies lived here in v7.
+//! Deleted: this TU now links the REAL definitions from
+//! RiivoValidate.cpp, so there is nothing left to diverge.)
 //! USA mod dirs with real per-dir file counts (measured local tree:
 //! 99/12/78/78/75/846/1/658/1/10/58 = 1916 mapped).
 struct MwModDir { const char *disc; int count; int depth2frac; };
@@ -123,6 +73,7 @@ static const int kNModStems = 12;
 //! Last-run results for harness-side checks.
 static u32 mwDeepPre = 0, mwDeepFail = 0, mwDeepPlain = 0;
 static u32 mwDeepPaths = 0, mwDeepGate = 0, mwDeepUnplaced = 0;
+static u32 mwDeepBase = 0; // discFst.FileCount(): baseline paths
 
 //! Last walk failure text, GDB-readable (nm walkErrBuf) if walkOK==0.
 static char walkErrBuf[128];
@@ -229,16 +180,14 @@ static void MwDeepRun(u32 slot, int heapCase)
 
 	u32 preFail = 0, failOp = 0;
 	u32 plain = 0, compact = 0, paths = 0, crc = 0, gate = 0, unplaced = 0;
-	bool walkOK = false;
-	char line[160];
+	bool walkOK = false, planOk = false;
 	//! Default-constructed (no allocation; the empty rep is static), so
 	//! this declaration is safe even with both heaps dead. Assigned
 	//! inside the pre-window guard below.
-	std::string out;
-	std::vector<Riivo::FstWalkExpectation> expectedFst;
-	Riivo::FragPlan plan;
-	std::vector<Riivo::ModExtent> extents;
-	std::vector<Riivo::PlacedFile> placed;
+	std::vector<u8> discImg; // retained synthetic disc image
+	Riivo::Fst discFst;      // parsed baseline (ValidateTable reads it)
+	std::map<std::string, Riivo::SkipReason> addFails; // empty: harness
+																						 // applies never fail
 	std::vector<Riivo::RedirectSpec> redirects;
 	std::vector<Riivo::CreatedFile> created;
 	std::vector<u32> createdSizes; // parallel to created (exact apply sizes)
@@ -253,7 +202,6 @@ static void MwDeepRun(u32 slot, int heapCase)
 	std::vector<u8> newFst;
 	try
 	{
-		out = "mw deep report\n";
 		std::vector<std::string> baseFiles;
 		std::vector<u8> img;
 		MwDeepBuild(img, baseFiles);
@@ -262,8 +210,14 @@ static void MwDeepRun(u32 slot, int heapCase)
 			preFail = 90;
 			throw std::bad_alloc();
 		}
-		img.clear();
-		img.shrink_to_fit();
+		discImg.swap(img); // no copy, no alloc: keep the baseline bytes
+		if (discImg.empty() ||
+			!discFst.Parse(&discImg[0], (u32) discImg.size(), true))
+		{
+			preFail = 95;
+			throw std::bad_alloc();
+		}
+		mwDeepBase = (u32) discFst.FileCount();
 		char nm[64], dp[160], ext[96];
 		size_t repl = 0;
 		u64 cursor = region;
@@ -345,13 +299,13 @@ static void MwDeepRun(u32 slot, int heapCase)
 		for (size_t i = 0; i < redirects.size(); ++i)
 		{
 			cursor = (cursor + mask) & ~mask;
-			modOffsets[redirects[i].disc] = cursor;
+			modOffsets[Riivo::NormaliseDiscPath(redirects[i].disc)] = cursor;
 			cursor += ((u64) redirects[i].length + mask) & ~mask;
 		}
 		for (size_t i = 0; i < created.size(); ++i)
 		{
 			cursor = (cursor + mask) & ~mask;
-			modOffsets[created[i].disc] = cursor;
+			modOffsets[Riivo::NormaliseDiscPath(created[i].disc)] = cursor;
 			cursor += ((u64) createdSizes[i] + mask) & ~mask;
 		}
 		try
@@ -380,193 +334,109 @@ static void MwDeepRun(u32 slot, int heapCase)
 			preFail = 99;
 	}
 
-	// ---- GUARDED WINDOW (production-shaped guard): expectations
-	// through gate inputs. failOp attributes the first throwing op.
+	// ---- GUARDED WINDOW: the REAL production function. No mirror,
+	// no copies: ValidateTable runs the window; opTrace attributes.
 	MwPhase(slot * 10 + 2); // pre-window done
 	if (!preFail)
-	try
 	{
+		// Auxiliary inputs production derives during redirect
+		// processing (RiivoBoot.cpp): normalised keys, exact sizes.
+		std::map<std::string, u32> modSizes;
+		std::vector<Riivo::RegRecord> records;
 		try
 		{
-			expectedFst.reserve(6500);
-		}
-		catch (...)
-		{
-			failOp = 1;
-			throw;
-		}
-		try
-		{
-			out.reserve(out.size() + 12288);
-		}
-		catch (...)
-		{
-			failOp = 6;
-			throw;
-		}
-		for (size_t i = 0; i < redirects.size(); ++i)
-		{
-			u64 off = 0;
-			u32 ln = 0;
-			if (b.FindAssigned(redirects[i].disc, &off, &ln))
-				expectedFst.push_back(Riivo::FstWalkExpectation(
-					redirects[i].disc, off, redirects[i].length));
-		}
-		for (size_t i = 0; i < created.size(); ++i)
-		{
-			u64 off = 0;
-			u32 ln = 0;
-			if (b.FindAssigned(created[i].disc, &off, &ln))
-				expectedFst.push_back(Riivo::FstWalkExpectation(
-					created[i].disc, off, ln));
-		}
-		paths = (u32) expectedFst.size();
-		Riivo::FstWalk gameWalk;
-		std::string walkError;
-		walkOK = false;
-		try
-		{
-			walkOK = !newFst.empty() &&
-				gameWalk.Open(&newFst[0], newFst.size(), true, &walkError) &&
-				gameWalk.Check(expectedFst, &walkError);
-		}
-		catch (...)
-		{
-			failOp = 2;
-			throw;
-		}
-		snprintf(line, sizeof(line), "walk %d paths %u\n", (int) walkOK,
-				 paths);
-		out += line;
-		if (!walkOK)
-		{
-			strncpy(walkErrBuf, walkError.c_str(), sizeof(walkErrBuf) - 1);
-			walkErrBuf[sizeof(walkErrBuf) - 1] = 0;
-			DCFlushRange(walkErrBuf, sizeof(walkErrBuf));
-		}
-		std::vector<u8> compactFst;
-		bool compactOK = false;
-		try
-		{
-			compactOK = b.SerializeCompacted(compactFst, true);
-		}
-		catch (...)
-		{
-			failOp = 3;
-			throw;
-		}
-		Riivo::FstWalk cw;
-		try
-		{
-			if (compactOK)
-				compactOK = !compactFst.empty() &&
-					cw.Open(&compactFst[0], compactFst.size(), true,
-							&walkError) &&
-					cw.Check(expectedFst, &walkError);
-		}
-		catch (...)
-		{
-			failOp = 4;
-			throw;
-		}
-		compact = compactOK ? (u32) compactFst.size() : 0;
-		snprintf(line, sizeof(line), "compact %d bytes %u cap %u\n",
-				 (int) compactOK, compact,
-				 compactOK ? (u32) compactFst.capacity() : 0);
-		out += line;
-		try
-		{
-			MwCollectPlaced(b, region, redirects, created, placed);
-		}
-		catch (...)
-		{
-			failOp = 10;
-			throw;
-		}
-		try
-		{
-			MwToExtents(placed, extents);
-			std::vector<Riivo::RegRecord> records;
 			records.reserve(redirects.size() + created.size());
-			for (size_t i = 0; i < redirects.size(); ++i)
+			for (size_t r = 0; r < redirects.size(); ++r)
 			{
-				Riivo::RegRecord r;
-				r.disc = redirects[i].disc;
-				r.external = redirects[i].external;
-				r.length = redirects[i].length;
+				const std::string key =
+					Riivo::NormaliseDiscPath(redirects[r].disc);
+				modSizes[key] = redirects[r].length;
+				Riivo::RegRecord rec;
+				rec.disc = redirects[r].disc;
+				rec.external = redirects[r].external;
+				rec.length = redirects[r].length;
 				std::map<std::string, u64>::const_iterator it =
-					modOffsets.find(r.disc);
-				r.offset = (it == modOffsets.end()) ? 0 : it->second;
-				records.push_back(r);
+					modOffsets.find(key);
+				rec.offset = (it == modOffsets.end()) ? 0 : it->second;
+				records.push_back(rec);
 			}
-			for (size_t i = 0; i < created.size(); ++i)
+			for (size_t r = 0; r < created.size(); ++r)
 			{
-				Riivo::RegRecord r;
-				r.disc = created[i].disc;
-				r.external = created[i].external;
-				r.length = 64;
+				const std::string key =
+					Riivo::NormaliseDiscPath(created[r].disc);
+				modSizes[key] = createdSizes[r];
+				Riivo::RegRecord rec;
+				rec.disc = created[r].disc;
+				rec.external = created[r].external;
+				rec.length = createdSizes[r];
 				std::map<std::string, u64>::const_iterator it =
-					modOffsets.find(r.disc);
-				r.offset = (it == modOffsets.end()) ? 0 : it->second;
-				records.push_back(r);
+					modOffsets.find(key);
+					rec.offset = (it == modOffsets.end()) ? 0 : it->second;
+				records.push_back(rec);
 			}
-			std::vector<u64> lateOffsets;
-			lateOffsets.reserve(placed.size());
-			for (size_t i = 0; i < placed.size(); ++i)
-				lateOffsets.push_back(placed[i].offset);
-			std::map<std::string, char> hasRedirect;
-			for (size_t i = 0; i < redirects.size(); ++i)
-				hasRedirect[redirects[i].disc] = 1;
-			for (size_t i = 0; i < created.size(); ++i)
-				hasRedirect[created[i].disc] = 1;
-			std::map<std::string, Riivo::SkipReason> addFails;
-			std::vector<Riivo::SkipRecord> skips;
-			Riivo::FindSkips(records, lateOffsets, region, hasRedirect,
-							 addFails, skips);
-			plan = Riivo::PlanFragRegion(4685037568ULL, 512, 3, extents);
-		if (!plan.ok)
-		{
-			strncpy(planWhyBuf, plan.why.c_str(), sizeof(planWhyBuf) - 1);
-			planWhyBuf[sizeof(planWhyBuf) - 1] = 0;
-			DCFlushRange(planWhyBuf, sizeof(planWhyBuf));
-		}
 		}
 		catch (...)
 		{
-			failOp = 11;
-			throw;
+			preFail = 94;
 		}
-		std::vector<u8> stage(newFst.size());
-		try
+		if (!preFail)
 		{
-			memcpy(&stage[0], &newFst[0], newFst.size());
-		}
-		catch (...)
-		{
-			failOp = 5;
-			throw;
-		}
-		crc = Riivo::Crc32(&stage[0], (u32) stage.size());
-		gate = (walkOK && plan.ok && unplaced == 0) ? 1 : 0;
-		printf("%s", out.c_str());
+			Riivo::ValidateRequest vreq;
+			vreq.builder = &b;
+			vreq.fst = &discFst;
+			vreq.plainFst = &newFst;
+			vreq.modOffsets = &modOffsets;
+			vreq.expectedModSizes = &modSizes;
+			vreq.fstReserve = 153792; // SB4E01 reservation, like production
+			vreq.region = region;
+			vreq.modRegionStart = region;
+			vreq.redirects = &redirects;
+			vreq.created = &created;
+			vreq.modRecords = &records;
+			vreq.modAddFails = &addFails;
+			vreq.imageBytes = 4685037568ULL;
+			vreq.sectorSize = 512;
+			vreq.usedFrags = 3;
+			int trace = Riivo::VOP_NONE;
+			Riivo::ValidateResult vres;
+			Riivo::ValidateTable(vreq, vres, &trace);
+			failOp = vres.oom ? (trace ? trace : 99) : 0;
+			walkOK = vres.fstWalkOK;
+			planOk = vres.plan.ok;
+			paths = vres.expectedPaths;
+			compact = vres.useCompact ? (u32) vres.staged.size()
+						: vres.compactBytes;
+			const u8 *stagePtr = vres.staged.empty()
+				? (newFst.empty() ? (const u8 *) 0 : &newFst[0])
+				: &vres.staged[0];
+			const u32 stageLen = vres.staged.empty()
+				? (u32) newFst.size() : (u32) vres.staged.size();
+			crc = (stagePtr && stageLen) ? Riivo::Crc32(stagePtr, stageLen)
+									  : 0;
+			gate = (walkOK && planOk && unplaced == 0) ? 1 : 0;
+			if (!walkOK)
+			{
+				strncpy(walkErrBuf, vres.walkError.c_str(),
+						sizeof(walkErrBuf) - 1);
+				walkErrBuf[sizeof(walkErrBuf) - 1] = 0;
+				DCFlushRange(walkErrBuf, sizeof(walkErrBuf));
+			}
+			if (!planOk)
+			{
+				strncpy(planWhyBuf, vres.plan.why.c_str(),
+						sizeof(planWhyBuf) - 1);
+					planWhyBuf[sizeof(planWhyBuf) - 1] = 0;
+					DCFlushRange(planWhyBuf, sizeof(planWhyBuf));
+				}
+			printf("mw deep slot%u: staged %u gate %u trace %d\n",
+				   slot, vres.useCompact ? (u32) vres.staged.size() : plain,
+				   gate, trace);
+			}
 	}
-	catch (const std::bad_alloc &)
-	{
-		if (!failOp)
-			failOp = 99;
-		printf("mw deep slot%u: caught bad_alloc at op %u\n", slot, failOp);
-	}
-	catch (const std::exception &)
-	{
-		if (!failOp)
-			failOp = 98;
-		printf("mw deep slot%u: caught exception at op %u\n", slot, failOp);
-	}
-
 	const u32 f1post = MwMem1Free(), f2post = MEM2_freesize();
 	MwSlot(slot, plain, compact, paths,
 		   (preFail << 24) | (failOp << 16) | (crc & 0xFFFF),
-		   (walkOK ? 0x01000000u : 0) | ((plan.ok ? 1u : 0) << 16) |
+		   (walkOK ? 0x01000000u : 0) | ((planOk ? 1u : 0) << 16) |
 		   (unplaced & 0xFFFF),
 		   (f1pre - f1post) & 0xFFFFFF, f2pre, drained);
 	// Extra words clear of the 8-word stride: f1pre, drain note.
@@ -589,7 +459,10 @@ void RunDeepWindow(void)
 	MwDeepRun(1, 0);
 	MwCheck(mwDeepPre == 0, "deep clean: pre-window completed");
 	MwCheck(mwDeepFail == 0, "deep clean: no throwing op");
-	MwCheck(mwDeepPaths == 2148, "deep clean: 2148 applied paths");
+	// Baseline + mods: the REAL window walks the whole table, not just
+	// mod paths.
+	MwCheck(mwDeepPaths == mwDeepBase + 2148,
+			"deep clean: baseline+2148 paths walked");
 	MwCheck(mwDeepGate == 1 && mwDeepUnplaced == 0, "deep clean: gate green");
 	MwPhase(30);
 	MwDeepRun(2, 1);

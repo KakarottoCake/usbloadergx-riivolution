@@ -281,27 +281,9 @@ namespace Riivo
 		}
 	}
 
-	std::string NormaliseDiscPath(const std::string &path)
-	{
-		std::string out;
-		size_t i = 0;
-		while (i < path.size())
-		{
-			while (i < path.size() && path[i] == '/')
-				++i;
-			size_t j = i;
-			while (j < path.size() && path[j] != '/')
-				++j;
-			if (j > i)
-			{
-				out += '/';
-				for (size_t k = i; k < j; ++k)
-					out += (char) tolower((unsigned char) path[k]);
-			}
-			i = j;
-		}
-		return out;
-	}
+	//! NormaliseDiscPath lives in RiivoValidate.cpp (moved verbatim; the
+	//! declaration in RiivoFile.hpp is unchanged so all callers link it
+	//! from there).
 
 	static bool ByCandidateDisc(const ModCandidate &a, const ModCandidate &b)
 	{
