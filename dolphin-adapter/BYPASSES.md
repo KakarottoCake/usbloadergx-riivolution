@@ -418,6 +418,37 @@ no unverified address is substituted anywhere on this evidence.
   DMA excluded by design). Pointer words arrive post-entry with no
   trapped CPU store (HLE-async lead stands).
 
+## Causal order established (dev build, Sep 2026)
+
+- Install-vs-publication: HLE install (pre-entry) PRECEDES the
+  one-shot async publication (~1 s post-entry, non-CPU writer),
+  which CLOBBERS custom words to stock. Repoint-after-waitmem
+  restores them instantly; they then stick (no second clobber).
+- Unmodified control: words arrive with no trapped CPU store
+  (validated channel) - host-side writer; valid stock boot state
+  confirmed separately (idle, stock-table parse reads flowing at
+  `pc=805D153C`, same instruction as below).
+- Candidate region `[0x90DB4800, 0x935E0000)` is OWNED, not free:
+  streaming-module reads (`pc=80502940` et al, 17 lines) and writes
+  (669k `stpc` lines, `val` chains incl. self-pointers) - free-list
+  / buffer traffic. Closed as a reservation.
+- FIRST TABLE READ, observed: `read pc=805D153C sp=807F2CD0
+  ea=92000008 len=4` - the stock parser (same PC/SP as its stock
+  parse) reading OUR repointed table's root-count word. Exactly
+  ONE span read in the run, then nothing: the word was zeros
+  (wipe first), parse aborted, hang followed. Read-hook validity
+  is behavioral and in-run (candidate reads flow through it).
+- ORDER (all pieces): install -> publication (clobbers words) ->
+  repoint -> WIPE (dcbz, traced) -> first read (zeros) -> parse
+  abort -> fatal DVD-path hang. No CPU read precedes the wipe;
+  no DMA copy is consistent with the single direct read either
+  (a parsed copy would show zero span reads AND successful boot
+  progress - neither observed).
+- Consequence: the parser DOES read through a repointed pointer
+  (consumption path works); the table is dead before first use.
+  Hardware needs the table alive at first read - the wipe, not
+  the pointer, not serving, is the blocker. No GX/Wii changes.
+
 ## Inputs ledger
 
 - CAPTURED (SB4E01 T0 card logs, v3.36+): arena `{0, 0x817DA740,
