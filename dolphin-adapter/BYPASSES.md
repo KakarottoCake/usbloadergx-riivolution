@@ -479,9 +479,12 @@ no unverified address is substituted anywhere on this evidence.
 
 All runs: base ISO + GX table at `0x90000800` reservation + BASE
 redirect (or noted poke), converged profile. Idle = `0x805BCCB0`
-EE-on; non-idle second-halt = undistinguished stopped state
-(calibration below). CORRECTED after config audit (see recovery
-notes below):
+EE-on. HYGIENE RESET (see recovery notes): cross-run log
+contamination found (orphaned emulator from a timed-out tool
+appending to shared logs); all multi-boot/wedge claims below
+were re-derived from single-boot-gated traces; halt-timeout
+alone no longer verdicts anything (a clean run times out its
+final halt mid-activity).
 
 | variant | bytes | entries | outcome |
 |---|---|---|---|
@@ -514,6 +517,15 @@ notes below):
   in Spectral runs mean a non-idle stopped state, not session
   decay. (One +385 s stock timeout stands unexplained; timeouts
   past +240 s are not calibrated - stated, not used.)
+  UPDATE: a clean Spectral run times out its final halt WHILE
+  heap-write activity flows in-trace - so timeout-minus-idle
+  proves busyness-or-wedge, not wedge. Progress is read from
+  trace/di/served growth + burn rate, never from halt alone.
+- REBOOT RETRACTED: doubled apploader/entry/install lines came
+  from a stale concurrent emulator (orphaned by a tool timeout)
+  appending to the shared trace - clean runs show bootepochx1,
+  entryx1. No loader reset, no crash reset; the "two boots"
+  never happened. PID-tagged epochs prevent recurrence.
 - REBOOT, not wedge-at-parse: install-verified Spectral runs
   show TWO full boots per trace (entry/install/phase lines x2;
   ~493k table reads EACH). Boot1 parses fully, does bulk heap
@@ -650,13 +662,14 @@ notes below):
   bypass+pad live): 17 DI submits ALL succeed, 25+ served with
   correct bytes (SMR.szs, JaiSeq, SoundIdToInstList), 2 EOF
   overruns padded (31 B, 19 B), 0 fail/miss, full 493k parse,
-  reservation untouched (0 writes/clears). Process then blocks
-  with no further submits - title unconfirmed (no video/input
-  yet), NOT a serving failure. One unexplained read value
+  reservation untouched (0 writes/clears). Clean single-boot
+  rerun: activity (70k+ heap writes) CONTINUES past the old
+  "wedge" point - prior wedge verdicts rested on halt-timeouts
+  and mixed-trace counts and are withdrawn as verdicts (data
+  retained). One unexplained read value
   (`0x805D16D4`/`0x9000229C` = `0x41400` vs file `0x3BDF5143`,
-  no writer on CPU/dcbz/host-copy/mset paths; host-direct
-  pointer writes remain the unlogged class; interpreter-Z2
-  probe proposed) - held open, not attributed.
+  single occurrence per boot, progress continues after it) -
+  held open as non-blocking curiosity, not attributed.
 - M12 identical-contents comparison: SUPERSEDED in its
   placement-per-se form (offsets submit freely; serving, not
   placement, decides). Remaining variant of value: same bytes
