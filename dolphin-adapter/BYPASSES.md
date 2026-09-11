@@ -406,9 +406,10 @@ no unverified address is substituted anywhere on this evidence.
   mapped post-boot, fits the table easily. Prerequisites, all open:
   heap-cap reliability, an owned post-clear install point, and
   first-read timing.
-- First FST READ still unobserved (validated-silent CPU channels;
-  DMA excluded by design). Pointer words arrive post-entry with no
-  trapped CPU store (HLE-async lead stands).
+- First FST READ: observed extensively since (parser + heap +
+  streaming reads logged with values throughout; DMA excluded
+  by design). The boot-info words arrive synchronously from the
+  apploader (profile artifact retired above).
 
 ## Causal order established (dev build, Sep 2026)
 
@@ -474,14 +475,58 @@ no unverified address is substituted anywhere on this evidence.
   and repoint-after-waitmem, install-races-publication. All ran
   under AccurateCPUCache=True host-stale reads.
 
-## Reservation experiment (SMG2-specific, in progress)
+## Grown-parse matrix (dev build, Sep 2026)
 
-- FIT: reservation `[0x90000800, 0x90040800)` (256 KiB,
-  32 B-aligned both ends) holds every table: stock 153792
-  (spare 108352), T0 plain 153934, T0 compact 144323, Spectral
-  plain 230076 (spare 32068), Spectral compact 211016. End
-  misalignment is irrelevant (clear starts on the aligned end;
-  no straddling line touches the tail).
+All runs: base ISO + GX table at `0x90000800` reservation + BASE
+redirect (or noted poke), converged profile. Verdicts by 75 s
+(wedge = halt-timeout + dead signature; idle = `0x805BCCB0` EE-on):
+
+| variant | bytes | entries | outcome |
+|---|---|---|---|
+| M0 stock verbatim | 153792 | 4493 | IDLE, 494625 reads |
+| M1 stock+76 KB trailing zeros | 230076 | 4493 | bdnz compute loop at 75 s, IDLE by 325 s (SLOW, not stuck) |
+| M2 +10 files | 154122 | 4503 | IDLE |
+| M4 +500 files | 169312 | 4993 | IDLE |
+| M6 +100 files, 600 B names | 215112 | 4593 | IDLE |
+| M7 +60 zero-length files | 155672 | 4553 | IDLE (zero-length innocent) |
+| M8 +2000 files | 215812 | 6493 | IDLE (count to 6493 innocent) |
+| M9 267 files lengths+4096, stock offsets | 153790 | 4493 | IDLE (lengths innocent) |
+| M10 267 files stock lengths, 6 GB offsets | 153790 | 4493 | WEDGE ~1237 reads, no DI/DVDThread activity |
+| M11 267 files shifted +1 MB in-disc | 153790 | 4493 | past M10 point (1561 reads), thread reads flow, later content wedge (expected: wrong bytes) |
+| Spectral GX 230076 | 230076 | 6618 | WEDGE ~1240 reads, no DI/DVDThread activity |
+| Dolphin 230076 table | 230076 | 6618 | WEDGE ~1764 reads, same signature |
+
+- REJECT CONDITION: mod-range OFFSETS, pre-submit. M9 idles /
+  M10 wedges with entry count, names, and lengths controlled;
+  count (M8), strings (M6), zero-length (M7), lengths (M9),
+  padding-slowness (M1) all exonerated as wedge causes. With
+  6 GB offsets the game never issues any DI/DVDThread request
+  (hook proven live: stock/M11 runs log thread reads); with
+  in-disc offsets it proceeds to served reads. First divergence
+  is layout (own string bases), not behavior; the abort leaves
+  no table reads and identical heap-setup tails.
+- SERVING STATUS, corrected: implemented at the true choke
+  point (`DVDThread::ProcessReadRequest` covers file + DTK
+  streaming with correct async completion; an earlier
+  `PerformDecryptingRead` hook was removed as redundant) but
+  UNEXERCISED for GX offsets - absence is now meaningful
+  (liveness proven), and it says the wedge precedes submit.
+- Wedge-point forensics: stop lands mid-string-walk over VALID
+  NUL-terminated names (`MessageData`); no malformed structure
+  at `0x900171B8`. Post-read tail = heap/DVD-request setup
+  (426 writes) then silence; process ~2% CPU (blocked, not
+  spinning); only dialog is a benign host-font warning.
+- Hardware reading: T0 (unopened created files) and Yoshi
+  (in-place) never opened a mod-offset file, so no hardware run
+  contradicts a DOL-side range check - but none confirms it
+  either. If the DOL checks against IOS-reported size, cIOS may
+  satisfy it on hardware (unverified). Next probes (no GX
+  changes): extend `m_disc_end_offset` + log DI entries, rerun
+  M10/Spectral; find the DOL check's operand on a miss.
+- Method caveats: NoGUI-master second-halt-in-session times out
+  (single-halt sessions work; trace file is authoritative);
+  `reservewrite`/`dcbz` reservation silence re-verified each
+  matrix run (0 in-reservation writes).
 
 - CONTRACT (exact, file-order from the converged trace): entry
   zeroes TOP (`pc=800046C0`) -> setter writes BASE=`0x90000800`
@@ -532,11 +577,11 @@ no unverified address is substituted anywhere on this evidence.
   proven (12 B paddings abundant in text; need birth/idle/+min
   reads of the chosen cave) - the patch stays unexecuted.
 - SPECTRAL TABLE: 1238 valid reads (root `0x19DA`, entry/name
-  bytes), ZERO dcbz lines inside the reservation, then a
-  content-stage wedge (stub unresponsive <20 s) - expected: mod
-  offsets have no serving backend here. Survival + lookup
-  proven; file CONTENT needs a replacement-file backend the
-  stock control cannot provide.
+  bytes), ZERO dcbz lines inside the reservation, then wedge -
+  SUPERSEDED by the matrix below: the wedge is pre-submit offset
+  rejection (M9/M10 split), not missing-backend content failure.
+  Survival + lookup stand; content serving awaits a run that
+  reaches submit.
 - WRITE-SILENCE (boot-to-extended-idle, ~4.5 min, 4.4M-line
   trace): ZERO `reservewrite` + ZERO dcbz inside the reservation;
   game alive across code regions, narrowing intact. Level-loading
@@ -547,9 +592,12 @@ no unverified address is substituted anywhere on this evidence.
   implementation agreement); `replacements.log` maps 2088 files
   (CustomCode 15 incl. 5 LoaderSB4, 267+1881 shape) with
   disc offsets/lengths and disc fallback; 299k stock-site parse
-  reads flow. Save selection + playable level need input
-  driving (movie/input poke - planned, not done); Wii stays
-  paused until that integrated run passes.
+  reads flow. STATUS, corrected: serving is IMPLEMENTED but
+  UNEXERCISED in the integrated run - the empty `gxserved.log`
+  (no GX-offset read arrived before the parse wedge) establishes
+  nothing about content delivery. Save selection + playable
+  level need input driving (movie/input poke - planned, not
+  done); Wii stays paused until that integrated run passes.
 - INTEGRATED RUN (base ISO + GX Spectral table at reservation +
   redirect + GX-offset backend): configuration PROVEN in-run
   (words `0x90000800/0x382BC`, GX table head `0x19DA`, redirect
