@@ -479,8 +479,9 @@ no unverified address is substituted anywhere on this evidence.
 
 All runs: base ISO + GX table at `0x90000800` reservation + BASE
 redirect (or noted poke), converged profile. Idle = `0x805BCCB0`
-EE-on; wedge/hang = halt-timeout + blocked process. CORRECTED
-after config audit (see recovery notes below):
+EE-on; non-idle second-halt = undistinguished stopped state
+(calibration below). CORRECTED after config audit (see recovery
+notes below):
 
 | variant | bytes | entries | outcome |
 |---|---|---|---|
@@ -508,6 +509,27 @@ after config audit (see recovery notes below):
   own `install` line + in-RAM root bytes. M1-slow stands on
   root-verified evidence; the voided claims are retracted here,
   not silently kept.
+- STUB CALIBRATION: second AND third halts work on stock idle
+  out to +240 s (same PC/SP, session healthy) - so halt-timeouts
+  in Spectral runs mean a non-idle stopped state, not session
+  decay. (One +385 s stock timeout stands unexplained; timeouts
+  past +240 s are not calibrated - stated, not used.)
+- REBOOT, not wedge-at-parse: install-verified Spectral runs
+  show TWO full boots per trace (entry/install/phase lines x2;
+  ~493k table reads EACH). Boot1 parses fully, does bulk heap
+  activity, then the game reboots (no crash dialog in any
+  panic-hunt; consistent with the mod loader's intentional
+  reset-and-apply, trigger unconfirmed). Boot2 repeats the
+  parse and continues into serving. The old "1237-read wedge"
+  counts came from cross-trace confusion; current runs complete
+  the walk.
+- ANOMALY DEMOTED: the `0x805D16D4`/`0x9000229C`=`0x41400` read
+  (vs file `0x3BDF5143`) repeats identically in both boots AND
+  boot1 continues 70k+ writes afterward - it does not stop
+  progress. Four-way check passes (same pc/sp/ea/len/BE/table
+  version `e17e71a3`); no writer exists on CPU/dcbz/host-copy/
+  memset paths. Held as non-blocking curiosity (host-direct
+  pointer writes unlogged; interpreter-Z2 probe retained).
 - SERVING STATUS: backend moved to the true choke point
   (`DVDThread::ProcessReadRequest` serves file + DTK streaming
   with correct async completion; a `PerformDecryptingRead` hook
