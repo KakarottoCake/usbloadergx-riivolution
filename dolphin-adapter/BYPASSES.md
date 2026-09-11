@@ -478,33 +478,36 @@ no unverified address is substituted anywhere on this evidence.
 ## Grown-parse matrix (dev build, Sep 2026)
 
 All runs: base ISO + GX table at `0x90000800` reservation + BASE
-redirect (or noted poke), converged profile. Verdicts by 75 s
-(wedge = halt-timeout + dead signature; idle = `0x805BCCB0` EE-on):
+redirect (or noted poke), converged profile. Idle = `0x805BCCB0`
+EE-on; wedge/hang = halt-timeout + blocked process. CORRECTED
+after config audit (see recovery notes below):
 
 | variant | bytes | entries | outcome |
 |---|---|---|---|
 | M0 stock verbatim | 153792 | 4493 | IDLE, 494625 reads |
-| M1 stock+76 KB trailing zeros | 230076 | 4493 | bdnz compute loop at 75 s, IDLE by 325 s (SLOW, not stuck) |
+| M1 stock+76 KB trailing zeros | 230076 | 4493 | bdnz loop at 75 s, IDLE by ~145 s (SLOW (root-verified `0x118D` in-RAM), not stuck) |
 | M2 +10 files | 154122 | 4503 | IDLE |
 | M4 +500 files | 169312 | 4993 | IDLE |
 | M6 +100 files, 600 B names | 215112 | 4593 | IDLE |
 | M7 +60 zero-length files | 155672 | 4553 | IDLE (zero-length innocent) |
 | M8 +2000 files | 215812 | 6493 | IDLE (count to 6493 innocent) |
 | M9 267 files lengths+4096, stock offsets | 153790 | 4493 | IDLE (lengths innocent) |
-| M10 267 files stock lengths, 6 GB offsets | 153790 | 4493 | WEDGE ~1237 reads, no DI/DVDThread activity |
-| M11 267 files shifted +1 MB in-disc | 153790 | 4493 | past M10 point (1561 reads), thread reads flow, later content wedge (expected: wrong bytes) |
-| Spectral GX 230076 | 230076 | 6618 | WEDGE ~1240 reads, no DI/DVDThread activity |
-| Dolphin 230076 table | 230076 | 6618 | WEDGE ~1764 reads, same signature |
+| M10 267 files stock lengths, 6 GB offsets | 153790 | 4493 | submit+BlockOOB+DEINT, retry, fatal (pre-bypass); offset-gated |
+| M11 267 files shifted +1 MB in-disc | 153790 | 4493 | past M10 point, thread reads flow, later content wedge (expected: wrong bytes) |
+| Spectral GX 230076 | 230076 | 6618 | below (integrated) |
+| Dolphin 230076 table | 230076 | 6618 | same signature (not serializer-specific) |
 
-- REJECT CONDITION: mod-range OFFSETS, pre-submit. M9 idles /
-  M10 wedges with entry count, names, and lengths controlled;
-  count (M8), strings (M6), zero-length (M7), lengths (M9),
-  padding-slowness (M1) all exonerated as wedge causes. With
-  6 GB offsets the game never issues any DI/DVDThread request
-  (hook proven live: stock/M11 runs log thread reads); with
-  in-disc offsets it proceeds to served reads. First divergence
-  is layout (own string bases), not behavior; the abort leaves
-  no table reads and identical heap-setup tails.
+- REJECT CONDITION: mod-range OFFSETS at submit time. M9 idles /
+  M10 errors with count/names/lengths controlled; M11 in-disc
+  proceeds. The barrier was the emulator's
+  `m_disc_end_offset` (BlockOOB+DEINT on submit, retry pair,
+  fatal) - "PPC-side rejection" WITHDRAWN (game submits freely).
+- CONFIG HYGIENE (learned hard): two runs were mislabeled by
+  stale `install.fst` (batch3 "m1-long" ran M6; one specint4 ran
+  stock). Iron rule adopted: every verdict gated on the trace's
+  own `install` line + in-RAM root bytes. M1-slow stands on
+  root-verified evidence; the voided claims are retracted here,
+  not silently kept.
 - SERVING STATUS: backend moved to the true choke point
   (`DVDThread::ProcessReadRequest` serves file + DTK streaming
   with correct async completion; a `PerformDecryptingRead` hook
@@ -621,13 +624,22 @@ redirect (or noted poke), converged profile. Verdicts by 75 s
   nothing about content delivery. Save selection + playable
   level need input driving (movie/input poke - planned, not
   done); Wii stays paused until that integrated run passes.
-- INTEGRATED RUN (base ISO + GX Spectral table at reservation +
-  redirect + GX-offset backend): configuration PROVEN in-run
-  (words `0x90000800/0x382BC`, GX table head `0x19DA`, redirect
-  logged, backend map loaded) - but the game wedges in table
-  parsing (1240 reads, last `ea=900171B8`, stub unresponsive)
-  BEFORE any content read, so the backend never fires
-  (`gxserved.log` empty). Integrated-to-title NOT achieved.
+- INTEGRATED FRONTIER (Spectral, install-verified root `0x19DA`,
+  bypass+pad live): 17 DI submits ALL succeed, 25+ served with
+  correct bytes (SMR.szs, JaiSeq, SoundIdToInstList), 2 EOF
+  overruns padded (31 B, 19 B), 0 fail/miss, full 493k parse,
+  reservation untouched (0 writes/clears). Process then blocks
+  with no further submits - title unconfirmed (no video/input
+  yet), NOT a serving failure. One unexplained read value
+  (`0x805D16D4`/`0x9000229C` = `0x41400` vs file `0x3BDF5143`,
+  no writer on CPU/dcbz/host-copy/mset paths; host-direct
+  pointer writes remain the unlogged class; interpreter-Z2
+  probe proposed) - held open, not attributed.
+- M12 identical-contents comparison: SUPERSEDED in its
+  placement-per-se form (offsets submit freely; serving, not
+  placement, decides). Remaining variant of value: same bytes
+  served at both placements to isolate content-vs-address -
+  backend already serves identical bytes wherever mapped.
 - CONTROL kills the serializer theory: Dolphin's OWN 230076-byte
   table at the reservation wedges IDENTICALLY (1764 reads, 112
   distinct, same string-compare PCs, same dead park) - while the
