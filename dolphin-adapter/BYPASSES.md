@@ -505,12 +505,35 @@ redirect (or noted poke), converged profile. Verdicts by 75 s
   in-disc offsets it proceeds to served reads. First divergence
   is layout (own string bases), not behavior; the abort leaves
   no table reads and identical heap-setup tails.
-- SERVING STATUS, corrected: implemented at the true choke
-  point (`DVDThread::ProcessReadRequest` covers file + DTK
-  streaming with correct async completion; an earlier
-  `PerformDecryptingRead` hook was removed as redundant) but
-  UNEXERCISED for GX offsets - absence is now meaningful
-  (liveness proven), and it says the wedge precedes submit.
+- SERVING STATUS: backend moved to the true choke point
+  (`DVDThread::ProcessReadRequest` serves file + DTK streaming
+  with correct async completion; a `PerformDecryptingRead` hook
+  was tried and removed as redundant). Path bug found and
+  fixed: msys `/j/...` paths are invalid Win32 (fixed by
+  normalization at load). Serving PROVEN live: 11 correct reads
+  of mod audio (`SMR.szs`, 32 B probe + streaming chunks)
+  with disc fallback intact (Error#001 probe still errors).
+- BARRIER, precisely localized (instrument-before-change):
+  DI entry logs every request; the bound check logs offset/len/
+  limit/decision without changing behavior. M10 run: game
+  SUBMITS the 6 GB read twice (retry), IOS pre-checks pass
+  (partition open, buffer exact), `diret=submitted`, then
+  `oobcheck ... WOULD-ERROR` -> BlockOOB + DEINT -> fatal.
+  "PPC-side rejection" WITHDRAWN: the game submits past any
+  game-side check; the barrier is the emulator's
+  `m_disc_end_offset` comparison. Emulator-backend barrier, not
+  a Wii defect finding.
+- BOUND BYPASS (diagnostic, mapped-only): skip BlockOOB solely
+  for fully-mapped extents (same map the thread serves from);
+  unmapped OOB still errors; nothing carried to GX. With it,
+  Spectral runs serve mod bytes and proceed past the old stop
+  (  streaming flows); the remaining stop is a LATER per-open
+  offset gate (M11 in-disc proceeds past M10's stop with thread
+  reads flowing; M10/6 GB stalls with zero thread requests while
+  the hook is proven live - both pre-bypass observations, now
+  explained: unmapped OOB errored before the thread).
+  Next: operand identification (partition-size source the open
+  path reads) + size-report extension test. No GX/Wii changes.
 - Wedge-point forensics: stop lands mid-string-walk over VALID
   NUL-terminated names (`MessageData`); no malformed structure
   at `0x900171B8`. Post-read tail = heap/DVD-request setup
