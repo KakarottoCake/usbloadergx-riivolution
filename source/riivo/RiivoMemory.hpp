@@ -85,6 +85,15 @@ namespace Riivo
 	//! than partially patched.
 	int MemPreflightHardFails(const std::vector<MemOutcome> &out);
 
+	//! Reservation-experiment completeness: every requested patch ran and
+	//! reported success. Unlike VerifyAppliedPatches (which re-reads bytes
+	//! and skips non-OK outcomes), this fails on any skip: a soft original
+	//! mismatch or a missing outcome means the configuration going in is
+	//! not the configuration requested, and a full-mod run must refuse
+	//! rather than boot a mixture. Pure logic over the two vectors.
+	bool AllMemoryPatchesOk(const ResolvedPatchSet &set,
+							const std::vector<MemOutcome> &app);
+
 	//! Compact post-shutdown summary: applied/total, skips by reason, and any
 	//! patch whose outcome changed between preflight and apply (loader
 	//! patches run between the two, so a change names bytes they touched).

@@ -325,6 +325,37 @@ int main()
 		   "mixed set: preflight left the good patch's target alone");
 	}
 
+	// ----------------- completeness for the reservation gate: every requested
+	// patch ran and reported success. A size check alone passes a set whose
+	// outcomes are all present but skipped, which is exactly the mixture a
+	// full-mod run must refuse.
+	{
+		ResolvedPatchSet set;
+		set.memories.push_back(Direct(0x00608000, VAL4, 4));
+		set.memories.push_back(Direct(0x00608100, VAL4, 4));
+		std::vector<MemOutcome> app;
+		ck(ApplyMemoryPatches(set, "sd:", app) == 2, "complete: both applied");
+		ck(AllMemoryPatchesOk(set, app), "complete: full success reports complete");
+
+		ResolvedPatchSet skip;
+		skip.memories.push_back(Direct(0x00608200, VAL4, 4, ORIG4, 4)); // RAM is zero: soft skip
+		skip.memories.push_back(Direct(0x00608300, VAL4, 4));
+		std::vector<MemOutcome> skipped;
+		ck(ApplyMemoryPatches(set, "sd:", skipped) == 2, "setup: control applies");
+		ck(ApplyMemoryPatches(skip, "sd:", skipped) == 1, "setup: one patch skips");
+		ck(skipped.size() == skip.memories.size(),
+		   "skip: outcomes still one per patch, so a size check alone passes");
+		ck(!AllMemoryPatchesOk(skip, skipped),
+		   "skip: a soft-skipped patch reports incomplete");
+
+		skipped.pop_back();
+		ck(!AllMemoryPatchesOk(skip, skipped), "short: a missing outcome reports incomplete");
+
+		ResolvedPatchSet none;
+		std::vector<MemOutcome> empty;
+		ck(AllMemoryPatchesOk(none, empty), "empty: vacuous success");
+	}
+
 	printf("%d checks, %d failure(s)\n", checks, failed);
 	return failed ? 1 : 0;
 }
