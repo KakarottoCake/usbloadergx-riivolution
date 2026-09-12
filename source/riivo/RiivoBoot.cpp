@@ -31,7 +31,6 @@
 #include "RiivoLaunchState.hpp"
 #include "RiivoCheckpoints.hpp"
 #include "RiivoPersist.hpp"
-#include "RiivoSmg2Reserve.hpp"
 #include "RiivoPatchGuard.h"
 #include "RiivoIosProbe.hpp"
 #include "RiivoOnDemand.hpp"
@@ -354,21 +353,12 @@ namespace Riivo
 	static bool relocOrig = false;
 	static std::vector<u8> relocOrigRaw;
 
-	//! Experimental split (riivolution/mem2fst.txt): place a grown table in
-	//! MEM2 instead of cascading below the MEM1 reservation. MEM1 below the
-	//! reservation is cleared by game startup on SB4E01 no matter what the
-	//! arena words say, so the cascade steers into a clear zone there. MEM2
-	//! has no apploader reservation at all: the address is surveyed, not
-	//! derived (see PlaceFstMem2), which is why this stays behind a marker
-	//! and only ever applies to tables that must grow. In-place tables,
-	//! unknown reservations, and refused MEM2 placements all behave exactly
-	//! as without the marker. Do not combine with nofstinstall.txt (which
-	//! wins: nothing installs).
-	static bool mem2Fst = false;
-	static bool smg2Reserve = false;
-	static bool &smg2ReservePending = g_launch.smg2Armed;
+	//! Retired (general pipeline, 2026-09-12): mem2fst.txt / smg2reserve.txt
+	//! per-title MEM2 placements removed. PlaceFstMem2 arithmetic remains
+	//! host-tested in RiivoFstInstall.cpp but is no longer consulted by the
+	//! production placement policy, which supports only in-place tables until
+	//! the patched boot view lands. See docs/archive/smg2-reserve/README.md.
 	static u8 bootDiscRevision = 0xff;
-	bool Smg2ReservationPending() { return smg2ReservePending; }
 
 	//! The game's id, needed to ask which partition it lives on.
 	static u8 bootGameId[8] = { 0 };
@@ -536,18 +526,28 @@ namespace Riivo
 				fclose(r);
 			}
 		}
+		//! Retired markers (general pipeline, 2026-09-12): smg2reserve.txt
+		//! (per-game MEM2 reservation) and mem2fst.txt (per-title surveyed
+		//! MEM2 window) are no longer consulted. If present they are reported
+		//! as retired and ignored; grown placements refuse via the general
+		//! policy below, never via a game-ID gate. See
+		//! docs/archive/smg2-reserve/README.md.
 		if (!device.empty())
 		{
 			FILE *m = fopen((device + "/riivolution/smg2reserve.txt").c_str(), "rb");
-			if (m) { smg2Reserve = true; fclose(m); }
+			if (m)
+			{
+				fclose(m);
+				gprintf("Riivo: smg2reserve.txt is retired (per-game reservation removed); ignored, general placement policy applies\n");
+			}
 		}
 		if (!device.empty())
 		{
 			FILE *m = fopen((device + "/riivolution/mem2fst.txt").c_str(), "rb");
 			if (m)
 			{
-				mem2Fst = true;
 				fclose(m);
+				gprintf("Riivo: mem2fst.txt is retired (surveyed MEM2 window removed); ignored, general placement policy applies\n");
 			}
 		}
 		//! Optional: "addr:port" of a listener on the LAN. Absent for
@@ -636,8 +636,6 @@ namespace Riivo
 		skipFstInstall = false;
 		relocOrig = false;
 		relocOrigRaw.clear();
-		smg2Reserve = false;
-		mem2Fst = false;
 		//! Diagnostics and verdicts: never inherited across boots.
 		bootClockStart = 0;
 		deadlinePassed = false;
@@ -982,7 +980,8 @@ namespace Riivo
 	//! And the reservation size from boot.bin+0x42C (same sector, no extra
 	//! read): the apploader reserves exactly that many bytes for the table,
 	//! so a rebuild that fits it can stay in place instead of relocating
-	//! below into memory the game's startup clears (measured on SB4E01).
+	//! below into memory game startup may clear (general policy: in-place
+	//! only until the patched boot view lands).
 	static bool ReadDiscFst(u8 **outData, u32 *outSize, u32 *outOffset,
 							 u32 *outDolOffset, u32 *outMaxSize, std::string &err)
 	{
@@ -2041,8 +2040,9 @@ namespace Riivo
 		//! offsets and sizes; shared string tails stored once). If the plain
 		//! table outgrows the apploader's reservation but the compacted one
 		//! fits, stage the compacted bytes instead: they install in place,
-		//! out of reach of the startup clearing below the reservation that
-		//! kills relocated tables on SB4E01. Anything else keeps today's
+		//! which the general policy supports. Grown tables that still overflow
+		//! refuse explicitly; relocation is unsupported until the patched boot
+		//! view lands. Anything else keeps today's
 		//! bytes exactly - unknown reservation, fitting plain table, failed
 		//! build, failed walk, or still-overflowing compaction.
 		if (!validationOom && compactAttempted)
@@ -2477,35 +2477,6 @@ namespace Riivo
 			g_launch.Refuse(2);
 			gprintf("Riivo: late FST install REFUSED - staged table failed its checksum before copying\n");
 			return false;
-		}
-		if (smg2ReservePending)
-		{
-			u32 original[4], patched[4];
-			memcpy(original, (const void *) SMG2_GET_BASE, sizeof(original));
-			//! MEM2 arena high: the PPC/IOS boundary word the game's OSInit
-			//! reads (see RiivoMem2Reserve.hpp for provenance). Re-read late
-			//! rather than trusted from placement: anything that moved the
-			//! boundary after the report must refuse, not install.
-			const char *why = CheckSmg2Reservation(bootGameId, bootDiscRevision,
-				size, *(vu32 *) MEM2_ARENA_HI_ADDR, (u32)pendingFst, original);
-			if (why || addr != SMG2_FST_BASE
-				|| RiivoPatchConflict(SMG2_GET_BASE, 16)
-				|| RiivoPatchConflict(SMG2_FST_BASE, SMG2_FST_CAP)
-				|| !BuildSmg2GetterPatch(original, patched))
-			{
-				g_launch.Refuse(3);
-				gprintf("Riivo: SB4E01 reservation refused: %s\n", why ? why : "placement or mod conflict");
-				return false;
-			}
-			memcpy((void *) SMG2_GET_BASE, patched, sizeof(patched));
-			DCFlushRange((void *) SMG2_GET_BASE, sizeof(patched));
-			ICInvalidateRange((void *) SMG2_GET_BASE, sizeof(patched));
-			if (memcmp((const void *) SMG2_GET_BASE, patched, sizeof(patched)))
-			{
-				g_launch.Refuse(3);
-				return false;
-			}
-			gprintf("Riivo: SB4E01 BASE getter installed: reservation 90000800..90040800\n");
 		}
 		const bool ok = InstallFst(pendingPlace, pendingFst, pendingFstSize);
 		if (!ok)
@@ -3186,100 +3157,10 @@ namespace Riivo
 		}
 	}
 
-	//! Placement-time modifier for the SB4E01 reservation: direct <memory>
-	//! patches have known targets, so one writing the BASE getter slot or
-	//! the reserved span refuses the reservation here, persistently. Search
-	//! and ocarina targets are unknown until applied; the guard re-checks
-	//! every applied write before installation (see InstallPendingFst).
-	static const char *Smg2DirectConflict(const ResolvedPatchSet *set)
-	{
-		if (!set)
-			return 0;
-		for (size_t i = 0; i < set->memories.size(); ++i)
-		{
-			const ResolvedMemory &m = set->memories[i];
-			if (m.search || m.ocarina)
-				continue;
-			const u32 len = (u32) m.value.size();
-			if (!len)
-				continue;
-			const u32 addr = m.offset | 0x80000000;
-			if (Smg2Overlaps(addr, len, SMG2_GET_BASE, SMG2_GET_BASE + 16)
-				|| Smg2Overlaps(addr, len, SMG2_FST_BASE, SMG2_FST_END))
-				return "a <memory> patch writes the BASE getter or the reserved span";
-		}
-		return 0;
-	}
-
-	//! Evaluate the SB4E01 reservation (smg2reserve.txt on a revision-0 disc)
-	//! and either arm it or refuse it, persistently. Success sets
-	//! smg2ReservePending and replaces effPlace with the MEM2 answer;
-	//! failure replaces effPlace with a refusal and never falls back: the
-	//! MEM1 cascade below the reservation is cleared by game startup on
-	//! this title, so it is not a consolation prize. Booking and outcome
-	//! text below consume effPlace unchanged.
-	static void EvaluateSmg2Reservation(const ArenaInfo &arena, u32 want,
-										std::string &out, FstPlacement &effPlace)
-	{
-		if (skipFstInstall)
-		{
-			//! The skip diagnostic wins: nothing installs, so there is
-			//! nothing to arm. Not a refusal - the run is a vanilla boot.
-			out += "\n  SB4E01 reservation (smg2reserve.txt present):\n"
-				   "  not armed: nofstinstall.txt wins, nothing installs.\n";
-			return;
-		}
-		if (relocOrig || mem2Fst || OnDemandRequested())
-		{
-			effPlace = FstPlacement();
-			effPlace.why = "incompatible bypass marker (relocorig.txt/mem2fst.txt/ondemand.txt)";
-		}
-		else if (effPlace.ok && effPlace.inPlace)
-		{
-			//! Proven path stays: it fits where the apploader put it.
-			out += "\n  SB4E01 reservation (smg2reserve.txt present):\n"
-				   "  not armed: the table fits in place.\n";
-			return;
-		}
-		else
-		{
-			u32 getterWords[4] = {0, 0, 0, 0};
-			memcpy(getterWords, (const void *) SMG2_GET_BASE, sizeof(getterWords));
-			FstPlacement smg2place = BuildSmg2ReservationPlacement(arena, want);
-			const char *why = smg2place.ok ? CheckSmg2Reservation(
-				bootGameId, bootDiscRevision, want,
-				*(vu32 *) MEM2_ARENA_HI_ADDR,
-				(u32) pendingFst, getterWords) : smg2place.why.c_str();
-			u32 trial[4];
-			if (!why)
-				why = Smg2DirectConflict(bootSet);
-			if (!why && !BuildSmg2GetterPatch(getterWords, trial))
-				why = "BASE getter patch would not construct";
-			if (!why)
-			{
-				smg2ReservePending = true;
-				effPlace = smg2place;
-				Addf(out, "\n  SB4E01 reservation (smg2reserve.txt present):\n");
-				Addf(out, "  MEM2 table at    : %08x, %u bytes; MEM1 arena untouched\n",
-					 smg2place.fstAddr, want);
-				Addf(out, "  MEM2 boundary    : %08x; staging at %08x\n",
-					 *(vu32 *) MEM2_ARENA_HI_ADDR, (u32) pendingFst);
-				Addf(out, "  BASE getter      : %08x %08x .... .... (slot signature verified, patch armed for install)\n",
-					 getterWords[0], getterWords[1]);
-				out += "  The getter patch and the table land last, immediately\n"
-					   "  before the game starts; a failed check there refuses\n"
-					   "  instead of jumping (code 3).\n";
-				return;
-			}
-			effPlace = FstPlacement();
-			effPlace.why = why;
-		}
-		Addf(out, "\n  SB4E01 reservation (smg2reserve.txt present):\n");
-		Addf(out, "  REFUSED: %s\n", effPlace.why.c_str());
-		out += "  No fallback: the MEM1 cascade below the reservation is\n"
-			   "  cleared by game startup on this title, so a refused\n"
-			   "  reservation withholds the table instead of steering into it.\n";
-	}
+	//! Retired (general pipeline, 2026-09-12): per-game reservation
+	//! conflict checks and MEM2 evaluation removed. General placement
+	//! policy in ReportFstPlacement refuses grown tables explicitly with
+	//! required vs reserved capacity. See docs/archive/smg2-reserve/.
 
 	void ReportFstPlacement()
 	{
@@ -3370,56 +3251,25 @@ namespace Riivo
 			 arena.fstAddr, arena.fstMaxSize);
 		Addf(out, "  rebuilt size : %u bytes\n\n", want);
 
-		//! SB4E01 reservation (riivolution/smg2reserve.txt): a grown table
-		//! for this game goes to a fixed MEM2 window the game's own BASE
-		//! getter is patched to skip, instead of cascading below the MEM1
-		//! reservation (cleared by game startup no matter what arenaHi says)
-		//! or trusting the surveyed 0x92000000 window the game was never
-		//! seen reading. Decided here, persistently: success arms the late
-		//! getter patch plus the MEM2 install, refusal withholds with no
-		//! fallback. In-place tables and other games never consult it.
-		//! Experimental MEM2 destination (riivolution/mem2fst.txt): when the
-		//! table has to grow and the marker asks for it, try MEM2 instead of
-		//! the MEM1 cascade below the reservation - game startup clears that
-		//! zone on SB4E01 no matter what arenaHi says. In-place tables never
-		//! consult the marker. A refused MEM2 placement falls back to the
-		//! MEM1 answer (logged), never to a guess. Everything below books
-		//! and reports the EFFECTIVE placement.
+		//! General placement policy (2026-09-12, no game-ID gates): only
+		//! in-place tables install. A grown table that fits nowhere the
+		//! apploader reserved refuses explicitly here with required vs
+		//! reserved capacity, instead of cascading into memory game startup
+		//! may clear or trusting a surveyed MEM2 window. The coherent fix is
+		//! the patched boot view (apploader allocates for the rebuilt table);
+		//! until it lands, relocation is unsupported on every title alike.
+		//! Everything below books and reports the EFFECTIVE placement.
 		FstPlacement effPlace = place;
-		bool useMem1Answer = true;
-		if (smg2Reserve && memcmp(bootGameId, "SB4E01", 6) == 0
-			&& bootDiscRevision == 0)
+		if (effPlace.ok && !effPlace.inPlace)
 		{
-			useMem1Answer = false;
-			EvaluateSmg2Reservation(arena, want, out, effPlace);
-		}
-		else if (smg2Reserve)
-		{
-			out += "\n  smg2reserve.txt present but this is not SB4E01 revision 0:"
-				   " marker ignored.\n";
-		}
-		if (useMem1Answer && mem2Fst && place.ok && !place.inPlace)
-		{
-			const FstPlacement mp = PlaceFstMem2(arena, want, 32);
-			Addf(out, "\n  MEM2 experiment (mem2fst.txt present):\n");
-			if (mp.ok)
-			{
-				Addf(out, "  MEM2 table at    : %08x, %u bytes; MEM1 arena untouched\n",
-					 mp.fstAddr, want);
-				out += "  Basis (SB4E01 Dolphin survey, NOT a derivation): game MEM2\n"
-					   "  grows bottom-up from 0x90000000 (sparse first megabyte at\n"
-					   "  90 s idle); reads above ~0x93700000 fault post-boot (outside\n"
-					   "  the game's mapping); 0x92000000 sits ~31 MB above observed\n"
-					   "  use and ~23 MB below the mapping end, clear of loader MEM2\n"
-					   "  staging (low). Dolphin consumer checks at this address did\n"
-					   "  NOT pass (no table reads observed) - hardware Test 6 stays\n"
-					   "  held until a site does. This boot proceeds so its log\n"
-					   "  records MEM2 mechanics, not a validation.\n";
-				effPlace = mp;
-			}
-			else
-				Addf(out, "  MEM2 refused (%s); kept MEM1 answer\n",
-					 mp.why.c_str());
+			char relWhy[192];
+			snprintf(relWhy, sizeof(relWhy),
+				"grown table needs %u bytes but the apploader reserved %u; "
+				"relocation requires the patched boot view (unsupported)",
+				want, arena.fstMaxSize);
+			effPlace = FstPlacement();
+			effPlace.why = relWhy;
+			Addf(out, "\n  relocation unsupported: %s\n", effPlace.why.c_str());
 		}
 
 		if (!effPlace.ok)
@@ -3435,29 +3285,16 @@ namespace Riivo
 				 arena.fstMaxSize - plannedFstSize);
 			out += "  Nothing would move and the game's heap would be untouched.\n";
 		}
-		else if (effPlace.fstAddr >= MEM2_BASE)
-		{
-			Addf(out, "  would go at  : %08x  (MEM2 experimental placement)\n",
-				 effPlace.fstAddr);
-			Addf(out, "  arena high   : %08x (unchanged)\n", arena.arenaHi);
-		}
 		else
 		{
-			Addf(out, "  would go at  : %08x  (extended downwards)\n", effPlace.fstAddr);
-			Addf(out, "  arena high   : %08x -> %08x\n", arena.arenaHi, effPlace.newArenaHi);
-			Addf(out, "  taken from the game's heap : %u KB\n", effPlace.reserved / 1024);
-			if (effPlace.heapLeft)
-				Addf(out, "  heap the game still has    : %u MB\n",
-					 effPlace.heapLeft / (1024 * 1024));
-			else
-			{
-				//! Arena low was never set, so there is no floor to measure
-				//! the heap against. The cap actually enforced in that case
-				//! is the blind-drop limit; print how much of it this takes.
-				Addf(out, "  heap the game still has    : unknown (arena low not set)\n");
-				Addf(out, "  blind-drop cap used        : %u of %u KB\n",
-					 effPlace.reserved / 1024, MAX_BLIND_DROP / 1024);
-			}
+			//! Unreachable by construction: grown placements refuse above.
+			//! Retained as a defensive refusal so a future policy change
+			//! cannot silently re-activate relocation without updating this
+			//! report and the booking below.
+			Addf(out, "  REFUSED: unexpected grown placement at %08x (policy requires in-place)\n",
+				 effPlace.fstAddr);
+			effPlace = FstPlacement();
+			effPlace.why = "unexpected grown placement (policy requires in-place)";
 		}
 		if (effPlace.ok)
 			Addf(out, "  loaded ranges kept clear : %u considered, %u ignored "

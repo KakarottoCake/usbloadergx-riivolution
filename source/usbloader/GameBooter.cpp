@@ -987,8 +987,7 @@ int GameBooter::BootGame(struct discHdr *gameHdr, const s8 useOcarina)
 		//! splits that outcome: intact now plus a code-2 blink means the table
 		//! was corrupted after the card went away - by gamepatches, the code
 		//! handler, the pre-jump summary's GUI work - and not by the apploader
-		//! or the table build. T7 on SB4E01 refused at this install with the
-		//! reason unrecorded; this is what that round was missing.
+		//! or the table build.
 		if (AppEntrypoint != 0)
 			Riivo::AppendLog(!Riivo::HaveStagedFst()
 							 ? "Staged file table: none staged for this boot.\n"
@@ -1163,21 +1162,12 @@ int GameBooter::BootGame(struct discHdr *gameHdr, const s8 useOcarina)
 	//! staged, plus the words the game uses to find the table. A mismatch
 	//! refuses the jump and returns to the loader - a visible outcome naming
 	//! the install - instead of a black screen past this point.
-	// The reservation experiment is a full-mod run. A skipped memory patch
-	// invalidates that configuration; refuse before installing the table.
-	// Outcome-based, not byte-based: every requested patch must have run
-	// and reported success (the byte re-reads stay diagnostic at
-	// post-apply and pre-jump, since later loader writes can move bytes
-	// that applied cleanly). VerifyAppliedPatches alone cannot gate this:
-	// it skips non-OK outcomes instead of failing on them.
-	if (Riivo::Smg2ReservationPending() && !riivoSet.memories.empty()
-		&& (!riivoMemAttempted || !Riivo::AllMemoryPatchesOk(riivoSet, riivoMemApp)))
-	{
-		gprintf("Riivo: SB4E01 reservation refused: memory patch set incomplete\n");
-		RiivoBlinkRefusal(3);
-		Sys_BackToLoader();
-		return -1;
-	}
+	//! General effective-mod integrity (no game-ID gates): file work and
+	//! memory patches belong to one selected configuration. Incomplete file
+	//! work already holds back the memory set above; a hard memory-preflight
+	//! failure with live files boots files-only only via the explicit policy
+	//! there, never silently. No per-title reservation gate remains; grown
+	//! tables refuse at placement via the general in-place-only policy.
 	if (!Riivo::InstallPendingFst())
 	{
 		const u32 riivoFailCode = Riivo::InstallFailCode();
