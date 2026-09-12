@@ -1,3 +1,55 @@
+# Handoff — 2026-09-12 (SB4E01 reservation: branch smg2-reserve, CI building)
+
+Branch `smg2-reserve` (commit `e13b945b`, from `717a04a6`) completes
+Astra's partial reservation work. No Wii run yet; CI build in progress.
+Localhost proof so far: full host suite green, touched PPC units compile
+clean, getter bytes verified in main.dol, halted MEM2 dump matches the
+installed table byte-for-byte (prior soak run).
+
+## What changed (9 files, +364/-5, no whitespace noise)
+
+- `source/riivo/RiivoSmg2Reserve.hpp` (new): slot constants, getter
+  signature/builder, `CheckSmg2Reservation`, `BuildSmg2ReservationPlacement`.
+- `source/riivo/RiivoBoot.cpp`: `EvaluateSmg2Reservation` arms the
+  reservation at placement time (persistent log) or refuses with no MEM1
+  fallback; install block re-checks late and writes lwz/addis/blr with
+  cache maintenance + read-back (fail code 3); MEM1 dirt scan stays MEM1.
+- `source/riivo/RiivoBoot.hpp`: `discRevision` through `SetBootContext`
+  (default keeps old callers compiling), `Smg2ReservationPending()`.
+- `source/usbloader/GameBooter.cpp`: passes `gameHeader.disc_ver`;
+  reservation gate requires every requested memory patch OK
+  (`AllMemoryPatchesOk`); byte verifier stays diagnostic.
+- `source/riivo/RiivoMemory.{hpp,cpp}`: the `AllMemoryPatchesOk` helper.
+- `hosttests/`: `test_smg2reserve.cpp` (new, placement builder) wired
+  into `run.sh`; completeness cases in `test_memapply.cpp`.
+
+## Static evidence for getter==setter equivalence (main.dol)
+
+- Slot at 0x805B4E70 holds `806D9644 4E800020 00000000 00000000` (verified
+  from file offset via text1 mapping). Patch `3C630004` (addis r3,r3,4)
+  adds exactly 0x40000: 0x90000800 -> 0x90040800, LR/CR/stack untouched.
+- Whole-DOL survey: exactly ONE reader of r13-27068 (the getter), ONE
+  writer (setter at 0x805B4ED0), 12 bl call sites, ZERO absolute refs
+  into the slot padding. Sibling `...640` slots confirm the padding idiom.
+
+## Ownership audit (code-level; Wii boot is the proof)
+
+- GX pool is [0x90200000, 0x93300000] (`mem2alloc.cpp:20-23`); reservation
+  [0x90000800, 0x90040800) is disjoint and below `IOS_RELOAD_AREA`.
+- `RiivoIosProbe` scans MEM2 read-only from 0x90C00000. `disc.c` DMAs to
+  0x93000000. No GX/IOS writer to the reservation in the boot path.
+- `0x80003134` is the documented MEM2 arena-high word
+  (`RiivoMem2Reserve.hpp`); the install block now names the constant.
+
+## Tester plan (two starts maximum, after CI artifact + SHA land)
+
+1. Control: T0, no `smg2reserve.txt` -> expect in-place `FST_STAGED` boot.
+2. Experiment: Spectral USA SB4E01 full patches + `smg2reserve.txt` (no
+   `relocorig`/`mem2fst`/`nofstinstall`/`nomempatch`) -> reservation block
+   in the card log; code 3 + menu on refusal, gameplay if it boots.
+Config: d2x-v11-beta3 base 58 slot 252, game+mod same USB, HBC/AHBPROT.
+Preserve `usbloadergx_riivo_SB4E01.log` from each run.
+
 # Handoff — 2026-09-10 (updated: Spectral light reading + hang-window timed locally; one file-end check decides it)
 
 State of the SB4E01 (Super Mario Galaxy 2) debugging effort. Read the
