@@ -31,6 +31,7 @@
 #include "RiivoLaunchState.hpp"
 #include "RiivoCheckpoints.hpp"
 #include "RiivoPersist.hpp"
+#include "RiivoPatchPlan.hpp"
 #include "RiivoPatchGuard.h"
 #include "RiivoIosProbe.hpp"
 #include "RiivoOnDemand.hpp"
@@ -1662,6 +1663,65 @@ namespace Riivo
 		BuildRedirects(fst, *bootSet, bootDevice, &lister, redirects, &created);
 		LogStep("matched: %u replacement(s), %u addition(s)",
 				(unsigned) redirects.size(), (unsigned) created.size());
+
+		//! Coherent plan (general pipeline): compose the same inputs into
+		//! PlannedFiles with Dolphin-compatible segment semantics. FST sizes
+		//! below derive from the plan's finalSize, not whole external sizes,
+		//! so offset/fileoffset/length/resize reach the live rebuild path.
+		//! Boot-file and partial-segment files refuse explicitly here (named
+		//! limitations until the patched boot view / segment runtime land);
+		//! never silently apply whole-file bytes for a sub-range patch.
+		{
+			struct BootSizes : public FileSizeProvider
+			{
+				virtual bool GetSize(const std::string &external, u32 *outSize)
+				{
+					return ExternalFileSize(external, outSize);
+				}
+			} bootSizes;
+			PatchPlan plan;
+			std::string planWhy;
+			if (!BuildPatchPlan(fst, *bootSet, bootDevice, &lister,
+								&bootSizes, plan, planWhy))
+			{
+				Addf(out, "plan FAILED: %s\n", planWhy.c_str());
+				Addf(out, "\nNothing is applied for an unplannable mod. The game boots unmodified.\n");
+				AppendLog(out);
+				return;
+			}
+			if (!plan.errors.empty() || plan.hasBootFile)
+			{
+				Addf(out, "unsupported enabled file operation(s) - refusing file work:\n");
+				for (size_t i = 0; i < plan.errors.size() && i < 8; ++i)
+					Addf(out, "  %s\n", plan.errors[i].c_str());
+				if (plan.errors.size() > 8)
+					Addf(out, "  ... and %u more\n",
+						 (unsigned)(plan.errors.size() - 8));
+				Addf(out, "\nNever silently apply a different operation. The game boots unmodified;\n"
+						  "memory patches are held back via the file-work gate.\n");
+				AppendLog(out);
+				return;
+			}
+			if (plan.hasPartial)
+			{
+				Addf(out, "partial file replacement (offset/fileoffset/length/resize sub-ranges)\n"
+						  "detected: the fragment runtime serves whole files only.\n");
+				Addf(out, "Composed sizes would be:");
+				for (size_t i = 0; i < plan.files.size() && i < 8; ++i)
+				{
+					if (!plan.files[i].wholeFile)
+						Addf(out, " %s=%u", plan.files[i].disc.c_str(),
+							 plan.files[i].finalSize);
+				}
+				Addf(out, "\nRefusing file work until the segment runtime lands;\n"
+						  "the game boots unmodified (named limitation, not silent whole-file).\n");
+				AppendLog(out);
+				return;
+			}
+			// Whole-file plan agrees with redirects; FST sizes below use the
+			// plan's finalSize (equal to external sizes here) as the single
+			// authoritative source going forward.
+		}
 
 		//! Size accounting. A replacement bigger than the file it stands in for
 		//! cannot be served by redirection alone: the file table still advertises
