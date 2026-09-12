@@ -26,22 +26,6 @@
 namespace Riivo
 {
 
-bool IsBootFileDisc(const std::string &disc)
-{
-	if (disc.empty())
-		return false;
-	// Bare "main.dol" (any case, no slash) => executable (Dolphin).
-	bool hasSlash = disc.find('/') != std::string::npos
-		|| disc.find('\\') != std::string::npos;
-	if (!hasSlash && strcasecmp(disc.c_str(), "main.dol") == 0)
-		return true;
-	// Explicit "/main.dol" => also boot-file (never an FST entry).
-	std::string n = NormaliseDiscPath(disc);
-	if (n == "/main.dol")
-		return true;
-	return false;
-}
-
 bool StatFileSizeProvider::GetSize(const std::string &external, u32 *outSize)
 {
 	struct stat st;
@@ -67,29 +51,13 @@ static std::string ToLowerStr(const std::string &s)
 	return o;
 }
 
-static std::string BaseName(const std::string &path)
-{
-	size_t p = path.find_last_of("/\\");
-	return p == std::string::npos ? path : path.substr(p + 1);
-}
-
-static std::string JoinDiscPath(const std::string &dir, const std::string &rel)
-{
-	std::string d = dir;
-	if (!d.empty() && d[d.size() - 1] == '/')
-		d.erase(d.size() - 1);
-	std::string r = rel;
-	if (!r.empty() && r[0] == '/')
-		r = r.substr(1);
-	if (d.empty())
-		return "/" + r;
-	return d + "/" + r;
-}
-
 //! Working composition state per disc path, in application order.
 struct ComposeState
 {
-	std::string disc; // plan key
+	std::string disc; // plan key (post-FST routing)
+	std::string earlyKey; // pre-FST enumeration key (rule-derived): the
+	                      // identity the early fragment placement filed this
+	                      // file under; the late layout looks offsets up here
 	u64 origOffset;
 	u32 origLength;
 	bool existed;
@@ -347,13 +315,79 @@ static bool ApplyOne(ComposeState &st,
 	}
 }
 
+//! DOL image span from a parsed section table: max(fileOff+size), at
+//! least 0x100 (the header every apploader read implies). Pure.
+u64 DolImageSize(const u32 *fileOffs, const u32 *sizes, u32 count)
+{
+	u64 hi = 0x100;
+	if (!fileOffs || !sizes)
+		return hi;
+	for (u32 i = 0; i < count; ++i)
+	{
+		u64 end = (u64)fileOffs[i] + sizes[i];
+		if (end > hi)
+			hi = end;
+	}
+	return hi;
+}
+
+//! Compose one executable patch entry into the DOL state (base ORIGINAL
+//! [0,dolSize) backed by the DOL image on disc). The external size must
+//! already be statted. First use initializes the base; dolSize == 0 is a
+//! refusal (image extent unknown). Resize is FORCED size-preserving:
+//! apploader responses follow the stock image layout, so a grown or shrunken
+//! served image would desynchronize destinations; growth past the image end
+//! fails the size rule at materialization. Records errors, never throws.
+static bool ComposeDolEntry(ComposeState &dolSt, bool &dolHave, u64 dolSize,
+							u32 rawOffset, u32 rawFileOffset, u32 rawLength,
+							bool resize, const std::string &external, u32 extSize,
+							const char *what, std::vector<std::string> &errors)
+{
+	(void)resize; // entry flag ignored: executables preserve image size
+	if (!dolHave)
+	{
+		if (dolSize == 0 || dolSize > 0xFFFFFFFFULL)
+		{
+			errors.push_back("executable patch refused: DOL image extent unknown");
+			return false;
+		}
+		dolSt.disc = "/main.dol";
+		dolSt.existed = true;
+		dolSt.origOffset = 0;
+		dolSt.origLength = (u32)dolSize;
+		dolSt.curSize = (u32)dolSize;
+		dolSt.create = false;
+		dolSt.resize = true;
+		dolSt.segs.clear();
+		PlanSegment base;
+		base.kind = PlanSegment::SEG_ORIGINAL;
+		base.fileOffset = 0;
+		base.length = (u32)dolSize;
+		dolSt.segs.push_back(base);
+		dolHave = true;
+	}
+	std::string awhy;
+	if (!ApplyOne(dolSt, rawOffset, rawFileOffset, rawLength,
+				  false, external, extSize, awhy))
+	{
+		char b[300];
+		snprintf(b, sizeof(b), "executable patch '%s' refused: %s",
+			what ? what : "main.dol", awhy.c_str());
+		errors.push_back(b);
+		return false;
+	}
+	return true;
+}
+
 bool BuildPatchPlan(const Fst &fst,
 					const ResolvedPatchSet &set,
 					const std::string &device,
 					DirLister *lister,
 					FileSizeProvider *sizes,
 					PatchPlan &out,
-					std::string &why)
+					std::string &why,
+					u64 dolSize,
+					PlannedFile *outDol)
 {
 	why.clear();
 	out = PatchPlan();
@@ -375,6 +409,13 @@ bool BuildPatchPlan(const Fst &fst,
 	bool hasBoot = false;
 	bool hasPartial = false;
 
+	// Executable composition state (main.dol). Base is the ORIGINAL DOL
+	// image [0,dolSize) backed by disc; apploader requests stay at stock
+	// offsets and are served positionally, so the served image must preserve
+	// the stock image size exactly (checked at materialization).
+	ComposeState dolSt;
+	bool dolHave = false;
+
 	// Helper: ensure state for disc key (create vs existing resolved here).
 	// Returns 0 on skip (warning recorded), 1 on ready, -1 on boot-file.
 	int ensureState = 0;
@@ -392,11 +433,35 @@ bool BuildPatchPlan(const Fst &fst,
 		if (IsBootFileDisc(f.disc))
 		{
 			hasBoot = true;
-			char b[256];
-			snprintf(b, sizeof(b),
-				"boot-file patch '%s' requires the patched boot view (unsupported)",
-				f.disc.c_str());
-			errors.push_back(b);
+			if (!outDol)
+			{
+				char b[256];
+				snprintf(b, sizeof(b),
+					"boot-file patch '%s' requires the patched boot view (unsupported)",
+					f.disc.c_str());
+				errors.push_back(b);
+				continue;
+			}
+			warnings.push_back("executable patch routed to the boot view: " + f.disc);
+			const std::string external = JoinPath(device, f.root, f.external);
+			if (external.find('\\') != std::string::npos)
+			{
+				warnings.push_back("executable external with backslash skipped: " + external);
+				continue;
+			}
+			u32 extSize = 0;
+			if (!sizes->GetSize(external, &extSize))
+			{
+				MissingExternal m;
+				m.disc = "/main.dol";
+				m.external = external;
+				missing.push_back(m);
+				continue; // leave executable original (file-missing rule)
+			}
+			ComposeDolEntry(dolSt, dolHave, dolSize,
+							f.offset, f.fileoffset, f.length,
+							f.resize, external, extSize,
+							f.disc.c_str(), errors);
 			continue;
 		}
 		const std::string external = JoinPath(device, f.root, f.external);
@@ -434,12 +499,17 @@ bool BuildPatchPlan(const Fst &fst,
 		}
 		if (!entry && !f.create)
 			continue; // no disc entry, no create => no patch (Dolphin)
+		// Pre-FST enumeration key for this rule (what ListModFiles filed it
+		// under before any FST existed): the late layout meets early offsets
+		// through this identity, so basename routing still finds placement.
+		const std::string earlyKey = PlanKey(f.disc);
 		std::map<std::string, size_t>::iterator it = idx.find(key);
 		size_t si;
 		if (it == idx.end())
 		{
 			ComposeState st;
 			st.disc = key;
+			st.earlyKey = earlyKey;
 			st.create = f.create;
 			st.resize = f.resize;
 			InitFromDisc(st, entry);
@@ -462,15 +532,17 @@ bool BuildPatchPlan(const Fst &fst,
 			errors.push_back(b);
 			continue;
 		}
-		// Partial when not a single whole-file external.
-		if (!(st.segs.size() == 1
+		// Partial when not a single whole-file external (zero-length files
+		// compose to no segments and take no fragments: whole by vacuity).
+		if (!((st.segs.size() == 1
 			  && st.segs[0].kind == PlanSegment::SEG_EXTERNAL
 			  && st.segs[0].fileOffset == 0
 			  && st.segs[0].srcOffset == 0
 			  && st.segs[0].length == st.curSize
 			  && st.curSize == extSize
 			  && (f.offset & ~3u) == 0 && f.fileoffset == 0
-			  && (f.length == 0 || f.length == extSize)))
+			  && (f.length == 0 || f.length == extSize))
+			 || (st.curSize == 0 && st.segs.empty())))
 			hasPartial = true;
 	}
 
@@ -490,8 +562,10 @@ bool BuildPatchPlan(const Fst &fst,
 			std::vector<std::string> rel;
 			lister->List(extDir, fl.recursive, rel);
 			const bool dataless = fl.disc.empty();
-			const std::string discDir = dataless ? std::string()
-				: (fl.disc[0] == '/' ? fl.disc : std::string("/") + fl.disc);
+			// Shared helper with the early enumeration (ListModFiles): the
+			// pre-FST key below is byte-identical to what the early phase
+			// filed, by construction rather than by parallel formulas.
+			const std::string discDir = DiscDirPath(fl.disc);
 			for (size_t j = 0; j < rel.size(); ++j)
 			{
 				// Host/shim listings use '/' separators; normalize.
@@ -504,9 +578,22 @@ bool BuildPatchPlan(const Fst &fst,
 				{
 					MissingExternal m;
 					m.external = childExternal;
-					m.disc = dataless ? ToLowerStr(std::string("/") + BaseName(r))
+					m.disc = dataless ? ToLowerStr(std::string("/") + BaseFileName(r))
 						: PlanKey(JoinDiscPath(discDir, r));
 					missing.push_back(m);
+					continue;
+				}
+				// Dataless folders name bare files; a child naming the
+				// executable routes to the DOL plan (Dolphin parity: folder
+				// children become file patches routed by disc name).
+				if (dataless && outDol && IsBootFileDisc(BaseFileName(r)))
+				{
+					hasBoot = true;
+					warnings.push_back("executable patch routed to the boot view: " + r);
+					ComposeDolEntry(dolSt, dolHave, dolSize,
+									0, 0, fl.length, fl.resize,
+									childExternal, extSize,
+									r.c_str(), errors);
 					continue;
 				}
 				const FstFile *entry = 0;
@@ -514,7 +601,7 @@ bool BuildPatchPlan(const Fst &fst,
 				if (dataless)
 				{
 					// Basename match (Newer): first disc file with this name.
-					entry = fst.FindFile(BaseName(r));
+					entry = fst.FindFile(BaseFileName(r));
 					if (entry)
 						key = PlanKey(entry->path);
 					else
@@ -528,12 +615,16 @@ bool BuildPatchPlan(const Fst &fst,
 				}
 				if (!entry && !fl.create)
 					continue;
+				// Pre-FST enumeration key (early-phase identity for the late
+				// offset lookup below).
+				const std::string earlyKey = PlanKey(JoinDiscPath(discDir, r));
 				std::map<std::string, size_t>::iterator it = idx.find(key);
 				size_t si;
 				if (it == idx.end())
 				{
 					ComposeState st;
 					st.disc = key;
+					st.earlyKey = earlyKey;
 					st.create = fl.create;
 					st.resize = fl.resize;
 					InitFromDisc(st, entry);
@@ -577,6 +668,7 @@ bool BuildPatchPlan(const Fst &fst,
 			continue; // enumerated but never patched (all externals missing)
 		PlannedFile pf;
 		pf.disc = st.disc;
+		pf.earlyKey = st.earlyKey;
 		pf.discOffsetOrig = st.origOffset;
 		pf.discLengthOrig = st.origLength;
 		pf.finalSize = st.curSize;
@@ -618,14 +710,85 @@ bool BuildPatchPlan(const Fst &fst,
 	out.warnings = warnings;
 	out.errors = errors;
 	out.hasBootFile = hasBoot;
-	// hasPartial when any file is not whole-file (or boot-file requested).
+	// hasPartial when any NON-DOL file is not whole-file: the fragment
+	// runtime serves whole files only. DOL partials are served positionally
+	// by the boot view and never set this.
 	out.hasPartial = hasPartial;
 	for (size_t i = 0; i < out.files.size(); ++i)
 		if (!out.files[i].wholeFile)
 			out.hasPartial = true;
 	out.totalFinalBytes = total;
 	out.wholeFileCount = whole;
+
+	// Materialize the executable plan. The served image must preserve the
+	// stock image size exactly: apploader responses follow the stock layout,
+	// so a grown or shrunken image would desynchronize destinations.
+	if (dolHave && outDol)
+	{
+		if (dolSt.curSize != (u32)dolSize)
+		{
+			char b[256];
+			snprintf(b, sizeof(b),
+				"executable patch changes image size (%u, need %llu); "
+				"the served image must preserve the stock layout",
+				dolSt.curSize, (unsigned long long)dolSize);
+			errors.push_back(b);
+			out.errors = errors;
+			return true; // errors refuse file work; not a planning failure
+		}
+		PlannedFile pf;
+		pf.disc = "/main.dol";
+		pf.discOffsetOrig = 0;
+		pf.discLengthOrig = (u32)dolSize;
+		pf.finalSize = (u32)dolSize;
+		pf.isNew = false;
+		pf.resize = dolSt.resize;
+		pf.create = false;
+		pf.segs = dolSt.segs;
+		pf.bootFile = true;
+		pf.dolBase = 0; // production assigns the partition DOL offset
+		if (dolSt.segs.size() == 1
+			&& dolSt.segs[0].kind == PlanSegment::SEG_EXTERNAL
+			&& dolSt.segs[0].fileOffset == 0
+			&& dolSt.segs[0].srcOffset == 0
+			&& dolSt.segs[0].length == dolSt.curSize)
+		{
+			pf.wholeFile = true;
+			pf.external = dolSt.segs[0].external;
+		}
+		else
+		{
+			pf.wholeFile = false;
+		}
+		*outDol = pf;
+	}
 	return true;
+}
+
+void ResolveLateOffsets(const PatchPlan &plan,
+						const std::map<std::string, u64> &earlyOffsets,
+						std::map<std::string, u64> &lateOffsets,
+						u32 &unplaced, u32 &remapped)
+{
+	lateOffsets.clear();
+	unplaced = 0;
+	remapped = 0;
+	for (size_t i = 0; i < plan.files.size(); ++i)
+	{
+		const PlannedFile &f = plan.files[i];
+		if (f.bootFile)
+			continue; // executables take no fragments, never unplaced
+		std::map<std::string, u64>::const_iterator it =
+			earlyOffsets.find(f.earlyKey);
+		if (it == earlyOffsets.end())
+		{
+			++unplaced;
+			continue;
+		}
+		lateOffsets[f.disc] = it->second;
+		if (f.earlyKey != f.disc)
+			++remapped;
+	}
 }
 
 bool PlanToManifestRuns(const PlannedFile &file,
@@ -657,6 +820,82 @@ bool PlanToManifestRuns(const PlannedFile &file,
 		}
 		e.genOff = 0;
 		out.push_back(e);
+	}
+	return true;
+}
+
+bool BuildPlanManifest(const PatchPlan &plan,
+					   const std::vector<PlacedFile> &placed,
+					   u32 discId,
+					   std::vector<u8> &blob,
+					   std::string &why)
+{
+	why.clear();
+	blob.clear();
+	// Index plan entries by external path once (bounded n log n).
+	std::map<std::string, std::vector<size_t> > byExternal;
+	for (size_t j = 0; j < plan.files.size(); ++j)
+	{
+		const PlannedFile &f = plan.files[j];
+		if (!f.bootFile && f.wholeFile && !f.external.empty())
+			byExternal[f.external].push_back(j);
+	}
+	std::vector<ManifestExtent> exts;
+	exts.reserve(placed.size());
+	for (size_t i = 0; i < placed.size(); ++i)
+	{
+		const PlacedFile &p = placed[i];
+		const PlannedFile *match = 0;
+		std::map<std::string, std::vector<size_t> >::const_iterator it =
+			byExternal.find(p.external);
+		if (it != byExternal.end())
+		{
+			for (size_t k = 0; k < it->second.size(); ++k)
+			{
+				const PlannedFile &f = plan.files[it->second[k]];
+				if (f.finalSize == p.length)
+				{
+					match = &f;
+					break;
+				}
+			}
+		}
+		if (!match)
+		{
+			char b[256];
+			snprintf(b, sizeof(b),
+				"placed file with no plan entry: %s (%u bytes)",
+				p.external.c_str(), p.length);
+			why = b;
+			return false;
+		}
+		ManifestExtent e;
+		e.discOffset = p.offset;
+		e.length = p.length;
+		e.kind = RIIVO_EXT_EXTERNAL;
+		if (!ManifestSourceFor(p.external, e.source))
+		{
+			char b[256];
+			snprintf(b, sizeof(b), "unknown device in %s",
+				p.external.c_str());
+			why = b;
+			return false;
+		}
+		e.srcOffset = 0;
+		e.path = ManifestPathFor(p.external);
+		e.genOff = 0;
+		exts.push_back(e);
+	}
+	if (!BuildManifestV1(exts, RIIVO_MANIFEST_DISCOVER, discId, 0,
+						 RIIVO_CAP_SPLIT_READ, RIIVO_PROV_BOUNDED,
+						 blob, why))
+		return false;
+	if (blob.size() < RIIVO_MANIFEST_HEADER
+		|| !ValidateManifestV1(&blob[0], (u32)blob.size(), why))
+	{
+		if (why.empty())
+			why = "self-validation refused";
+		return false;
 	}
 	return true;
 }

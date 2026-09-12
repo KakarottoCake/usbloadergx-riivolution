@@ -130,14 +130,46 @@ namespace Riivo
 	//! `missing`, when given, collects every file the mod names that failed to
 	//! stat - filled from the stat this already performs, so it costs no extra
 	//! card traffic. Covers both <file> patches and <folder> children.
+	//! `dolRouted`, when given, counts entries routed to the executable
+	//! (boot-view) path instead of fragments: bare "main.dol" <file> rules
+	//! and dataless-folder children naming it. Those bytes are served
+	//! positionally during the apploader window, never fragment-mapped.
 	void ListModFiles(const ResolvedPatchSet &set, const std::string &device,
 					  DirLister *lister, std::vector<ModCandidate> &out,
 					  ListProgressFn progress = 0, void *ctx = 0,
-					  std::vector<MissingExternal> *missing = 0);
+					  std::vector<MissingExternal> *missing = 0,
+					  u32 *dolRoutedOut = 0);
 
 	//! Lower-case a disc path and strip empty components, giving the exact key
 	//! FstBuilder::LayoutFrom expects.
 	std::string NormaliseDiscPath(const std::string &path);
+
+	//! Shared disc-path join used by BOTH the early fragment enumeration
+	//! (ListModFiles, no FST) and the late plan composition (BuildPatchPlan,
+	//! with FST): one implementation so the two phases cannot disagree about
+	//! where a folder child goes. `dir` is a disc folder (leading '/';
+	//! DiscDirPath normalizes it), `rel` a lister-relative child path.
+	//! `DiscDirPath("")` is "/" (dataless root).
+	std::string DiscDirPath(const std::string &disc);
+	std::string JoinDiscPath(const std::string &dir, const std::string &rel);
+
+	//! Basename of a card/disc-relative path (after the last '/' or '\').
+	//! Shared by dataless-folder routing on both phases.
+	std::string BaseFileName(const std::string &path);
+
+	//! True when disc names the Wii executable, Dolphin-exact: a bare
+	//! "main.dol" (case-insensitive, no slash) routes to the executable;
+	//! an absolute "/main.dol" is an ordinary FST path with specific-file
+	//! semantics. Home is the file layer (both enumeration and planning
+	//! route on it); the plan still documents the executable contract.
+	bool IsBootFileDisc(const std::string &disc);
+
+	//! Manifest source/path helpers, shared with the boot path's RIV1
+	//! emission: classify "sd:"/"usbN:" prefixes (case-insensitive; unknown
+	//! devices refuse) and strip the device prefix to a partition-absolute
+	//! path. Same contract as the RedirectSpec bridge below.
+	bool ManifestSourceFor(const std::string &external, u16 &outSrc);
+	std::string ManifestPathFor(const std::string &external);
 
 	//! External-file sizes stated during early enumeration, reused late so
 	//! each file is stat'ed once per boot instead of three times

@@ -277,7 +277,8 @@ int main()
 		if (plan.files.size() == 1)
 			CHECK(plan.files[0].finalSize == 0);
 	}
-	// 9. main.dol => boot-file error (refuse, never silent skip).
+	// 9. main.dol without an executable sink => boot-file error (legacy
+	// callers keep prior behavior; production passes a DOL sink below).
 	{
 		Fst fst;
 		std::vector<u8> img;
@@ -360,6 +361,165 @@ int main()
 			// 41 & ~3 == 40: segs orig[0,40), ext 4, then truncate to 44.
 			CHECK(plan.files[0].finalSize == 44);
 		}
+	}
+
+	// 13. DolImageSize: max section end, 0x100 floor.
+	{
+		u32 offs[3] = {0x100, 0x500, 0};
+		u32 sizes[3] = {0x200, 0x100, 0};
+		CHECK(DolImageSize(offs, sizes, 3) == 0x600);
+		CHECK(DolImageSize(0, 0, 0) == 0x100);
+		CHECK(DolImageSize(offs, sizes, 0) == 0x100);
+	}
+	// 14. Partial DOL patch composes against the image base, preserves size,
+	// does not set file-partial, carries no FST effect.
+	{
+		Fst fst;
+		std::vector<u8> img;
+		CHECK(MakeFst(fst, img));
+		ResolvedPatchSet set;
+		set.files.push_back(RF("main.dol", "/r/dolpatch.bin", "/riivolution", 0x100, 4, 8, true));
+		MemLister lister;
+		MemSizes sizes;
+		sizes.Put("sd:/r/dolpatch.bin", 100);
+		PatchPlan plan;
+		PlannedFile dol;
+		std::string why;
+		CHECK(BuildPatchPlan(fst, set, "sd:", &lister, &sizes, plan, why, 0x1000, &dol));
+		CHECK(plan.errors.empty());
+		CHECK(plan.hasBootFile);
+		CHECK(!plan.hasPartial);
+		CHECK(plan.files.empty()); // DOL never enters the FST plan
+		CHECK(dol.bootFile);
+		CHECK(dol.finalSize == 0x1000);
+		CHECK(dol.discLengthOrig == 0x1000);
+		CHECK(dol.segs.size() == 3); // orig head, ext, orig tail
+		if (dol.segs.size() == 3)
+		{
+			CHECK(dol.segs[0].kind == PlanSegment::SEG_ORIGINAL && dol.segs[0].length == 0x100);
+			CHECK(dol.segs[1].kind == PlanSegment::SEG_EXTERNAL && dol.segs[1].length == 8
+				  && dol.segs[1].srcOffset == 4);
+			CHECK(dol.segs[2].kind == PlanSegment::SEG_ORIGINAL
+				  && dol.segs[2].fileOffset == 0x108);
+		}
+	}
+	// 15. DOL patch growing past the image end is refused (size rule).
+	{
+		Fst fst;
+		std::vector<u8> img;
+		CHECK(MakeFst(fst, img));
+		ResolvedPatchSet set;
+		set.files.push_back(RF("main.dol", "/r/dolpatch.bin", "/riivolution", 0xFF0, 0, 0x20, true));
+		MemLister lister;
+		MemSizes sizes;
+		sizes.Put("sd:/r/dolpatch.bin", 0x100);
+		PatchPlan plan;
+		PlannedFile dol;
+		std::string why;
+		CHECK(BuildPatchPlan(fst, set, "sd:", &lister, &sizes, plan, why, 0x1000, &dol));
+		CHECK(!plan.errors.empty()); // 0xFF0+0x20 = 0x1010 != 0x1000
+	}
+	// 16. Whole-file DOL replacement, same size: allowed, wholeFile.
+	{
+		Fst fst;
+		std::vector<u8> img;
+		CHECK(MakeFst(fst, img));
+		ResolvedPatchSet set;
+		set.files.push_back(RF("MAIN.DOL", "/r/newdol.bin")); // case-insensitive
+		MemLister lister;
+		MemSizes sizes;
+		sizes.Put("sd:/r/newdol.bin", 0x1000);
+		PatchPlan plan;
+		PlannedFile dol;
+		std::string why;
+		CHECK(BuildPatchPlan(fst, set, "sd:", &lister, &sizes, plan, why, 0x1000, &dol));
+		CHECK(plan.errors.empty());
+		CHECK(dol.wholeFile);
+		CHECK(dol.external == "sd:/r/newdol.bin");
+	}
+	// 17. Whole-file DOL replacement, different size: refused.
+	{
+		Fst fst;
+		std::vector<u8> img;
+		CHECK(MakeFst(fst, img));
+		ResolvedPatchSet set;
+		set.files.push_back(RF("main.dol", "/r/newdol.bin"));
+		MemLister lister;
+		MemSizes sizes;
+		sizes.Put("sd:/r/newdol.bin", 0x2000);
+		PatchPlan plan;
+		PlannedFile dol;
+		std::string why;
+		CHECK(BuildPatchPlan(fst, set, "sd:", &lister, &sizes, plan, why, 0x1000, &dol));
+		CHECK(!plan.errors.empty());
+	}
+	// 18. Missing DOL external: skipped like file-missing, no error.
+	{
+		Fst fst;
+		std::vector<u8> img;
+		CHECK(MakeFst(fst, img));
+		ResolvedPatchSet set;
+		set.files.push_back(RF("main.dol", "/r/gone.bin"));
+		set.files.push_back(RF("/a.bin", "/r/a.bin"));
+		MemLister lister;
+		MemSizes sizes;
+		sizes.Put("sd:/r/a.bin", 100);
+		PatchPlan plan;
+		PlannedFile dol;
+		std::string why;
+		CHECK(BuildPatchPlan(fst, set, "sd:", &lister, &sizes, plan, why, 0x1000, &dol));
+		CHECK(plan.errors.empty());
+		CHECK(plan.missingExternals.size() == 1);
+		CHECK(plan.files.size() == 1); // /a.bin still planned
+		CHECK(!dol.bootFile); // untouched: no DOL serving
+	}
+	// 19. Dataless folder child naming main.dol routes to the DOL plan.
+	{
+		Fst fst;
+		std::vector<u8> img;
+		CHECK(MakeFst(fst, img));
+		ResolvedPatchSet set;
+		ResolvedFolder fl;
+		fl.root = "/riivolution";
+		fl.disc = "";
+		fl.external = "newer";
+		fl.resize = true;
+		fl.create = false;
+		fl.recursive = true;
+		fl.length = 0;
+		set.folders.push_back(fl);
+		MemLister lister;
+		lister.Add("sd:/riivolution/newer", "main.dol");
+		MemSizes sizes;
+		sizes.Put("sd:/riivolution/newer/main.dol", 0x1000);
+		PatchPlan plan;
+		PlannedFile dol;
+		std::string why;
+		CHECK(BuildPatchPlan(fst, set, "sd:", &lister, &sizes, plan, why, 0x1000, &dol));
+		CHECK(plan.errors.empty());
+		CHECK(dol.bootFile && dol.wholeFile);
+		CHECK(plan.files.empty());
+	}
+
+	// 20. Absolute "/main.dol" is an FST path, never the executable
+	// (Dolphin-exact): no such file on disc, no create => skipped silently.
+	{
+		Fst fst;
+		std::vector<u8> img;
+		CHECK(MakeFst(fst, img));
+		ResolvedPatchSet set;
+		set.files.push_back(RF("/main.dol", "/r/rootmain.bin"));
+		MemLister lister;
+		MemSizes sizes;
+		sizes.Put("sd:/r/rootmain.bin", 64);
+		PatchPlan plan;
+		PlannedFile dol;
+		std::string why;
+		CHECK(BuildPatchPlan(fst, set, "sd:", &lister, &sizes, plan, why, 0x1000, &dol));
+		CHECK(plan.errors.empty());
+		CHECK(!plan.hasBootFile);
+		CHECK(plan.files.empty());
+		CHECK(!dol.bootFile);
 	}
 
 	printf("%d checks, %d failures\n", checks, failures);
