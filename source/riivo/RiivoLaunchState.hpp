@@ -38,6 +38,8 @@ enum class LaunchStage
 	Staged,    // rebuilt table held (bytes + CRC captured)
 	Booked,    // placement chosen and recorded; install may consume once
 	Installed, // table written and verified; staging is spent
+	Skipped,   // booked but deliberately not installed (diagnostic
+	           // bypass); the boot proceeds unmodified by design
 	Refused    // a stage refused; nothing further may install
 };
 
@@ -128,12 +130,23 @@ struct LaunchState
 		return placeOk && stageBytes && stageSize;
 	}
 
-	//! Consume the booking after InstallFst runs. Success and refusal both
-	//! end here: either way this table must never install twice.
+	//! Consume the booking after InstallFst runs AND verification passes.
+	//! Call only on the verified path: a failed verification must go
+	//! through Refuse (below) so the state never claims Installed for
+	//! bytes the game must not trust.
 	void Consume()
 	{
 		placeOk = false;
 		stage = LaunchStage::Installed;
+	}
+
+	//! Diagnostic bypass: booked but deliberately not installed (the
+	//! nofstinstall split). The boot proceeds unmodified by design - this
+	//! is not a refusal and not an install. A repeated call stays spent.
+	void Skip()
+	{
+		placeOk = false;
+		stage = LaunchStage::Skipped;
 	}
 
 	//! Release the staging buffer after a verified install. The caller

@@ -1912,9 +1912,14 @@ namespace Riivo
 		Riivo::ValidateResult vres;
 		//! Entry checkpoint: the validator catches its own allocation
 		//! failures into vres.oom (see below), so reaching the return line
-		//! with no entry line means the call itself never ran, and an entry
-		//! line with no return line means it never came back - a hang, not
-		//! a refusal, because refusals and OOM both travel through vres.
+		//! with no entry line means the call itself never ran. An entry
+		//! line with no return line does NOT prove a validation hang: the
+		//! call may have returned while the return line itself failed to
+		//! build or persist (its string growth, or the card write the
+		//! checked persist reports only to Gecko). What it does prove is
+		//! that no validated outcome was recorded - hang inside validation
+		//! and return-line loss are both still open, told apart only by
+		//! the drive light (it flips per step regardless) on the next run.
 		LogStep("validating the rebuilt table");
 		//! NULL trace: production records outcomes in the log, not op codes.
 		Riivo::ValidateTable(vreq, vres, 0);
@@ -1937,10 +1942,10 @@ namespace Riivo
 			newFst.swap(vres.staged);
 		const bool validationOom = vres.oom;
 		//! Return checkpoint: every outcome the validator can produce is
-		//! named here, so a log that ends at the entry line above died
-		//! inside validation, while one that reaches this line died later
-		//! (report, staging, or the card itself - the persist below is
-		//! checked separately and never claims otherwise).
+		//! named here. A log reaching this line proves validation returned
+		//! with these verdicts; anything dying later is in report building,
+		//! staging, or the card. A missing return line proves nothing about
+		//! a hang by itself (see the entry checkpoint above).
 		LogStep("validation returned: walk=%d paths=%u compact=%d compactBytes=%u oom=%d plan=%d",
 				vres.fstWalkOK ? 1 : 0, (unsigned) vres.walkPaths,
 				vres.useCompact ? 1 : 0, (unsigned) vres.compactBytes,
@@ -2306,10 +2311,13 @@ namespace Riivo
 		//! Deliberately not installed; see the nofstinstall.txt marker. The
 		//! staged table is simply dropped and the game keeps its own, so the
 		//! jump goes ahead exactly as it would for a mod that staged nothing.
-		if (skipFstInstall)
+		//! Gated on a live staging: with nothing staged this falls through
+		//! to the guard below like any unstaged boot (same outcome), and a
+		//! spent or refused booking can never be re-labelled bypassed.
+		if (skipFstInstall && g_launch.HaveStaged())
 		{
 			installFailCode = 0;
-			g_launch.Consume();
+			g_launch.Skip();
 			gprintf("Riivo: FST install SKIPPED by riivolution/nofstinstall.txt\n");
 			return true;
 		}
@@ -2446,8 +2454,6 @@ namespace Riivo
 		const bool ok = InstallFst(pendingPlace, pendingFst, pendingFstSize);
 		if (!ok)
 			g_launch.Refuse(3);
-		else
-			g_launch.Consume();
 		bool verified = false;
 		u32 ptr = 0, max = 0, arena = 0;
 		if (!ok)
@@ -2465,6 +2471,12 @@ namespace Riivo
 			//! Bytes first: a failed write and a moved pointer are different
 			//! faults, and the blink code is the only channel that survives.
 			installFailCode = verified ? 0 : (bytesOk ? 5 : 4);
+			//! Installed means verified: a failed verification refuses with
+			//! its code instead of claiming a table the game must not trust.
+			if (verified)
+				g_launch.Consume();
+			else
+				g_launch.Refuse(installFailCode);
 		}
 		if (verified)
 		{
