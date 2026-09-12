@@ -245,4 +245,9 @@ build_run test_smg2reserve
 # inherit the previous boot's staged table or verdicts.
 build_run test_launchstate
 
+# Checked log persistence: the production append helper reports success,
+# open failure, and short writes distinctly, so a record is never claimed
+# to survive a storage failure. Header-only.
+build_run test_persist
+
 printf '\nall suites passed\n'

@@ -29,6 +29,7 @@
 #include "RiivoReadVerify.hpp"
 #include "RiivoFstInstall.hpp"
 #include "RiivoLaunchState.hpp"
+#include "RiivoPersist.hpp"
 #include "RiivoSmg2Reserve.hpp"
 #include "RiivoPatchGuard.h"
 #include "RiivoIosProbe.hpp"
@@ -706,10 +707,15 @@ namespace Riivo
 		return m;
 	}
 
-	void AppendLog(const std::string &text)
+	//! Checked persistence both AppendLog and the paths that need the
+	//! verdict use. True when there was nothing to do or every byte is
+	//! confirmed on the card; false after a gprintf naming the failure.
+	//! The gprintf is the whole failure record: reporting it through the
+	//! log would recurse, and the card is exactly what just failed.
+	static bool PersistReport(const std::string &text)
 	{
 		if (bootLogPath.empty() || text.empty())
-			return;
+			return true;
 		//! Same text to the listener, if one was configured. Sent first so
 		//! it survives even when the card is unmounted: the SetupDisc
 		//! register/remount window unmounts SD, and a file-only copy would
@@ -717,14 +723,22 @@ namespace Riivo
 		//! record; this is the copy that survives a boot that never
 		//! finishes or a card that never comes back.
 		SendCollector(text);
-		FILE *f = fopen(bootLogPath.c_str(), "a");
-		if (!f)
+		//! Checked write: an unreported short write or failed close leaves
+		//! a log that ends mid-boot with no explanation - indistinguishable
+		//! from a hang at that point. gprintf is the only channel that does
+		//! not need the card, so a persist failure is reported there and
+		//! nowhere else (never back into the log: that would recurse).
+		if (!AppendFileBytes(bootLogPath.c_str(), text.data(), text.size()))
 		{
 			gprintf("Riivo: log append failed (%s)\n", bootLogPath.c_str());
-			return;
+			return false;
 		}
-		fwrite(text.data(), 1, text.size(), f);
-		fclose(f);
+		return true;
+	}
+
+	void AppendLog(const std::string &text)
+	{
+		PersistReport(text);
 	}
 
 	//! Small printf-into-std::string helper; the reports are short.
@@ -772,10 +786,21 @@ namespace Riivo
 		//! rate and a light that stops tells the tester which step hung.
 		PulseLight();
 		const u32 now = BootElapsedMs();
-		Addf(out, "  %-52s %6u ms  MEM2 free %u KB\n", buf,
-			 (unsigned) now,
-			 (unsigned) (MEM2_freesize() / 1024));
-		AppendLog(out);
+		try
+		{
+			Addf(out, "  %-52s %6u ms  MEM2 free %u KB\n", buf,
+				 (unsigned) now,
+				 (unsigned) (MEM2_freesize() / 1024));
+			AppendLog(out);
+		}
+		catch (...)
+		{
+			//! The diagnostic channel must not become the fault: the light
+			//! above already flipped, and a string-growth failure here gets
+			//! one gecko line instead of a silent death. (Unwinding is
+			//! already relied upon: ValidateTable reports OOM this way.)
+			gprintf("Riivo: log step failed (%s)\n", buf);
+		}
 		if (stepMarkCount < sizeof(stepMarks) / sizeof(stepMarks[0]))
 		{
 			StepMark &m = stepMarks[stepMarkCount++];
@@ -1885,6 +1910,12 @@ namespace Riivo
 		vreq.usedFrags = fragStats.fragsBefore ? fragStats.fragsBefore
 					   : gameFrags->num;
 		Riivo::ValidateResult vres;
+		//! Entry checkpoint: the validator catches its own allocation
+		//! failures into vres.oom (see below), so reaching the return line
+		//! with no entry line means the call itself never ran, and an entry
+		//! line with no return line means it never came back - a hang, not
+		//! a refusal, because refusals and OOM both travel through vres.
+		LogStep("validating the rebuilt table");
 		//! NULL trace: production records outcomes in the log, not op codes.
 		Riivo::ValidateTable(vreq, vres, 0);
 		const bool expectedComplete = vres.expectedComplete;
@@ -1905,6 +1936,15 @@ namespace Riivo
 		if (vres.useCompact)
 			newFst.swap(vres.staged);
 		const bool validationOom = vres.oom;
+		//! Return checkpoint: every outcome the validator can produce is
+		//! named here, so a log that ends at the entry line above died
+		//! inside validation, while one that reaches this line died later
+		//! (report, staging, or the card itself - the persist below is
+		//! checked separately and never claims otherwise).
+		LogStep("validation returned: walk=%d paths=%u compact=%d compactBytes=%u oom=%d plan=%d",
+				vres.fstWalkOK ? 1 : 0, (unsigned) vres.walkPaths,
+				vres.useCompact ? 1 : 0, (unsigned) vres.compactBytes,
+				vres.oom ? 1 : 0, vres.plan.ok ? 1 : 0);
 		if (validationOom)
 		{
 			//! Allocation failure inside validation (refusal recorded in
@@ -1923,14 +1963,8 @@ namespace Riivo
 				out += oomLine;
 			if (!bootLogPath.empty())
 			{
-				FILE *f = fopen(bootLogPath.c_str(), "a");
-				if (f)
-				{
-					fwrite(oomLine, 1, oomLen, f);
-					fclose(f);
-				}
-				else
-					gprintf("Riivo: OOM refusal (log unwritable)\n");
+				if (!AppendFileBytes(bootLogPath.c_str(), oomLine, oomLen))
+					gprintf("Riivo: OOM refusal (log write failed)\n");
 			}
 		}
 		if (fstWalkOK)
