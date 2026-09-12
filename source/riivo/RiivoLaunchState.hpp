@@ -53,6 +53,7 @@ struct LaunchState
 	bool placeOk;        // a live booking exists (false once consumed)
 	bool fileWorkWanted; // the selection needs file replacement
 	bool fileWorkLive;   // ...and the files were actually installed
+	bool smg2Armed;      // SB4E01 reservation patch armed for install
 	u32 plannedFstSize;  // room the rebuilt table wants (for placement)
 	u32 installFailCode; // last install verdict, for the blink code
 	u32 generation;      // boot generation; bumped by Begin()
@@ -61,8 +62,8 @@ struct LaunchState
 	LaunchState()
 		: stageBytes(0), stageSize(0), stageCrc(0), stageGeneration(0),
 		  placeOk(false), fileWorkWanted(false), fileWorkLive(false),
-		  plannedFstSize(0), installFailCode(0), generation(0),
-		  stage(LaunchStage::None) {}
+		  smg2Armed(false), plannedFstSize(0), installFailCode(0),
+		  generation(0), stage(LaunchStage::None) {}
 
 	//! Start a boot: hand back the previous staging buffer (the caller
 	//! frees it - this header cannot touch the console allocator) and
@@ -78,22 +79,39 @@ struct LaunchState
 	}
 
 	//! Record a freshly staged table. Call once, right after the bytes
-	//! and their CRC are captured.
-	void NoteStaged()
+	//! and their CRC are captured. Refuses anything but the first staging
+	//! of a boot: a second staging, or one after a refusal, would mean two
+	//! candidate tables with one install slot.
+	bool Stage(u8 *bytes, u32 size, u32 crc)
 	{
+		if (stage != LaunchStage::None || !bytes || !size)
+			return false;
+		stageBytes = bytes;
+		stageSize = size;
+		stageCrc = crc;
 		stageGeneration = generation;
 		stage = LaunchStage::Staged;
+		return true;
 	}
 
 	//! Record a placement booking. The game is live from here: fileWorkLive
-	//! is what later stages consult, never a leftover flag.
-	void Book(const FstPlacement &p)
+	//! is what later stages consult, never a leftover flag. Refuses invalid
+	//! placements and any re-booking: one boot gets exactly one booking,
+	//! and a refused launch stays refused.
+	bool Book(const FstPlacement &p)
 	{
+		if (stage != LaunchStage::Staged || !p.ok)
+			return false;
 		place = p;
 		placeOk = true;
 		fileWorkLive = true;
 		stage = LaunchStage::Booked;
+		return true;
 	}
+
+	//! The memory-holdback predicate: wanted files that never went live.
+	//! Pure logic over owned fields, so host tests exercise the real rule.
+	bool FileWorkIncomplete() const { return fileWorkWanted && !fileWorkLive; }
 
 	//! True when a booked install from THIS boot may be consumed: a live
 	//! booking, staged bytes of this generation. A table staged by an
@@ -116,6 +134,16 @@ struct LaunchState
 	{
 		placeOk = false;
 		stage = LaunchStage::Installed;
+	}
+
+	//! Release the staging buffer after a verified install. The caller
+	//! frees the memory (this header cannot touch the console allocator);
+	//! this clears the fields so later stages see nulls, not stale bytes.
+	//! A repeated install refuses at the guard above.
+	void ReleaseStaging()
+	{
+		stageBytes = 0;
+		stageSize = 0;
 	}
 
 	//! Record a refusal. A refused launch stays refused.

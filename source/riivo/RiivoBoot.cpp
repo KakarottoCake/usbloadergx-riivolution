@@ -351,7 +351,7 @@ namespace Riivo
 	//! wins: nothing installs).
 	static bool mem2Fst = false;
 	static bool smg2Reserve = false;
-	static bool smg2ReservePending = false;
+	static bool &smg2ReservePending = g_launch.smg2Armed;
 	static u8 bootDiscRevision = 0xff;
 	bool Smg2ReservationPending() { return smg2ReservePending; }
 
@@ -456,7 +456,6 @@ namespace Riivo
 	{
 		bootSet = set;
 		bootDiscRevision = discRevision;
-		smg2ReservePending = false;
 		bootDevice = device;
 		bootLogPath = logPath;
 		bootSectorSize = sectorSize ? sectorSize : 512;
@@ -467,7 +466,6 @@ namespace Riivo
 
 		//! Read the marker now, while the card is still mounted: by the time
 		//! the patches would be applied, ShutDownDevices has taken it away.
-		memPatchSuppressed = false;
 		//! The progress window and the per-folder log lines are the two
 		//! things that run INSIDE the file-listing loop, and they are the
 		//! only things in that phase that did not exist in v2.9 - the last
@@ -475,50 +473,6 @@ namespace Riivo
 		//! stopped mid-listing, so both are off unless asked for. On, they
 		//! give a moving bar and a line per <folder> rule; off, the phase is
 		//! as quiet as it used to be and only its start and end are recorded.
-		deepVerify = false;
-		//! Per boot, like the directory cache: the card can be swapped between
-		//! one launch and the next, and a stale flag here would take the
-		//! on-demand path with no module installed.
-		onDemandPlanned = false;
-		onDemandLayout = OnDemandLayout();
-		ClearDirListCache();
-		ClearFileSizeCache();
-		bootClockStart = 0;
-		deadlinePassed = false;
-		stepHeaderWritten = false;
-		//! Per-boot diagnostics: a single boot runs per process, but reset
-		//! anyway so an aborted launch or a changed mod can never inherit
-		//! another boot's verdicts, records, or timings.
-		stepMarkCount = 0;
-		sumPlaced = 0;
-		sumFailed = 0;
-		withholdStage.clear();
-		//! Every refusal in this boot assigns a short literal here; hold
-		//! capacity once, while the heap is fresh, so a late out-of-memory
-		//! withhold cannot throw inside its own assignment (libstdc++
-		//! strings always heap-allocate, even for short literals).
-		withholdStage.reserve(32);
-		modRecords.clear();
-		modSkips.clear();
-		modMissing.clear();
-		modAddFails.clear();
-		dolSectionCount = 0;
-		dolBssAddr = dolBssSize = 0;
-		dolImageBase = 0;
-		dolNoteCount = 0;
-		dolNotesDropped = 0;
-		installFailCode = 0;
-		//! No loading bar, and no marker to turn one on. Two separate GUI
-		//! draws on this path were confirmed on hardware to stop the boot -
-		//! the pre-jump summary and this one - and each hid the next problem
-		//! behind it. An opt-in would only be a trap for whoever sets it.
-		//!
-		//! The drive light is the progress signal now: LogStep flips it, so
-		//! every logged step is a blink, and it needs no GUI, no thread and
-		//! no allocation - one register write. See PulseLight.
-		//! Arm the drive-light pulse for this boot. Disarmed at the jump.
-		pulseArmed = true;
-		pulseOn = false;
 		if (!device.empty())
 		{
 			FILE *w = fopen((device + "/riivolution/verify.txt").c_str(), "rb");
@@ -548,7 +502,7 @@ namespace Riivo
 		//! the table installed and succeeds without it puts the fault in the
 		//! install or the table; one that fails both ways puts it in the hook
 		//! or the fragments. Nothing else distinguishes those two halves.
-		skipFstInstall = false;
+		//! (Resets live in BeginLaunch; only the marker reads stay here.)
 		if (!device.empty())
 		{
 			FILE *n = fopen((device + "/riivolution/nofstinstall.txt").c_str(), "rb");
@@ -558,7 +512,6 @@ namespace Riivo
 				fclose(n);
 			}
 		}
-		relocOrig = false;
 		if (!device.empty())
 		{
 			FILE *r = fopen((device + "/riivolution/relocorig.txt").c_str(), "rb");
@@ -568,13 +521,11 @@ namespace Riivo
 				fclose(r);
 			}
 		}
-		smg2Reserve = false;
 		if (!device.empty())
 		{
 			FILE *m = fopen((device + "/riivolution/smg2reserve.txt").c_str(), "rb");
 			if (m) { smg2Reserve = true; fclose(m); }
 		}
-		mem2Fst = false;
 		if (!device.empty())
 		{
 			FILE *m = fopen((device + "/riivolution/mem2fst.txt").c_str(), "rb");
@@ -598,7 +549,6 @@ namespace Riivo
 				OpenCollector(spec);
 			}
 		}
-		memPatchMarker.clear();
 		if (!device.empty())
 		{
 			memPatchMarker = device + "/riivolution/nomempatch.txt";
@@ -647,6 +597,7 @@ namespace Riivo
 		u8 *oldStaging = g_launch.Begin();
 		if (oldStaging)
 			MEM2_free(oldStaging);
+		//! Fragment bookkeeping: re-derived every boot from the live list.
 		fragsRegistered = false;
 		fragListUntouched = false;
 		fragRefusal.clear();
@@ -660,12 +611,57 @@ namespace Riivo
 		fragStats = FragBuildStats();
 		modDev = ModDevice();
 		listFromSd = false;
+		//! Markers: re-read from the card by SetBootContext when a mod is
+		//! selected; cleared here so a mod-less boot cannot inherit them.
+		memPatchSuppressed = false;
+		memPatchMarker.clear();
+		deepVerify = false;
+		onDemandPlanned = false;
+		onDemandLayout = OnDemandLayout();
+		skipFstInstall = false;
+		relocOrig = false;
+		relocOrigRaw.clear();
+		smg2Reserve = false;
+		mem2Fst = false;
+		//! Diagnostics and verdicts: never inherited across boots.
+		bootClockStart = 0;
+		deadlinePassed = false;
+		stepHeaderWritten = false;
+		stepMarkCount = 0;
+		sumPlaced = 0;
+		sumFailed = 0;
+		withholdStage.clear();
+		//! Every refusal in this boot assigns a short literal here; hold
+		//! capacity once, while the heap is fresh, so a late out-of-memory
+		//! withhold cannot throw inside its own assignment (libstdc++
+		//! strings always heap-allocate, even for short literals).
+		withholdStage.reserve(32);
+		modRecords.clear();
+		modSkips.clear();
+		modMissing.clear();
+		modAddFails.clear();
+		dolSectionCount = 0;
+		dolBssAddr = dolBssSize = 0;
+		dolImageBase = 0;
+		dolNoteCount = 0;
+		dolNotesDropped = 0;
+		pulseArmed = true;
+		pulseOn = false;
+		patchApplied = false;
+		patchStorage = 0;
+		patchWhy.clear();
+		bootFsKnown = false;
+		bootFsType = 0;
+		bootFsLba = 0;
 		bootSet = 0;
 		bootDevice.clear();
 		bootLogPath.clear();
 		bootSectorSize = 512;
 		bootUsbPort = 0;
+		bootDiscRevision = 0xff;
 		memset(bootGameId, 0, sizeof(bootGameId));
+		ClearDirListCache();
+		ClearFileSizeCache();
 	}
 
 	//! Ask DeviceHandler which drive a mount prefix ("sd:", "usb1:") names, and
@@ -1476,8 +1472,8 @@ namespace Riivo
 		const u8 *stageSrc = stageRelocOrig ? &relocOrigRaw[0] : &newFst[0];
 		const u32 stageSize = stageRelocOrig ? (u32) relocOrigRaw.size() + RELOC_ORIG_PAD
 											 : (u32) newFst.size();
-		pendingFst = (u8 *) MEM2_alloc(stageSize);
-		if (!pendingFst)
+		u8 *staged = (u8 *) MEM2_alloc(stageSize);
+		if (!staged)
 		{
 			out += "  Out of memory for the rebuilt table, so it will not be\n"
 				   "  installed. The patch above is harmless on its own.\n";
@@ -1486,18 +1482,22 @@ namespace Riivo
 		}
 		if (stageRelocOrig)
 		{
-			memcpy(pendingFst, stageSrc, relocOrigRaw.size());
-			memset(pendingFst + relocOrigRaw.size(), 0, RELOC_ORIG_PAD);
+			memcpy(staged, stageSrc, relocOrigRaw.size());
+			memset(staged + relocOrigRaw.size(), 0, RELOC_ORIG_PAD);
 		}
 		else
-			memcpy(pendingFst, stageSrc, stageSize);
-		pendingFstSize = stageSize;
+			memcpy(staged, stageSrc, stageSize);
 		//! Captured now, from the bytes just staged - the install step
 		//! compares the installed region against this, so a staging buffer
 		//! that rotted in MEM2 in between still fails instead of blessing
-		//! itself.
-		pendingFstCrc = Crc32(pendingFst, pendingFstSize);
-		g_launch.NoteStaged();
+		//! itself. Staged through the launch owner: a second staging in one
+		//! boot withholds instead of swapping tables under a booking.
+		if (!g_launch.Stage(staged, stageSize, Crc32(staged, stageSize)))
+		{
+			MEM2_free(staged);
+			withholdStage = "FST_WITHHELD";
+			return;
+		}
 
 		Addf(out, "  rebuilt table        : %u bytes held, ready to install\n",
 			 pendingFstSize);
@@ -2195,7 +2195,7 @@ namespace Riivo
 
 	bool FileWorkIncomplete()
 	{
-		return fileWorkWanted && !fileWorkLive;
+		return g_launch.FileWorkIncomplete();
 	}
 
 	bool FileWorkLive()
@@ -2257,7 +2257,7 @@ namespace Riivo
 
 	bool HaveStagedFst()
 	{
-		return pendingPlaceOk && pendingFst && pendingFstSize;
+		return g_launch.HaveStaged();
 	}
 
 	bool StagedFstStillIntact()
@@ -2274,8 +2274,8 @@ namespace Riivo
 		//! jump goes ahead exactly as it would for a mod that staged nothing.
 		if (skipFstInstall)
 		{
-			pendingPlaceOk = false;
 			installFailCode = 0;
+			g_launch.Consume();
 			gprintf("Riivo: FST install SKIPPED by riivolution/nofstinstall.txt\n");
 			return true;
 		}
@@ -2288,8 +2288,13 @@ namespace Riivo
 			//! CanInstall is the same check the old guard spelled out,
 			//! plus the generation stamp: a table staged by an earlier
 			//! boot can never satisfy it.
-			installFailCode = fileWorkLive ? 1 : 0;
-			return !fileWorkLive;
+			if (!fileWorkLive)
+			{
+				installFailCode = 0;
+				return true;
+			}
+			g_launch.Refuse(1);
+			return false;
 		}
 		const u32 addr = pendingPlace.fstAddr;
 		const u32 size = pendingFstSize;
@@ -2371,8 +2376,7 @@ namespace Riivo
 		//! staging and here would otherwise bless itself.
 		if (Crc32(pendingFst, size) != pendingFstCrc)
 		{
-			pendingPlaceOk = false;
-			installFailCode = 2;
+			g_launch.Refuse(2);
 			gprintf("Riivo: late FST install REFUSED - staged table failed its checksum before copying\n");
 			return false;
 		}
@@ -2391,8 +2395,7 @@ namespace Riivo
 				|| RiivoPatchConflict(SMG2_FST_BASE, SMG2_FST_CAP)
 				|| !BuildSmg2GetterPatch(original, patched))
 			{
-				installFailCode = 3;
-				pendingPlaceOk = false;
+				g_launch.Refuse(3);
 				gprintf("Riivo: SB4E01 reservation refused: %s\n", why ? why : "placement or mod conflict");
 				return false;
 			}
@@ -2401,14 +2404,16 @@ namespace Riivo
 			ICInvalidateRange((void *) SMG2_GET_BASE, sizeof(patched));
 			if (memcmp((const void *) SMG2_GET_BASE, patched, sizeof(patched)))
 			{
-				installFailCode = 3;
-				pendingPlaceOk = false;
+				g_launch.Refuse(3);
 				return false;
 			}
 			gprintf("Riivo: SB4E01 BASE getter installed: reservation 90000800..90040800\n");
 		}
 		const bool ok = InstallFst(pendingPlace, pendingFst, pendingFstSize);
-		pendingPlaceOk = false;
+		if (!ok)
+			g_launch.Refuse(3);
+		else
+			g_launch.Consume();
 		bool verified = false;
 		u32 ptr = 0, max = 0, arena = 0;
 		if (!ok)
@@ -2426,6 +2431,15 @@ namespace Riivo
 			//! Bytes first: a failed write and a moved pointer are different
 			//! faults, and the blink code is the only channel that survives.
 			installFailCode = verified ? 0 : (bytesOk ? 5 : 4);
+		}
+		if (verified)
+		{
+			//! Staging served its purpose: the installed bytes verified
+			//! against it, so hand the MEM2 back before the jump instead of
+			//! leaking it every boot. Later stages see nulls, not stale
+			//! bytes; a repeated install refuses at the guard above.
+			MEM2_free(pendingFst);
+			g_launch.ReleaseStaging();
 		}
 		gprintf("Riivo: late FST install %s at %08x, %u bytes, crc %08x (ptr %08x max %u arena %08x)\n",
 				verified ? "verified" : (ok ? "UNVERIFIED" : "REFUSED"),
@@ -3387,14 +3401,15 @@ namespace Riivo
 		//! runs when the fragment list, the read-back check and the cIOS hook
 		//! all succeeded earlier - otherwise pendingFst was never filled in, and
 		//! the game boots with its own table exactly as it always did.
-		if (pendingFst && pendingFstSize && effPlace.ok)
-		{
 		//! Booked, not written - see pendingPlace. The only thing that could
 		//! still refuse it is the bounds re-check inside InstallFst, and that
 		//! is decided by this placement, which is already known good.
 		//! Booked through the launch owner: placement, verdict, and the
-		//! live flag move together and can never desynchronise.
-		g_launch.Book(effPlace);
+		//! live flag move together and can never desynchronise. Book itself
+		//! refuses invalid placements and any re-booking, so reaching the
+		//! Ready text below means exactly one live booking exists.
+		if (pendingFst && pendingFstSize && effPlace.ok && g_launch.Book(effPlace))
+		{
 			out += "\n  Ready. The table goes in last, immediately before the\n"
 				   "  game starts, so nothing the loader still has to do can land\n"
 				   "  on top of it. The game will read the mod\'s files.\n";
