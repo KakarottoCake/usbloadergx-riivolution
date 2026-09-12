@@ -250,4 +250,9 @@ build_run test_launchstate
 # to survive a storage failure. Header-only.
 build_run test_persist
 
+# Path resolution: absolute externals are device-root-relative, relative
+# paths keep device-joined behavior. SUPERSTAR_XML/SUPERSTAR_MOD replay the
+# real SSMG pack (skips cleanly without them).
+build_run test_pathresolve "$SRC/riivo/RiivoFstBuild.cpp" "$SRC/riivo/RiivoFst.cpp" "$SRC/riivo/RiivoFstWalk.cpp" "$SRC/riivo/RiivoFragPlan.cpp" "$SRC/riivo/RiivoValidate.cpp" "$SRC/riivo/RiivoFile.cpp" "$SRC/riivo/RiivoConfig.cpp" "$SRC/riivo/RiivoParser.cpp" "$SRC/xml/pugixml.cpp"
+
 printf '\nall suites passed\n'
