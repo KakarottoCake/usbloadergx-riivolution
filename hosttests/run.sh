@@ -212,6 +212,11 @@ build_run test_manifest_extents "$SRC/riivo/RiivoFstBuild.cpp" "$SRC/riivo/Riivo
 # planner + resolver + validator), not a helper copy.
 build_run test_patchplan "$SRC/riivo/RiivoPatchPlan.cpp" "$SRC/riivo/RiivoFstBuild.cpp" "$SRC/riivo/RiivoFst.cpp" "$SRC/riivo/RiivoFstWalk.cpp" "$SRC/riivo/RiivoFragPlan.cpp" "$SRC/riivo/RiivoValidate.cpp" "$SRC/riivo/RiivoFile.cpp" "$SRC/riivo/RiivoConfig.cpp" "$SRC/xml/pugixml.cpp"
 
+# Patched boot view overlay: stock-equivalence, grown header/table coherence
+# (0x424/428/42c), exact sub-reads, crossing/OOB fallback, refusal bounds.
+# Production overlay code only (no console, no IOS).
+build_run test_bootview "$SRC/riivo/RiivoBootView.cpp"
+
 # Two-phase reconciliation (Newer SMBW fix): early registration records
 # against late placement, skip reasons, recovered-offset matching, and the
 # previous-boot outcome parser. Header-only reconcile plus the FST builder

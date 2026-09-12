@@ -711,6 +711,11 @@ int GameBooter::BootGame(struct discHdr *gameHdr, const s8 useOcarina)
 	{
 		gprintf("Reloading into game cIOS: %i...\n", iosChoice);
 		IosLoader::LoadGameCios(iosChoice);
+		//! Verified reload restores stock IOS: any hook/fragments a previous
+		//! boot installed are gone. Clear the generations so the next SetupDisc
+		//! starts from stock, not stale. No reload => generations persist and
+		//! SetupDisc refuses new file work on stale state (relaunch to retry).
+		Riivo::NoteIosReload();
 		if (MountGamePartition(false) < 0)
 			return -1;
 	}

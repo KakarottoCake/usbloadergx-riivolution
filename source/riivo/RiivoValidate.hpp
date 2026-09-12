@@ -117,9 +117,10 @@ namespace Riivo
 	//! RiivoFile.hpp so existing callers are untouched).
 	std::string NormaliseDiscPath(const std::string &path);
 
-	//! Run the validation window. Never throws: every std::exception
-	//! (including std::bad_alloc) sets res.oom and returns, so the
-	//! caller can withhold with a reason instead of stopping silent.
+	//! Run the validation window. Never throws: std::bad_alloc sets res.oom;
+	//! other std::exceptions / unknown throws set fstWalkOK=false with a
+	//! walkError reason (refusal, not OOM). The caller withholds with a
+	//! reason instead of stopping silent either way.
 	//! When opTrace is non-null it receives the ValidateOp in flight
 	//! (plain stores, no allocation) for failure attribution.
 	void ValidateTable(const ValidateRequest &req, ValidateResult &res,

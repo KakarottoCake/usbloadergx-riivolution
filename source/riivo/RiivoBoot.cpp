@@ -166,6 +166,19 @@ namespace Riivo
 	static bool patchApplied = false;
 	static u32 patchStorage = 0;
 	static std::string patchWhy;
+	//! IOS lifecycle generations (separate contract from PPC LaunchState).
+	//! Clearing patchApplied/fragsRegistered does NOT restore a successfully
+	//! installed Starlet hook or fragment registration. hookGeneration /
+	//! fragGeneration record the launch generation that installed them;
+	//! a nonzero value differing from g_launch.generation means a previous
+	//! boot's IOS state persists (no reload since). SetupDisc refuses new
+	//! file work on stale state instead of layering a new hook atop the old
+	//! (BuildDiHook expects the original signature) or serving new fragments
+	//! through an old hook. NoteIosReload() (BootGame after LoadGameCios)
+	//! clears both to stock. Same-process retry after a successful hook is
+	//! therefore unsupported by design: relaunch GX (fresh IOS) and retry.
+	static u32 hookGeneration = 0;
+	static u32 fragGeneration = 0;
 
 	//! Which partition the game is on, looked up in SetupDisc for the same
 	//! reason as everything else here.
@@ -613,6 +626,8 @@ namespace Riivo
 		u8 *oldStaging = g_launch.Begin();
 		if (oldStaging)
 			MEM2_free(oldStaging);
+		//! PPC flags clear every boot; IOS generations persist for stale
+		//! detection (see statics). NoteIosReload() clears them on stock.
 		//! Fragment bookkeeping: re-derived every boot from the live list.
 		fragsRegistered = false;
 		fragListUntouched = false;
@@ -676,6 +691,20 @@ namespace Riivo
 		memset(bootGameId, 0, sizeof(bootGameId));
 		ClearDirListCache();
 		ClearFileSizeCache();
+	}
+
+	//! Stock IOS restored (BootGame after LoadGameCios slot reload). Clears
+	//! the installed-hook/fragment generations so the next SetupDisc starts
+	//! from stock, not stale. Call only after a verified reload, never to
+	//! "unpatch" blindly against an unidentified IOS instance.
+	void NoteIosReload()
+	{
+		hookGeneration = 0;
+		fragGeneration = 0;
+		patchApplied = false;
+		patchStorage = 0;
+		patchWhy.clear();
+		fragsRegistered = false;
 	}
 
 	//! Ask DeviceHandler which drive a mount prefix ("sd:", "usb1:") names, and
@@ -2602,6 +2631,7 @@ namespace Riivo
 		//! The table must not be installed against fragments that were never
 		//! registered - that points the game at unmapped space.
 		fragsRegistered = false;
+		fragGeneration = 0;
 		modOffsets.clear();
 		modRecords.clear();
 		fragListUntouched = true;
@@ -2621,6 +2651,22 @@ namespace Riivo
 			return;
 		if (bootSet->files.empty() && bootSet->folders.empty())
 			return;
+
+		//! Stale IOS state from a previous boot in this loader session (hook
+		//! installed, no reload since). Layering a new hook atop the old
+		//! fails its original-signature check at best and serves mixed
+		//! generations at worst. Refuse new file work explicitly; relaunch GX
+		//! (fresh IOS) to retry. Clearing PPC flags never restores stock IOS.
+		if ((hookGeneration != 0 && hookGeneration != g_launch.generation)
+			|| (fragGeneration != 0 && fragGeneration != g_launch.generation))
+		{
+			fragListUntouched = true;
+			fragRefusal = "stale IOS hook/fragments from a previous boot (relaunch GX to retry)";
+			gprintf("Riivo: %s (hookGen %u fragGen %u curGen %u)\n",
+					fragRefusal.c_str(), hookGeneration, fragGeneration,
+					g_launch.generation);
+			return;
+		}
 
 		//! Everything below changes the fragment list the cIOS serves the game
 		//! through, and it happens here - in SetupDisc - long before the checks
@@ -2865,6 +2911,7 @@ namespace Riivo
 			//! exactly as they were, so a refusal further on still boots the
 			//! game unmodified.
 			fragsRegistered = true;
+			fragGeneration = g_launch.generation;
 			onDemandPlanned = true;
 			LogStep("on-demand: skipped mapping %u file(s)",
 					(unsigned) placed.size());
@@ -2891,6 +2938,7 @@ namespace Riivo
 		else
 		{
 			fragsRegistered = true;
+			fragGeneration = g_launch.generation;
 			gprintf("Riivo: %u mod fragment(s) appended, %u total\n",
 					fragStats.files, fragStats.fragsAfter);
 		}
@@ -2959,11 +3007,14 @@ namespace Riivo
 			{
 				LogStep("on-demand: table built, %u file(s), %u bytes",
 						(unsigned) entries.size(), (unsigned) table.size());
-				patchApplied = InstallOnDemand(bootProbe.patchSites[0], table,
-											   RIIVO_PART_DISCOVER, onDemandLayout,
-											   patchWhy);
-				if (patchApplied)
-					patchStorage = onDemandLayout.moduleAddr;
+			patchApplied = InstallOnDemand(bootProbe.patchSites[0], table,
+										   RIIVO_PART_DISCOVER, onDemandLayout,
+										   patchWhy);
+			if (patchApplied)
+			{
+				patchStorage = onDemandLayout.moduleAddr;
+				hookGeneration = g_launch.generation;
+			}
 			}
 			gprintf("Riivo: on-demand hook at %08x: %s\n",
 					bootProbe.patchSites[0],
@@ -2972,6 +3023,8 @@ namespace Riivo
 		else if (bootProbe.patchSites.size() == 1)
 		{
 			patchApplied = ApplyDiPatch(bootProbe.patchSites[0], (u32)(modRegionEnd >> 2), patchWhy, &patchStorage);
+			if (patchApplied)
+				hookGeneration = g_launch.generation;
 			gprintf("Riivo: early cIOS hook at %08x: %s\n",
 					bootProbe.patchSites[0],
 					patchApplied ? "applied" : patchWhy.c_str());
@@ -2989,6 +3042,7 @@ namespace Riivo
 			WriteProbeDumps(bootProbe, dumpPath);
 			RestoreFragList(originalNum, originalLast);
 			fragsRegistered = false;
+			fragGeneration = 0;
 			modOffsets.clear();
 			modRecords.clear();
 			fragRefusal = patchWhy;
