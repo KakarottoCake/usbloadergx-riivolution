@@ -177,6 +177,122 @@ int main()
 	ck(used.size() == 4, "all 4 modded files were relocated");
 	ck(ok, "aligned and non-overlapping, clear of the disc data");
 
+	printf("5. a folder without a disc path matches by basename (Newer Others)\n");
+	//! Synthetic FST, clearly labeled: models the Newer shape (nested disc
+	//! files under /Layout, one duplicated basename), not real disc data.
+	//! /Layout/characterChange/characterChange.arc @0x10000 len 0x1000
+	//! /Layout/dateFile/dateFile.arc @0x20000 len 0x2000
+	//! /Layout/dupA/same.arc @0x30000 len 0x400 } duplicate basename:
+	//! /Layout/dupB/same.arc @0x40000 len 0x800 } first FST-order hit wins
+	std::vector<u8> newerDisc;
+	{
+		std::vector<SEnt> e;
+		e.push_back((SEnt){1, "",                0, 10});
+		e.push_back((SEnt){1, "Layout",          0, 10});
+		e.push_back((SEnt){1, "characterChange", 0, 4});
+		e.push_back((SEnt){0, "characterChange.arc", 0x10000 >> 2, 0x1000});
+		e.push_back((SEnt){1, "dateFile",        0, 6});
+		e.push_back((SEnt){0, "dateFile.arc",    0x20000 >> 2, 0x2000});
+		e.push_back((SEnt){1, "dupA",            0, 8});
+		e.push_back((SEnt){0, "same.arc",        0x30000 >> 2, 0x400});
+		e.push_back((SEnt){1, "dupB",            0, 10});
+		e.push_back((SEnt){0, "same.arc",        0x40000 >> 2, 0x800});
+		Flatten(e, newerDisc);
+	}
+	Fst newerFst;
+	ck(newerFst.Parse(&newerDisc[0], (u32) newerDisc.size(), true), "newer-shape base parses");
+	ck(newerFst.FileCount() == 4, "4 files on the newer-shape disc");
+
+	//! The struct production Resolve produces for NewerSMBW.xml's Others
+	//! rule (root /NewerSMBW, no disc path, no create): verified against a
+	//! resolve run over the real XML. Filenames below are real Others/
+	//! names; missing.arc and the nested probe are synthetic.
+	ResolvedPatchSet newerSet;
+	ResolvedFolder others;
+	others.root = "/NewerSMBW";
+	others.external = "Others";
+	others.disc = "";
+	others.resize = true;
+	others.create = false;
+	others.recursive = true;
+	others.length = 0;
+	newerSet.folders.push_back(others);
+
+	FakeLister newerLister;
+	newerLister.files.push_back("characterChange.arc"); // nested disc match
+	newerLister.files.push_back("dateFile.arc");        // nested disc match
+	newerLister.files.push_back("missing.arc");         // unmatched: ignored
+	newerLister.files.push_back("Sub/characterChange.arc"); // nested rel: never matches
+
+	std::vector<RedirectSpec> newerRedirects;
+	std::vector<CreatedFile> newerCreated;
+	BuildRedirects(newerFst, newerSet, "usb1:", &newerLister, newerRedirects, &newerCreated);
+	ck(newerRedirects.size() == 2, "dataless folder: 2 top-level names matched");
+	ck(newerCreated.size() == 0, "dataless folder: nothing created");
+	bool sawCC = false, sawDF = false;
+	for (size_t i = 0; i < newerRedirects.size(); ++i)
+	{
+		const RedirectSpec &r = newerRedirects[i];
+		if (r.disc == "/layout/characterchange/characterchange.arc")
+		{
+			sawCC = true;
+			ck(r.discOffset == 0x10000, "matched file keeps its disc offset");
+			ck(r.discLength == 0x1000, "matched file keeps its disc size");
+			ck(r.external == "usb1:/NewerSMBW/Others/characterChange.arc",
+			   "matched file keeps its external path");
+		}
+		if (r.disc == "/layout/datefile/datefile.arc")
+		{
+			sawDF = true;
+			ck(r.discOffset == 0x20000, "second match keeps its disc offset");
+			ck(r.discLength == 0x2000, "second match keeps its disc size");
+		}
+	}
+	ck(sawCC, "nested disc file matched by top-level basename");
+	ck(sawDF, "second nested disc file matched");
+
+	printf("6. explicit paths are untouched; duplicates take the first hit\n");
+	//! Same file through an explicit disc path: identical target, proving
+	//! the exact lookup did not change.
+	ResolvedPatchSet pathedSet;
+	ResolvedFolder pathed;
+	pathed.root = "/NewerSMBW";
+	pathed.external = "Others";
+	pathed.disc = "/Layout/characterChange";
+	pathed.resize = true;
+	pathed.create = false;
+	pathed.recursive = true;
+	pathed.length = 0;
+	pathedSet.folders.push_back(pathed);
+	FakeLister pathedLister;
+	pathedLister.files.push_back("characterChange.arc");
+	std::vector<RedirectSpec> pathedRedirects;
+	std::vector<CreatedFile> pathedCreated;
+	BuildRedirects(newerFst, pathedSet, "usb1:", &pathedLister, pathedRedirects, &pathedCreated);
+	ck(pathedRedirects.size() == 1, "explicit path: control matches");
+	if (pathedRedirects.size() == 1)
+	{
+		ck(pathedRedirects[0].disc == "/layout/characterchange/characterchange.arc",
+		   "explicit path: same disc target as the basename match");
+		ck(pathedRedirects[0].discOffset == 0x10000, "explicit path: same offset");
+	}
+
+	//! Duplicate basenames: first FST-order hit wins, with its own
+	//! offset and size (not the later twin's).
+	FakeLister dupLister;
+	dupLister.files.push_back("same.arc");
+	std::vector<RedirectSpec> dupRedirects;
+	std::vector<CreatedFile> dupCreated;
+	BuildRedirects(newerFst, newerSet, "usb1:", &dupLister, dupRedirects, &dupCreated);
+	ck(dupRedirects.size() == 1, "duplicate basenames: exactly one match");
+	if (dupRedirects.size() == 1)
+	{
+		ck(dupRedirects[0].disc == "/layout/dupa/same.arc",
+		   "duplicate basenames: first FST-order hit wins");
+		ck(dupRedirects[0].discOffset == 0x30000, "duplicate: first hit's offset");
+		ck(dupRedirects[0].discLength == 0x400, "duplicate: first hit's size");
+	}
+
 	printf("\n%d checks, %d failure(s)\n", checks, failures);
 	return failures ? 1 : 0;
 }

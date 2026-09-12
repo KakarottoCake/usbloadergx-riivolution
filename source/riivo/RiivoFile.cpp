@@ -253,7 +253,18 @@ namespace Riivo
 		for (size_t i = 0; i < extFiles.size(); ++i)
 		{
 			const std::string &rel = extFiles[i]; // relative to extDir
-			const std::string discFile = JoinDisc(discDir, rel);
+			//! A folder without a disc path names its files, not their
+			//! location: each top-level file is looked up by basename
+			//! against the whole table (first FST-order hit), which is how
+			//! the reference resolves them (its name search compares bare
+			//! filenames). Nested files cannot name a table entry this way
+			//! and never match there either, so they are skipped rather
+			//! than guessed at. Explicit paths keep the exact lookup below,
+			//! unchanged.
+			const bool dataless = f.disc.empty();
+			if (dataless && rel.find('/') != std::string::npos)
+				continue;
+			const std::string discFile = dataless ? rel : JoinDisc(discDir, rel);
 			const FstFile *entry = fst.FindFile(discFile);
 			const std::string external = JoinDisc(extDir, rel);
 
