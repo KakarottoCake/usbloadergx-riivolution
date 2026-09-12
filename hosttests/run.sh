@@ -239,4 +239,10 @@ build_run test_preflight "$SRC/riivo/RiivoFstBuild.cpp" "$SRC/riivo/RiivoFstWalk
 # MEM2 placement half. Header-only: no console, no link beyond the test.
 build_run test_smg2reserve
 
+# Per-boot launch state: reset semantics, booking, and the install guard.
+# Header-only: exercises the production LaunchState type directly, so an
+# aborted launch or a second launch in one loader session can never
+# inherit the previous boot's staged table or verdicts.
+build_run test_launchstate
+
 printf '\nall suites passed\n'
