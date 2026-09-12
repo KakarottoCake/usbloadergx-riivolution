@@ -105,11 +105,24 @@ namespace Riivo
 
 	std::string JoinPath(const std::string &device, const std::string &root, const std::string &rel)
 	{
+		//! A leading slash makes the path device-root-relative: the
+		//! reference resolves it against the card root, IGNORING any patch
+		//! root. (The reference resolves a RELATIVE patch root against the
+		//! XML directory; GX has no XML-directory tracking and keeps its
+		//! device-joined relative roots - a deliberate, tested non-parity:
+		//! no mod in evidence needs it, and changing it would move working
+		//! mods.) Without the slash the path is relative to the patch
+		//! root, exactly as before: relative roots, empty roots, and the
+		//! /riivolution default keep today's device-joined behavior
+		//! bit-for-bit, so every relative-external mod resolves identically.
+		//! Only leading-slash externals change, and those were all broken
+		//! before (root prepended twice, so no file under them was found).
 		std::string p = device;
-		const std::string parts[2] = { root, rel };
-		for (int k = 0; k < 2; ++k)
+		const std::string *parts[2] = { &root, &rel };
+		int start = (!rel.empty() && rel[0] == '/') ? 1 : 0;
+		for (int k = start; k < 2; ++k)
 		{
-			const std::string &part = parts[k];
+			const std::string &part = *parts[k];
 			if (part.empty())
 				continue;
 			const bool pslash = !p.empty() && p[p.size() - 1] == '/';
