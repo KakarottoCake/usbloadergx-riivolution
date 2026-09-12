@@ -6,6 +6,16 @@
 #include "RiivoFstInstall.hpp"
 
 namespace Riivo {
+// EXPERIMENTAL game-specific workaround, not general pipeline. Everything
+// in this header applies to one game (SB4E01 revision 0) behind one marker
+// file (riivolution/smg2reserve.txt), and nothing outside it may depend on
+// it: general paths must never branch on game identity (verified: the only
+// game-ID comparisons in source/ are the gate below and its call site).
+// Contract for any future game-specific workaround in this codebase:
+// marker-gated, game-gated, additive-only (a refused workaround boots the
+// game unmodified), separately tested, and removable by deleting its marker
+// reads without touching general code. Do not generalize this file's
+// addresses or reservation into shared machinery.
 // SB4E01 revision 0 only. Getter occupies a 16-byte aligned slot in
 // main.dol. Grow lwz/blr to lwz/addis/blr within that slot; no external cave.
 // Static survey of main.dol (text sections): exactly one reader of
