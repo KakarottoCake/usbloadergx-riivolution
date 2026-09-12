@@ -29,6 +29,7 @@
 #include "RiivoReadVerify.hpp"
 #include "RiivoFstInstall.hpp"
 #include "RiivoLaunchState.hpp"
+#include "RiivoCheckpoints.hpp"
 #include "RiivoPersist.hpp"
 #include "RiivoSmg2Reserve.hpp"
 #include "RiivoPatchGuard.h"
@@ -1955,10 +1956,17 @@ namespace Riivo
 		//! vres.oom, so silence is neither refusal nor OOM) or in the
 		//! microsecond gap before function entry. That interval is one
 		//! straight-line span below; read it, it has nowhere to hide.
-		LightSet(true);
-		LogCheckpoint("validating the rebuilt table");
 		//! NULL trace: production records outcomes in the log, not op codes.
-		Riivo::ValidateTable(vreq, vres, 0);
+		//! The entry half runs through ValidationBoundary (template over
+		//! light/log sinks): host tests pin its exact order with mocks,
+		//! production passes the register/card sinks here.
+		struct BoundaryLight { void Set(bool on) { LightSet(on); } };
+		struct BoundaryLog { void Line(const char *text) { LogCheckpoint("%s", text); } };
+		BoundaryLight boundaryLight;
+		BoundaryLog boundaryLog;
+		ValidationBoundary(boundaryLight, boundaryLog,
+						   [&]{ Riivo::ValidateTable(vreq, vres, 0); },
+						   "validating the rebuilt table");
 		//! Return checkpoint: validation is back, light OFF, stably. OFF
 		//! with an entry line but no return line means the return line
 		//! itself failed to build or persist - the call returned. A return
