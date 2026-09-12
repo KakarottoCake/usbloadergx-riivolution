@@ -19,6 +19,12 @@ s32 WDVD_OpenPartition(u64 offset, u8 *ios);
 s32 WDVD_ClosePartition(void);
 s32 WDVD_UnencryptedRead(void *, u32, u64);
 s32 WDVD_Read(void *, u32, u64);
+//! Raw disc read bypassing the Riivolution boot view (for the view's own
+//! stock-fallback and verification reads; never recurse into the overlay).
+s32 WDVD_ReadStock(void *, u32, u64);
+//! Patched boot-view consult (RiivoBoot.cpp): 1 served (bytes in buffer),
+//! 0 fall through to stock, -1 fail loudly (caller must boot nothing).
+int RiivoBootViewServe(u64 offset, u8 *buffer, u32 length);
 s32 WDVD_WaitForDisc(void);
 s32 WDVD_GetCoverStatus(u32 *);
 s32 WDVD_SetUSBMode(const u8 *, s32);

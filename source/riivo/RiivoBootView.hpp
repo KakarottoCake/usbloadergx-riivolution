@@ -11,25 +11,36 @@
  * afterward) drove per-game reservation experiments. This overlay is the
  * general fix's first half: header + FST coherence before the apploader.
  *
- * Lifetime explicit: Activate after the plan is built (PrepareFileRedirects),
- * consulted only by WDVD_Read during Apploader_Run, Deactivate immediately
- * after. Never a filesystem dependency after devices shut down; runtime file
- * reads use the IOS hook/manifest, not this. Inactive => Serve returns false
- * for every request (stock behavior preserved bit-for-bit).
+ * Lifetime explicit: armed after the plan is built (PrepareFileRedirects),
+ * consulted by WDVD_Read while the partition is open and devices are mounted
+ * (the apploader window), disarmed right after Apploader_Run returns and at
+ * every fresh BeginLaunch. Never a filesystem dependency after devices shut
+ * down; post-boot file reads use the IOS hook, not this. Inactive => every
+ * consult returns false (stock behavior preserved bit-for-bit).
  *
- * PPC wiring status: host-tested module only in this slice. WDVD_Read
- * consultation awaits the apploader-read survey (which reads it makes, which
- * addresses it writes, how it reserves the table, whether writes overlap live
- * GX memory). Do not activate in production until that measurement lands;
- * MEM1-install + verification remains the production boot path with the
- * in-place-only policy.
+ * What is served, and why each is safe:
+ * - DOL image range [dolBase, dolBase+dolSize): composed positionally from
+ *   the plan's executable segments. Apploader responses follow the stock
+ *   layout and the served image preserves the stock image size exactly, so
+ *   destinations stay valid while sources change. ORIGINAL runs fall back
+ *   to the stock disc read at the same offset (identical bytes); EXTERNAL
+ *   runs read the mod file at the recorded source offset; ZERO runs emit
+ *   zeros. Requests are split across runs with per-run error propagation;
+ *   any sub-read failure fails the whole read (the caller boots nothing on
+ *   partial bytes). Reads past the composed end inside the image range fail
+ *   loudly rather than mixing stock bytes into a patched image.
+ * - FST range [fstOffset, fstOffset+stagedSize): staged rebuilt bytes, so a
+ *   post-plan reader sees the same table the game will receive in MEM1.
+ * - Header [0,0x440): stock bytes (production patches no header words; the
+ *   disc image is immutable and MEM1 boot words carry the new table size).
+ *   Retained as a served range so header reads are coherent and verifiable.
+ * Stock fallback for everything else, including crossing requests outside
+ * these ranges.
  *
- * Scope this slice: header (0x0-0x440, partition-byte offsets) + FST bytes.
- * Executable/content serving (main.dol, file data during apploader) and
- * apploader-allocation measurement remain for the emulator-measured slice
- * (see DOLPHIN-GX-CANDIDATE-SWEEP acceptance 3-5). Boot-file patches refuse
- * until then; partial file data during apploader is stock (whole-file mods
- * only in this slice).
+ * Pure logic with injected readers (no console calls); host tests exercise
+ * Serve + ServeDol + header patching byte-exactly, including splits,
+ * source-offset advancement, fallback identity, and error propagation.
+ * Checked u64 arithmetic, explicit units (partition bytes unless named).
  *
  * Pure logic, no console calls; host tests exercise Serve + header patching
  * byte-exactly. Checked u64 arithmetic, explicit units (partition bytes).
@@ -40,6 +51,8 @@
 #include <gctypes.h>
 #include <string>
 #include <vector>
+
+#include "RiivoPatchPlan.hpp"
 
 namespace Riivo
 {
@@ -73,6 +86,17 @@ bool PatchBootHeader(const u8 *stockHeader, u32 stockLen,
 					 u64 fstOffsetBytes, u32 fstSizeBytes, u32 fstMaxBytes,
 					 std::vector<u8> &outPatched, std::string &why);
 
+//! Byte sources for DOL serving, injected so host tests run with no
+//! console or card. Each must transfer EXACTLY the requested bytes or
+//! report failure; short transfers are failures, never partial use.
+struct BootReaders
+{
+	bool (*stock)(u64 absOff, u8 *dst, u32 len, void *ctx);
+	bool (*fat)(const std::string &path, u64 srcOff, u8 *dst, u32 len, void *ctx);
+	void *ctx;
+	BootReaders() : stock(0), fat(0), ctx(0) {}
+};
+
 //! Loader-owned overlay state. Activate copies header + FST (bounded: header
 //! 0x440 + table bytes, never whole-mod payloads). Serve answers only
 //! fully-contained header/FST reads; all else returns false (stock path).
@@ -84,7 +108,8 @@ public:
 	//! Activate with stock header (for fallback bytes outside 0x424-42f),
 	//! patched header, patched FST + its partition-byte offset. Copies bytes
 	//! (bounded). Returns false + why on bad inputs (empty table, overflow,
-	//! header too short). Deactivate on failure (remains inactive).
+	//! header too short). Clears any DOL coverage: call Activate first, then
+	//! SetDol, so overlap is always checked against the final FST range.
 	bool Activate(const u8 *stockHeader, u32 stockLen,
 				  const std::vector<u8> &patchedHeader,
 				  u64 fstOffsetBytes,
@@ -101,8 +126,31 @@ public:
 	//! Returns true + copies when the request lies fully inside the header
 	//! or FST coverage; false leaves `buffer` untouched (caller does stock).
 	//! Zero-length reads return false (nothing to serve). No partial splits:
-	//! crossing requests fall back to stock (runtime splitter owns those).
+	//! crossing requests fall back to stock (the DOL splitter below owns
+	//! multi-run reads; header/FST readers always ask exactly).
 	bool Serve(u64 offset, u8 *buffer, u32 length) const;
+
+	//! Arm DOL coverage from a composed executable plan. Requires a bootFile
+	//! plan whose segments tile [0,size) contiguously, a nonzero image size,
+	//! a base at/above the header, no u64 overflow, and no overlap with the
+	//! header or an already-active FST range. Returns false + why otherwise
+	//! (state left disarmed for DOL). Production assigns dol.dolBase before
+	//! calling; the plan copy is retained (small: segments only, no payload).
+	bool SetDol(u64 base, u64 size, const PlannedFile &dol, std::string &why);
+
+	bool HasDol() const { return hasDol; }
+	u64 DolBase() const { return dolBase; }
+	u64 DolSize() const { return dolSize; }
+
+	//! Serve a DOL-range read through the composed segments, splitting across
+	//! runs: ORIGINAL runs fall back to the stock disc read at the same
+	//! absolute offset; EXTERNAL runs read the mod file at srcOffset plus the
+	//! intra-run position; ZERO runs emit zeros. Returns false (with *doneOut
+	//! = bytes completed, for diagnostics) when the request is outside the
+	//! DOL range, readers are null, or any sub-read fails; the caller must
+	//! discard the buffer on false, never boot partial bytes.
+	bool ServeDol(u64 offset, u8 *buffer, u32 length,
+				  const BootReaders &r, u32 *doneOut) const;
 
 	//! Forget everything (explicit lifetime end). Idempotent.
 	void Deactivate();
@@ -112,6 +160,10 @@ private:
 	std::vector<u8> header; // BOOTVIEW_HEADER_BYTES (patched)
 	u64 fstOffset;
 	std::vector<u8> fst;    // patched table bytes
+	bool hasDol;
+	u64 dolBase;
+	u64 dolSize;
+	PlannedFile dol;        // composed executable (segments + paths only)
 };
 
 } // namespace Riivo

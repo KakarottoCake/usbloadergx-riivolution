@@ -143,9 +143,11 @@ namespace Riivo
 
 	//! Which install check refused last: 0 none/success, 1 live game with
 	//! nothing staged, 2 staged pre-copy checksum, 3 InstallFst bounds,
-	//! 4 installed bytes/CRC, 5 low-memory pointer/arena. Read by the
-	//! caller after a false return to blink the drive light, since the
-	//! refusal text itself only reaches gprintf past device shutdown.
+	//! 4 installed bytes/CRC, 5 low-memory pointer/arena, 8 pre-shutdown
+	//! withhold (boot-view verification or equivalent; the card log carries
+	//! the reason and the boot proceeds stock, so no blink is emitted for 8).
+	//! Read by the caller after a false return to blink the drive light,
+	//! since the refusal text itself only reaches gprintf past device shutdown.
 	u32 InstallFailCode();
 
 	//! Put the game's own fragment list back after the cIOS refused the
@@ -154,6 +156,16 @@ namespace Riivo
 	bool RevertFragList();
 
 	void LogBootStep(const char *what);
+
+	//! Disarm the patched boot view at the end of the apploader window (and
+	//! every fresh boot). Logs one bounded summary line while the card is
+	//! alive. Idempotent; safe to call when never armed.
+	void DeactivateBootView();
+
+	//! True once executable coverage is armed AND verified through the real
+	//! read path. Gates the alt-DOL stacking refusal: an SD alternate DOL
+	//! would overwrite the served image in MEM after the fact.
+	bool DolWillServe();
 
 	//! Flip the drive light. Called from every logged boot step, and from
 	//! inside the long silent stretches that log nothing, so the console has

@@ -169,8 +169,27 @@ u32 GameBooter::BootPartition(char *dolpath, u8 videoselected, u8 alternatedol, 
 	/* Setup video mode */
 	Disc_SelectVMode(videoselected, false, NULL, NULL);
 
+	//! An SD alternate DOL replaces the entry executable in MEM after the
+	//! apploader ran. Combined with a served Riivolution executable that
+	//! patch would be silently discarded while the mod's files still apply
+	//! - an incoherent effective mod. Refuse the combination explicitly
+	//! before the apploader runs (stock boot, memory held back downstream).
+	if (alternatedol == ALT_DOL_FROM_SD_USB && Riivo::DolWillServe())
+	{
+		gprintf("Riivo: alt-DOL from SD/USB combined with a mod executable; refusing\n");
+		Riivo::LogBootStep("alt-DOL stacking refused, booting stock");
+		Riivo::DeactivateBootView();
+		return 0;
+	}
+
 	/* Run apploader */
 	ret = Apploader_Run(&p_entry, dolpath, alternatedol, alternatedoloffset);
+
+	//! The boot view (if armed) served the composed executable through the
+	//! reads above. Disarm now on every path: post-apploader consumers read
+	//! MEM tables and IOS-served files, never the overlay, and a stale armed
+	//! view must not survive into device shutdown.
+	Riivo::DeactivateBootView();
 
 	//! Proves the apploader finished, in both surviving channels: a step
 	//! line in the card log and a light flip. A log ending before this

@@ -210,12 +210,21 @@ build_run test_manifest_extents "$SRC/riivo/RiivoFstBuild.cpp" "$SRC/riivo/Riivo
 # offset/fileoffset/length/resize, multiple mods to one file, zero-length,
 # missing files, main.dol refusal. Production linkage (FST + builder + file
 # planner + resolver + validator), not a helper copy.
-build_run test_patchplan "$SRC/riivo/RiivoPatchPlan.cpp" "$SRC/riivo/RiivoFstBuild.cpp" "$SRC/riivo/RiivoFst.cpp" "$SRC/riivo/RiivoFstWalk.cpp" "$SRC/riivo/RiivoFragPlan.cpp" "$SRC/riivo/RiivoValidate.cpp" "$SRC/riivo/RiivoFile.cpp" "$SRC/riivo/RiivoConfig.cpp" "$SRC/xml/pugixml.cpp"
+build_run test_patchplan "$SRC/riivo/RiivoPatchPlan.cpp" "$SRC/riivo/RiivoFstBuild.cpp" "$SRC/riivo/RiivoFst.cpp" "$SRC/riivo/RiivoFstWalk.cpp" "$SRC/riivo/RiivoFragPlan.cpp" "$SRC/riivo/RiivoValidate.cpp" "$SRC/riivo/RiivoFile.cpp" "$SRC/riivo/RiivoManifest.cpp" "$SRC/riivo/RiivoConfig.cpp" "$SRC/xml/pugixml.cpp"
 
 # Patched boot view overlay: stock-equivalence, grown header/table coherence
-# (0x424/428/42c), exact sub-reads, crossing/OOB fallback, refusal bounds.
-# Production overlay code only (no console, no IOS).
+# (0x424/428/42c), exact sub-reads, crossing/OOB fallback, refusal bounds,
+# plus DOL positional serving (splits, source advancement, fallback
+# identity, error propagation, coverage refusals). Production overlay code
+# only (no console, no IOS).
 build_run test_bootview "$SRC/riivo/RiivoBootView.cpp"
+
+# Early/late placement identity through the production seam: real FsDirLister
+# + real stat over a scratch card early, same set/device/lister/sizes plus
+# FST late; shared cursor walk, pre-FST earlyKey remap, identical offsets
+# and sizes, table build off the resolved map, RIV1 round-trip, and the
+# divergence tripwires. Fails loudly (never boots partial) on drift.
+build_run test_planparity "$SRC/riivo/RiivoPatchPlan.cpp" "$SRC/riivo/RiivoFstBuild.cpp" "$SRC/riivo/RiivoFst.cpp" "$SRC/riivo/RiivoFstWalk.cpp" "$SRC/riivo/RiivoFragPlan.cpp" "$SRC/riivo/RiivoValidate.cpp" "$SRC/riivo/RiivoFile.cpp" "$SRC/riivo/RiivoConfig.cpp" "$SRC/riivo/RiivoManifest.cpp" "$SRC/xml/pugixml.cpp"
 
 # Two-phase reconciliation (Newer SMBW fix): early registration records
 # against late placement, skip reasons, recovered-offset matching, and the

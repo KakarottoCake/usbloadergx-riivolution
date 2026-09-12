@@ -195,6 +195,8 @@ namespace Riivo
 	}
 
 	//! Join a disc folder path with a relative child path.
+	//! NOTE: device/external paths must NOT go through DiscDirPath (it
+	//! would corrupt the "sd:"/"usbN:" prefix); they keep this raw join.
 	static std::string JoinDisc(const std::string &dir, const std::string &rel)
 	{
 		std::string d = dir;
@@ -206,9 +208,58 @@ namespace Riivo
 		return d + "/" + r;
 	}
 
-	static void BuildFile(const Fst &fst, const ResolvedFile &f, const std::string &device,
-						  std::vector<RedirectSpec> &out, std::vector<CreatedFile> *outCreated)
+	std::string DiscDirPath(const std::string &disc)
 	{
+		if (disc.empty())
+			return "/";
+		if (disc[0] != '/')
+			return "/" + disc;
+		return disc;
+	}
+
+	std::string JoinDiscPath(const std::string &dir, const std::string &rel)
+	{
+		std::string d = dir;
+		if (!d.empty() && d[d.size() - 1] == '/')
+			d.erase(d.size() - 1);
+		std::string r = rel;
+		if (!r.empty() && r[0] == '/')
+			r = r.substr(1);
+		if (d.empty())
+			return "/" + r;
+		return d + "/" + r;
+	}
+
+	std::string BaseFileName(const std::string &path)
+	{
+		size_t p = path.find_last_of("/\\");
+		return p == std::string::npos ? path : path.substr(p + 1);
+	}
+
+	bool IsBootFileDisc(const std::string &disc)
+	{
+		if (disc.empty())
+			return false;
+		// Bare "main.dol" (any case, no slash) => executable (Dolphin-exact).
+		// An absolute "/main.dol" is an ordinary FST path with specific-file
+		// semantics (it names a root-level data file if one exists, never the
+		// executable image the apploader loads from the DOL offset).
+		bool hasSlash = disc.find('/') != std::string::npos
+			|| disc.find('\\') != std::string::npos;
+		return !hasSlash && strcasecmp(disc.c_str(), "main.dol") == 0;
+	}
+	static void BuildFile(const Fst &fst, const ResolvedFile &f, const std::string &device,
+						  std::vector<RedirectSpec> &out,
+						  std::vector<CreatedFile> *outCreated)
+	{
+		// Bare "main.dol" names the executable image (Dolphin-exact), not an
+		// FST entry: it composes in the patch plan and serves through the
+		// boot view, never here. (An absolute "/main.dol" stays an FST path.)
+		if (IsBootFileDisc(f.disc))
+		{
+			gprintf("Riivo file: executable routed to boot view, not FST: %s\n", f.disc.c_str());
+			return;
+		}
 		const FstFile *entry = fst.FindFile(f.disc);
 		const std::string external = JoinPath(device, f.root, f.external);
 
@@ -250,30 +301,35 @@ namespace Riivo
 
 		std::vector<std::string> extFiles;
 		lister->List(extDir, f.recursive, extFiles);
+		u32 dolRouted = 0;
 
 		for (size_t i = 0; i < extFiles.size(); ++i)
 		{
 			const std::string &rel = extFiles[i]; // relative to extDir
 			const std::string external = JoinDisc(extDir, rel);
 
-			// Dataless folders (empty disc) match by basename (first disc
-			// file with that name, case-insensitive), not by root-joined
-			// path. General fix (e.g. Newer): folder children become bare
-			// filename patches per the file-routing rule.
+			// Dataless folders name bare files; a child naming the executable
+			// routes to the DOL plan (Dolphin parity), never to an FST entry.
+			if (dataless && IsBootFileDisc(BaseFileName(rel)))
+			{
+				++dolRouted;
+				continue;
+			}
 			const FstFile *entry = 0;
 			std::string discFile;
 			if (dataless)
 			{
-				size_t slash = rel.find_last_of("/\\");
-				std::string base = slash == std::string::npos
-					? rel : rel.substr(slash + 1);
-				entry = fst.FindFile(base);
+				// Dataless folders (empty disc) match by basename (first disc
+				// file with that name, case-insensitive), not by root-joined
+				// path. General fix (e.g. Newer): folder children become bare
+				// filename patches per the file-routing rule.
+				entry = fst.FindFile(BaseFileName(rel));
 				discFile = entry ? entry->path
 					: NormaliseDiscPath(std::string("/") + rel);
 			}
 			else
 			{
-				discFile = JoinDisc(discDir, rel);
+				discFile = JoinDiscPath(discDir, rel);
 				entry = fst.FindFile(discFile);
 			}
 
@@ -299,6 +355,9 @@ namespace Riivo
 			spec.external = external;
 			out.push_back(spec);
 		}
+		if (dolRouted > 0)
+			gprintf("Riivo file: %u executable file(s) routed to boot view, not FST\n",
+					dolRouted);
 	}
 
 	//! NormaliseDiscPath lives in RiivoValidate.cpp (moved verbatim; the
@@ -355,15 +414,23 @@ namespace Riivo
 	void ListModFiles(const ResolvedPatchSet &set, const std::string &device,
 					  DirLister *lister, std::vector<ModCandidate> &out,
 					  ListProgressFn progress, void *ctx,
-					  std::vector<MissingExternal> *missing)
+					  std::vector<MissingExternal> *missing,
+					  u32 *dolRoutedOut)
 	{
 		out.clear();
 		if (missing)
 			missing->clear();
+		u32 dolRouted = 0;
 
 		for (size_t i = 0; i < set.files.size(); ++i)
 		{
 			const ResolvedFile &f = set.files[i];
+			// Bare "main.dol" serves through the boot view, never fragments.
+			if (IsBootFileDisc(f.disc))
+			{
+				++dolRouted;
+				continue;
+			}
 			ModCandidate c;
 			c.external = JoinPath(device, f.root, f.external);
 			c.disc = NormaliseDiscPath(f.disc);
@@ -384,7 +451,8 @@ namespace Riivo
 			for (size_t i = 0; i < set.folders.size(); ++i)
 			{
 				const ResolvedFolder &f = set.folders[i];
-				const std::string discDir = DiscPath(f.disc);
+				const bool dataless = f.disc.empty();
+				const std::string discDir = DiscDirPath(f.disc);
 				const std::string extDir = JoinPath(device, f.root, f.external);
 
 				if (progress)
@@ -395,9 +463,16 @@ namespace Riivo
 
 				for (size_t j = 0; j < rel.size(); ++j)
 				{
+					// Dataless children naming the executable serve through
+					// the boot view, never fragments (Dolphin parity).
+					if (dataless && IsBootFileDisc(BaseFileName(rel[j])))
+					{
+						++dolRouted;
+						continue;
+					}
 					ModCandidate c;
 					c.external = JoinDisc(extDir, rel[j]);
-					c.disc = NormaliseDiscPath(JoinDisc(discDir, rel[j]));
+					c.disc = NormaliseDiscPath(JoinDiscPath(discDir, rel[j]));
 					struct stat st;
 					if (c.disc.empty())
 						continue;
@@ -414,6 +489,8 @@ namespace Riivo
 				}
 			}
 		}
+		if (dolRoutedOut)
+			*dolRoutedOut = dolRouted;
 
 		//! Remember every stated size - including claims the dedup below
 		//! drops - before sorting, so the late phase reuses them instead of
@@ -459,8 +536,8 @@ namespace Riivo
 	//! Source id from an external path's device prefix ("sd:/..." -> SD,
 	//! "usb1:/..." -> USB). RiiFS-backed paths arrive in WP8 with their own
 	//! scheme and are refused here so they can never be misclassified as
-	//! local sectors.
-	static bool ClassifySource(const std::string &external, u16 &outSrc)
+	//! local sectors. Shared with the boot path's RIV1 emission.
+	bool ManifestSourceFor(const std::string &external, u16 &outSrc)
 	{
 		size_t colon = external.find(':');
 		std::string dev = colon == std::string::npos ? "" : external.substr(0, colon);
@@ -481,7 +558,8 @@ namespace Riivo
 
 	//! Path within the FAT partition: strip the "sd:" device prefix, keeping
 	//! the leading '/'. The runtime resolves it against partLba/discovery.
-	static std::string StripDevice(const std::string &external)
+	//! Shared with the boot path's RIV1 emission.
+	std::string ManifestPathFor(const std::string &external)
 	{
 		size_t colon = external.find(':');
 		if (colon == std::string::npos)
@@ -490,6 +568,16 @@ namespace Riivo
 		if (p.empty() || p[0] != '/')
 			p = "/" + p;
 		return p;
+	}
+
+	static bool ClassifySource(const std::string &external, u16 &outSrc)
+	{
+		return ManifestSourceFor(external, outSrc);
+	}
+
+	static std::string StripDevice(const std::string &external)
+	{
+		return ManifestPathFor(external);
 	}
 
 	bool BuildManifestExtents(const std::vector<RedirectSpec> &specs,

@@ -6,6 +6,7 @@
 #include <string.h>
 #include <strings.h>
 #include <malloc.h>
+#include <limits.h>
 #include <sys/stat.h>
 #include <unistd.h>
 #include <algorithm>
@@ -32,6 +33,8 @@
 #include "RiivoCheckpoints.hpp"
 #include "RiivoPersist.hpp"
 #include "RiivoPatchPlan.hpp"
+#include "RiivoBootView.hpp"
+#include "RiivoManifest.hpp"
 #include "RiivoPatchGuard.h"
 #include "RiivoIosProbe.hpp"
 #include "RiivoOnDemand.hpp"
@@ -180,6 +183,34 @@ namespace Riivo
 	static u32 hookGeneration = 0;
 	static u32 fragGeneration = 0;
 
+	//! Patched boot view (production instance). Armed in Activate() once the
+	//! plan is composed and the rebuilt table staged; consulted by WDVD_Read
+	//! while the partition is open and devices are mounted (the apploader
+	//! window); disarmed right after Apploader_Run and at every BeginLaunch.
+	//! DOL coverage serves the composed executable positionally (apploader
+	//! responses follow the stock layout; the served image preserves stock
+	//! size exactly). FST coverage serves the staged rebuilt bytes at the
+	//! disc FST range. Everything else falls through to stock.
+	static BootView bootView;
+	//! Composed executable + image base from the plan block. Persisted (small:
+	//! segments and paths only, never payloads) so Activate() can arm the
+	//! view after staging; cleared per boot with everything else.
+	static PlannedFile stagedDol;
+	static bool haveStagedDol = false;
+	static u64 stagedDolBase = 0;
+	//! Authoritative file plan for the late phases (FST sizes, offset remap,
+	//! manifest emission). Persisted from the plan block; cleared per boot.
+	//! Bounded by the early fragment budget (refused beyond it pre-plan).
+	static PatchPlan activePlan;
+	static bool haveActivePlan = false;
+	//! True once DOL coverage is armed AND verified through the real read
+	//! path. Gates the alt-DOL stacking refusal in BootPartition: an SD
+	//! alternate DOL would overwrite the served image in MEM after the fact.
+	static bool dolServing = false;
+	//! Consult counters, reported once at disarm (bounded single line).
+	static u32 ovReads = 0, ovServedDol = 0, ovServedMeta = 0, ovFatOpens = 0,
+			   ovFailed = 0;
+
 	//! Which partition the game is on, looked up in SetupDisc for the same
 	//! reason as everything else here.
 	//!
@@ -268,6 +299,122 @@ namespace Riivo
 		}
 		else
 			++dolNotesDropped;
+	}
+
+	//! Production byte sources for the boot view (PPC apploader window only:
+	//! partition open, devices mounted). Stock reads bypass the overlay
+	//! (WDVD_ReadStock) so serving can never recurse into itself. FAT reads
+	//! stream straight into the caller's buffer; short transfers are failures.
+	//! Bounded: one open per run served, no retained handles, no staging.
+	static bool BootStockReader(u64 absOff, u8 *dst, u32 len, void *ctx)
+	{
+		(void)ctx;
+		return WDVD_ReadStock(dst, len, absOff) == 0;
+	}
+
+	static bool BootFatReader(const std::string &path, u64 srcOff, u8 *dst,
+							  u32 len, void *ctx)
+	{
+		(void)ctx;
+		if (len == 0)
+			return true;
+		if (srcOff > (u64)LONG_MAX)
+			return false;
+		++ovFatOpens;
+		FILE *f = fopen(path.c_str(), "rb");
+		if (!f)
+			return false;
+		bool ok = false;
+		if (fseek(f, (long)srcOff, SEEK_SET) == 0)
+		{
+			size_t got = 0;
+			while (got < len)
+			{
+				size_t n = fread(dst + got, 1, len - got, f);
+				if (n == 0)
+					break;
+				got += n;
+			}
+			ok = (got == len);
+		}
+		fclose(f);
+		return ok;
+	}
+
+	//! Serve one production read through the armed boot view.
+	//! Tri-state: 1 served (bytes in buffer), 0 fall through to stock,
+	//! -1 fail loudly (a patched range that cannot be served: the caller
+	//! must boot nothing, never mix stock bytes into a patched image).
+	//! DOL range overlaps fail rather than fall through; header/FST
+	//! crossings fall through (their readers always ask exactly).
+	static int ServeBootRead(u64 offset, u8 *buffer, u32 length)
+	{
+		if (!buffer || length == 0)
+			return 0;
+		const bool viewLive = bootView.Active() || bootView.HasDol();
+		if (!viewLive)
+			return 0;
+		++ovReads;
+		if (bootView.HasDol())
+		{
+			const u64 dLo = bootView.DolBase();
+			const u64 dHi = dLo + bootView.DolSize();
+			const u64 end = offset + (u64)length;
+			if (end >= offset && offset < dHi && end > dLo)
+			{
+				// Touches the served image: all or nothing.
+				BootReaders r;
+				r.stock = BootStockReader;
+				r.fat = BootFatReader;
+				r.ctx = 0;
+				u32 done = 0;
+				if (bootView.ServeDol(offset, buffer, length, r, &done))
+				{
+					++ovServedDol;
+					return 1;
+				}
+				++ovFailed;
+				gprintf("Riivo: boot-view DOL read failed at 0x%llx len %u (done %u)\n",
+						(unsigned long long)offset, length, done);
+				return -1;
+			}
+		}
+		if (bootView.Active() && bootView.Serve(offset, buffer, length))
+		{
+			++ovServedMeta;
+			return 1;
+		}
+		return 0;
+	}
+
+	//! C bridge for wdvd.c (int, not bool: 1 served, 0 stock, -1 fail).
+	extern "C" int RiivoBootViewServe(u64 offset, u8 *buffer, u32 length)
+	{
+		return ServeBootRead(offset, buffer, length);
+	}
+
+	//! Disarm the boot view at the end of the apploader window (and every
+	//! fresh boot). Logs one bounded summary line while the card is alive.
+	void DeactivateBootView()
+	{
+		if (bootView.Active() || bootView.HasDol() || ovReads > 0)
+		{
+			gprintf("Riivo: boot view disarmed (reads %u, dol %u, meta %u, fat opens %u, failed %u)\n",
+					ovReads, ovServedDol, ovServedMeta, ovFatOpens, ovFailed);
+			char line[160];
+			snprintf(line, sizeof(line),
+				"boot view: %u read(s) consulted, %u dol + %u header/table served, %u fat open(s), %u failed\n",
+				ovReads, ovServedDol, ovServedMeta, ovFatOpens, ovFailed);
+			AppendLog(line);
+		}
+		bootView.Deactivate();
+		dolServing = false;
+		ovReads = ovServedDol = ovServedMeta = ovFatOpens = ovFailed = 0;
+	}
+
+	bool DolWillServe()
+	{
+		return dolServing;
 	}
 
 	//! Per-disc table-build failures from PrepareFileRedirects: the redirect
@@ -669,6 +816,11 @@ namespace Riivo
 		modSkips.clear();
 		modMissing.clear();
 		modAddFails.clear();
+		activePlan = PatchPlan();
+		haveActivePlan = false;
+		stagedDol = PlannedFile();
+		haveStagedDol = false;
+		stagedDolBase = 0;
 		dolSectionCount = 0;
 		dolBssAddr = dolBssSize = 0;
 		dolImageBase = 0;
@@ -691,6 +843,10 @@ namespace Riivo
 		memset(bootGameId, 0, sizeof(bootGameId));
 		ClearDirListCache();
 		ClearFileSizeCache();
+		// Last: disarm any leftover boot-view state. Runs after the log path
+		// is cleared so a stale summary can never land in a new boot's log;
+		// normally a silent no-op (BootPartition disarms on every exit path).
+		DeactivateBootView();
 	}
 
 	//! Stock IOS restored (BootGame after LoadGameCios slot reload). Clears
@@ -1287,7 +1443,16 @@ namespace Riivo
 	//!     in, so the game is never pointed at a region nothing serves.
 	static void Activate(std::string &out, const FragPlan &plan,
 						 const std::vector<PlacedFile> &placed,
-						 const std::vector<u8> &newFst)
+						 const std::vector<u8> &newFst,
+						 u64 fstDiscOffset);
+	static bool ArmBootView(std::string &out, u64 fstDiscOffset);
+	static bool EmitManifest(std::string &out,
+							 const std::vector<PlacedFile> &placed);
+
+	static void Activate(std::string &out, const FragPlan &plan,
+						 const std::vector<PlacedFile> &placed,
+						 const std::vector<u8> &newFst,
+						 u64 fstDiscOffset)
 	{
 		if (placed.empty())
 		{
@@ -1610,6 +1775,310 @@ namespace Riivo
 		else
 			out += "\n  Riivolution is prepared for this boot; the table installs\n"
 				   "  last, just before the jump, and only a verified install runs.\n";
+
+		//! Arm the patched boot view and prove it through the real read path.
+		//! FST coverage serves the just-staged bytes at the disc FST range;
+		//! DOL coverage serves the composed executable positionally (unless
+		//! the nofstinstall diagnostic holds it to stock). Verification reads
+		//! go through WDVD_Read - the same function the apploader calls - so
+		//! a passing check proves overlay bytes, offsets and lengths agree
+		//! on real PPC, not just in a host harness. Any failure withholds
+		//! with code 8 (card log authoritative; stock boot, no blink).
+		if (!ArmBootView(out, fstDiscOffset))
+			return;
+		//! Emit the RIV1 manifest: the staged segment contract for a future
+		//! runtime, cross-checked against the served placements now. A
+		//! mismatch means the plan and the placements drifted - withhold
+		//! rather than serve either.
+		if (!EmitManifest(out, placed))
+			return;
+	}
+
+	//! Bounded verification buffers (one IOS-sized chunk each). Static: no
+	//! per-boot allocation failure mode, freed never (loader lifetime).
+	static u8 verifyBounce[32768] ATTRIBUTE_ALIGN(32);
+	static u8 verifyExpect[32768] ATTRIBUTE_ALIGN(32);
+
+	//! Withhold a staged table with an explicit stage: free the staging
+	//! buffer, release + refuse through the launch owner (sticky: no later
+	//! Book can install it), disarm the boot view, and log the reason.
+	//! The boot then proceeds stock with memory held back; post-shutdown
+	//! InstallPendingFst finds nothing to do and blinks nothing (code 8 is
+	//! log-only by design - the card is still alive here).
+	static void WithholdStaged(std::string &out, const char *stage,
+							   const char *detail)
+	{
+		if (pendingFst)
+			MEM2_free(pendingFst);
+		g_launch.ReleaseStaging();
+		g_launch.Refuse(8);
+		DeactivateBootView();
+		withholdStage = stage;
+		out += detail;
+	}
+
+	//! Verify one DOL sample: read [dolBase+rel, +len) through the production
+	//! path and compare against FAT bytes at srcOff. Bounded by the caller.
+	static bool VerifyDolSample(u64 dolBase, u64 rel, const std::string &path,
+								u64 srcOff, u32 len, std::string &why)
+	{
+		if (len == 0 || len > sizeof(verifyBounce))
+		{
+			why = "sample length out of bounds";
+			return false;
+		}
+		if (WDVD_Read(verifyBounce, len, dolBase + rel) != 0)
+		{
+			why = "production read failed";
+			return false;
+		}
+		if (!BootFatReader(path, srcOff, verifyExpect, len, 0)
+			|| memcmp(verifyBounce, verifyExpect, len) != 0)
+		{
+			why = "served bytes differ from the mod file";
+			return false;
+		}
+		return true;
+	}
+
+	//! Arm the patched boot view and prove it through the real read path.
+	//! FST coverage serves the just-staged bytes at the disc FST range; DOL
+	//! coverage serves the composed executable positionally (held to stock
+	//! under the nofstinstall diagnostic). FST read-back is full but chunked
+	//! (bounded 32 KB peak); DOL sampling covers head+tail of the first
+	//! runs plus one original-identity and one zero sample. Any failure
+	//! withholds with code 8 (stock boot, memory held back, no blink).
+	static bool ArmBootView(std::string &out, u64 fstDiscOffset)
+	{
+		static u8 ovHeader[BOOTVIEW_HEADER_BYTES] ATTRIBUTE_ALIGN(32);
+		if (WDVD_ReadStock(ovHeader, sizeof(ovHeader), 0) != 0)
+		{
+			WithholdStaged(out, "BOOTVIEW",
+				"  boot view: stock header unreadable, cannot arm; FST withheld.\n");
+			return false;
+		}
+		// Production patches no header words (the disc image is immutable;
+		// MEM1 boot words carry the new table size at install). The served
+		// header is stock-identical: coherence plus verifiable plumbing.
+		std::vector<u8> patchedHeader(ovHeader, ovHeader + sizeof(ovHeader));
+		std::vector<u8> stagedView(pendingFst, pendingFst + pendingFstSize);
+		std::string why;
+		if (!bootView.Activate(ovHeader, sizeof(ovHeader), patchedHeader,
+							   fstDiscOffset, stagedView, why))
+		{
+			char line[192];
+			snprintf(line, sizeof(line),
+				"  boot view: activation refused (%s); FST withheld.\n", why.c_str());
+			WithholdStaged(out, "BOOTVIEW", line);
+			return false;
+		}
+		if (haveStagedDol && !skipFstInstall)
+		{
+			if (stagedDolBase == 0 || stagedDol.discLengthOrig == 0)
+			{
+				WithholdStaged(out, "BOOTVIEW",
+					"  boot view: DOL image base unknown; FST withheld.\n");
+				return false;
+			}
+			if (!bootView.SetDol(stagedDolBase, stagedDol.discLengthOrig,
+								 stagedDol, why))
+			{
+				char line[224];
+				snprintf(line, sizeof(line),
+					"  boot view: DOL coverage refused (%s); FST withheld.\n",
+					why.c_str());
+				WithholdStaged(out, "BOOTVIEW", line);
+				return false;
+			}
+		}
+		else if (haveStagedDol)
+		{
+			out += "  DIAGNOSTIC: DOL served stock under nofstinstall (see above).\n";
+		}
+		Addf(out, "  boot view : armed (FST %u bytes at 0x%08x%s)\n",
+			 pendingFstSize, (unsigned)fstDiscOffset,
+			 (haveStagedDol && !skipFstInstall) ? ", DOL image served" : "");
+		// FST read-back through WDVD_Read (the apploader's function): proves
+		// overlay bytes, offsets and lengths agree on real PPC. The disc
+		// still holds stock bytes there - a mismatch names the overlay, and
+		// only the overlay, as the fault.
+		LogStep("verifying the boot view through WDVD_Read");
+		{
+			u32 remaining = pendingFstSize;
+			u64 off = fstDiscOffset;
+			bool ok = true;
+			while (remaining > 0 && ok)
+			{
+				u32 take = remaining > sizeof(verifyBounce)
+						   ? sizeof(verifyBounce) : remaining;
+				if (WDVD_Read(verifyBounce, take, off) != 0)
+					ok = false;
+				else if (memcmp(verifyBounce, pendingFst + (off - fstDiscOffset),
+								take) != 0)
+					ok = false;
+				off += take;
+				remaining -= take;
+			}
+			if (!ok)
+			{
+				WithholdStaged(out, "BOOTVIEW",
+					"  boot view: FST read-back mismatch; FST withheld.\n");
+				return false;
+			}
+		}
+		Addf(out, "  boot view : FST read-back matches staged bytes (%u)\n",
+			 pendingFstSize);
+		// DOL samples: head+tail of the edge external runs (bounded eight),
+		// one original-identity sample (overlay vs stock, same bytes), one
+		// zero sample. Any failure withholds: no partial patched images.
+		if (haveStagedDol && !skipFstInstall && bootView.HasDol())
+		{
+			u32 extRuns = 0;
+			for (size_t i = 0; i < stagedDol.segs.size(); ++i)
+				if (stagedDol.segs[i].kind == PlanSegment::SEG_EXTERNAL)
+					++extRuns;
+			u32 extSeen = 0, samples = 0;
+			bool ok = true;
+			std::string detail;
+			u32 lastExt = 0;
+			for (size_t i = 0; i < stagedDol.segs.size(); ++i)
+				if (stagedDol.segs[i].kind == PlanSegment::SEG_EXTERNAL)
+					lastExt = (u32)i;
+			for (size_t i = 0; ok && i < stagedDol.segs.size(); ++i)
+			{
+				const PlanSegment &s = stagedDol.segs[i];
+				if (s.kind != PlanSegment::SEG_EXTERNAL)
+					continue;
+				bool edge = (extSeen < 7) || (i == lastExt);
+				++extSeen;
+				if (!edge)
+					continue;
+				u32 head = s.length < 32768 ? s.length : 32768;
+				if (!VerifyDolSample(stagedDolBase, s.fileOffset, s.external,
+									 s.srcOffset, head, detail))
+				{
+					ok = false;
+					break;
+				}
+				++samples;
+				if (s.length > head)
+				{
+					u32 tailOff = s.length - (s.length - head < 32768
+											  ? s.length - head : 32768);
+					u32 tailLen = s.length - tailOff;
+					if (!VerifyDolSample(stagedDolBase, s.fileOffset + tailOff,
+										 s.external, s.srcOffset + tailOff,
+										 tailLen, detail))
+					{
+						ok = false;
+						break;
+					}
+					++samples;
+				}
+			}
+			// Original-identity: first sufficiently long ORIGINAL run reads
+			// identically through the overlay and the stock path.
+			if (ok)
+			{
+				for (size_t i = 0; i < stagedDol.segs.size(); ++i)
+				{
+					const PlanSegment &s = stagedDol.segs[i];
+					if (s.kind != PlanSegment::SEG_ORIGINAL || s.length < 4096)
+						continue;
+					if (WDVD_Read(verifyBounce, 4096,
+								  stagedDolBase + s.fileOffset) != 0
+						|| WDVD_ReadStock(verifyExpect, 4096,
+										  stagedDolBase + s.fileOffset) != 0
+						|| memcmp(verifyBounce, verifyExpect, 4096) != 0)
+					{
+						ok = false;
+						detail = "original-identity sample differs";
+					}
+					else
+						++samples;
+					break;
+				}
+			}
+			// Zero sample: first ZERO run reads back zeros.
+			if (ok)
+			{
+				for (size_t i = 0; i < stagedDol.segs.size(); ++i)
+				{
+					const PlanSegment &s = stagedDol.segs[i];
+					if (s.kind != PlanSegment::SEG_ZERO || s.length == 0)
+						continue;
+					u32 take = s.length < 4096 ? s.length : 4096;
+					if (WDVD_Read(verifyBounce, take,
+								  stagedDolBase + s.fileOffset) != 0)
+					{
+						ok = false;
+						detail = "zero sample unreadable";
+						break;
+					}
+					for (u32 k = 0; k < take; ++k)
+					{
+						if (verifyBounce[k] != 0)
+						{
+							ok = false;
+							detail = "zero sample not zero";
+							break;
+						}
+					}
+					if (ok)
+						++samples;
+					break;
+				}
+			}
+			if (!ok)
+			{
+				char line[256];
+				snprintf(line, sizeof(line),
+					"  boot view: DOL verification failed (%s); FST withheld.\n",
+					detail.c_str());
+				WithholdStaged(out, "BOOTVIEW", line);
+				return false;
+			}
+			dolServing = true;
+			Addf(out, "  boot view : DOL verified (%u external run(s), %u sample read(s))\n",
+				 extRuns, samples);
+		}
+		return true;
+	}
+
+	//! Emit the RIV1 manifest: the staged segment contract for a future
+	//! runtime, cross-checked against the served placements now. Shared
+	//! implementation (BuildPlanManifest) with the host parity suite: a
+	//! mismatch means the plan and the placements drifted - withhold
+	//! rather than serve either. The digest (entries, bytes, blob size,
+	//! crc) is the artifact to compare.
+	static bool EmitManifest(std::string &out,
+							 const std::vector<PlacedFile> &placed)
+	{
+		if (!haveActivePlan)
+			return true; // no plan drove this boot; nothing to contract
+		u32 discId = ((u32)bootGameId[0] << 24) | ((u32)bootGameId[1] << 16) |
+					 ((u32)bootGameId[2] << 8) | (u32)bootGameId[3];
+		// Partition index is untracked (0 = unspecified); readers must not
+		// depend on it. The discovery LBA likewise defers to the module.
+		std::vector<u8> blob;
+		std::string why;
+		if (!BuildPlanManifest(activePlan, placed, discId, blob, why))
+		{
+			char line[300];
+			snprintf(line, sizeof(line),
+				"  manifest: %s; withheld.\n", why.c_str());
+			WithholdStaged(out, "MANIFEST", line);
+			return false;
+		}
+		u64 totalBytes = 0;
+		for (size_t i = 0; i < placed.size(); ++i)
+			totalBytes += placed[i].length;
+		u32 crc = (u32)blob[16] | ((u32)blob[17] << 8)
+				  | ((u32)blob[18] << 16) | ((u32)blob[19] << 24);
+		Addf(out, "  manifest RIV1 : %u extent(s), %llu byte(s), %u blob byte(s), crc %08x (validated)\n",
+			 (unsigned)placed.size(), (unsigned long long)totalBytes,
+			 (unsigned)blob.size(), crc);
+		return true;
 	}
 
 	static bool ExternalFileSize(const std::string &path, u32 *outSize)
@@ -1697,9 +2166,11 @@ namespace Riivo
 		//! PlannedFiles with Dolphin-compatible segment semantics. FST sizes
 		//! below derive from the plan's finalSize, not whole external sizes,
 		//! so offset/fileoffset/length/resize reach the live rebuild path.
-		//! Boot-file and partial-segment files refuse explicitly here (named
-		//! limitations until the patched boot view / segment runtime land);
-		//! never silently apply whole-file bytes for a sub-range patch.
+		//! Partial-segment non-DOL files refuse explicitly here (named
+		//! limitation: the fragment runtime serves whole files only); the
+		//! executable composes against the DOL image for boot-view serving
+		//! (size-preserving by rule, verified below). Never silently apply
+		//! whole-file bytes for a sub-range patch.
 		{
 			struct BootSizes : public FileSizeProvider
 			{
@@ -1708,17 +2179,34 @@ namespace Riivo
 					return ExternalFileSize(external, outSize);
 				}
 			} bootSizes;
+			// DOL image span from the section table read above (DOL-relative
+			// file offsets; the served image preserves this size exactly).
+			// Zero when the header was unreadable: DOL entries then refuse
+			// explicitly instead of composing against a guessed extent.
+			u64 dolSize = 0;
+			if (dolSectionCount > 0)
+			{
+				u32 offs[18], lens[18];
+				for (u32 i = 0; i < 18; ++i)
+				{
+					offs[i] = dolSections[i].fileOff;
+					lens[i] = dolSections[i].size;
+				}
+				dolSize = DolImageSize(offs, lens, 18);
+			}
 			PatchPlan plan;
+			PlannedFile dolPlan;
 			std::string planWhy;
 			if (!BuildPatchPlan(fst, *bootSet, bootDevice, &lister,
-								&bootSizes, plan, planWhy))
+								&bootSizes, plan, planWhy,
+								dolSize, &dolPlan))
 			{
 				Addf(out, "plan FAILED: %s\n", planWhy.c_str());
 				Addf(out, "\nNothing is applied for an unplannable mod. The game boots unmodified.\n");
 				AppendLog(out);
 				return;
 			}
-			if (!plan.errors.empty() || plan.hasBootFile)
+			if (!plan.errors.empty())
 			{
 				Addf(out, "unsupported enabled file operation(s) - refusing file work:\n");
 				for (size_t i = 0; i < plan.errors.size() && i < 8; ++i)
@@ -1747,6 +2235,78 @@ namespace Riivo
 				AppendLog(out);
 				return;
 			}
+			// Persist for the late phases (single authoritative plan: FST
+			// sizes, offset remap, manifest emission, boot-view arming).
+			// Small: paths, sizes and file segments only, never payloads;
+			// cleared per boot in BeginLaunch.
+			activePlan = plan;
+			haveActivePlan = true;
+			// Stat/compose agreement: every whole-file final must equal the
+			// size the early enumeration stated for the same pre-FST key
+			// (same card, same boot, shared size cache). A mismatch means
+			// the card changed between phases or the composer drifted from
+			// the enumerator - refuse explicitly, never size either side.
+			{
+				std::map<std::string, u32> earlySize;
+				for (size_t i = 0; i < modRecords.size(); ++i)
+					earlySize[modRecords[i].disc] = modRecords[i].length;
+				std::string drift;
+				u32 drifted = 0;
+				for (size_t i = 0; i < plan.files.size(); ++i)
+				{
+					const PlannedFile &f = plan.files[i];
+					if (!f.wholeFile || f.finalSize == 0)
+						continue;
+					std::map<std::string, u32>::const_iterator it =
+						earlySize.find(f.earlyKey);
+					if (it == earlySize.end() || it->second != f.finalSize)
+					{
+						++drifted;
+						if (drifted <= 8)
+						{
+							char b[192];
+							snprintf(b, sizeof(b), " %s(plan %u, early %s)",
+								f.disc.c_str(), f.finalSize,
+								it == earlySize.end() ? "absent"
+								: "different");
+							drift += b;
+						}
+					}
+				}
+				if (drifted > 0)
+				{
+					Addf(out, "stat/compose disagreement on %u file(s):%s\n",
+						 drifted, drift.c_str());
+					if (drifted > 8)
+						Addf(out, "  ... and %u more\n", drifted - 8);
+					out += "  The early and late phases disagree about file sizes;\n"
+						   "  building the table from either would mis-size reads.\n"
+						   "  Withheld.\n";
+					withholdStage = "SIZE_DRIFT";
+					AppendLog(out);
+					return;
+				}
+			}
+			// Externals missing at composition time, filed for the skip audit
+			// under the plan's (pre-FST) disc keys - the same identity the
+			// early registration records carry.
+			for (size_t i = 0; i < plan.missingExternals.size(); ++i)
+			{
+				const std::string &key = plan.missingExternals[i].disc;
+				if (!key.empty()
+					&& modAddFails.find(key) == modAddFails.end())
+					modAddFails[key] = SKIP_STAT_FAILED;
+			}
+			if (dolPlan.bootFile)
+			{
+				dolPlan.dolBase = dolImageBase;
+				stagedDol = dolPlan;
+				stagedDolBase = dolImageBase;
+				haveStagedDol = true;
+				Addf(out, "executable : %u composed byte(s), image size %llu, %u segment(s)\n",
+					 dolPlan.finalSize, (unsigned long long)dolSize,
+					 (unsigned)dolPlan.segs.size());
+			}
 			// Whole-file plan agrees with redirects; FST sizes below use the
 			// plan's finalSize (equal to external sizes here) as the single
 			// authoritative source going forward.
@@ -1755,6 +2315,8 @@ namespace Riivo
 		//! Size accounting. A replacement bigger than the file it stands in for
 		//! cannot be served by redirection alone: the file table still advertises
 		//! the old length, so the game never asks for the extra bytes.
+		//! Payload bytes come from the plan loop below (composed finals,
+		//! deduplicated); this loop only classifies fits/grows.
 		int missing = 0, fits = 0, grows = 0;
 		u64 maxDiscOffset = 0, modBytes = 0;
 		std::vector<size_t> growers;
@@ -1771,7 +2333,6 @@ namespace Riivo
 				++missing;
 				continue;
 			}
-			modBytes += extSize;
 			if (extSize > r.discLength)
 			{
 				++grows;
@@ -1868,47 +2429,122 @@ namespace Riivo
 		//! list a missing folder looks like one phantom addition that plans
 		//! nothing - exactly the confusion to avoid.
 		std::vector<std::string> missingCreated;
-		bool isNew = false;
-		for (size_t i = 0; i < redirects.size(); ++i)
+		//! Router-divergence tripwire: the plan and the redirect builder must
+		//! name the same file set (the plan skips DOL-routed entries, which
+		//! never reach the builder - that exclusion is by design, not drift).
+		//! Any other difference means the two routers disagree about what the
+		//! XML selected, and the table must not be built from either.
 		{
-			u32 extSize = 0;
-			const std::string key = NormaliseDiscPath(redirects[i].disc);
-			if (!ExternalFileSize(redirects[i].external, &extSize))
+			std::map<std::string, char> routed;
+			for (size_t i = 0; i < redirects.size(); ++i)
+				routed[NormaliseDiscPath(redirects[i].disc)] = 1;
+			for (size_t i = 0; i < created.size(); ++i)
+				routed[NormaliseDiscPath(created[i].disc)] = 1;
+			std::string drift;
+			u32 drifted = 0;
+			std::map<std::string, char> planned;
+			for (size_t i = 0; i < activePlan.files.size(); ++i)
 			{
-				modAddFails[key] = SKIP_STAT_FAILED;
+				planned[activePlan.files[i].disc] = 1;
+				if (routed.find(activePlan.files[i].disc) == routed.end())
+				{
+					++drifted;
+					if (drifted <= 8)
+						drift += " plan-without-redirect:" + activePlan.files[i].disc;
+				}
+			}
+			for (std::map<std::string, char>::const_iterator it = routed.begin();
+				 it != routed.end(); ++it)
+			{
+				if (planned.find(it->first) == planned.end())
+				{
+					++drifted;
+					if (drifted <= 8)
+						drift += " redirect-without-plan:" + it->first;
+				}
+			}
+			if (drifted > 0)
+			{
+				Addf(out, "router divergence on %u file(s) (plan vs redirects):%s%s\n",
+					 drifted, drift.c_str(),
+					 drifted > 8 ? " ..." : "");
+				out += "  The two file routers disagree; building the table from\n"
+					   "  either would silently apply a different mod. Withheld.\n";
+				withholdStage = "ROUTER_DRIFT";
+				AppendLog(out);
+				return;
+			}
+		}
+		bool isNew = false;
+		// Single authoritative source: the plan's composed finals. Whole-file
+		// entries carry the winning external; the stat below reuses the early
+		// enumeration cache (same card, same boot). A mismatch with the
+		// composed final cannot happen through the cache - it would mean the
+		// wholeFile invariant broke - so it refuses explicitly instead of
+		// sizing the table from either value.
+		// Failures are filed under both the late disc key and the pre-FST
+		// early key when they differ, so the skip audit (keyed by early
+		// registration records) names the true reason for basename-routed
+		// files instead of a generic unassigned verdict.
+		for (size_t i = 0; i < activePlan.files.size(); ++i)
+		{
+			const PlannedFile &pf = activePlan.files[i];
+			const std::string &key = pf.disc;
+			u32 extSize = 0;
+			if (pf.finalSize == 0 && pf.external.empty())
+			{
+				// Zero-length file: valid entry, no fragments, no stat.
+				if (builder.AddOrReplace(pf.disc, 0, &isNew))
+				{
+					++planned;
+					expectedModSizes[key] = 0;
+				}
+				else
+				{
+					modAddFails[key] = SKIP_ADD_FAILED;
+					if (pf.earlyKey != key)
+						modAddFails[pf.earlyKey] = SKIP_ADD_FAILED;
+					++rejected;
+				}
 				continue;
 			}
-			if (builder.AddOrReplace(redirects[i].disc, extSize, &isNew))
+			if (!ExternalFileSize(pf.external, &extSize)
+				|| extSize != pf.finalSize)
+			{
+				if (modAddFails.find(key) == modAddFails.end())
+					modAddFails[key] = SKIP_STAT_FAILED;
+				if (pf.earlyKey != key
+					&& modAddFails.find(pf.earlyKey) == modAddFails.end())
+					modAddFails[pf.earlyKey] = SKIP_STAT_FAILED;
+				if (!ExternalFileSize(pf.external, &extSize))
+					missingCreated.push_back(pf.external);
+				continue;
+			}
+			modBytes += pf.finalSize;
+			if (builder.AddOrReplace(pf.disc, pf.finalSize, &isNew))
 			{
 				++planned;
-				expectedModSizes[key] = extSize;
+				expectedModSizes[key] = pf.finalSize;
 			}
 			else
 			{
 				modAddFails[key] = SKIP_ADD_FAILED;
+				if (pf.earlyKey != key)
+					modAddFails[pf.earlyKey] = SKIP_ADD_FAILED;
 				++rejected;
 			}
 		}
+		// Diagnostics for created files missing from the card keep their
+		// historical shape (the plan records them as missing externals).
 		for (size_t i = 0; i < created.size(); ++i)
 		{
 			u32 extSize = 0;
-			const std::string key = NormaliseDiscPath(created[i].disc);
 			if (!ExternalFileSize(created[i].external, &extSize))
 			{
-				modAddFails[key] = SKIP_STAT_FAILED;
+				const std::string key = NormaliseDiscPath(created[i].disc);
+				if (modAddFails.find(key) == modAddFails.end())
+					modAddFails[key] = SKIP_STAT_FAILED;
 				missingCreated.push_back(created[i].external);
-				continue;
-			}
-			modBytes += extSize;
-			if (builder.AddOrReplace(created[i].disc, extSize, &isNew))
-			{
-				++planned;
-				expectedModSizes[key] = extSize;
-			}
-			else
-			{
-				modAddFails[key] = SKIP_ADD_FAILED;
-				++rejected;
 			}
 		}
 		LogStep("table entries planned: %u (%u rejected)", planned, rejected);
@@ -1997,14 +2633,33 @@ namespace Riivo
 		//! Apply the placement decided in SetupDisc rather than choosing a new
 		//! one: the fragments are already registered against those offsets and
 		//! cannot be changed now, because d2x refuses IOCTL_DI_FRAG_SET once
-		//! the game partition is open. Layout() is only used when nothing was
-		//! placed, so the report still shows what would have happened.
+		//! the game partition is open. The late keys (post-FST routing) meet
+		//! the early offsets through each file's pre-FST earlyKey, so
+		//! basename-routed files land on registered fragments instead of
+		//! withholding the whole table. LayoutFrom then counts builder
+		//! entries the resolved map cannot serve - the single gate below.
+		//! Layout() is only used when nothing was placed, so the report
+		//! still shows what would have happened.
 		u32 unplaced = 0;
+		u32 remapped = 0;
+		std::map<std::string, u64> lateOffsets;
 		if (!modOffsets.empty())
-			unplaced = builder.LayoutFrom(modOffsets);
+		{
+			u32 resolveUnplaced = 0;
+			ResolveLateOffsets(activePlan, modOffsets, lateOffsets,
+							   resolveUnplaced, remapped);
+			unplaced = builder.LayoutFrom(lateOffsets);
+			// Both counters must agree: the resolver sees plan files, the
+			// builder sees table entries. A file the resolver cannot serve
+			// but the builder does not contain is an internal inconsistency,
+			// refused the same way.
+			if (resolveUnplaced > unplaced)
+				unplaced = resolveUnplaced;
+		}
 		else
 			builder.Layout(region, layoutAlign);
-		LogStep("early placement applied: %u without", unplaced);
+		LogStep("early placement applied: %u without, %u remapped by name",
+				unplaced, remapped);
 
 		std::vector<u8> newFst;
 		builder.Serialize(newFst, true);
@@ -2018,7 +2673,10 @@ namespace Riivo
 		vreq.builder = &builder;
 		vreq.fst = &fst;
 		vreq.plainFst = &newFst;
-		vreq.modOffsets = &modOffsets;
+		// Late keys (post-FST routing), matching expectedModSizes and the
+		// redirect/created lists below. Passing the early map here would
+		// fail basename-routed files against their own placements.
+		vreq.modOffsets = &lateOffsets;
 		vreq.expectedModSizes = &expectedModSizes;
 		vreq.fstReserve = fstReserve;
 		vreq.region = region;
@@ -2351,7 +3009,7 @@ namespace Riivo
 		else
 		{
 			LogStep("checking the mod's files through the hook");
-			Activate(out, plan, placed, newFst);
+			Activate(out, plan, placed, newFst, fstOffset);
 			LogStep("file work finished");
 			//! The staged copy (or the relocorig original) already lives in
 			//! its own MEM2 buffer; holding the disc bytes too would just
@@ -2774,12 +3432,16 @@ namespace Riivo
 		//! that is thousands of entries off FAT, and it is the slowest thing
 		//! in the whole boot - so say so before starting, not after.
 		LogStep("listing the mod's files (reads the card)");
+		u32 dolRoutedEarly = 0;
 		{
 			FsDirLister lister;
 			ListModFiles(*bootSet, bootDevice, &lister, cand,
-						 LogListProgress, 0, &modMissing);
+						 LogListProgress, 0, &modMissing, &dolRoutedEarly);
 		}
 		LogStep("mod files listed: %u found", (unsigned) cand.size());
+		if (dolRoutedEarly > 0)
+			LogStep("executable file(s) serve via boot view, no fragments: %u",
+					dolRoutedEarly);
 		//! Named in the progress section as well as the report below: a boot
 		//! that dies later still shows the count here, and "0 found" with a
 		//! nonzero missing count is a mod pointing at files that are not
@@ -2827,40 +3489,14 @@ namespace Riivo
 		placed.reserve(cand.size());
 		modRecords.clear();
 		modRecords.reserve(cand.size());
-		u64 cursor = regionStart;
-		for (size_t i = 0; i < cand.size(); ++i)
-		{
-			if (cand[i].size == 0)
-			{
-				//! Empty files need no fragments, but they still need a
-				//! placement: the rebuilt table holds an entry for them, and
-				//! LayoutFrom refuses entries with none. They share the cursor
-				//! without advancing it; a zero-length read never touches it.
-				cursor = (cursor + align - 1) & ~((u64) align - 1);
-				modOffsets[cand[i].disc] = cursor;
-				RegRecord rec;
-				rec.disc = cand[i].disc;
-				rec.external = cand[i].external;
-				rec.offset = cursor;
-				rec.length = 0;
-				modRecords.push_back(rec);
-				continue;
-			}
-			cursor = (cursor + align - 1) & ~((u64) align - 1);
-			PlacedFile pf;
-			pf.offset = cursor;
-			pf.length = cand[i].size;
-			pf.external = cand[i].external;
-			placed.push_back(pf);
-			modOffsets[cand[i].disc] = cursor;
-			RegRecord rec;
-			rec.disc = cand[i].disc;
-			rec.external = cand[i].external;
-			rec.offset = cursor;
-			rec.length = cand[i].size;
-			modRecords.push_back(rec);
-			cursor += cand[i].size;
-		}
+		//! One cursor walk for both phases (see AssignModOffsets): the late
+		//! table build meets these same offsets through ResolveLateOffsets
+		//! (keyed by each file's pre-FST earlyKey), so basename-routed files
+		//! still land on registered fragments. test_planparity pins the
+		//! early/late identity on shared fixtures.
+		modOffsets.clear();
+		u64 cursor = AssignModOffsets(cand, regionStart, align, modOffsets,
+									  placed, modRecords);
 		modRegionStart = regionStart;
 		modRegionEnd = cursor;
 		LogStep("placement computed: %u file(s), %llu bytes",

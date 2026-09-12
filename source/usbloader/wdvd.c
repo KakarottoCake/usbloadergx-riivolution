@@ -2,6 +2,7 @@
 #include <string.h>
 #include <malloc.h>
 #include <ogcsys.h>
+#include "wdvd.h"
 #include "gecko.h"
 #include "wbfs.h"
 
@@ -276,10 +277,44 @@ s32 WDVD_UnencryptedRead(void *buf, u32 len, u64 offset)
 	return (ret == 1) ? 0 : -ret;
 }
 
+s32 WDVD_ReadStock(void *buf, u32 len, u64 offset)
+{
+	if (_di_fd < 0)
+		return _di_fd;
+
+	s32 ret;
+
+	memset(inbuf, 0, sizeof(inbuf));
+
+	/* Disc read */
+	inbuf[0] = IOCTL_DI_READ << 24;
+	inbuf[1] = len;
+	inbuf[2] = (u32)(offset >> 2);
+
+	ret = IOS_Ioctl(_di_fd, IOCTL_DI_READ, inbuf, sizeof(inbuf), buf, len);
+	if (ret < 0)
+		return ret;
+
+	return (ret == 1) ? 0 : -ret;
+}
+
 s32 WDVD_Read(void *buf, u32 len, u64 offset)
 {
 	if (_di_fd < 0)
 		return _di_fd;
+
+	//! Patched boot view (Riivolution): while armed, executable and rebuilt
+	//! table ranges serve composed bytes; everything else falls through to
+	//! stock. A loud failure (-1) refuses the read outright: the caller must
+	//! boot nothing rather than mix stock bytes into a patched image.
+	if (buf && len)
+	{
+		int served = RiivoBootViewServe(offset, (u8 *)buf, len);
+		if (served > 0)
+			return 0;
+		if (served < 0)
+			return -1;
+	}
 
 	s32 ret;
 

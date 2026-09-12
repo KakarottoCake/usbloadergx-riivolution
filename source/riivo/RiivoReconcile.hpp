@@ -33,6 +33,9 @@
 #include <string>
 #include <vector>
 
+#include "RiivoFile.hpp"      // ModCandidate (early enumeration unit)
+#include "RiivoFragBuild.hpp" // PlacedFile (fragment-mapped unit)
+
 namespace Riivo
 {
 	//! CRC-32 (IEEE) for post-install verification. Inline so both the
@@ -261,10 +264,11 @@ namespace Riivo
 	// before memory patches and unmounting (MenuLaunch: RVL_Patch, then
 	// apploader, then CommitRVL(false), then PatchMemory, then Unmount);
 	// GX stages pre-shutdown but installs after memory patches,
-	// post-shutdown, just before the jump. Registering asset redirects
-	// does not by itself establish that GX's apploader sees rebuilt
-	// metadata or executable replacements - its apploader runs before the
-	// install, so main.dol loads from the real disc.
+	// post-shutdown, just before the jump. Asset redirects register
+	// pre-partition in SetupDisc. Executable (main.dol) replacement is the
+	// exception to "the apploader sees stock": the armed boot view serves
+	// the composed image positionally through the production WDVD_Read path
+	// during Apploader_Run, then disarms before the jump.
 	// ------------------------------------------------------------------
 
 	//! One replaced range: partition bytes [off, off+len) come from a file
@@ -289,6 +293,64 @@ namespace Riivo
 
 		SpanSeg() : outOff(0), len(0), fromFile(false), fileOff(0) {}
 	};
+
+	//! Lay enumerated candidates onto the synthetic region: the deterministic
+	//! cursor walk shared by the early fragment registration (SetupDisc, no
+	//! FST) and, through ResolveLateOffsets, the late table build. Empty
+	//! files share the cursor without advancing it (a zero-length read never
+	//! touches the address); every other file advances past its stat size at
+	//! sector alignment. Returns the end cursor (region end). Pure and total:
+	//! no console, no failure mode, so the production call site and host
+	//! tests run this exact code.
+	inline u64 AssignModOffsets(const std::vector<ModCandidate> &cand,
+								u64 regionStart, u32 align,
+								std::map<std::string, u64> &offsets,
+								std::vector<PlacedFile> &placed,
+								std::vector<RegRecord> &records)
+	{
+		offsets.clear();
+		placed.clear();
+		records.clear();
+		if (align == 0)
+			align = 512;
+		const u64 mask = (u64)align - 1;
+		const bool pow2 = align && ((align & (align - 1)) == 0);
+		u64 cursor = regionStart;
+		for (size_t i = 0; i < cand.size(); ++i)
+		{
+			if (pow2)
+				cursor = (cursor + mask) & ~mask;
+			if (cand[i].size == 0)
+			{
+				//! Empty files need no fragments, but they still need a
+				//! placement: the rebuilt table holds an entry for them, and
+				//! LayoutFrom refuses entries with none. They share the cursor
+				//! without advancing it; a zero-length read never touches it.
+				offsets[cand[i].disc] = cursor;
+				RegRecord rec;
+				rec.disc = cand[i].disc;
+				rec.external = cand[i].external;
+				rec.offset = cursor;
+				rec.length = 0;
+				records.push_back(rec);
+				continue;
+			}
+			PlacedFile pf;
+			pf.offset = cursor;
+			pf.length = cand[i].size;
+			pf.external = cand[i].external;
+			placed.push_back(pf);
+			offsets[cand[i].disc] = cursor;
+			RegRecord rec;
+			rec.disc = cand[i].disc;
+			rec.external = cand[i].external;
+			rec.offset = cursor;
+			rec.length = cand[i].size;
+			records.push_back(rec);
+			cursor += cand[i].size;
+		}
+		return cursor;
+	}
 
 	//! Split [pos, pos+len) into ascending segments covering exactly len
 	//! bytes. `fullyCovered` mirrors the reference's filecover: every byte
