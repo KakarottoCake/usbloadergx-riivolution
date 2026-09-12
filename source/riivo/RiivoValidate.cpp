@@ -10,6 +10,7 @@
 #include <ctype.h>
 #include <string.h>
 #include <algorithm>
+#include <new>
 #include "RiivoValidate.hpp"
 
 namespace Riivo
@@ -263,13 +264,22 @@ namespace Riivo
 			res.stats = useCompact ? builder.Stats() : plainStats;
 			TraceOp(opTrace, VOP_NONE);
 		}
-		catch (const std::exception &)
+		catch (const std::bad_alloc &)
 		{
 			res.oom = true;
 		}
+		catch (const std::exception &e)
+		{
+			// Non-allocation failure: refuse, but do not misclassify as OOM.
+			res.oom = false;
+			res.fstWalkOK = false;
+			res.walkError = std::string("validation exception: ") + e.what();
+		}
 		catch (...)
 		{
-			res.oom = true;
+			res.oom = false;
+			res.fstWalkOK = false;
+			res.walkError = "validation exception: unknown";
 		}
 	}
 }

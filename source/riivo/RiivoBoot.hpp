@@ -40,6 +40,10 @@ namespace Riivo
 	//! SetBootContext (mod selected) fills the context in afterwards.
 	void BeginLaunch();
 
+	//! Stock IOS restored (BootGame after a verified slot reload). Clears
+	//! installed-hook/fragment generations to stock. Never blind-unpatches.
+	void NoteIosReload();
+
 	//! Hand the boot-time context to this module. Called from BootGame once the
 	//! selection has been resolved, while the devices are still mounted.
 	//! `set` must outlive the boot; `logPath` may be empty to disable reporting.
