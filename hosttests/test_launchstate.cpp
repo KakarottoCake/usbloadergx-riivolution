@@ -1,7 +1,10 @@
 // Per-boot launch state: reset semantics, booking, and the install guard.
-// Exercises the production Riivo::LaunchState type directly: a second boot
-// (or an aborted one) must never inherit the previous boot's staged table,
-// placement verdict, or file-work flags.
+// Exercises the production Riivo::LaunchState type directly through
+// scripted call sequences that mirror production's call order (stage,
+// book, install-guard, consume/refuse/skip). This pins the state
+// contract; it does not execute BootGame or InstallPendingFst, which need
+// the console. A second boot (or an aborted one) must never inherit the
+// previous boot's staged table, placement verdict, or file-work flags.
 #include <stdio.h>
 #include <string.h>
 #include "riivo/RiivoLaunchState.hpp"
@@ -194,12 +197,42 @@ int main() {
     {
         LaunchState l;
         l.Begin();
+        ck(l.Stage(bootABytes, sizeof(bootABytes), 1), "staging accepted");
+        FstPlacement p;
+        p.ok = true;
+        l.Book(p);
+        l.Skip(); // nofstinstall bypass: booked but deliberately uninstalled
+        ck(!l.CanInstall(), "second attempt after a skip refuses");
+        ck(l.stage == LaunchStage::Skipped, "skip recorded, not installed");
+        l.Skip();
+        ck(!l.CanInstall(), "repeated skip stays spent");
+    }
+    // Production verify-failure route: InstallFst wrote, verification
+    // failed, so the launch refuses with the verification code (4 bytes,
+    // 5 pointers) instead of claiming an install that must not be trusted.
+    {
+        LaunchState l;
+        l.Begin();
         l.Stage(bootABytes, sizeof(bootABytes), 1);
         FstPlacement p;
         p.ok = true;
         l.Book(p);
-        l.Consume(); // skipped installation spends the booking like a real one
-        ck(!l.CanInstall(), "second attempt after a skip refuses");
+        l.Refuse(4); // installed bytes mismatch
+        ck(!l.CanInstall(), "bytes-failed install cannot install");
+        ck(l.stage == LaunchStage::Refused, "bytes failure is a refusal");
+        ck(l.installFailCode == 4, "bytes failure carries code 4");
+        ck(!l.Book(p), "no re-booking a verify-failed launch");
+    }
+    {
+        LaunchState l;
+        l.Begin();
+        l.Stage(bootABytes, sizeof(bootABytes), 1);
+        FstPlacement p;
+        p.ok = true;
+        l.Book(p);
+        l.Refuse(5); // low-memory pointers mismatch
+        ck(!l.CanInstall(), "pointers-failed install cannot install");
+        ck(l.installFailCode == 5, "pointers failure carries code 5");
     }
     {
         LaunchState l;
