@@ -807,7 +807,7 @@ int GameBooter::BootGame(struct discHdr *gameHdr, const s8 useOcarina)
 		//! and is deliberately not passed along.
 		Riivo::SetBootContext(&riivoSet, riivoDevice, riivoLogPath,
 							  Settings.SDMode ? 512 : hdd_sector_size[usbport],
-							  gameHeader.id, usbport);
+							  gameHeader.id, usbport, gameHeader.disc_ver);
 		Riivo::ReportCios(!riivoSet.files.empty() || !riivoSet.folders.empty());
 		char choices[512];
 		snprintf(choices, sizeof(choices),
@@ -1157,6 +1157,21 @@ int GameBooter::BootGame(struct discHdr *gameHdr, const s8 useOcarina)
 	//! staged, plus the words the game uses to find the table. A mismatch
 	//! refuses the jump and returns to the loader - a visible outcome naming
 	//! the install - instead of a black screen past this point.
+	// The reservation experiment is a full-mod run. A skipped memory patch
+	// invalidates that configuration; refuse before installing the table.
+	// Outcome-based, not byte-based: every requested patch must have run
+	// and reported success (the byte re-reads stay diagnostic at
+	// post-apply and pre-jump, since later loader writes can move bytes
+	// that applied cleanly). VerifyAppliedPatches alone cannot gate this:
+	// it skips non-OK outcomes instead of failing on them.
+	if (Riivo::Smg2ReservationPending() && !riivoSet.memories.empty()
+		&& (!riivoMemAttempted || !Riivo::AllMemoryPatchesOk(riivoSet, riivoMemApp)))
+	{
+		gprintf("Riivo: SB4E01 reservation refused: memory patch set incomplete\n");
+		RiivoBlinkRefusal(3);
+		Sys_BackToLoader();
+		return -1;
+	}
 	if (!Riivo::InstallPendingFst())
 	{
 		const u32 riivoFailCode = Riivo::InstallFailCode();

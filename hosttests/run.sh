@@ -234,4 +234,9 @@ build_run test_spectral "$SRC/riivo/RiivoFstBuild.cpp" "$SRC/riivo/RiivoFst.cpp"
 # joining, partial packs, duplicate claims and the <folder> exemption.
 build_run test_preflight "$SRC/riivo/RiivoFstBuild.cpp" "$SRC/riivo/RiivoFstWalk.cpp" "$SRC/riivo/RiivoFragPlan.cpp" "$SRC/riivo/RiivoValidate.cpp" "$SRC/riivo/RiivoFile.cpp" "$SRC/riivo/RiivoConfig.cpp" "$SRC/riivo/RiivoFst.cpp" "$SRC/xml/pugixml.cpp"
 
+# SB4E01 MEM2 reservation: the in-slot BASE getter patch (signature,
+# single-application, instruction decode), the reservation guards, and the
+# MEM2 placement half. Header-only: no console, no link beyond the test.
+build_run test_smg2reserve
+
 printf '\nall suites passed\n'

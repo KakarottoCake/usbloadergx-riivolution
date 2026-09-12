@@ -423,6 +423,19 @@ namespace Riivo
 		return hard;
 	}
 
+	bool AllMemoryPatchesOk(const ResolvedPatchSet &set,
+							const std::vector<MemOutcome> &app)
+	{
+		if (app.size() != set.memories.size())
+			return false;
+		for (size_t i = 0; i < app.size(); ++i)
+		{
+			if (app[i].check != MEM_CHECK_OK)
+				return false;
+		}
+		return true;
+	}
+
 	static const char *CheckName(MemCheck check)
 	{
 		switch (check)

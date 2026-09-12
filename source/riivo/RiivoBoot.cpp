@@ -28,6 +28,8 @@
 #include "RiivoFstWalk.hpp"
 #include "RiivoReadVerify.hpp"
 #include "RiivoFstInstall.hpp"
+#include "RiivoSmg2Reserve.hpp"
+#include "RiivoPatchGuard.h"
 #include "RiivoIosProbe.hpp"
 #include "RiivoOnDemand.hpp"
 #include "RiivoRedirectTable.hpp"
@@ -339,6 +341,10 @@ namespace Riivo
 	//! as without the marker. Do not combine with nofstinstall.txt (which
 	//! wins: nothing installs).
 	static bool mem2Fst = false;
+	static bool smg2Reserve = false;
+	static bool smg2ReservePending = false;
+	static u8 bootDiscRevision = 0xff;
+	bool Smg2ReservationPending() { return smg2ReservePending; }
 
 	//! The game's id, needed to ask which partition it lives on.
 	static u8 bootGameId[8] = { 0 };
@@ -424,9 +430,11 @@ namespace Riivo
 
 	void SetBootContext(const ResolvedPatchSet *set, const std::string &device,
 						const std::string &logPath, u32 sectorSize,
-						const u8 *gameId, int usbPort)
+						const u8 *gameId, int usbPort, u8 discRevision)
 	{
 		bootSet = set;
+		bootDiscRevision = discRevision;
+		smg2ReservePending = false;
 		bootDevice = device;
 		bootLogPath = logPath;
 		bootSectorSize = sectorSize ? sectorSize : 512;
@@ -537,6 +545,12 @@ namespace Riivo
 				relocOrig = true;
 				fclose(r);
 			}
+		}
+		smg2Reserve = false;
+		if (!device.empty())
+		{
+			FILE *m = fopen((device + "/riivolution/smg2reserve.txt").c_str(), "rb");
+			if (m) { smg2Reserve = true; fclose(m); }
 		}
 		mem2Fst = false;
 		if (!device.empty())
@@ -2237,7 +2251,7 @@ namespace Riivo
 		//! break sits, for post-hoc analysis, and the install always
 		//! proceeds to the verification below. In-place installs touch
 		//! nothing outside the reservation and skip this entirely.
-		if (!pendingPlace.inPlace)
+		if (!pendingPlace.inPlace && addr < MEM1_END)
 		{
 			const u32 curPtr = *(vu32 *) 0x80000038;
 			const u32 curMax = *(vu32 *) 0x8000003C;
@@ -2309,6 +2323,37 @@ namespace Riivo
 			installFailCode = 2;
 			gprintf("Riivo: late FST install REFUSED - staged table failed its checksum before copying\n");
 			return false;
+		}
+		if (smg2ReservePending)
+		{
+			u32 original[4], patched[4];
+			memcpy(original, (const void *) SMG2_GET_BASE, sizeof(original));
+			//! MEM2 arena high: the PPC/IOS boundary word the game's OSInit
+			//! reads (see RiivoMem2Reserve.hpp for provenance). Re-read late
+			//! rather than trusted from placement: anything that moved the
+			//! boundary after the report must refuse, not install.
+			const char *why = CheckSmg2Reservation(bootGameId, bootDiscRevision,
+				size, *(vu32 *) MEM2_ARENA_HI_ADDR, (u32)pendingFst, original);
+			if (why || addr != SMG2_FST_BASE
+				|| RiivoPatchConflict(SMG2_GET_BASE, 16)
+				|| RiivoPatchConflict(SMG2_FST_BASE, SMG2_FST_CAP)
+				|| !BuildSmg2GetterPatch(original, patched))
+			{
+				installFailCode = 3;
+				pendingPlaceOk = false;
+				gprintf("Riivo: SB4E01 reservation refused: %s\n", why ? why : "placement or mod conflict");
+				return false;
+			}
+			memcpy((void *) SMG2_GET_BASE, patched, sizeof(patched));
+			DCFlushRange((void *) SMG2_GET_BASE, sizeof(patched));
+			ICInvalidateRange((void *) SMG2_GET_BASE, sizeof(patched));
+			if (memcmp((const void *) SMG2_GET_BASE, patched, sizeof(patched)))
+			{
+				installFailCode = 3;
+				pendingPlaceOk = false;
+				return false;
+			}
+			gprintf("Riivo: SB4E01 BASE getter installed: reservation 90000800..90040800\n");
 		}
 		const bool ok = InstallFst(pendingPlace, pendingFst, pendingFstSize);
 		pendingPlaceOk = false;
@@ -2973,6 +3018,101 @@ namespace Riivo
 		}
 	}
 
+	//! Placement-time modifier for the SB4E01 reservation: direct <memory>
+	//! patches have known targets, so one writing the BASE getter slot or
+	//! the reserved span refuses the reservation here, persistently. Search
+	//! and ocarina targets are unknown until applied; the guard re-checks
+	//! every applied write before installation (see InstallPendingFst).
+	static const char *Smg2DirectConflict(const ResolvedPatchSet *set)
+	{
+		if (!set)
+			return 0;
+		for (size_t i = 0; i < set->memories.size(); ++i)
+		{
+			const ResolvedMemory &m = set->memories[i];
+			if (m.search || m.ocarina)
+				continue;
+			const u32 len = (u32) m.value.size();
+			if (!len)
+				continue;
+			const u32 addr = m.offset | 0x80000000;
+			if (Smg2Overlaps(addr, len, SMG2_GET_BASE, SMG2_GET_BASE + 16)
+				|| Smg2Overlaps(addr, len, SMG2_FST_BASE, SMG2_FST_END))
+				return "a <memory> patch writes the BASE getter or the reserved span";
+		}
+		return 0;
+	}
+
+	//! Evaluate the SB4E01 reservation (smg2reserve.txt on a revision-0 disc)
+	//! and either arm it or refuse it, persistently. Success sets
+	//! smg2ReservePending and replaces effPlace with the MEM2 answer;
+	//! failure replaces effPlace with a refusal and never falls back: the
+	//! MEM1 cascade below the reservation is cleared by game startup on
+	//! this title, so it is not a consolation prize. Booking and outcome
+	//! text below consume effPlace unchanged.
+	static void EvaluateSmg2Reservation(const ArenaInfo &arena, u32 want,
+										std::string &out, FstPlacement &effPlace)
+	{
+		if (skipFstInstall)
+		{
+			//! The skip diagnostic wins: nothing installs, so there is
+			//! nothing to arm. Not a refusal - the run is a vanilla boot.
+			out += "\n  SB4E01 reservation (smg2reserve.txt present):\n"
+				   "  not armed: nofstinstall.txt wins, nothing installs.\n";
+			return;
+		}
+		if (relocOrig || mem2Fst)
+		{
+			effPlace = FstPlacement();
+			effPlace.why = "incompatible bypass marker (relocorig.txt/mem2fst.txt)";
+		}
+		else if (effPlace.ok && effPlace.inPlace)
+		{
+			//! Proven path stays: it fits where the apploader put it.
+			out += "\n  SB4E01 reservation (smg2reserve.txt present):\n"
+				   "  not armed: the table fits in place.\n";
+			return;
+		}
+		else
+		{
+			u32 getterWords[4] = {0, 0, 0, 0};
+			memcpy(getterWords, (const void *) SMG2_GET_BASE, sizeof(getterWords));
+			FstPlacement smg2place = BuildSmg2ReservationPlacement(arena, want);
+			const char *why = smg2place.ok ? CheckSmg2Reservation(
+				bootGameId, bootDiscRevision, want,
+				*(vu32 *) MEM2_ARENA_HI_ADDR,
+				(u32) pendingFst, getterWords) : smg2place.why.c_str();
+			u32 trial[4];
+			if (!why)
+				why = Smg2DirectConflict(bootSet);
+			if (!why && !BuildSmg2GetterPatch(getterWords, trial))
+				why = "BASE getter patch would not construct";
+			if (!why)
+			{
+				smg2ReservePending = true;
+				effPlace = smg2place;
+				Addf(out, "\n  SB4E01 reservation (smg2reserve.txt present):\n");
+				Addf(out, "  MEM2 table at    : %08x, %u bytes; MEM1 arena untouched\n",
+					 smg2place.fstAddr, want);
+				Addf(out, "  MEM2 boundary    : %08x; staging at %08x\n",
+					 *(vu32 *) MEM2_ARENA_HI_ADDR, (u32) pendingFst);
+				Addf(out, "  BASE getter      : %08x %08x .... .... (slot signature verified, patch armed for install)\n",
+					 getterWords[0], getterWords[1]);
+				out += "  The getter patch and the table land last, immediately\n"
+					   "  before the game starts; a failed check there refuses\n"
+					   "  instead of jumping (code 3).\n";
+				return;
+			}
+			effPlace = FstPlacement();
+			effPlace.why = why;
+		}
+		Addf(out, "\n  SB4E01 reservation (smg2reserve.txt present):\n");
+		Addf(out, "  REFUSED: %s\n", effPlace.why.c_str());
+		out += "  No fallback: the MEM1 cascade below the reservation is\n"
+			   "  cleared by game startup on this title, so a refused\n"
+			   "  reservation withholds the table instead of steering into it.\n";
+	}
+
 	void ReportFstPlacement()
 	{
 		if (!bootSet)
@@ -3062,6 +3202,14 @@ namespace Riivo
 			 arena.fstAddr, arena.fstMaxSize);
 		Addf(out, "  rebuilt size : %u bytes\n\n", want);
 
+		//! SB4E01 reservation (riivolution/smg2reserve.txt): a grown table
+		//! for this game goes to a fixed MEM2 window the game's own BASE
+		//! getter is patched to skip, instead of cascading below the MEM1
+		//! reservation (cleared by game startup no matter what arenaHi says)
+		//! or trusting the surveyed 0x92000000 window the game was never
+		//! seen reading. Decided here, persistently: success arms the late
+		//! getter patch plus the MEM2 install, refusal withholds with no
+		//! fallback. In-place tables and other games never consult it.
 		//! Experimental MEM2 destination (riivolution/mem2fst.txt): when the
 		//! table has to grow and the marker asks for it, try MEM2 instead of
 		//! the MEM1 cascade below the reservation - game startup clears that
@@ -3070,7 +3218,19 @@ namespace Riivo
 		//! MEM1 answer (logged), never to a guess. Everything below books
 		//! and reports the EFFECTIVE placement.
 		FstPlacement effPlace = place;
-		if (mem2Fst && place.ok && !place.inPlace)
+		bool useMem1Answer = true;
+		if (smg2Reserve && memcmp(bootGameId, "SB4E01", 6) == 0
+			&& bootDiscRevision == 0)
+		{
+			useMem1Answer = false;
+			EvaluateSmg2Reservation(arena, want, out, effPlace);
+		}
+		else if (smg2Reserve)
+		{
+			out += "\n  smg2reserve.txt present but this is not SB4E01 revision 0:"
+				   " marker ignored.\n";
+		}
+		if (useMem1Answer && mem2Fst && place.ok && !place.inPlace)
 		{
 			const FstPlacement mp = PlaceFstMem2(arena, want, 32);
 			Addf(out, "\n  MEM2 experiment (mem2fst.txt present):\n");

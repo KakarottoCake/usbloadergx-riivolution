@@ -43,7 +43,8 @@ namespace Riivo
 	//! that same drive and this is how that is checked.
 	void SetBootContext(const ResolvedPatchSet *set, const std::string &device,
 						const std::string &logPath, u32 sectorSize,
-						const u8 *gameId, int usbPort);
+						const u8 *gameId, int usbPort, u8 discRevision = 0xff);
+	bool Smg2ReservationPending();
 
 	//! Append a block of text to the boot log set up by SetBootContext.
 	//! No-op when there is no log path or the device has already gone away.
