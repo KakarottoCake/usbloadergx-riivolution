@@ -176,9 +176,9 @@ namespace Riivo
 			//! paths, offsets and sizes; shared string tails stored once).
 			//! If the plain table outgrows the apploader's reservation but
 			//! the compacted one fits, the caller stages the compacted
-			//! bytes instead: they install in place, out of reach of the
-			//! startup clearing below the reservation that kills relocated
-			//! tables on SB4E01. Anything else keeps today's bytes exactly
+			//! bytes instead: they install in place, which the general policy
+			//! supports. Grown tables that still overflow refuse explicitly.
+			//! Anything else keeps today's bytes exactly
 			//! - unknown reservation, fitting plain table, failed build,
 			//! failed walk, or still-overflowing compaction.
 			bool useCompact = false;

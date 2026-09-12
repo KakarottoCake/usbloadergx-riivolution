@@ -46,12 +46,12 @@ namespace Riivo
 	//! MEM2_BASE/MEM2_TOP pair - reused here, not redefined).
 	static const u32 MEM2_END = MEM2_TOP;
 
-	//! Experimental MEM2 table base, surveyed on SB4E01 under Dolphin: the
-	//! game grows its MEM2 heap bottom-up from 0x90000000 (sparse use over
-	//! the first megabyte in 90 s idle) while the top faults post-boot
-	//! (outside the game's mapping), so the mid window has the most margin
-	//! on both sides. NOT a derived safe address - a per-title surveyed
-	//! one. Never the default; only the mem2fst.txt marker selects it.
+	//! Retired MEM2 table base (general pipeline, 2026-09-12): surveyed on
+	//! one title under Dolphin (game MEM2 grows bottom-up from 0x90000000,
+	//! top faults post-boot), NOT a derived safe address. Production no
+	//! longer selects it (mem2fst.txt retired); PlaceFstMem2 arithmetic
+	//! remains host-tested but unconsulted until the patched boot view lands.
+	//! See docs/archive/smg2-reserve/README.md.
 	static const u32 MEM2_FST_BASE = 0x92000000;
 
 	//! Largest table the experimental MEM2 path accepts. Way above any
@@ -130,14 +130,10 @@ namespace Riivo
 	FstPlacement PlaceFst(const ArenaInfo &info, u32 fstSize, u32 align,
 						 const OccupiedRange *occ = 0, u32 occCount = 0);
 
-	//! Experimental MEM2 placement for a table that cannot stay in MEM1:
-	//! grown past the reservation on a game whose startup clears below it
-	//! (measured on SB4E01). Takes the arena only to pass its high word
-	//! through untouched (nothing is taken from the MEM1 heap, so there is
-	//! nothing to deduct) and to refuse garbage input. No occupied list:
-	//! MEM2 obstacles are not scanned, they are surveyed (see MEM2_FST_BASE),
-	//! which is exactly why this stays behind the mem2fst.txt marker and
-	//! refuses anything above MEM2_FST_CAP. Pure arithmetic, host-tested.
+	//! Retired MEM2 placement (general pipeline, 2026-09-12): arithmetic
+	//! for a table that cannot stay in MEM1. Production no longer calls it;
+	//! retained host-tested for the future patched boot view. See
+	//! docs/archive/smg2-reserve/README.md.
 	FstPlacement PlaceFstMem2(const ArenaInfo &info, u32 fstSize, u32 align);
 
 	//! Half-open interval overlap: [aLo,aHi) against [bLo,bHi). An empty or

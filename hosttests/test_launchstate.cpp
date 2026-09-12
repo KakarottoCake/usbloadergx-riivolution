@@ -247,13 +247,16 @@ int main() {
         u8 *f = l.Begin();
         ck(f == 0, "released staging is not handed back again");
     }
-    // Reservation arm flag resets with everything else.
+    // Retired (general pipeline, 2026-09-12): no per-game reservation arm
+    // exists in production. Begin still clears every per-boot verdict so a
+    // second boot inherits nothing; file-work flags cover that contract.
     {
         LaunchState l;
         l.Begin();
-        l.smg2Armed = true;
+        l.fileWorkWanted = true;
+        l.fileWorkLive = true;
         l.Begin();
-        ck(!l.smg2Armed, "reservation arm does not survive Begin");
+        ck(!l.fileWorkWanted && !l.fileWorkLive, "file-work flags do not survive Begin");
     }
     printf("%d checks, %d failures\n", checks, failures);
     return failures ? 1 : 0;

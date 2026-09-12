@@ -33,8 +33,8 @@ namespace Riivo
 	//! True when a well-formed range sits fully inside the stale-table
 	//! reservation: the expected overlap (the table being replaced, which
 	//! an in-place install overwrites too). A range merely TOUCHING the
-	//! reservation is a real obstacle - the T0 case on SB4E01, where an
-	//! 8 KB apploader block ends exactly where the table begins.
+	//! reservation is a real obstacle - e.g. an 8 KB apploader block ending
+	//! exactly where the table begins.
 	static bool IsStaleTableRange(const OccupiedRange &r, u32 resLo, u32 resHi)
 	{
 		return r.lo >= resLo && r.hi <= resHi;

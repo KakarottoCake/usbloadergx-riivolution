@@ -55,7 +55,6 @@ struct LaunchState
 	bool placeOk;        // a live booking exists (false once consumed)
 	bool fileWorkWanted; // the selection needs file replacement
 	bool fileWorkLive;   // ...and the files were actually installed
-	bool smg2Armed;      // SB4E01 reservation patch armed for install
 	u32 plannedFstSize;  // room the rebuilt table wants (for placement)
 	u32 installFailCode; // last install verdict, for the blink code
 	u32 generation;      // boot generation; bumped by Begin()
@@ -64,7 +63,7 @@ struct LaunchState
 	LaunchState()
 		: stageBytes(0), stageSize(0), stageCrc(0), stageGeneration(0),
 		  placeOk(false), fileWorkWanted(false), fileWorkLive(false),
-		  smg2Armed(false), plannedFstSize(0), installFailCode(0),
+		  plannedFstSize(0), installFailCode(0),
 		  generation(0), stage(LaunchStage::None) {}
 
 	//! Start a boot: hand back the previous staging buffer (the caller
