@@ -1,3 +1,17 @@
+# Handoff — 2026-09-12 (dataless-folder fix on newer-dataless-folder; v3.44 untouched)
+
+Branch `newer-dataless-folder` (from v3.44 tag commit): a `<folder>` rule
+with no `disc` path now resolves top-level files by basename against the
+whole table (first FST-order hit) instead of forcing them onto disc root
+and silently dropping them. Nested rels still never match, explicit paths
+are byte-identical behavior. This is what Newer's `Others/` (29 files) and
+`Others{$__region}` need; the reference name-searches, GX now does too.
+Duplicates agree with the reference (FST order == its tree order).
+No memory-policy change: Newer's regional soft-skips stay valid, and the
+SMG2 all-OK gate / reservation are not extended. Host suite green
+(147,072 checks); RiivoFile.cpp compiles clean under devkitPPC flags.
+CI branch build is the verification; no tag, no release, no tester round.
+
 # Handoff — 2026-09-12 (SB4E01 reservation: branch smg2-reserve, CI building)
 
 Branch `smg2-reserve` (commit `e13b945b`, from `717a04a6`) completes
