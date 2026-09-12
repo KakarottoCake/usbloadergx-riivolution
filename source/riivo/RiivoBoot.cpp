@@ -1917,12 +1917,19 @@ namespace Riivo
 		//! call may have returned while the return line itself failed to
 		//! build or persist (its string growth, or the card write the
 		//! checked persist reports only to Gecko). What it does prove is
-		//! that no validated outcome was recorded - hang inside validation
-		//! and return-line loss are both still open, told apart only by
-		//! the drive light (it flips per step regardless) on the next run.
+		//! that no validated outcome was recorded. The pulse below splits
+		//! the remainder: it runs after the return, before the return
+		//! line, on the card-independent light channel.
 		LogStep("validating the rebuilt table");
 		//! NULL trace: production records outcomes in the log, not op codes.
 		Riivo::ValidateTable(vreq, vres, 0);
+		//! Return pulse: validation is back. No flip after the entry line
+		//! means death inside validation (hang or fault - caught exceptions
+		//! already travel through vres.oom, so silence here is neither a
+		//! refusal nor OOM). A flip with no return line means the return
+		//! line itself failed to build or persist. One register write, no
+		//! allocation, no devices.
+		PulseLight();
 		const bool expectedComplete = vres.expectedComplete;
 		const bool fstWalkOK = vres.fstWalkOK;
 		const u32 walkPaths = vres.walkPaths;
