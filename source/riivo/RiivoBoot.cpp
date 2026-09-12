@@ -296,6 +296,19 @@ namespace Riivo
 		wiilight_diag(pulseOn ? 1 : 0);
 	}
 
+	//! Set the drive light to an explicit state for checkpoint boundaries.
+	//! Unlike PulseLight (toggle), an explicit state cannot be cancelled by
+	//! a neighboring toggle: ON stays ON no matter the prior parity, for as
+	//! long as nothing else touches the light. Same gate and register as
+	//! every other light write.
+	static void LightSet(bool on)
+	{
+		if (!pulseArmed)
+			return;
+		pulseOn = on;
+		wiilight_diag(on ? 1 : 0);
+	}
+
 	//! Off, once and for all. Called immediately before the jump: from then
 	//! on a dark light means the loader is done and the game has it, which
 	//! is what makes "still pulsing" and "went out" mean different things.
@@ -764,7 +777,7 @@ namespace Riivo
 	//! Step names and times are also kept in the ring above, so the report
 	//! can print a phase-duration table at the end: per-step lines say when,
 	//! the table says how long each phase took.
-	static void LogStep(const char *fmt, ...)
+	static void LogStepImpl(const char *fmt, va_list args, bool pulse)
 	{
 		std::string out;
 		if (!stepHeaderWritten)
@@ -776,15 +789,15 @@ namespace Riivo
 			stepHeaderWritten = true;
 		}
 		char buf[256];
-		va_list args;
-		va_start(args, fmt);
 		vsnprintf(buf, sizeof(buf), fmt, args);
-		va_end(args);
 		if (!bootClockStart)
 			bootClockStart = gettime();
-		//! Every logged step flips the light, so the blink rate IS the work
-		//! rate and a light that stops tells the tester which step hung.
-		PulseLight();
+		//! Every ordinary logged step flips the light, so the blink rate IS
+		//! the work rate and a light that stops tells the tester which step
+		//! hung. Checkpoint lines (below) skip this: they own the light
+		//! explicitly and a toggle here would cancel the state reported.
+		if (pulse)
+			PulseLight();
 		const u32 now = BootElapsedMs();
 		try
 		{
@@ -808,6 +821,26 @@ namespace Riivo
 			m.name[sizeof(m.name) - 1] = 0;
 			m.ms = now;
 		}
+	}
+
+	static void LogStep(const char *fmt, ...)
+	{
+		va_list args;
+		va_start(args, fmt);
+		LogStepImpl(fmt, args, true);
+		va_end(args);
+	}
+
+	//! Checkpoint line that leaves the light exactly as it found it, for
+	//! the validation boundary whose states LightSet owns. Same text,
+	//! timing, persist checks, and phase-table row as an ordinary step -
+	//! only the toggle is skipped, so a state set just before it survives.
+	static void LogCheckpoint(const char *fmt, ...)
+	{
+		va_list args;
+		va_start(args, fmt);
+		LogStepImpl(fmt, args, false);
+		va_end(args);
 	}
 
 	//! Phase durations from the ring above, oldest first. Step-to-step
@@ -1910,26 +1943,35 @@ namespace Riivo
 		vreq.usedFrags = fragStats.fragsBefore ? fragStats.fragsBefore
 					   : gameFrags->num;
 		Riivo::ValidateResult vres;
-		//! Entry checkpoint: the validator catches its own allocation
-		//! failures into vres.oom (see below), so reaching the return line
-		//! with no entry line means the call itself never ran. An entry
-		//! line with no return line does NOT prove a validation hang: the
-		//! call may have returned while the return line itself failed to
-		//! build or persist (its string growth, or the card write the
-		//! checked persist reports only to Gecko). What it does prove is
-		//! that no validated outcome was recorded. The pulse below splits
-		//! the remainder: it runs after the return, before the return
-		//! line, on the card-independent light channel.
-		LogStep("validating the rebuilt table");
+		//! Entry checkpoint owns the light explicitly: ON from here until
+		//! validation returns. Set BEFORE persisting, so even a lost entry
+		//! line leaves the state behind (ON with no entry line means death
+		//! persisting the entry itself - or earlier - and validation may
+		//! never have run). The checkpoint line itself never pulses, so
+		//! nothing here can cancel the state. What ON-stable with an entry
+		//! line but no return line covers, honestly: death anywhere in the
+		//! interval from entry persist through ValidateTable - inside
+		//! validation (hang or fault; caught exceptions already travel via
+		//! vres.oom, so silence is neither refusal nor OOM) or in the
+		//! microsecond gap before function entry. That interval is one
+		//! straight-line span below; read it, it has nowhere to hide.
+		LightSet(true);
+		LogCheckpoint("validating the rebuilt table");
 		//! NULL trace: production records outcomes in the log, not op codes.
 		Riivo::ValidateTable(vreq, vres, 0);
-		//! Return pulse: validation is back. No flip after the entry line
-		//! means death inside validation (hang or fault - caught exceptions
-		//! already travel through vres.oom, so silence here is neither a
-		//! refusal nor OOM). A flip with no return line means the return
-		//! line itself failed to build or persist. One register write, no
-		//! allocation, no devices.
-		PulseLight();
+		//! Return checkpoint: validation is back, light OFF, stably. OFF
+		//! with an entry line but no return line means the return line
+		//! itself failed to build or persist - the call returned. A return
+		//! line means validation returned with the verdicts it names;
+		//! anything dying later is in report building, staging, or the
+		//! card. None of this holds for a run nobody watched: an
+		//! unobserved signal stays inconclusive, and a flickering or
+		//! uncertain reading settles nothing - report what was seen.
+		LightSet(false);
+		LogCheckpoint("validation returned: walk=%d paths=%u compact=%d compactBytes=%u oom=%d plan=%d",
+				vres.fstWalkOK ? 1 : 0, (unsigned) vres.walkPaths,
+				vres.useCompact ? 1 : 0, (unsigned) vres.compactBytes,
+				vres.oom ? 1 : 0, vres.plan.ok ? 1 : 0);
 		const bool expectedComplete = vres.expectedComplete;
 		const bool fstWalkOK = vres.fstWalkOK;
 		const u32 walkPaths = vres.walkPaths;
@@ -1948,12 +1990,11 @@ namespace Riivo
 		if (vres.useCompact)
 			newFst.swap(vres.staged);
 		const bool validationOom = vres.oom;
-		//! Return checkpoint: every outcome the validator can produce is
-		//! named here. A log reaching this line proves validation returned
-		//! with these verdicts; anything dying later is in report building,
-		//! staging, or the card. A missing return line proves nothing about
-		//! a hang by itself (see the entry checkpoint above).
-		LogStep("validation returned: walk=%d paths=%u compact=%d compactBytes=%u oom=%d plan=%d",
+		//! Return line: every outcome the validator can produce is named
+		//! here. Logged without pulsing so the OFF state set above survives
+		//! intact; a log reaching this line proves validation returned with
+		//! these verdicts.
+		LogCheckpoint("validation returned: walk=%d paths=%u compact=%d compactBytes=%u oom=%d plan=%d",
 				vres.fstWalkOK ? 1 : 0, (unsigned) vres.walkPaths,
 				vres.useCompact ? 1 : 0, (unsigned) vres.compactBytes,
 				vres.oom ? 1 : 0, vres.plan.ok ? 1 : 0);
