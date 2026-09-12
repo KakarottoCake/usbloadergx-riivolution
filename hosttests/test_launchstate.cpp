@@ -25,11 +25,8 @@ int main() {
         u8 *old = l.Begin();
         ck(old == 0, "first Begin: no previous staging to free");
         ck(l.generation == 1, "first Begin: generation 1");
-        l.stageBytes = bootABytes;
-        l.stageSize = sizeof(bootABytes);
-        l.stageCrc = 0x12345678;
         l.fileWorkWanted = true;
-        l.NoteStaged();
+        ck(l.Stage(bootABytes, sizeof(bootABytes), 0x12345678), "staging accepted");
         ck(!l.CanInstall(), "staged but not booked: cannot install");
         FstPlacement p;
         p.ok = true;
@@ -47,9 +44,7 @@ int main() {
     {
         LaunchState l;
         l.Begin();
-        l.stageBytes = bootABytes;
-        l.stageSize = sizeof(bootABytes);
-        l.NoteStaged();
+        ck(l.Stage(bootABytes, sizeof(bootABytes), 1), "staging accepted");
         FstPlacement p;
         p.ok = true;
         l.Book(p);
@@ -72,9 +67,7 @@ int main() {
     {
         LaunchState l;
         l.Begin();
-        l.stageBytes = bootBBytes;
-        l.stageSize = sizeof(bootBBytes);
-        l.NoteStaged();
+        ck(l.Stage(bootBBytes, sizeof(bootBBytes), 2), "staging accepted");
         FstPlacement p;
         p.ok = true;
         l.Book(p);
@@ -86,9 +79,7 @@ int main() {
     {
         LaunchState l;
         l.Begin();
-        l.stageBytes = bootABytes;
-        l.stageSize = sizeof(bootABytes);
-        l.NoteStaged();
+        ck(l.Stage(bootABytes, sizeof(bootABytes), 1), "staging accepted");
         FstPlacement p;
         p.ok = true;
         l.Book(p);
@@ -103,13 +94,133 @@ int main() {
         a.Begin();
         FstPlacement p;
         p.ok = true;
-        a.Book(p);
+        ck(!a.Book(p), "booking without staging refused");
         ck(!a.CanInstall(), "booking without staged bytes cannot install");
         b.Begin();
-        b.stageBytes = bootABytes;
-        b.stageSize = sizeof(bootABytes);
-        b.NoteStaged();
+        ck(b.Stage(bootABytes, sizeof(bootABytes), 1), "staging accepted");
         ck(!b.CanInstall(), "staged bytes without booking cannot install");
+    }
+    // Stage() is the only way in: twice, null, empty, or after refusal
+    // all refuse, and the first staging wins.
+    {
+        LaunchState l;
+        l.Begin();
+        ck(!l.Stage(0, 16, 1), "null staging refused");
+        ck(!l.Stage(bootABytes, 0, 1), "empty staging refused");
+        ck(l.Stage(bootABytes, sizeof(bootABytes), 0x1111), "first staging accepted");
+        ck(!l.Stage(bootBBytes, sizeof(bootBBytes), 0x2222), "second staging refused");
+        ck(l.stageBytes == bootABytes && l.stageCrc == 0x1111, "first staging kept");
+        l.Refuse(2);
+        ck(!l.Stage(bootBBytes, sizeof(bootBBytes), 0x2222), "staging after refusal refused");
+    }
+    // Book() refuses invalid placements and any re-booking.
+    {
+        LaunchState l;
+        l.Begin();
+        l.Stage(bootABytes, sizeof(bootABytes), 1);
+        FstPlacement bad;
+        bad.ok = false;
+        ck(!l.Book(bad), "invalid placement refused");
+        ck(!l.CanInstall(), "refused booking installs nothing");
+        FstPlacement p;
+        p.ok = true;
+        p.fstAddr = 0x817b2de0;
+        ck(l.Book(p), "valid booking accepted");
+        ck(!l.Book(p), "re-booking refused");
+        ck(l.CanInstall(), "original booking still live");
+        l.Consume();
+        ck(!l.Book(p), "booking after consume refused");
+    }
+    // The memory hold-back predicate runs on owned fields.
+    {
+        LaunchState l;
+        l.Begin();
+        l.fileWorkWanted = true;
+        ck(l.FileWorkIncomplete(), "wanted but not live holds memory back");
+        FstPlacement p;
+        p.ok = true;
+        l.Stage(bootABytes, sizeof(bootABytes), 1);
+        l.Book(p);
+        ck(!l.FileWorkIncomplete(), "live files release memory patches");
+    }
+    // Orchestration: aborted mod launch -> unmodified launch.
+    {
+        LaunchState l;
+        l.Begin();
+        l.fileWorkWanted = true;
+        l.Stage(bootABytes, sizeof(bootABytes), 1);
+        FstPlacement p;
+        p.ok = true;
+        l.Book(p);
+        l.Refuse(2); // aborted (e.g. handler collision) before install
+        u8 *freed = l.Begin(); // next boot: unmodified, stages nothing
+        ck(freed == bootABytes, "aborted boot hands its staging back exactly once");
+        ck(!l.CanInstall() && !l.FileWorkIncomplete(), "unmodified boot is clean");
+    }
+    // Orchestration: mod A -> mod B hands each buffer back exactly once.
+    {
+        LaunchState l;
+        l.Begin();
+        l.Stage(bootABytes, sizeof(bootABytes), 1);
+        FstPlacement p;
+        p.ok = true;
+        l.Book(p);
+        int frees = 0;
+        u8 *f = l.Begin();
+        if (f == bootABytes) ++frees;
+        l.Stage(bootBBytes, sizeof(bootBBytes), 2);
+        l.Book(p);
+        ck(l.CanInstall() && l.stageBytes == bootBBytes, "mod B installs its own table");
+        f = l.Begin();
+        if (f == bootBBytes) ++frees;
+        f = l.Begin();
+        if (f) ++frees;
+        ck(frees == 2, "each staging freed exactly once, nothing dangling");
+    }
+    // Orchestration: repeated refusal sticks; skipped install spends the
+    // booking; a second install attempt after success refuses.
+    {
+        LaunchState l;
+        l.Begin();
+        l.Stage(bootABytes, sizeof(bootABytes), 1);
+        FstPlacement p;
+        p.ok = true;
+        l.Book(p);
+        l.Refuse(3);
+        l.Refuse(4);
+        ck(!l.CanInstall() && l.installFailCode == 4, "repeated refusal sticks with latest code");
+        ck(!l.Book(p), "no re-booking a refused launch");
+    }
+    {
+        LaunchState l;
+        l.Begin();
+        l.Stage(bootABytes, sizeof(bootABytes), 1);
+        FstPlacement p;
+        p.ok = true;
+        l.Book(p);
+        l.Consume(); // skipped installation spends the booking like a real one
+        ck(!l.CanInstall(), "second attempt after a skip refuses");
+    }
+    {
+        LaunchState l;
+        l.Begin();
+        l.Stage(bootABytes, sizeof(bootABytes), 1);
+        FstPlacement p;
+        p.ok = true;
+        l.Book(p);
+        l.Consume();
+        l.ReleaseStaging();
+        ck(!l.CanInstall() && !l.HaveStaged(), "released staging installs nothing");
+        u8 *f = l.Begin();
+        ck(f == 0, "released staging is not handed back again");
+    }
+    // Reservation arm flag resets with everything else.
+    {
+        LaunchState l;
+        l.Begin();
+        l.smg2Armed = true;
+        l.Begin();
+        ck(!l.smg2Armed, "reservation arm does not survive Begin");
     }
     printf("%d checks, %d failures\n", checks, failures);
     return failures ? 1 : 0;
