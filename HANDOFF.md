@@ -23,7 +23,7 @@ installed table byte-for-byte (prior soak run).
 - `hosttests/`: `test_smg2reserve.cpp` (new, placement builder) wired
   into `run.sh`; completeness cases in `test_memapply.cpp`.
 
-## Static evidence for getter==setter equivalence (main.dol)
+## Static evidence for the getter patch (support only, not equivalence)
 
 - Slot at 0x805B4E70 holds `806D9644 4E800020 00000000 00000000` (verified
   from file offset via text1 mapping). Patch `3C630004` (addis r3,r3,4)
@@ -31,13 +31,20 @@ installed table byte-for-byte (prior soak run).
 - Whole-DOL survey: exactly ONE reader of r13-27068 (the getter), ONE
   writer (setter at 0x805B4ED0), 12 bl call sites, ZERO absolute refs
   into the slot padding. Sibling `...640` slots confirm the padding idiom.
+- Correction: this supports patching the getter, it does NOT establish
+  dynamic equivalence with the emulator's setter interception. Same call
+  sites, same value shape — but whether the running game consumes the
+  grown table through it is exactly what the Wii run tests.
 
 ## Ownership audit (code-level; Wii boot is the proof)
 
-- GX pool is [0x90200000, 0x93300000] (`mem2alloc.cpp:20-23`); reservation
-  [0x90000800, 0x90040800) is disjoint and below `IOS_RELOAD_AREA`.
+- GX pool is [0x90200000, 0x93300000] (`mem2alloc.cpp:20-23`), disjoint
+  from the reservation [0x90000800, 0x90040800), which also sits below
+  `IOS_RELOAD_AREA`. Correction: that establishes this pool's
+  non-overlap only, not ownership against every loader/IOS subsystem.
 - `RiivoIosProbe` scans MEM2 read-only from 0x90C00000. `disc.c` DMAs to
-  0x93000000. No GX/IOS writer to the reservation in the boot path.
+  0x93000000. No GX/IOS writer to the reservation was found in the boot
+  path audit — a finding, not a proof; the Wii run decides it.
 - `0x80003134` is the documented MEM2 arena-high word
   (`RiivoMem2Reserve.hpp`); the install block now names the constant.
 

@@ -3061,10 +3061,10 @@ namespace Riivo
 				   "  not armed: nofstinstall.txt wins, nothing installs.\n";
 			return;
 		}
-		if (relocOrig || mem2Fst)
+		if (relocOrig || mem2Fst || OnDemandRequested())
 		{
 			effPlace = FstPlacement();
-			effPlace.why = "incompatible bypass marker (relocorig.txt/mem2fst.txt)";
+			effPlace.why = "incompatible bypass marker (relocorig.txt/mem2fst.txt/ondemand.txt)";
 		}
 		else if (effPlace.ok && effPlace.inPlace)
 		{
