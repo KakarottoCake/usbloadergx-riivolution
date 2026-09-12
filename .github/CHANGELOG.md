@@ -357,6 +357,68 @@ and permanent silence, and a write failure drops the socket rather than retrying
 - test_netlog: 23 checks on the address parsing, the half that fails quietly.
 - 146,353 automated checks, all passing.
 
+## Changed in v3.43
+
+- Fixed the SB4E01 relocation failure without relocating: rebuilt tables now share string tails (`SerializeCompacted`), so T0's table shrinks from 153,934 to 144,323 bytes and fits the apploader's existing 153,792-byte reservation - it installs in place, out of reach of the startup clearing below it. Staged only when the plain table overflows and the compacted one fits and verifies; every path, offset and size is identical between the two serializations (host-checked over all 4496 entries).
+- Experimental MEM2 placement behind a `riivolution/mem2fst.txt` marker: grown tables that still cannot fit go to surveyed MEM2 (`0x92000000`) instead of the MEM1 cascade, with the MEM1 arena untouched. Refusal-first, fully logged, never the default. Dolphin screening has NOT cleared a MEM2 site for real game consumption yet - do not create the marker; it is documented for a held test only.
+- If you are on the SB4E01 round: run T0 with THIS build (no bypass markers). The log should show "compacted table ... STAGED instead of the plain table" and an in-place install ("fits in the room"), then the game booting. Video the ending if possible, and send the log.
+- 146,982 automated checks, all passing.
+
+## Changed in v3.42
+
+- Slimmed the post-apploader diagnostics after the v3.41 log stopped inside them: the struct disc reads and full-range memory sweeps are out; checkpoints, checked reads, per-chunk source offsets and the placement protection are unchanged. Installation decisions unchanged.
+- New host integration fixture (36 checks) running planning through installation against the captured SB4E01 layout in simulated memory.
+- If you are on the SB4E01 round: run T0 with THIS build (no bypass markers) - game boot is the acceptance test. Video the ending if possible, and send the log.
+- 146,933 automated checks, all passing.
+
+## Changed in v3.41
+
+- Apploader chunk reads are now checked like the header and image reads: a failed chunk records destination, length, disc offset and return code in the log, then refuses through the existing path instead of booting a half-loaded game image silently.
+- The placement report now proves the apploader finished (log line plus light flip with the return value) and persists in three chunks, so a future truncated log bounds itself instead of saying nothing.
+- If you are on the SB4E01 round: run one T0 with THIS build (no bypass markers), video the ending if possible, and send the log.
+- 146,897 automated checks, all passing.
+
+## Changed in v3.40
+
+- The apploader-struct block now leads with each chunk's own recorded source: every loaded range carries the disc offset its read came from, and the struct bytes are compared against their actual source first, the image second. A difference from either source proves post-source change only - never a live reference, never a reason to patch.
+- If you are on the SB4E01 round: run one T0 with THIS build (no bypass markers), video the ending if possible, and send the log.
+- 146,897 automated checks, all passing.
+
+## Changed in v3.39
+
+- New log section for the `0x81201b90` question: the placement report dumps the 8 words around the apploader-staged address that matched the original FST pointer, checks each against the same bytes fresh off the disc, verifies the address sits inside the loaded apploader image, and logs whether the loader heap could have reached it. Read-only - nothing is updated, no placement changed.
+- If you are on the SB4E01 round: run one T0 with THIS build (no `nofstinstall.txt`, no `relocorig.txt`), watch and ideally video the final light sequence, and send the log.
+- 146,897 automated checks, all passing.
+
+## Changed in v3.38
+
+- Unambiguous handover signals. A refused boot now blinks its code THREE times with a pause between (meanings 1-7 unchanged - count one group, check the others match; irregular flicker is just progress). A verified install is followed by one solid second ON, then dark, then the jump. Groups without solid = refused; solid without groups = the game has it.
+- New log section: every file-mod boot scans all loaded ranges for words already equal to the table addresses (FST address, sizes, arena values), to tell whether anything references the original table.
+- If you are on the SB4E01 round: run T0 with THIS build and the v7 pack, and report the light pattern (repeating groups or solid second), the screen, and the log.
+- 146,897 automated checks, all passing.
+
+## Changed in v3.37
+
+- CORRECTION: v3.36's notes below describe this fix, but its binary was built from a tree that predates the code - T0 on v3.36 repeats the old black screen. This build carries the fix; the `build :` line in any log names its exact commit, and the release's boot.dol was string-checked for the new code before publishing.
+- Fixed the SB4E01 relocation overwrite: a grown file table is now moved down past every apploader-loaded range it would hit, instead of assuming the space below the old table is free. The stale table's own space is still reused (that overlap is expected); malformed range data refuses the grown install rather than guessing around it.
+- Every file-mod boot now logs each loaded range with its DOL section and disc offset (or BSS), and the placement names the ranges it kept clear.
+- If you are on the SB4E01 round: run T0 with THIS build and send the log - the table should land below the game's 8 KB block this time.
+- 146,886 automated checks, all passing.
+
+## Changed in v3.36
+
+- Fixed the SB4E01 relocation overwrite: a grown file table is now moved down past every apploader-loaded range it would hit, instead of assuming the space below the old table is free. The stale table's own space is still reused (that overlap is expected); malformed range data refuses the grown install rather than guessing around it.
+- Every file-mod boot now logs each loaded range with its DOL section and disc offset (or BSS), and the placement names the ranges it kept clear.
+- If you are on the SB4E01 round: run T0 with this build and send the log - the table should land below the game's 8 KB block this time.
+- 146,886 automated checks, all passing.
+
+## Changed in v3.35
+
+- New diagnostic for the SB4E01 relocation failure: every file-mod boot now logs a "Relocation evidence" block naming the planned table address, the loaded game ranges one by one, the thread stack bounds, and the heap extent, with an overlap reading for each. Installation itself is unchanged - same decisions, same refusals, no new blink codes.
+- `boot.elf.map` (linker map) now ships with every release next to `boot.elf`, so each build's exact memory layout is on record.
+- If you are on the SB4E01 round: run T0 with this build and send the log - the new section is the evidence the relocation question needs.
+- 146,876 automated checks, all passing.
+
 ## Changed in v3.34
 
 - Removed the last leftover text of the deleted result screen. Nothing is drawn on the boot path.
