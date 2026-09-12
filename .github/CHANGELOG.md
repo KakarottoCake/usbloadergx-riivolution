@@ -357,6 +357,21 @@ and permanent silence, and a write failure drops the socket rather than retrying
 - test_netlog: 23 checks on the address parsing, the half that fails quietly.
 - 146,353 automated checks, all passing.
 
+## Changed in v3.44-smg2reserve
+
+- A controlled Wii experiment candidate for SB4E01, not a proven fix. Behind an
+  `riivolution/smg2reserve.txt` marker on revision-0 discs only: a grown table goes
+  to a fixed MEM2 window (`0x90000800`, 256 KiB) and the game's own BASE getter is
+  patched in its 16-byte slot to skip that window. Any failed check withholds the
+  table with no fallback; the full `<memory>` set must apply with zero skips or the
+  jump is refused first.
+- Two runs, no more: T0 with no marker (in-place control, must boot), then Spectral
+  USA full options with the marker. Keep `relocorig.txt`, `mem2fst.txt`,
+  `nofstinstall.txt` and `nomempatch.txt` absent for both. Send each run's card log
+  plus the light pattern (blink groups, or one solid second then dark) and where the
+  screen stopped - or gameplay, if it gets there.
+- 147,054 automated checks, all passing.
+
 ## Changed in v3.43
 
 - Fixed the SB4E01 relocation failure without relocating: rebuilt tables now share string tails (`SerializeCompacted`), so T0's table shrinks from 153,934 to 144,323 bytes and fits the apploader's existing 153,792-byte reservation - it installs in place, out of reach of the startup clearing below it. Staged only when the plain table overflows and the compacted one fits and verifies; every path, offset and size is identical between the two serializations (host-checked over all 4496 entries).

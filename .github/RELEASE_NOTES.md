@@ -35,19 +35,21 @@ Create an empty file `riivolution/ondemand.txt` on the same drive as the mod to 
 on. Without that file nothing changes. It has never run on a console; do not combine
 it with the reservation marker below.
 
-## Changed in v3.44-smg2reserve
+## Changed in v3.45-launch-pipeline
 
-- A controlled Wii experiment candidate for SB4E01, not a proven fix. Behind an
-  `riivolution/smg2reserve.txt` marker on revision-0 discs only: a grown table goes
-  to a fixed MEM2 window (`0x90000800`, 256 KiB) and the game's own BASE getter is
-  patched in its 16-byte slot to skip that window. Any failed check withholds the
-  table with no fallback; the full `<memory>` set must apply with zero skips or the
-  jump is refused first.
-- Two runs, no more: T0 with no marker (in-place control, must boot), then Spectral
+- Launch lifecycle reliability, same two-run round as v3.44. One per-boot
+  owner for staging, booking, and install verdicts with a single reset
+  (including mod-less boots): an aborted or repeated launch can no longer
+  inherit a previous boot's table, and staging buffers are freed instead of
+  leaked. Illegal transitions (re-booking, staging twice, reinstalling,
+  installing another boot's table) refuse by construction.
+- Spectral cutoff instrumentation for the log that ends at `table
+  serialised`: validation entry/return checkpoints name walk/compact/oom
+  outcomes, and every log write is verified (failures go to Gecko, never
+  silently lost). Send the entry/return lines plus the drive-light behavior.
+- Same round: T0 with no marker (in-place control, must boot), then Spectral
   USA full options with the marker. Keep `relocorig.txt`, `mem2fst.txt`,
-  `nofstinstall.txt` and `nomempatch.txt` absent for both. Send each run's card log
-  plus the light pattern (blink groups, or one solid second then dark) and where the
-  screen stopped - or gameplay, if it gets there.
-- 147,054 automated checks, all passing.
+  `nofstinstall.txt`, `nomempatch.txt` and `ondemand.txt` absent for both.
+- 147,138 automated checks, all passing.
 
 Older versions: [CHANGELOG.md](CHANGELOG.md)
