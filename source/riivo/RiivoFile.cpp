@@ -244,6 +244,7 @@ namespace Riivo
 		if (!lister)
 			return;
 
+		const bool dataless = f.disc.empty();
 		const std::string discDir = DiscPath(f.disc);
 		const std::string extDir = JoinPath(device, f.root, f.external);
 
@@ -253,9 +254,28 @@ namespace Riivo
 		for (size_t i = 0; i < extFiles.size(); ++i)
 		{
 			const std::string &rel = extFiles[i]; // relative to extDir
-			const std::string discFile = JoinDisc(discDir, rel);
-			const FstFile *entry = fst.FindFile(discFile);
 			const std::string external = JoinDisc(extDir, rel);
+
+			// Dataless folders (empty disc) match by basename (first disc
+			// file with that name, case-insensitive), not by root-joined
+			// path. General fix (e.g. Newer): folder children become bare
+			// filename patches per the file-routing rule.
+			const FstFile *entry = 0;
+			std::string discFile;
+			if (dataless)
+			{
+				size_t slash = rel.find_last_of("/\\");
+				std::string base = slash == std::string::npos
+					? rel : rel.substr(slash + 1);
+				entry = fst.FindFile(base);
+				discFile = entry ? entry->path
+					: NormaliseDiscPath(std::string("/") + rel);
+			}
+			else
+			{
+				discFile = JoinDisc(discDir, rel);
+				entry = fst.FindFile(discFile);
+			}
 
 			if (!entry)
 			{

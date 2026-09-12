@@ -146,6 +146,7 @@ namespace Riivo
 		ParamMap p;
 		if (gameId && strlen(gameId) >= 6)
 		{
+			p["__ngid"] = std::string(gameId, 6);
 			p["__gameid"] = std::string(gameId, 3);
 			p["__region"] = std::string(gameId + 3, 1);
 			p["__maker"] = std::string(gameId + 4, 2);
