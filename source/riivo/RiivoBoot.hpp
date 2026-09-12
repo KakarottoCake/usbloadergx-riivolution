@@ -33,6 +33,13 @@
 
 namespace Riivo
 {
+	//! Start one boot. BootGame calls this once per launch, before anything
+	//! else - including launches with no mod selected. It frees any staging
+	//! buffer a previous boot leaked, clears every per-boot verdict, and
+	//! bumps the launch generation, so nothing inherits a previous boot.
+	//! SetBootContext (mod selected) fills the context in afterwards.
+	void BeginLaunch();
+
 	//! Hand the boot-time context to this module. Called from BootGame once the
 	//! selection has been resolved, while the devices are still mounted.
 	//! `set` must outlive the boot; `logPath` may be empty to disable reporting.

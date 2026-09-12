@@ -28,6 +28,7 @@
 #include "RiivoFstWalk.hpp"
 #include "RiivoReadVerify.hpp"
 #include "RiivoFstInstall.hpp"
+#include "RiivoLaunchState.hpp"
 #include "RiivoSmg2Reserve.hpp"
 #include "RiivoPatchGuard.h"
 #include "RiivoIosProbe.hpp"
@@ -62,6 +63,14 @@ namespace Riivo
 
 	static const ResolvedPatchSet *bootSet = 0;
 	static std::string bootDevice;
+
+	//! Single owner of this boot's staging, booking, and install verdicts.
+	//! The named references below are aliases into this object, so existing
+	//! code keeps working unchanged while storage, reset, and the install
+	//! guard live in one place (see RiivoLaunchState.hpp). Fresh storage
+	//! per boot is what makes a second launch - or an aborted one - unable
+	//! to inherit the previous boot's staged table.
+	static LaunchState g_launch;
 
 	//! Set when the boot took the on-demand path: the mod's files were NOT
 	//! mapped to sectors, so the redirect table and the module are what make
@@ -101,7 +110,7 @@ namespace Riivo
 	//! Size of the table PrepareFileRedirects worked out, carried across to
 	//! ReportFstPlacement - which runs later, after the apploader, and needs to
 	//! know how much room the rebuilt table wants.
-	static u32 plannedFstSize = 0;
+	static u32 &plannedFstSize = g_launch.plannedFstSize;
 
 	//! Sector size of the drive the backup is on, from SetBootContext.
 	static u32 bootSectorSize = 512;
@@ -122,8 +131,8 @@ namespace Riivo
 	//! an exit to the System Menu, because the patched code goes looking for
 	//! assets the disc does not have. If the first is true and the second is
 	//! not, the memory patches have to be held back too.
-	static bool fileWorkWanted = false;
-	static bool fileWorkLive = false;
+	static bool &fileWorkWanted = g_launch.fileWorkWanted;
+	static bool &fileWorkLive = g_launch.fileWorkLive;
 
 	//! Set when PrepareFragList deliberately left the fragment list alone, so
 	//! the report can say that rather than blaming a missing list.
@@ -309,7 +318,7 @@ namespace Riivo
 	//! refusal, 4 installed bytes/CRC mismatch, 5 low-memory pointer/arena
 	//! mismatch. The refusal text itself only reaches gprintf - the card is
 	//! gone - so this number is the part the tester can see.
-	static u32 installFailCode = 0;
+	static u32 &installFailCode = g_launch.installFailCode;
 
 	//! Outcome counters for the pre-jump screen, captured where they are
 	//! known.
@@ -427,6 +436,19 @@ namespace Riivo
 	//! every fragment maps where the table says it does.
 	static bool deepVerify = false;
 
+
+	//! Start one boot: the single reset point for every piece of per-boot
+	//! Riivo state. BootGame calls this once per launch, before anything
+	//! else - including launches with no mod selected, which never reach
+	//! SetBootContext. Without it, an aborted launch or a second launch in
+	//! one loader session inherits the previous boot's staged table,
+	//! placement verdict, and fragment bookkeeping; InstallPendingFst would
+	//! then install the WRONG mod's table into the new game (it verifies
+	//! the install against the same stale buffer). The previous staging
+	//! buffer is freed here (it leaked before); the generation stamp in
+	//! LaunchState additionally refuses a table staged under any other boot.
+	//! Defined after the fragment bookkeeping it resets.
+	void BeginLaunch();
 
 	void SetBootContext(const ResolvedPatchSet *set, const std::string &device,
 						const std::string &logPath, u32 sectorSize,
@@ -618,6 +640,32 @@ namespace Riivo
 		fl->num = originalNum;
 		fl->frag[originalNum - 1] = originalLast;
 		fl->size = origImageSectors;
+	}
+
+	void BeginLaunch()
+	{
+		u8 *oldStaging = g_launch.Begin();
+		if (oldStaging)
+			MEM2_free(oldStaging);
+		fragsRegistered = false;
+		fragListUntouched = false;
+		fragRefusal.clear();
+		origMappedEnd = 0;
+		origImageSectors = 0;
+		savedOrigNum = 0;
+		savedOrigLast = Fragment();
+		modOffsets.clear();
+		modRegionStart = 0;
+		modRegionEnd = 0;
+		fragStats = FragBuildStats();
+		modDev = ModDevice();
+		listFromSd = false;
+		bootSet = 0;
+		bootDevice.clear();
+		bootLogPath.clear();
+		bootSectorSize = 512;
+		bootUsbPort = 0;
+		memset(bootGameId, 0, sizeof(bootGameId));
 	}
 
 	//! Ask DeviceHandler which drive a mount prefix ("sd:", "usb1:") names, and
@@ -1081,12 +1129,12 @@ namespace Riivo
 	//! The rebuilt table, waiting for the apploader to finish so it can be put
 	//! into the game's memory. Held in MEM2 on purpose: the apploader fills MEM1
 	//! with the game and would walk straight over anything parked there.
-	static u8 *pendingFst = 0;
-	static u32 pendingFstSize = 0;
+	static u8 *&pendingFst = g_launch.stageBytes;
+	static u32 &pendingFstSize = g_launch.stageSize;
 	//! CRC of the staged table, captured when it is staged - not recomputed
 	//! from the staging buffer at install time, which would bless a buffer
 	//! that rotted in MEM2 in between.
-	static u32 pendingFstCrc = 0;
+	static u32 &pendingFstCrc = g_launch.stageCrc;
 
 	//! Where it is going, worked out once the apploader has filled the
 	//! boot-info block in. The copy into MEM1 does NOT happen there: the
@@ -1098,8 +1146,8 @@ namespace Riivo
 	//! overwritten before the game ever sees it - which verifies perfectly
 	//! at install time and then black-screens. So the placement is kept and
 	//! the write is done last, by InstallPendingFst, just before the jump.
-	static FstPlacement pendingPlace;
-	static bool pendingPlaceOk = false;
+	static FstPlacement &pendingPlace = g_launch.place;
+	static bool &pendingPlaceOk = g_launch.placeOk;
 
 	struct ReadVerifyContext {
 		FILE *file;
@@ -1449,6 +1497,7 @@ namespace Riivo
 		//! that rotted in MEM2 in between still fails instead of blessing
 		//! itself.
 		pendingFstCrc = Crc32(pendingFst, pendingFstSize);
+		g_launch.NoteStaged();
 
 		Addf(out, "  rebuilt table        : %u bytes held, ready to install\n",
 			 pendingFstSize);
@@ -2230,12 +2279,15 @@ namespace Riivo
 			gprintf("Riivo: FST install SKIPPED by riivolution/nofstinstall.txt\n");
 			return true;
 		}
-		if (!pendingPlaceOk || !pendingFst || !pendingFstSize)
+		if (!g_launch.CanInstall())
 		{
 			//! No staged state means no install is expected - except when
 			//! the game was already told its files are live. A live game
 			//! pointed at an uninstalled table reads unmapped space, so
 			//! that combination refuses instead of jumping (code 1).
+			//! CanInstall is the same check the old guard spelled out,
+			//! plus the generation stamp: a table staged by an earlier
+			//! boot can never satisfy it.
 			installFailCode = fileWorkLive ? 1 : 0;
 			return !fileWorkLive;
 		}
@@ -3337,12 +3389,12 @@ namespace Riivo
 		//! the game boots with its own table exactly as it always did.
 		if (pendingFst && pendingFstSize && effPlace.ok)
 		{
-			//! Booked, not written - see pendingPlace. The only thing that could
-			//! still refuse it is the bounds re-check inside InstallFst, and that
-			//! is decided by this placement, which is already known good.
-			pendingPlace = effPlace;
-			pendingPlaceOk = true;
-			fileWorkLive = true;
+		//! Booked, not written - see pendingPlace. The only thing that could
+		//! still refuse it is the bounds re-check inside InstallFst, and that
+		//! is decided by this placement, which is already known good.
+		//! Booked through the launch owner: placement, verdict, and the
+		//! live flag move together and can never desynchronise.
+		g_launch.Book(effPlace);
 			out += "\n  Ready. The table goes in last, immediately before the\n"
 				   "  game starts, so nothing the loader still has to do can land\n"
 				   "  on top of it. The game will read the mod\'s files.\n";

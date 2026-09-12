@@ -754,6 +754,12 @@ int GameBooter::BootGame(struct discHdr *gameHdr, const s8 useOcarina)
 	//! actually applies the patches, so anything that needs the filesystem -
 	//! reading the XML, loading <memory valuefile=> blobs, writing the boot log -
 	//! must be done up front.
+	//! Fresh launch state first, unconditionally: a previous boot in this
+	//! loader session may have staged a table, booked a placement, or set
+	//! file-work verdicts, and none of that may leak into this boot - not
+	//! even when no mod is selected below (those boots never reach
+	//! SetBootContext, but still reach the install gate).
+	Riivo::BeginLaunch();
 	Riivo::ResolvedPatchSet riivoSet;
 	std::vector<Riivo::MemOutcome> riivoMemPre, riivoMemApp;
 	bool riivoMemAttempted = false;
