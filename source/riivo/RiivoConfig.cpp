@@ -115,8 +115,11 @@ namespace Riivo
 		//! root, exactly as before: relative roots, empty roots, and the
 		//! /riivolution default keep today's device-joined behavior
 		//! bit-for-bit, so every relative-external mod resolves identically.
-		//! Only leading-slash externals change, and those were all broken
-		//! before (root prepended twice, so no file under them was found).
+		//! Only leading-slash externals change, and only where the prepended
+		//! root actually moved the path: with a non-empty root the old code
+		//! glued root onto an already-rooted path (Superstar's doubled
+		//! /SSMG/SSMG, under which no file was ever found). An empty root
+		//! resolved identically before and after - never broken, untouched.
 		std::string p = device;
 		const std::string *parts[2] = { &root, &rel };
 		int start = (!rel.empty() && rel[0] == '/') ? 1 : 0;
