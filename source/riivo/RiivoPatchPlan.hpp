@@ -136,7 +136,9 @@ struct PatchPlan
 	bool hasBootFile;     // a main.dol patch was requested (served iff
 	                      // composed into outDol without errors; else refused)
 	bool hasPartial;      // a non-DOL multi-segment or sub-range patch exists
-	                      // (fragment runtime serves whole files only)
+	                      // (served by the on-demand segment runtime; the
+	                      // fragment runtime stays whole-file-only and its
+	                      // path still withholds these plans)
 	u64 totalFinalBytes;  // sum finalSize (checked, saturates w/ error)
 	u32 wholeFileCount;   // files servable by the fragment runtime
 
@@ -160,9 +162,10 @@ u64 DolImageSize(const u32 *fileOffs, const u32 *sizes, u32 count);
 //! but unusable, arithmetic overflow, no filesystem provider, etc.).
 //! Per-file skips (missing disc w/o create, missing external, invalid
 //! paths) record warnings, leave the file original, and return true.
-//! Partial multi-segment non-DOL files set hasPartial (fragment runtime
-//! serves whole files only; caller withholds file work, never launches
-//! partial). Executable entries compose into *outDol when outDol != 0 and
+//! Partial multi-segment non-DOL files set hasPartial (served by the
+//! on-demand segment runtime from per-segment extents with ORIGINAL slices
+//! staged alongside; callers without segments must withhold file work,
+//! never launch partial). Executable entries compose into *outDol when outDol != 0 and
 //! dolSize > 0 (ORIGINAL base [0,dolSize) backed by the DOL image;
 //! resize forced size-preserving, finalSize must equal dolSize or errors
 //! records why); when outDol == 0 they record errors as before, so existing
@@ -201,6 +204,71 @@ bool BuildPlanManifest(const PatchPlan &plan,
 					   u32 discId,
 					   std::vector<u8> &blob,
 					   std::string &why);
+
+//! Largest ORIGINAL-slice store the segment emitter stages. Partial files
+//! preserve their untouched ranges as staged slices; the store is bounded
+//! because it lives in the game's MEM2 reservation alongside the table.
+//! Over it refuses with the total named - an explicit resource refusal,
+//! never a silent truncation.
+static const u32 RIV1_GEN_MAX = 8u << 20;
+
+//! One ORIGINAL run staged for serving: bytes [fileOffset,
+//! fileOffset+length) of the plan file come from the original disc at
+//! origAbs, staged at genOff in the store. Units are PartitionBytes
+//! throughout; origAbs is an original-disc offset, genOff a store offset.
+struct GenSlice
+{
+	std::string disc;
+	u64 fileOffset;
+	u32 length;
+	u64 origAbs;
+	u32 genOff;
+
+	GenSlice()
+		: fileOffset(0), length(0), origAbs(0), genOff(0) {}
+};
+
+//! The staged-slice layout: deterministic (plan file order, seg order),
+//! total checked against RIV1_GEN_MAX at build.
+struct GenLayout
+{
+	std::vector<GenSlice> slices;
+	u32 total;
+
+	GenLayout() : total(0) {}
+};
+
+//! True when the plan needs the segment runtime: any non-executable file
+//! the fragment runtime cannot serve whole (multi-segment composition).
+//! The whole-file-table fallback is only equivalent when this is false;
+//! falling back with it true would silently drop content, so the caller
+//! must refuse activation instead. Pure.
+inline bool PlanNeedsSegments(const PatchPlan &plan)
+{
+	for (size_t i = 0; i < plan.files.size(); ++i)
+	{
+		const PlannedFile &f = plan.files[i];
+		if (!f.bootFile && !f.wholeFile)
+			return true;
+	}
+	return false;
+}
+
+//! Staged RIV1 contract from plan + slot bases, covering whole AND partial
+//! files. Whole files emit one EXTERNAL run each (srcOffset 0), identical
+//! to BuildPlanManifest for the same inputs; partial files emit per-segment
+//! runs (EXTERNAL with source offsets, ZERO) with ORIGINAL runs staged as
+//! GENERATED slices in `gen` (bytes filled late from the disc, pre-boot).
+//! Executable and zero-length entries never appear. `bases` maps plan disc
+//! key -> slot base (PartitionBytes); `sizes` verifies every referenced
+//! external (missing/short refuses naming the file). Sorted, built and
+//! self-validated; the caller withholds on false. Pure (no console).
+bool BuildSegmentManifest(const PatchPlan &plan,
+						  const std::map<std::string, u64> &bases,
+						  FileSizeProvider *sizes,
+						  u32 discId, u32 partIdx,
+						  std::vector<u8> &blob, GenLayout &gen,
+						  std::string &why);
 
 } // namespace Riivo
 

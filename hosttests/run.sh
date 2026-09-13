@@ -213,6 +213,13 @@ build_run test_resolvemerge "$SRC/riivo/RiivoConfig.cpp"
 # test_pipeline's link set.
 build_run test_manifest_extents "$SRC/riivo/RiivoFstBuild.cpp" "$SRC/riivo/RiivoFst.cpp" "$SRC/riivo/RiivoFstWalk.cpp" "$SRC/riivo/RiivoFragPlan.cpp" "$SRC/riivo/RiivoValidate.cpp" "$SRC/riivo/RiivoFile.cpp" "$SRC/riivo/RiivoManifest.cpp" "$SRC/riivo/RiivoConfig.cpp" "$SRC/xml/pugixml.cpp"
 
+# Plan-to-runtime segments: production planner -> BuildSegmentManifest ->
+# the real ARM segment reader over a synthetic FAT volume. Partial span
+# (original prefix -> external slice -> original suffix) served complete
+# through ios/riivo_segread.c, whole-file parity with BuildPlanManifest,
+# the no-silent-downgrade gate, emitter refusals incl. the 8 MB store cap.
+build_run test_plansegments "$SRC/riivo/RiivoPatchPlan.cpp" "$SRC/riivo/RiivoFstBuild.cpp" "$SRC/riivo/RiivoFst.cpp" "$SRC/riivo/RiivoFstWalk.cpp" "$SRC/riivo/RiivoFragPlan.cpp" "$SRC/riivo/RiivoValidate.cpp" "$SRC/riivo/RiivoFile.cpp" "$SRC/riivo/RiivoManifest.cpp" "$SRC/riivo/RiivoRedirectTable.cpp" "$SRC/riivo/RiivoConfig.cpp" "$SRC/xml/pugixml.cpp" "$SRC/riivo/ios/riivo_segread.c" "$SRC/riivo/ios/riivo_redirect.c" "$SRC/riivo/ios/riivo_fat.c"
+
 # Coherent patch plan through the production builder: file replacement and
 # creation, folder recursion + dataless basename, duplicate precedence,
 # offset/fileoffset/length/resize, multiple mods to one file, zero-length,

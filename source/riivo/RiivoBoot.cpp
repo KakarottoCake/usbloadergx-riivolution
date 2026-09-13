@@ -225,6 +225,10 @@ namespace Riivo
 	static u32 earlyRiv1Count = 0;
 	static u64 earlyRiv1Bytes = 0;
 	static u32 earlyRiv1Crc = 0;
+	//! The early ORIGINAL-slice layout for the late fill: which original
+	//! disc ranges land where in the reserved store. Deterministic from
+	//! the plan, rebuilt identically late; cleared per boot with the plan.
+	static GenLayout earlyGen;
 	//! The early blob itself, for order-insensitive set comparison late.
 	//! Bounded by the fragment budget like every other retained plan state;
 	//! cleared per boot with everything else.
@@ -656,7 +660,7 @@ namespace Riivo
 		activePlan = PatchPlan();
 		haveActivePlan = false;
 		haveEarlyRiv1 = false;
-		earlyRiv1Blob.clear();
+		earlyGen = GenLayout();
 		stagedDol = PlannedFile();
 		haveStagedDol = false;
 		stagedDolBase = 0;
@@ -965,6 +969,7 @@ namespace Riivo
 		earlyRiv1Bytes = 0;
 		earlyRiv1Crc = 0;
 		earlyRiv1Blob.clear();
+		earlyGen = GenLayout();
 		stagedDol = PlannedFile();
 		haveStagedDol = false;
 		stagedDolBase = 0;
@@ -1606,6 +1611,15 @@ namespace Riivo
 	static bool ArmBootView(std::string &out, u64 fstDiscOffset, u32 fstDiscSize);
 	static bool EmitManifest(std::string &out,
 							 const std::vector<PlacedFile> &placed);
+	//! Staged-slice fill + partial slot verification (defined below, used
+	//! by Activate above their definitions like the rest here).
+	static bool FillGenStore(std::string &out);
+	static void PoisonStagedTable();
+	static bool ComposePartialReference(const PlannedFile &file, u64 slot,
+										u64 woff, u8 *dst, u32 len,
+										std::string &why);
+	static bool VerifyPartialSlot(u64 slot, const PlannedFile &file,
+								  std::string &why);
 
 	static void Activate(std::string &out, const FragPlan &plan,
 						 const std::vector<PlacedFile> &placed,
@@ -1643,6 +1657,37 @@ namespace Riivo
 		sumPlaced = (u32) placed.size();
 		sumFailed = 0;
 
+		//! Staged slices land before anything reads through the hook: the
+		//! segment verification below serves ORIGINAL ranges from this
+		//! store, and the game will too. A fill failure poisons the staged
+		//! table (module MISSES everything to stock) and withholds here,
+		//! before a single file is verified or staged.
+		if (haveEarlyRiv1 && earlyGen.total > 0)
+		{
+			LogStep("filling the staged slice store (%u slice(s))",
+					(unsigned) earlyGen.slices.size());
+			if (!FillGenStore(out))
+				return;
+		}
+
+		//! Slots served through segments, for the verify dispatch: partial
+		//! plan files by their assigned slot. Whole files keep the
+		//! first/last-byte sampler exactly as before.
+		std::map<u64, const PlannedFile *> partialSlots;
+		if (PlanNeedsSegments(activePlan))
+		{
+			for (size_t i = 0; i < activePlan.files.size(); ++i)
+			{
+				const PlannedFile &pf = activePlan.files[i];
+				if (pf.bootFile || pf.wholeFile)
+					continue;
+				std::map<std::string, u64>::const_iterator mo =
+					modOffsets.find(pf.disc);
+				if (mo != modOffsets.end())
+					partialSlots[mo->second] = &pf;
+			}
+		}
+
 		std::string why;
 		size_t verified = 0;
 
@@ -1668,7 +1713,14 @@ namespace Riivo
 		const size_t stride = (deepVerify || placed.size() <= MAX_SAMPLED)
 							  ? 1 : (placed.size() + MAX_SAMPLED - 1) / MAX_SAMPLED;
 		for (size_t i = 0; i < placed.size(); i += stride) {
-			if (!VerifyModFragment(placed[i].offset, placed[i].length, placed[i].external, why)) {
+			bool vok;
+			std::map<u64, const PlannedFile *>::const_iterator pit =
+				partialSlots.find(placed[i].offset);
+			if (pit == partialSlots.end())
+				vok = VerifyModFragment(placed[i].offset, placed[i].length, placed[i].external, why);
+			else
+				vok = VerifyPartialSlot(placed[i].offset, *pit->second, why);
+			if (!vok) {
 				if (failed < MAX_NAMED)
 					Addf(failures, "    %s\n", why.c_str());
 				++failed;
@@ -1679,7 +1731,14 @@ namespace Riivo
 		if (stride > 1 && (placed.size() - 1) % stride != 0)
 		{
 			const PlacedFile &last = placed.back();
-			if (!VerifyModFragment(last.offset, last.length, last.external, why)) {
+			bool vok;
+			std::map<u64, const PlannedFile *>::const_iterator pit =
+				partialSlots.find(last.offset);
+			if (pit == partialSlots.end())
+				vok = VerifyModFragment(last.offset, last.length, last.external, why);
+			else
+				vok = VerifyPartialSlot(last.offset, *pit->second, why);
+			if (!vok) {
 				if (failed < MAX_NAMED)
 					Addf(failures, "    %s\n", why.c_str());
 				++failed;
@@ -1753,10 +1812,19 @@ namespace Riivo
 		++extendedVerified;
 		if (idx % stride == 0 || idx == placed.size() - 1)
 			continue; // the sample above already read this one back
-		if (!VerifyModFragment(placed[idx].offset, placed[idx].length, placed[idx].external, why)) {
-			if (failed < MAX_NAMED)
-				Addf(failures, "    %s\n", why.c_str());
-			++failed;
+		{
+			bool vok;
+			std::map<u64, const PlannedFile *>::const_iterator pit =
+				partialSlots.find(placed[idx].offset);
+			if (pit == partialSlots.end())
+				vok = VerifyModFragment(placed[idx].offset, placed[idx].length, placed[idx].external, why);
+			else
+				vok = VerifyPartialSlot(placed[idx].offset, *pit->second, why);
+			if (!vok) {
+				if (failed < MAX_NAMED)
+					Addf(failures, "    %s\n", why.c_str());
+				++failed;
+			}
 		}
 	}
 		Addf(out, "  LOW_READ checks      : first/last-byte sample of %u of %u files passed (interior bytes are not covered by this check)\n",
@@ -2000,6 +2068,221 @@ namespace Riivo
 			why = "served bytes differ from the mod file";
 			return false;
 		}
+		return true;
+	}
+
+	//! Zero the staged table's magic and flush: module init refuses a
+	//! bad-magic table, so every later read MISSES to the stock path
+	//! instead of serving a contract whose slices never arrived. The boot
+	//! then continues stock through the normal withhold below.
+	static void PoisonStagedTable()
+	{
+		if (!onDemandLayout.tableAddr || !onDemandLayout.tableLen)
+			return;
+		u8 zero[4] = { 0, 0, 0, 0 };
+		memcpy((void *) onDemandLayout.tableAddr, zero, sizeof(zero));
+		DCFlushRange((void *) (onDemandLayout.tableAddr & ~31u),
+					 onDemandLayout.tableLen + 64);
+		gprintf("Riivo: staged table poisoned after a fill failure (module will MISS all)\n");
+	}
+
+	//! Reference bytes for [slot+woff, +len) of a partial plan file:
+	//! ORIGINAL runs via stock reads (BootView-independent by construction:
+	//! the view never covers original file data), EXTERNAL runs via the
+	//! card, ZERO runs as zeros. Mirrors the host reference the segment
+	//! suite compares against, so a mismatch here means the console and
+	//! the harness disagree about the same plan - withhold, investigate.
+	static bool ComposePartialReference(const PlannedFile &file, u64 slot,
+										u64 woff, u8 *dst, u32 len,
+										std::string &why)
+	{
+		u32 done = 0;
+		while (done < len)
+		{
+			u64 pos = woff + done;
+			const PlanSegment *seg = 0;
+			for (size_t i = 0; i < file.segs.size(); ++i)
+			{
+				if (pos >= file.segs[i].fileOffset
+					&& pos < file.segs[i].fileOffset + file.segs[i].length)
+				{
+					seg = &file.segs[i];
+					break;
+				}
+			}
+			if (!seg)
+			{
+				why = "reference has a hole the plan never tiled";
+				return false;
+			}
+			u64 runEnd = seg->fileOffset + seg->length;
+			u64 wantEnd = woff + len;
+			u32 take = (u32) ((runEnd < wantEnd ? runEnd : wantEnd) - pos);
+			if (seg->kind == PlanSegment::SEG_ZERO)
+			{
+				memset(dst + done, 0, take);
+			}
+			else if (seg->kind == PlanSegment::SEG_EXTERNAL)
+			{
+				u64 src = seg->srcOffset + (pos - seg->fileOffset);
+				if (!BootFatReader(seg->external, src, dst + done, take, 0))
+				{
+					why = "reference external unreadable: " + seg->external;
+					return false;
+				}
+			}
+			else
+			{
+				u64 orig = file.discOffsetOrig + pos;
+				u32 got = 0;
+				while (got < take)
+				{
+					u32 chunk = take - got;
+					if (chunk > sizeof(verifyBounce))
+						chunk = sizeof(verifyBounce);
+					if (WDVD_ReadStock(verifyBounce, chunk, orig + got) != 0)
+					{
+						why = "reference original unreadable";
+						return false;
+					}
+					memcpy(dst + done + got, verifyBounce, chunk);
+					got += chunk;
+				}
+			}
+			done += take;
+		}
+		(void)slot;
+		return true;
+	}
+
+	//! Bounded slot verification for one partial file: head, tail, and
+	//! every segment boundary through the hook against the reference.
+	//! Windows are 32 bytes like the whole-file sampler; past 40 windows
+	//! the middle boundaries are skipped and named (the head, tail, and
+	//! first/last boundaries always run). Any mismatch withholds exactly
+	//! like a whole-file read-back failure.
+	static bool VerifyPartialSlot(u64 slot, const PlannedFile &file,
+								  std::string &why)
+	{
+		if (file.finalSize == 0)
+		{
+			why = "partial slot with no size";
+			return false;
+		}
+		u64 points[42];
+		u32 npoints = 0;
+		points[npoints++] = 0;
+		for (size_t i = 0; i < file.segs.size() && npoints < 40; ++i)
+		{
+			u64 b = file.segs[i].fileOffset;
+			if (b > 0 && b < file.finalSize)
+				points[npoints++] = b > 16 ? b - 16 : 0;
+			if (b < file.finalSize)
+				points[npoints++] = b;
+		}
+		bool truncated = (file.segs.size() * 2 > 40);
+		u8 want[32];
+		u8 have[32] ATTRIBUTE_ALIGN(32);
+		for (u32 i = 0; i < npoints; ++i)
+		{
+			u64 woff = points[i] > file.finalSize - 32 && file.finalSize > 32
+					   ? file.finalSize - 32 : points[i];
+			if (woff + 32 > file.finalSize)
+			{
+				if (file.finalSize <= 32)
+					woff = 0;
+				else
+					continue;
+			}
+			u32 n = file.finalSize - woff < 32 ? (u32)(file.finalSize - woff) : 32;
+			if (!ComposePartialReference(file, slot, woff, want, n, why))
+				return false;
+			memset(have, 0, sizeof(have));
+			if (WDVD_Read(have, sizeof(have), slot + woff) != 0
+				|| memcmp(have, want, n) != 0)
+			{
+				char message[160];
+				snprintf(message, sizeof(message),
+					"segment read-back mismatch at 0x%010llx (file %s): ",
+					(unsigned long long)(slot + woff), file.disc.c_str());
+				why = message;
+				return false;
+			}
+		}
+		if (truncated)
+			gprintf("Riivo: partial verify truncated boundaries for %s\n",
+					file.disc.c_str());
+		return true;
+	}
+
+	//! Fill the staged ORIGINAL-slice store from the disc: late, partition
+	//! open, card mounted, hook installed but irrelevant (stock reads only).
+	//! Chunked through the aligned bounce into the reserved store, flushed,
+	//! then read back and compared. Any failure poisons the staged table
+	//! and withholds: the module would otherwise serve unfilled reservation
+	//! memory as game data.
+	static bool FillGenStore(std::string &out)
+	{
+		if (earlyGen.total == 0)
+			return true;
+		if (!onDemandLayout.genAddr || onDemandLayout.genLen < earlyGen.total)
+		{
+			PoisonStagedTable();
+			WithholdStaged(out, "GENFILL",
+				"  slice store missing from the reservation; table poisoned.\n");
+			return false;
+		}
+		u8 *store = (u8 *) onDemandLayout.genAddr;
+		for (size_t i = 0; i < earlyGen.slices.size(); ++i)
+		{
+			const GenSlice &s = earlyGen.slices[i];
+			u32 done = 0;
+			while (done < s.length)
+			{
+				u32 chunk = s.length - done;
+				if (chunk > sizeof(verifyBounce))
+					chunk = sizeof(verifyBounce);
+				if (WDVD_ReadStock(verifyBounce, chunk, s.origAbs + done) != 0)
+				{
+					char line[256];
+					snprintf(line, sizeof(line),
+						"  slice fill failed for %s (original unreadable); table poisoned.\n",
+						s.disc.c_str());
+					PoisonStagedTable();
+					WithholdStaged(out, "GENFILL", line);
+					return false;
+				}
+				memcpy(store + s.genOff + done, verifyBounce, chunk);
+				done += chunk;
+			}
+		}
+		DCFlushRange((void *) (onDemandLayout.genAddr & ~31u),
+					 onDemandLayout.genLen + 64);
+		for (size_t i = 0; i < earlyGen.slices.size(); ++i)
+		{
+			const GenSlice &s = earlyGen.slices[i];
+			u32 done = 0;
+			while (done < s.length)
+			{
+				u32 chunk = s.length - done;
+				if (chunk > sizeof(verifyBounce))
+					chunk = sizeof(verifyBounce);
+				if (WDVD_ReadStock(verifyBounce, chunk, s.origAbs + done) != 0
+					|| memcmp(store + s.genOff + done, verifyBounce, chunk) != 0)
+				{
+					char line[256];
+					snprintf(line, sizeof(line),
+						"  slice verify failed for %s; table poisoned.\n",
+						s.disc.c_str());
+					PoisonStagedTable();
+					WithholdStaged(out, "GENFILL", line);
+					return false;
+				}
+				done += chunk;
+			}
+		}
+		Addf(out, "  slice store        : %u slice(s), %u bytes filled + verified\n",
+			 (unsigned) earlyGen.slices.size(), (unsigned) earlyGen.total);
 		return true;
 	}
 
@@ -2255,6 +2538,36 @@ namespace Riivo
 		return true;
 	}
 
+	//! Early-stated file sizes reused late instead of re-statting: same
+	//! boot, same card, so the late phase reuses the enumeration cache
+	//! instead of walking libfat from the root again for every file.
+	//! Shared by the early plan build, the late table build, and the
+	//! manifest emission below (declared here so all three see it).
+	static bool ExternalFileSize(const std::string &path, u32 *outSize)
+	{
+		//! Stated during early enumeration: same boot, same card, so the
+		//! late phase reuses it instead of walking libfat from the root
+		//! again for every file. A miss stats as before.
+		if (KnownFileSize(path, outSize))
+			return true;
+		struct stat st;
+		if (stat(path.c_str(), &st) != 0)
+			return false;
+		*outSize = (u32) st.st_size;
+		return true;
+	}
+
+	//! FileSizeProvider over the boot's stat cache, shared by the early
+	//! plan build (pre-registration) and any later consumer: one stat per
+	//! file per boot, then cache hits.
+	struct BootSizes : public FileSizeProvider
+	{
+		virtual bool GetSize(const std::string &external, u32 *outSize)
+		{
+			return ExternalFileSize(external, outSize);
+		}
+	};
+
 	//! Entry-set comparison between two validated manifests, insensitive to
 	//! entry order and string-blob layout (early and late placements order
 	//! files differently while naming the same bytes). Little-endian by
@@ -2337,11 +2650,12 @@ namespace Riivo
 		std::sort(keys.begin(), keys.end());
 		return true;
 	}
-	//! Emit the RIV1 manifest: the staged segment contract for a future
-	//! runtime, cross-checked against the served placements now. Shared
-	//! implementation (BuildPlanManifest) with the host parity suite: a
-	//! mismatch means the plan and the placements drifted - withhold
-	//! rather than serve either. The digest (entries, bytes, blob size,
+	//! Emit the RIV1 manifest: the staged segment contract, rebuilt here
+	//! from the same plan and slots the early staging used, through the
+	//! same builder. Whole files emit single runs; partial files emit
+	//! composed runs with ORIGINAL slices staged alongside. A mismatch
+	//! means the plan and the placements drifted - withhold rather than
+	//! serve either. The digest (entries, bytes, blob size,
 	//! crc) is the artifact to compare.
 	static bool EmitManifest(std::string &out,
 							 const std::vector<PlacedFile> &placed)
@@ -2353,8 +2667,11 @@ namespace Riivo
 		// Partition index is untracked (0 = unspecified); readers must not
 		// depend on it. The discovery LBA likewise defers to the module.
 		std::vector<u8> blob;
+		GenLayout gen;
 		std::string why;
-		if (!BuildPlanManifest(activePlan, placed, discId, blob, why))
+		BootSizes bootSizes;
+		if (!BuildSegmentManifest(activePlan, modOffsets, &bootSizes,
+								  discId, 0, blob, gen, why))
 		{
 			char line[300];
 			snprintf(line, sizeof(line),
@@ -2382,9 +2699,15 @@ namespace Riivo
 			std::vector<ManifestEntryKey> earlyKeys, lateKeys;
 			bool same = ManifestEntrySet(earlyRiv1Blob, earlyKeys)
 						&& ManifestEntrySet(blob, lateKeys)
-						&& earlyKeys.size() == lateKeys.size();
+						&& earlyKeys.size() == lateKeys.size()
+						&& earlyGen.total == gen.total
+						&& earlyGen.slices.size() == gen.slices.size();
 			for (size_t i = 0; same && i < earlyKeys.size(); ++i)
 				same = (earlyKeys[i] == lateKeys[i]);
+			for (size_t i = 0; same && i < earlyGen.slices.size(); ++i)
+				same = (earlyGen.slices[i].origAbs == gen.slices[i].origAbs
+						&& earlyGen.slices[i].length == gen.slices[i].length
+						&& earlyGen.slices[i].genOff == gen.slices[i].genOff);
 			if (!same)
 			{
 				char line[300];
@@ -2400,31 +2723,6 @@ namespace Riivo
 		}
 		return true;
 	}
-
-	static bool ExternalFileSize(const std::string &path, u32 *outSize)
-	{
-		//! Stated during early enumeration: same boot, same card, so the
-		//! late phase reuses it instead of walking libfat from the root
-		//! again for every file. A miss stats as before.
-		if (KnownFileSize(path, outSize))
-			return true;
-		struct stat st;
-		if (stat(path.c_str(), &st) != 0)
-			return false;
-		*outSize = (u32) st.st_size;
-		return true;
-	}
-
-	//! FileSizeProvider over the boot's stat cache, shared by the early
-	//! plan build (pre-registration) and any later consumer: one stat per
-	//! file per boot, then cache hits.
-	struct BootSizes : public FileSizeProvider
-	{
-		virtual bool GetSize(const std::string &external, u32 *outSize)
-		{
-			return ExternalFileSize(external, outSize);
-		}
-	};
 
 	//! Save-namespace note for stock-continuation aborts below. File and
 	//! memory work stop at those returns, but a <savegame> patch was
@@ -2838,6 +3136,50 @@ namespace Riivo
 				{
 					++planned;
 					expectedModSizes[key] = 0;
+				}
+				else
+				{
+					modAddFails[key] = SKIP_ADD_FAILED;
+					if (pf.earlyKey != key)
+						modAddFails[pf.earlyKey] = SKIP_ADD_FAILED;
+					++rejected;
+				}
+				continue;
+			}
+			if (!pf.wholeFile)
+			{
+				// Partial file: the composed final sizes the entry; every
+				// referenced external must still be there in full, while
+				// ORIGINAL ranges are read from the disc at fill time.
+				// A missing/short external refuses this file explicitly -
+				// never a partially-described entry.
+				bool segOK = true;
+				for (size_t s = 0; s < pf.segs.size() && segOK; ++s)
+				{
+					const PlanSegment &seg = pf.segs[s];
+					if (seg.kind != PlanSegment::SEG_EXTERNAL)
+						continue;
+					u32 segSize = 0;
+					if (!ExternalFileSize(seg.external, &segSize)
+						|| (u64) seg.srcOffset + seg.length > segSize)
+					{
+						segOK = false;
+						if (modAddFails.find(key) == modAddFails.end())
+							modAddFails[key] = SKIP_STAT_FAILED;
+						if (pf.earlyKey != key
+							&& modAddFails.find(pf.earlyKey) == modAddFails.end())
+							modAddFails[pf.earlyKey] = SKIP_STAT_FAILED;
+						if (!ExternalFileSize(seg.external, &segSize))
+							missingCreated.push_back(seg.external);
+					}
+				}
+				if (!segOK)
+					continue;
+				modBytes += pf.finalSize;
+				if (builder.AddOrReplace(pf.disc, pf.finalSize, &isNew))
+				{
+					++planned;
+					expectedModSizes[key] = pf.finalSize;
 				}
 				else
 				{
@@ -4073,7 +4415,7 @@ namespace Riivo
 			LogStep("early plan refused: %s", why.c_str());
 			return;
 		}
-		if (plan.hasPartial)
+		if (plan.hasPartial && !OnDemandRequested())
 		{
 			earlyRefusal = "partial file replacement needs the segment runtime (whole files only)";
 			fragRefusal = earlyRefusal;
@@ -4082,6 +4424,8 @@ namespace Riivo
 			LogStep("early plan refused: %s", earlyRefusal.c_str());
 			return;
 		}
+		if (plan.hasPartial)
+			LogStep("partial file(s) flow through the segment runtime (on-demand)");
 		//! Publish the plan both phases consume. The executable stages
 		//! without its base here (the partition DOL offset is only known
 		//! once the cIOS side opens); the late phase attaches it.
@@ -4279,26 +4623,30 @@ namespace Riivo
 
 		if (bootProbe.patchSites.size() == 1 && onDemandPlanned)
 		{
-			//! Segmented manifest first: the RIV1 blob describes the same
-			//! whole-file extents the redirect table below carries (built
-			//! from the same plan and placements), and the module serves it
-			//! through the segment reader with the declared size as its
-			//! anti-shadow bound. Anything failing here falls back to the
-			//! whole-file table path exactly as before - a staging refusal
-			//! never changes what the game reads.
+			//! Segmented manifest first: per-segment runs (whole files as
+			//! single runs, partial files as composed runs with ORIGINAL
+			//! slices staged alongside) built from the same plan and slots
+			//! the table build consumes late. The module serves it through
+			//! the segment reader with the declared size as its anti-shadow
+			//! bound. Falling back to the whole-file table is only allowed
+			//! when the plan needs no segments: with partial content a
+			//! fallback would silently drop it, so a failed staging with
+			//! segments required refuses activation outright instead.
+			const bool needSeg = PlanNeedsSegments(activePlan);
 			bool riv1Staged = false;
 			if (haveActivePlan && declared > 0)
 			{
 				u32 discId = ((u32)bootGameId[0] << 24) | ((u32)bootGameId[1] << 16) |
 							 ((u32)bootGameId[2] << 8) | (u32)bootGameId[3];
 				std::vector<u8> riv1;
+				GenLayout gen;
 				std::string riv1Why;
-				if (BuildPlanManifest(activePlan, placed, discId, riv1, riv1Why)
-					&& riv1.size() >= RIIVO_MANIFEST_HEADER)
+				if (BuildSegmentManifest(activePlan, modOffsets, &bootSizes,
+										 discId, 0, riv1, gen, riv1Why))
 				{
 					OnDemandMeta meta;
 					meta.kind = 1;
-					meta.genBase = 0;
+					meta.genBase = 0; // reservation assigns the store below
 					meta.genSize = 0;
 					meta.declSize = declared;
 					meta.discId = discId;
@@ -4306,7 +4654,7 @@ namespace Riivo
 					OnDemandLayout riv1Layout;
 					if (InstallOnDemand(bootProbe.patchSites[0], riv1,
 										RIIVO_PART_DISCOVER, meta, riv1Layout,
-										patchWhy))
+										patchWhy, gen.total))
 					{
 						patchApplied = true;
 						patchStorage = riv1Layout.moduleAddr;
@@ -4314,22 +4662,34 @@ namespace Riivo
 						onDemandLayout = riv1Layout;
 						riv1Staged = true;
 						haveEarlyRiv1 = true;
+						earlyGen = gen;
 						earlyRiv1Blob = riv1;
-						earlyRiv1Count = (u32)placed.size();
+						earlyRiv1Count = (u32)activePlan.files.size();
 						earlyRiv1Bytes = (u32)riv1.size();
 						earlyRiv1Crc = (u32)riv1[16] | ((u32)riv1[17] << 8) |
 									  ((u32)riv1[18] << 16) | ((u32)riv1[19] << 24);
-						LogStep("on-demand: RIV1 staged, %u file(s), %u bytes, crc %08x",
-								(unsigned)placed.size(), (unsigned)riv1.size(),
-								earlyRiv1Crc);
+						LogStep("on-demand: RIV1 staged, %u file(s), %u bytes, crc %08x, %u staged slice(s)",
+								(unsigned)activePlan.files.size(), (unsigned)riv1.size(),
+								earlyRiv1Crc, (unsigned)gen.slices.size());
 					}
 					else
-						gprintf("Riivo: RIV1 staging refused (%s), trying whole-file table\n",
+						gprintf("Riivo: RIV1 staging refused (%s)\n",
 								patchWhy.c_str());
 				}
 				else
-					gprintf("Riivo: RIV1 build refused (%s), trying whole-file table\n",
+					gprintf("Riivo: RIV1 build refused (%s)\n",
 							riv1Why.c_str());
+				if (!riv1Staged && needSeg)
+				{
+					char refuse[320];
+					snprintf(refuse, sizeof(refuse),
+						"RIV1 staging failed but the plan needs segments; "
+						"the whole-file table cannot serve it: %s",
+						!riv1Why.empty() ? riv1Why.c_str() : patchWhy.c_str());
+					patchWhy = refuse;
+					gprintf("Riivo: %s\n", refuse);
+					LogStep("RIV1 unavailable for a segmented plan - file work refused");
+				}
 			}
 			if (riv1Staged)
 			{
@@ -4337,7 +4697,7 @@ namespace Riivo
 						bootProbe.patchSites[0]);
 				LogStep("on-demand: hook serves the RIV1 manifest");
 			}
-			else
+			else if (!needSeg)
 			{
 			//! Paths go over as the module will look them up: from the root of
 			//! the FAT partition, without the loader's device prefix.
