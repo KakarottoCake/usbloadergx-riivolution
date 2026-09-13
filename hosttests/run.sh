@@ -59,6 +59,13 @@ build_run test_fstinstall "$SRC/riivo/RiivoFstInstall.cpp"
 # and what still needs Wii hardware.
 build_run test_installsim "$SRC/riivo/RiivoFstInstall.cpp" "$SRC/riivo/RiivoFstBuild.cpp" "$SRC/riivo/RiivoFst.cpp"
 
+# Startup-survival regression (local, no hardware): production placement
+# over the captured T0 grown case, virtual-header grown-max image, clearing
+# rules vs observed outcomes (exclusions + the stale-reader mechanism), and
+# the install-then-reverify instrument logic. Production FstInstall +
+# BootView code, simulated MEM1.
+build_run test_bootsurvival "$SRC/riivo/RiivoFstInstall.cpp" "$SRC/riivo/RiivoBootView.cpp"
+
 # Where the mod region sits on the virtual disc the cIOS reads, and whether it
 # clears the read ceiling and the fragment table.
 build_run test_fragplan "$SRC/riivo/RiivoFragPlan.cpp"

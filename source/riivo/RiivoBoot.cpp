@@ -513,6 +513,15 @@ namespace Riivo
 	//! Do not combine with nofstinstall.txt (which wins: nothing installs).
 	static bool relocOrig = false;
 	static std::vector<u8> relocOrigRaw;
+	//! Whether the staged table is the retained verbatim original (not the
+	//! rebuild). Set at staging time in Activate; read at booking time in
+	//! ReportFstPlacement to gate the grown-relocation experiment below.
+	//! Cleared per boot with everything else.
+	static bool stagedVerbatim = false;
+	//! A grown table installed pre-shutdown by the relocorig experiment
+	//! (below) awaits its post-shutdown re-verification. In-place tables
+	//! install late as always and never set this.
+	static bool earlyInstalled = false;
 
 	//! Retired (general pipeline, 2026-09-12): mem2fst.txt / smg2reserve.txt
 	//! per-title MEM2 placements removed. PlaceFstMem2 arithmetic remains
@@ -799,6 +808,8 @@ namespace Riivo
 		skipFstInstall = false;
 		relocOrig = false;
 		relocOrigRaw.clear();
+		stagedVerbatim = false;
+		earlyInstalled = false;
 		//! Diagnostics and verdicts: never inherited across boots.
 		bootClockStart = 0;
 		deadlinePassed = false;
@@ -1751,6 +1762,9 @@ namespace Riivo
 			withholdStage = "FST_WITHHELD";
 			return;
 		}
+		// Persisted for the booking gate below: only a retained verbatim
+		// staging may attempt the grown-relocation experiment.
+		stagedVerbatim = stageRelocOrig;
 
 		Addf(out, "  rebuilt table        : %u bytes held, ready to install\n",
 			 pendingFstSize);
@@ -3141,6 +3155,37 @@ namespace Riivo
 			g_launch.Refuse(1);
 			return false;
 		}
+		//! Grown diagnostic experiment: the table went in pre-shutdown and
+		//! verified there. Re-verify bytes plus boot words now - no copy.
+		//! A mismatch means loader-side activity overwrote it after the
+		//! early install (the pre-shutdown log names the installed state);
+		//! refuse with code 4 and blink rather than jump. A match hands
+		//! over: game-startup behavior from here is observed, not checked.
+		if (earlyInstalled)
+		{
+			const u32 addr = pendingPlace.fstAddr;
+			const u32 size = pendingFstSize;
+			const bool bytesOk = pendingFst && size
+				&& memcmp((const void *) addr, pendingFst, size) == 0
+				&& Crc32((const u8 *) addr, size) == pendingFstCrc;
+			const bool ptrsOk = bytesOk
+				&& *(vu32 *) 0x80000038 == addr
+				&& *(vu32 *) 0x8000003C == size
+				&& *(vu32 *) 0x80000034 == pendingPlace.newArenaHi;
+			if (bytesOk && ptrsOk)
+			{
+				g_launch.Consume();
+				installFailCode = 0;
+				gprintf("Riivo: grown re-verify clean at jump (%u bytes at %08x)\n",
+						size, addr);
+				return true;
+			}
+			g_launch.Refuse(4);
+			installFailCode = 4;
+			gprintf("Riivo: grown re-verify MISMATCH at jump (bytes %d, ptrs %d); refusing\n",
+					(int) bytesOk, (int) ptrsOk);
+			return false;
+		}
 		const u32 addr = pendingPlace.fstAddr;
 		const u32 size = pendingFstSize;
 		//! A relocated table overwrites bytes below the apploader's
@@ -4001,17 +4046,40 @@ namespace Riivo
 			 arena.fstAddr, arena.fstMaxSize);
 		Addf(out, "  rebuilt size : %u bytes\n\n", want);
 
-		//! General placement policy (2026-09-12, no game-ID gates): only
-		//! in-place tables install. A grown table that fits nowhere the
-		//! apploader reserved refuses explicitly here with required vs
-		//! reserved capacity, instead of cascading into memory game startup
-		//! may clear or trusting a surveyed MEM2 window. The coherent fix is
-		//! the patched boot view (apploader allocates for the rebuilt table);
-		//! until it lands, relocation is unsupported on every title alike.
+		//! General placement policy (no game-ID gates): in-place tables install
+		//! where the apploader put them. A grown table refuses explicitly
+		//! here with required vs reserved capacity - EXCEPT under the
+		//! relocorig.txt diagnostic with retained verbatim bytes, which runs
+		//! the relocation experiment below. Rationale, stated plainly:
+		//! loader-side clearance (stack/heap arithmetic) cannot establish
+		//! game-startup ownership. Local analysis over the observed outcomes
+		//! (in-place boots; grown and verbatim-grown die; stock boots) pins
+		//! the mechanism space (see test_bootsurvival): clearing below the
+		//! reservation top contradicts the in-place boot outright; clearing
+		//! below arenaHi would spare a coherently-placed grown table, so it
+		//! cannot self-explain the grown death either. The only
+		//! self-contained explanation left is clearing below the REPORTED
+		//! table base with a stale reader - i.e. the apploader-struct copy
+		//! at 0x81201b80+0x10, which nothing updates. Until a coherent boot
+		//! view (header FST words consistent with the virtual table,
+		//! apploader consumption traced) passes that regression, relocation
+		//! stays refused on every title alike. The experiment path installs
+		//! early and re-verifies at the jump, which separates loader-side
+		//! corruption (re-verify mismatch, blink) from startup clearing
+		//! (clean entry, later failure); it is a diagnostic, never supported
+		//! operation, and it never runs without the marker AND retained
+		//! verbatim bytes.
 		//! Everything below books and reports the EFFECTIVE placement.
 		FstPlacement effPlace = place;
-		if (effPlace.ok && !effPlace.inPlace)
+		const bool grownExperiment = relocOrig && stagedVerbatim;
+		if (effPlace.ok && !effPlace.inPlace && !grownExperiment)
 		{
+			if (relocOrig && !stagedVerbatim)
+			{
+				Addf(out, "\n  relocorig.txt present but no verbatim bytes were retained:\n"
+						  "  a grown REBUILT table would confound relocation with\n"
+						  "  content, so it is refused like any grown table.\n");
+			}
 			char relWhy[192];
 			snprintf(relWhy, sizeof(relWhy),
 				"grown table needs %u bytes but the apploader reserved %u; "
@@ -4035,16 +4103,40 @@ namespace Riivo
 				 arena.fstMaxSize - plannedFstSize);
 			out += "  Nothing would move and the game's heap would be untouched.\n";
 		}
+		else if (relocOrig && stagedVerbatim)
+		{
+			//! DIAGNOSTIC EXPERIMENT (relocorig.txt, retained verbatim
+			//! bytes only): the grown install is attempted with early copy
+			//! plus pre-jump re-verification below. Startup survival below
+			//! the reservation is verified by observed boot on this title,
+			//! not by loader checks - this run tests exactly that. Never a
+			//! supported operation; never runs without marker + verbatim.
+			Addf(out, "  DIAGNOSTIC EXPERIMENT: grown verbatim table installs at\n"
+					  "  %08x (%u bytes below the reservation)\n",
+				 effPlace.fstAddr, want > arena.fstMaxSize
+				 ? want - arena.fstMaxSize : 0);
+			Addf(out, "  arena high   : %08x -> %08x\n", arena.arenaHi, effPlace.newArenaHi);
+			Addf(out, "  taken from the game's heap : %u KB\n", effPlace.reserved / 1024);
+			if (effPlace.heapLeft)
+				Addf(out, "  heap the game still has    : %u MB\n",
+					 effPlace.heapLeft / (1024 * 1024));
+			else
+			{
+				Addf(out, "  heap the game still has    : unknown (arena low not set)\n");
+				Addf(out, "  blind-drop cap used        : %u of %u KB\n",
+					 effPlace.reserved / 1024, MAX_BLIND_DROP / 1024);
+			}
+		}
 		else
 		{
-			//! Unreachable by construction: grown placements refuse above.
-			//! Retained as a defensive refusal so a future policy change
-			//! cannot silently re-activate relocation without updating this
-			//! report and the booking below.
-			Addf(out, "  REFUSED: unexpected grown placement at %08x (policy requires in-place)\n",
+			//! Defensive refusal: a grown placement that is neither refused
+			//! above nor covered by the diagnostic experiment must never
+			//! silently book. A future policy change has to update this
+			//! report and the booking below together.
+			Addf(out, "  REFUSED: unexpected grown placement at %08x (no experiment armed)\n",
 				 effPlace.fstAddr);
 			effPlace = FstPlacement();
-			effPlace.why = "unexpected grown placement (policy requires in-place)";
+			effPlace.why = "unexpected grown placement (no experiment armed)";
 		}
 		if (effPlace.ok)
 			Addf(out, "  loaded ranges kept clear : %u considered, %u ignored "
@@ -4110,11 +4202,64 @@ namespace Riivo
 			withholdStage = "FST_PLACE";
 		}
 
+		//! Grown diagnostic experiment, second half: with the booking live,
+		//! drop dead heap (plan, records, retained bytes - all consumed) so
+		//! the least possible live storage can alias the destination, then
+		//! install NOW, pre-shutdown, while the card log can still name the
+		//! outcome. Post-shutdown InstallPendingFst only re-verifies (bytes
+		//! plus boot words, no copy): a mismatch there blinks code 4 and
+		//! separates loader-side corruption (caught) from game-startup
+		//! clearing (clean entry, later failure). In-place tables never take
+		//! this path: they install late as always. Skipped under
+		//! nofstinstall like every install.
+		if (g_launch.HaveStaged() && effPlace.ok && !effPlace.inPlace
+			&& !skipFstInstall)
+		{
+			activePlan = PatchPlan();
+			haveActivePlan = false;
+			modRecords.clear();
+			LogStep("installing the grown table early (experiment)");
+			const u32 addr = pendingPlace.fstAddr;
+			const u32 size = pendingFstSize;
+			bool earlyOk = false;
+			if (addr >= MEM1_BASE && addr < MEM1_END
+				&& size > 0 && size <= MEM1_END - addr
+				&& InstallFst(pendingPlace, pendingFst, size))
+			{
+				earlyOk = (memcmp((const void *) addr, pendingFst, size) == 0)
+					&& Crc32((const u8 *) addr, size) == pendingFstCrc
+					&& *(vu32 *) 0x80000038 == addr
+					&& *(vu32 *) 0x8000003C == size
+					&& *(vu32 *) 0x80000034 == pendingPlace.newArenaHi;
+			}
+			if (earlyOk)
+			{
+				earlyInstalled = true;
+				Addf(out, "\n  grown table installed early at %08x (%u bytes, verified incl. boot words)\n",
+					 addr, size);
+				out += "  Post-shutdown only re-verifies; a mismatch blinks instead of jumping.\n";
+			}
+			else
+			{
+				WithholdStaged(out, "EARLY_INSTALL",
+					"\n  Grown early install failed verification; withheld (code 8, stock boot, no blink).\n");
+			}
+		}
+
 		//! Machine-parseable outcome for the previous-boot check in the game
 		//! settings UI. The prose above carries the details; this line is the
-		//! part the UI can read without parsing prose.
+		//! part the UI can read without parsing prose. Exact checkpoints:
+		//! NO_FILE_WORK (nothing wanted), FST_STAGED (in-place table booked
+		//! pre-shutdown; the post-shutdown install and jump still pending),
+		//! FST_EARLY (grown diagnostic experiment: table installed AND
+		//! verified pre-shutdown; only the post-shutdown re-verify and the
+		//! jump pending). Neither staged code is an installation or
+		//! consumption proof - a later refusal returns to the loader (blink
+		//! code) instead of jumping, which is the observable separating them.
 		if (!fileWorkWanted)
 			out += "OUTCOME: NO_FILE_WORK\n";
+		else if (earlyInstalled)
+			out += "OUTCOME: FST_EARLY\n";
 		else if (fileWorkLive)
 			out += "OUTCOME: FST_STAGED\n";
 		else

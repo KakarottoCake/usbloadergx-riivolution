@@ -322,6 +322,9 @@ static void TestOutcome()
 	check(Riivo::ParseBootOutcome("OUTCOME: FILES_LIVE\n", live, code)
 		  && live && code == "FILES_LIVE",
 		  "old FILES_LIVE logs still parse live");
+	check(Riivo::ParseBootOutcome("OUTCOME: FST_EARLY\n", live, code)
+		  && live && code == "FST_EARLY",
+		  "FST_EARLY (grown experiment installed pre-shutdown) parses live");
 	check(Riivo::ParseBootOutcome("OUTCOME: WITHHELD READBACK\nOUTCOME: FST_STAGED\n",
 								  live, code) && live,
 		  "last OUTCOME line wins");
