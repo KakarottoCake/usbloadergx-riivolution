@@ -177,6 +177,34 @@ int main()
 	ck(used.size() == 4, "all 4 modded files were relocated");
 	ck(ok, "aligned and non-overlapping, clear of the disc data");
 
+	printf("5. staged tables pad to whole words\n");
+	{
+		// Boot-info words carry sizes word-shifted, so the staged size
+		// must round-trip through them exactly (see PadTableWords).
+		std::vector<u8> aligned(100, 0xA5);
+		FstBuilder::PadTableWords(aligned);
+		ck(aligned.size() == 100, "multiple-of-4 input unchanged");
+		for (size_t len = 101; len <= 103; ++len)
+		{
+			std::vector<u8> v(len, 0x5A);
+			FstBuilder::PadTableWords(v);
+			ck(v.size() == 104, "pads up to the next whole word");
+			bool prefix = true, zeros = true;
+			for (size_t i = 0; i < len; ++i)
+				if (v[i] != 0x5A) prefix = false;
+			for (size_t i = len; i < v.size(); ++i)
+				if (v[i] != 0) zeros = false;
+			ck(prefix, "content prefix preserved");
+			ck(zeros, "pad bytes are zero");
+			const size_t before = v.size();
+			FstBuilder::PadTableWords(v);
+			ck(v.size() == before, "idempotent once aligned");
+		}
+		std::vector<u8> empty;
+		FstBuilder::PadTableWords(empty);
+		ck(empty.empty(), "empty input stays empty");
+	}
+
 	printf("\n%d checks, %d failure(s)\n", checks, failures);
 	return failures ? 1 : 0;
 }
