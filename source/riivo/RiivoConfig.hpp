@@ -59,6 +59,13 @@ namespace Riivo
 	//! Read the machine-parseable outcome of a previous boot log. The running
 	//! boot appends one `OUTCOME:` line: `FST_STAGED`, `NO_FILE_WORK`, or
 	//! `WITHHELD <STAGE>` (`FILES_LIVE` from older builds reads as staged).
+	//! Exact checkpoint, not proof: FST_STAGED means a table was booked
+	//! pre-shutdown - in place at the apploader's address, or grown at the
+	//! apploader-reported base after passing the reported placement gates.
+	//! Post-shutdown install and jump still pending in both cases; a later
+	//! refusal returns to the loader (blink code) instead of jumping - that
+	//! observable, not this line, separates a handed-over boot from a
+	//! refused one.
 	//! The last such line wins; returns false when the
 	//! text holds none (a log from before outcome lines existed). `liveOut`
 	//! is true only for a staged table; `codeOut` is the token after the prefix
