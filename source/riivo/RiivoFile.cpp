@@ -308,8 +308,15 @@ namespace Riivo
 			const std::string &rel = extFiles[i]; // relative to extDir
 			const std::string external = JoinDisc(extDir, rel);
 
-			// Dataless folders name bare files; a child naming the executable
-			// routes to the DOL plan (Dolphin parity), never to an FST entry.
+			// Dataless folders name bare files. A nested child cannot name
+			// a table entry this way (reference parity: the reference turns
+			// folder children into bare filename patches, and a name with a
+			// slash matches no bare filename), so it is skipped rather than
+			// guessed at - on both phases alike, so early and late agree.
+			if (dataless && rel.find('/') != std::string::npos)
+				continue;
+			// A top-level child naming the executable routes to the DOL plan
+			// (Dolphin parity), never to an FST entry.
 			if (dataless && IsBootFileDisc(BaseFileName(rel)))
 			{
 				++dolRouted;
@@ -465,10 +472,18 @@ namespace Riivo
 				{
 					// Dataless children naming the executable serve through
 					// the boot view, never fragments (Dolphin parity).
-					if (dataless && IsBootFileDisc(BaseFileName(rel[j])))
+					// Nested dataless children match nothing on either phase
+					// (reference parity: a slashed name is never a bare
+					// filename), so they are skipped here exactly as late.
+					if (dataless)
 					{
-						++dolRouted;
-						continue;
+						if (IsBootFileDisc(BaseFileName(rel[j])))
+						{
+							++dolRouted;
+							continue;
+						}
+						if (rel[j].find('/') != std::string::npos)
+							continue;
 					}
 					ModCandidate c;
 					c.external = JoinDisc(extDir, rel[j]);
