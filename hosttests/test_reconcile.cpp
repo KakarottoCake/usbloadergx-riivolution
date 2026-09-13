@@ -330,6 +330,12 @@ static void TestOutcome()
 	check(Riivo::ParseBootOutcome("OUTCOME: NO_FILE_WORK\r\n", live, code)
 		  && !live && code == "NO_FILE_WORK",
 		  "CRLF tolerated, NO_FILE_WORK is not live");
+	check(Riivo::ParseBootOutcome("log tail\nOUTCOME: WITHHELD XML_REFUSED\n", live, code)
+		  && !live && code == "WITHHELD XML_REFUSED",
+		  "refused selection parses withheld, never live");
+	check(Riivo::ParseBootOutcome("OUTCOME: WITHHELD NO_EARLY_PLAN\n", live, code)
+		  && !live && code == "WITHHELD NO_EARLY_PLAN",
+		  "missing early plan parses withheld, never live");
 	check(Riivo::ParseBootOutcome("OUTCOME:\n", live, code) == false,
 		  "empty OUTCOME is not an outcome");
 }

@@ -258,6 +258,22 @@ int main() {
         l.Begin();
         ck(!l.fileWorkWanted && !l.fileWorkLive, "file-work flags do not survive Begin");
     }
+    // Early abort shape (NO_EARLY_PLAN / EARLY_LATE_DIFF): file work was
+    // wanted, but the pipeline returned before staging or booking
+    // anything. Such a boot cannot install, holds the memory set back,
+    // and hands nothing to the next boot: disagreement cannot launch.
+    {
+        LaunchState l;
+        l.Begin();
+        l.fileWorkWanted = true;
+        ck(!l.CanInstall(), "unstaged abort cannot install");
+        ck(!l.HaveStaged(), "unstaged abort staged nothing");
+        ck(l.FileWorkIncomplete(), "wanted-but-never-live holds memory back");
+        ck(l.stage == LaunchStage::None, "abort without booking stages no verdict");
+        u8 *f = l.Begin();
+        ck(f == 0, "abort hands back no staging buffer");
+        ck(!l.FileWorkIncomplete(), "next boot starts clean");
+    }
     printf("%d checks, %d failures\n", checks, failures);
     return failures ? 1 : 0;
 }

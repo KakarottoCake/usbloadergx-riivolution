@@ -591,6 +591,124 @@ int main()
 		ck(!NoteInFstRange(0x772400, 100, 0x772400, 0), "empty table range matches nothing");
 	}
 
+	printf("N. apploader-owned table skips the late copy\n");
+	{
+		// MEM1 holds exactly the staged bytes with matching boot words:
+		// the apploader loaded the final table itself, so the copy and
+		// the word rewrite would write identical values.
+		const u32 addr = 0x817E0000, size = 4096;
+		std::vector<u8> staged(size);
+		for (u32 i = 0; i < size; ++i)
+			staged[i] = (u8)(i * 31 + 7);
+		ck(ApploaderOwnsTable(&staged[0], &staged[0], size,
+							  addr, size, addr,
+							  addr, size, addr),
+		   "identical bytes and words are owned");
+		// One flipped byte anywhere refuses the fast path.
+		std::vector<u8> drifted = staged;
+		drifted[size - 1] ^= 0x01;
+		ck(!ApploaderOwnsTable(&drifted[0], &staged[0], size,
+							   addr, size, addr,
+							   addr, size, addr),
+		   "single-byte drift refuses");
+		std::vector<u8> drifted0 = staged;
+		drifted0[0] ^= 0x80;
+		ck(!ApploaderOwnsTable(&drifted0[0], &staged[0], size,
+							   addr, size, addr,
+							   addr, size, addr),
+		   "first-byte drift refuses");
+		// Each wrong word refuses, even with identical bytes.
+		ck(!ApploaderOwnsTable(&staged[0], &staged[0], size,
+							   addr + 32, size, addr,
+							   addr, size, addr),
+		   "moved base word refuses");
+		ck(!ApploaderOwnsTable(&staged[0], &staged[0], size,
+							   addr, size + 4, addr,
+							   addr, size, addr),
+		   "grown size word refuses (prefix, not the table)");
+		ck(!ApploaderOwnsTable(&staged[0], &staged[0], size,
+							   addr, size, addr + 4096,
+							   addr, size, addr),
+		   "moved arena word refuses");
+		// Degenerate inputs never claim ownership.
+		ck(!ApploaderOwnsTable(0, &staged[0], size,
+							   addr, size, addr,
+							   addr, size, addr),
+		   "null MEM refuses");
+		ck(!ApploaderOwnsTable(&staged[0], 0, size,
+							   addr, size, addr,
+							   addr, size, addr),
+		   "null staging refuses");
+		ck(!ApploaderOwnsTable(&staged[0], &staged[0], 0,
+							   addr, size, addr,
+							   addr, size, addr),
+		   "empty table refuses");
+	}
+
+	printf("O. grown tables are apploader-owned or nothing\n");
+	{
+		// The apploader published this placement itself and loaded the
+		// staged bytes there; its heap sits below the span, so its
+		// arena-high is preservable: verify, never rewrite.
+		const u32 addr = 0x817B2DE0, size = 153934;
+		std::vector<u8> staged(size);
+		for (u32 i = 0; i < size; ++i)
+			staged[i] = (u8)(i * 13 + 5);
+		ck(ApploaderGrownTableOk(&staged[0], &staged[0], size,
+								 addr, size, 0x80004000, addr,
+								 addr),
+		   "owned grown table verifies (heap below)");
+		// Heap entirely above the span is equally disjoint.
+		ck(ApploaderGrownTableOk(&staged[0], &staged[0], size,
+								 addr, size, addr + size, addr + size + 0x100000,
+								 addr),
+		   "heap-above table verifies");
+		// Anything else refuses the launch instead of repairing it.
+		std::vector<u8> drifted = staged;
+		drifted[size / 2] ^= 0x01;
+		ck(!ApploaderGrownTableOk(&drifted[0], &staged[0], size,
+								  addr, size, 0x80004000, addr,
+								  addr),
+		   "grown byte drift refuses (code 4 leg)");
+		ck(!ApploaderGrownTableOk(&staged[0], &staged[0], size,
+								  addr + 32, size, 0x80004000, addr,
+								  addr),
+		   "moved grown base refuses (code 5 leg)");
+		ck(!ApploaderGrownTableOk(&staged[0], &staged[0], size,
+								  addr, size - 4, 0x80004000, addr,
+								  addr),
+		   "grown prefix refuses (code 5 leg)");
+		// Heap overlapping the span refuses even with perfect bytes:
+		// preserving that arena-high would let the game allocate over
+		// its own table.
+		ck(!ApploaderGrownTableOk(&staged[0], &staged[0], size,
+								  addr, size, 0x80004000, addr + 0x1000,
+								  addr),
+		   "overlapping heap refuses (code 5 leg)");
+		ck(!ApploaderGrownTableOk(&staged[0], &staged[0], size,
+								  addr, size, addr + size - 8, addr + size + 0x1000,
+								  addr),
+		   "straddling heap top refuses");
+		// Unknown heap floor with the top above the table cannot prove
+		// disjointness: refuse rather than guess.
+		ck(!ApploaderGrownTableOk(&staged[0], &staged[0], size,
+								  addr, size, 0, addr + 0x1000,
+								  addr),
+		   "blind overlapping heap refuses");
+		ck(!ApploaderGrownTableOk(0, &staged[0], size,
+								  addr, size, 0x80004000, addr,
+								  addr),
+		   "null MEM refuses");
+		ck(!ApploaderGrownTableOk(&staged[0], 0, size,
+								  addr, size, 0x80004000, addr,
+								  addr),
+		   "null staging refuses");
+		ck(!ApploaderGrownTableOk(&staged[0], &staged[0], 0,
+								  addr, size, 0x80004000, addr,
+								  addr),
+		   "empty grown table refuses");
+	}
+
 	printf("\n%d checks, %d failure(s)\n", checks, failures);
 	return failures ? 1 : 0;
 }

@@ -294,14 +294,16 @@ namespace Riivo
 		SpanSeg() : outOff(0), len(0), fromFile(false), fileOff(0) {}
 	};
 
-	//! Lay enumerated candidates onto the synthetic region: the deterministic
-	//! cursor walk shared by the early fragment registration (SetupDisc, no
-	//! FST) and, through ResolveLateOffsets, the late table build. Empty
-	//! files share the cursor without advancing it (a zero-length read never
-	//! touches the address); every other file advances past its stat size at
-	//! sector alignment. Returns the end cursor (region end). Pure and total:
-	//! no console, no failure mode, so the production call site and host
-	//! tests run this exact code.
+	//! Lay plan-derived candidates onto the synthetic region: the
+	//! deterministic cursor walk behind the early fragment registration.
+	//! Input comes from the retained plan's composed finals (stable disc
+	//! order), keyed by plan disc key, so the late table build consumes
+	//! the resulting map directly with no remapping step. Empty files
+	//! share the cursor without advancing it (a zero-length read never
+	//! touches the address); every other file advances past its size at
+	//! sector alignment. Returns the end cursor (region end). Pure and
+	//! total: no console, no failure mode, so the production call site
+	//! and host tests run this exact code.
 	inline u64 AssignModOffsets(const std::vector<ModCandidate> &cand,
 								u64 regionStart, u32 align,
 								std::map<std::string, u64> &offsets,

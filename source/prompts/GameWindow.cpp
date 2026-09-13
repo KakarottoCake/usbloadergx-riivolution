@@ -873,6 +873,15 @@ static std::string RiivoPreviousOutcome(const char *riivoPath, const char *gameI
 	if (code.compare(0, 8, "WITHHELD") != 0)
 		return std::string();
 	char msg[576];
+	//! A refused selection booted stock with nothing resolved: say so
+	//! plainly, or the quiet stock boot reads as a silently ignored mod.
+	if (code == "WITHHELD XML_REFUSED")
+	{
+		snprintf(msg, sizeof(msg),
+				 "The selected mod was refused: its XML targets a different game, disc, or revision, so the game booted stock. See %s for details.",
+				 logPath.c_str());
+		return msg;
+	}
 	snprintf(msg, sizeof(msg),
 			 "The last boot withheld file replacement (%s). See %s for details.",
 			 code.c_str(), logPath.c_str());

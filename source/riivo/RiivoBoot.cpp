@@ -42,6 +42,8 @@
 #include "RiivoDiPatch.hpp"
 #include "RiivoFragPlan.hpp"
 #include "RiivoFragBuild.hpp"
+#include "RiivoEarlyFst.hpp"
+#include "libs/libwbfs/wiidisc.h"
 #include "usbloader/frag.h"
 #include "usbloader/wbfs.h"
 #include "patches/gamepatches.h"
@@ -594,6 +596,61 @@ namespace Riivo
 	static u64 trackFstOff = 0;
 	static u32 trackFstSize = 0;
 
+	//! Early software-reader FST identity (general pipeline): what
+	//! WBFS_OpenDisc -> wd_open_disc -> wd_extract_file("FST") saw before
+	//! fragment registration, while the drives were still mounted. Compared
+	//! against the cIOS-read table in PrepareFileRedirects. Compared, not
+	//! replaced: on agreement both phases consume the retained plan below;
+	//! on disagreement file work aborts coherently. Cleared per boot.
+	static EarlyFstIdentity earlyFst;
+	//! The retained early table itself: parsed software-reader bytes the
+	//! authoritative plan was built from. Only the parsed form is kept
+	//! (paths, offsets, lengths); the raw bytes are freed after the
+	//! digest above is taken.
+	static Fst earlyFstObj;
+	static bool haveEarlyFst;
+	//! DOL image span the early plan composed against (from the
+	//! software-extracted main.dol header), and whether any enabled patch
+	//! routes to the executable at all. The late phase re-derives the span
+	//! from the cIOS header read and requires equality when wanted.
+	static u64 earlyDolSize;
+	static bool earlyWantDol;
+	//! Why the early phase refused before registering anything (plan
+	//! failure, unreadable table, ...). Survives into the late phase so
+	//! the report names the refusal instead of running an empty plan
+	//! through the pipeline. Empty means the early phase did not refuse.
+	static std::string earlyRefusal;
+	//! Why BootGame refused the saved selection outright (XML targets
+	//! another game/disc/revision). Set via NoteSelectionRefusal while the
+	//! card is mounted; reported persistently in ReportFstPlacement.
+	static std::string xmlRefusal;
+
+	//! Record that the saved Riivolution selection was refused before any
+	//! boot work (XML targets another game, disc, or revision). The
+	//! resolved set stays empty, so no file, memory, or save work can be
+	//! active; this only names the reason for the log and the next launch.
+	void NoteSelectionRefusal(const std::string &reason)
+	{
+		xmlRefusal = reason;
+	}
+
+	//! Withdraw the published early plan after a placement/registration
+	//! failure: the late phase must not consume a plan whose offsets were
+	//! taken back. Records why for the late report; the fragment-list
+	//! bookkeeping itself is the caller's (RestoreFragList etc.).
+	static void DropEarlyPlan(const std::string &why)
+	{
+		activePlan = PatchPlan();
+		haveActivePlan = false;
+		stagedDol = PlannedFile();
+		haveStagedDol = false;
+		stagedDolBase = 0;
+		modOffsets.clear();
+		modRecords.clear();
+		modRegionStart = modRegionEnd = 0;
+		earlyRefusal = why;
+	}
+
 	//! The USB port the backup is on, so the mod can be checked against it.
 	static int bootUsbPort = 0;
 
@@ -912,6 +969,13 @@ namespace Riivo
 		bootDiscRevision = 0xff;
 		trackFstOff = 0;
 		trackFstSize = 0;
+		earlyFst = EarlyFstIdentity();
+		earlyFstObj = Fst();
+		haveEarlyFst = false;
+		earlyDolSize = 0;
+		earlyWantDol = false;
+		earlyRefusal.clear();
+		xmlRefusal.clear();
 		memset(bootGameId, 0, sizeof(bootGameId));
 		ClearDirListCache();
 		ClearFileSizeCache();
@@ -2221,6 +2285,17 @@ namespace Riivo
 		return true;
 	}
 
+	//! FileSizeProvider over the boot's stat cache, shared by the early
+	//! plan build (pre-registration) and any later consumer: one stat per
+	//! file per boot, then cache hits.
+	struct BootSizes : public FileSizeProvider
+	{
+		virtual bool GetSize(const std::string &external, u32 *outSize)
+		{
+			return ExternalFileSize(external, outSize);
+		}
+	};
+
 	void PrepareFileRedirects()
 	{
 		if (!bootSet)
@@ -2244,6 +2319,46 @@ namespace Riivo
 			   "switched on at the end of this section; if any one fails, nothing is\n"
 			   "applied and the game boots untouched.\n\n";
 
+		//! No authoritative plan: the early phase refused before registering
+		//! anything (no access, unmapped drive, unreadable table,
+		//! unplannable mod), so the late pipeline has nothing to build
+		//! from and stops here. Nothing is staged, nothing installs, and
+		//! the interlock above holds the memory patches back with the
+		//! files. The reason travels in earlyRefusal (plan-stage refusals)
+		//! or fragRefusal (pre-plan refusals).
+		if (!haveActivePlan)
+		{
+			out += "No early plan exists for this boot: file work stops here.\n";
+			if (!earlyRefusal.empty())
+				Addf(out, "  reason: %s\n", earlyRefusal.c_str());
+			else if (!fragRefusal.empty())
+				Addf(out, "  reason: %s\n", fragRefusal.c_str());
+			out += "The game boots unmodified; its memory patches are held back with the files.\n";
+			withholdStage = "NO_EARLY_PLAN";
+			AppendLog(out);
+			//! Control flow past this return: the boot CONTINUES into the
+			//! game, stock-equivalent - it does not return to the loader.
+			//! The apploader still runs, BootPartition still returns its
+			//! entry, and the jump still happens; loader-return happens
+			//! only on apploader failure, GrownBlocked, or a refused
+			//! post-shutdown install (blink codes, GameBooter). Continuing
+			//! is safe - not silent - because every mod-activation step is
+			//! still ahead and all refuse on this state: nothing is staged
+			//! or booked (g_launch.Stage/Book never ran, so
+			//! InstallPendingFst no-ops and fileWorkLive stays false,
+			//! holding the memory set back); the boot view is never armed
+			//! (ArmBootView runs only inside Activate, unreachable past
+			//! here, and DeactivateBootView runs post-apploader anyway);
+			//! no redirect state exists yet to go stale. The registered
+			//! fragments and the cIOS hook stay, but with the stock table
+			//! nothing references the mod region - which clears the game
+			//! data end by construction - so the hook never fires: the
+			//! same dormant-hook stock boot as every other withhold path.
+			//! Restoring the fragment list instead is impossible
+			//! post-registration (late re-register returns -128).
+			return;
+		}
+
 		u8 *fstData = 0;
 		u32 fstSize = 0, fstOffset = 0, dolOffset = 0, fstReserve = 0;
 		std::string err;
@@ -2260,6 +2375,43 @@ namespace Riivo
 		Addf(out, "disc FST : offset 0x%08x, %u bytes, %s, %u file(s)\n",
 			 fstOffset, fstSize, parsed ? "parsed OK" : "PARSE FAILED",
 			 (unsigned) fst.FileCount());
+
+		//! Early/late consistency (general pipeline): the cIOS read must be
+		//! the same table the retained plan was built from - size, parsed
+		//! file count, and digest all agree, or file work aborts coherently
+		//! here. The table is never rebuilt from this second source while
+		//! fragments planned from the first stay registered: withheld
+		//! fragments stay dormant (stock table, memory held back), exactly
+		//! like every other withhold.
+		if (parsed)
+		{
+			const u32 lateDigest = FstDigest(fstData, fstSize);
+			if (EarlyPlanUsable(haveActivePlan, earlyFst, fstSize,
+								(unsigned) fst.FileCount(), lateDigest))
+				Addf(out, "early FST : agrees (%u bytes, %u file(s), digest %08x) - one plan, both phases\n",
+					 fstSize, (unsigned) fst.FileCount(), lateDigest);
+			else
+			{
+				Addf(out, "early FST : DIFFERS (early %u bytes/%u files/%08x, late %u bytes/%u files/%08x); aborting file work, no source switch\n",
+					 earlyFst.size, earlyFst.files, earlyFst.digest,
+					 fstSize, (unsigned) fst.FileCount(), lateDigest);
+				out += "The game boots unmodified; its memory patches are held back with the files.\n";
+				withholdStage = "EARLY_LATE_DIFF";
+				AppendLog(out);
+				free(fstData);
+				//! Same control-flow contract as the NO_EARLY_PLAN exit
+				//! above: the boot continues stock-equivalent (apploader
+				//! runs, entry returned, jump happens), loader-return only
+				//! via apploader failure / GrownBlocked / refused install.
+				//! Nothing is staged or booked past here, the boot view is
+				//! never armed (Activate unreachable; DeactivateBootView
+				//! still runs post-apploader), and no redirect state was
+				//! built yet to go stale - so disagreement cannot launch
+				//! with stale redirects or an armed overlay. The hook stays
+				//! dormant under the stock table, as on every withhold.
+				return;
+			}
+		}
 
 		if (!parsed)
 		{
@@ -2291,155 +2443,55 @@ namespace Riivo
 		LogStep("matched: %u replacement(s), %u addition(s)",
 				(unsigned) redirects.size(), (unsigned) created.size());
 
-		//! Coherent plan (general pipeline): compose the same inputs into
-		//! PlannedFiles with Dolphin-compatible segment semantics. FST sizes
-		//! below derive from the plan's finalSize, not whole external sizes,
-		//! so offset/fileoffset/length/resize reach the live rebuild path.
-		//! Partial-segment non-DOL files refuse explicitly here (named
-		//! limitation: the fragment runtime serves whole files only); the
-		//! executable composes against the DOL image for boot-view serving
-		//! (size-preserving by rule, verified below). Never silently apply
-		//! whole-file bytes for a sub-range patch.
+		//! The ONE plan, built pre-registration from the retained table and
+		//! verified above against this read: consumed here, never rebuilt.
+		//! DOL image span re-derived from the section table above; when the
+		//! retained plan serves the executable the spans must be equal.
+		u64 dolSize = 0;
+		if (dolSectionCount > 0)
 		{
-			struct BootSizes : public FileSizeProvider
+			u32 offs[18], lens[18];
+			for (u32 i = 0; i < 18; ++i)
 			{
-				virtual bool GetSize(const std::string &external, u32 *outSize)
-				{
-					return ExternalFileSize(external, outSize);
-				}
-			} bootSizes;
-			// DOL image span from the section table read above (DOL-relative
-			// file offsets; the served image preserves this size exactly).
-			// Zero when the header was unreadable: DOL entries then refuse
-			// explicitly instead of composing against a guessed extent.
-			u64 dolSize = 0;
-			if (dolSectionCount > 0)
-			{
-				u32 offs[18], lens[18];
-				for (u32 i = 0; i < 18; ++i)
-				{
-					offs[i] = dolSections[i].fileOff;
-					lens[i] = dolSections[i].size;
-				}
-				dolSize = DolImageSize(offs, lens, 18);
+				offs[i] = dolSections[i].fileOff;
+				lens[i] = dolSections[i].size;
 			}
-			PatchPlan plan;
-			PlannedFile dolPlan;
-			std::string planWhy;
-			if (!BuildPatchPlan(fst, *bootSet, bootDevice, &lister,
-								&bootSizes, plan, planWhy,
-								dolSize, &dolPlan))
-			{
-				Addf(out, "plan FAILED: %s\n", planWhy.c_str());
-				Addf(out, "\nNothing is applied for an unplannable mod. The game boots unmodified.\n");
-				AppendLog(out);
-				return;
-			}
-			if (!plan.errors.empty())
-			{
-				Addf(out, "unsupported enabled file operation(s) - refusing file work:\n");
-				for (size_t i = 0; i < plan.errors.size() && i < 8; ++i)
-					Addf(out, "  %s\n", plan.errors[i].c_str());
-				if (plan.errors.size() > 8)
-					Addf(out, "  ... and %u more\n",
-						 (unsigned)(plan.errors.size() - 8));
-				Addf(out, "\nNever silently apply a different operation. The game boots unmodified;\n"
-						  "memory patches are held back via the file-work gate.\n");
-				AppendLog(out);
-				return;
-			}
-			if (plan.hasPartial)
-			{
-				Addf(out, "partial file replacement (offset/fileoffset/length/resize sub-ranges)\n"
-						  "detected: the fragment runtime serves whole files only.\n");
-				Addf(out, "Composed sizes would be:");
-				for (size_t i = 0; i < plan.files.size() && i < 8; ++i)
-				{
-					if (!plan.files[i].wholeFile)
-						Addf(out, " %s=%u", plan.files[i].disc.c_str(),
-							 plan.files[i].finalSize);
-				}
-				Addf(out, "\nRefusing file work until the segment runtime lands;\n"
-						  "the game boots unmodified (named limitation, not silent whole-file).\n");
-				AppendLog(out);
-				return;
-			}
-			// Persist for the late phases (single authoritative plan: FST
-			// sizes, offset remap, manifest emission, boot-view arming).
-			// Small: paths, sizes and file segments only, never payloads;
-			// cleared per boot in BeginLaunch.
-			activePlan = plan;
-			haveActivePlan = true;
-			// Stat/compose agreement: every whole-file final must equal the
-			// size the early enumeration stated for the same pre-FST key
-			// (same card, same boot, shared size cache). A mismatch means
-			// the card changed between phases or the composer drifted from
-			// the enumerator - refuse explicitly, never size either side.
-			{
-				std::map<std::string, u32> earlySize;
-				for (size_t i = 0; i < modRecords.size(); ++i)
-					earlySize[modRecords[i].disc] = modRecords[i].length;
-				std::string drift;
-				u32 drifted = 0;
-				for (size_t i = 0; i < plan.files.size(); ++i)
-				{
-					const PlannedFile &f = plan.files[i];
-					if (!f.wholeFile || f.finalSize == 0)
-						continue;
-					std::map<std::string, u32>::const_iterator it =
-						earlySize.find(f.earlyKey);
-					if (it == earlySize.end() || it->second != f.finalSize)
-					{
-						++drifted;
-						if (drifted <= 8)
-						{
-							char b[192];
-							snprintf(b, sizeof(b), " %s(plan %u, early %s)",
-								f.disc.c_str(), f.finalSize,
-								it == earlySize.end() ? "absent"
-								: "different");
-							drift += b;
-						}
-					}
-				}
-				if (drifted > 0)
-				{
-					Addf(out, "stat/compose disagreement on %u file(s):%s\n",
-						 drifted, drift.c_str());
-					if (drifted > 8)
-						Addf(out, "  ... and %u more\n", drifted - 8);
-					out += "  The early and late phases disagree about file sizes;\n"
-						   "  building the table from either would mis-size reads.\n"
-						   "  Withheld.\n";
-					withholdStage = "SIZE_DRIFT";
-					AppendLog(out);
-					return;
-				}
-			}
-			// Externals missing at composition time, filed for the skip audit
-			// under the plan's (pre-FST) disc keys - the same identity the
-			// early registration records carry.
-			for (size_t i = 0; i < plan.missingExternals.size(); ++i)
-			{
-				const std::string &key = plan.missingExternals[i].disc;
-				if (!key.empty()
-					&& modAddFails.find(key) == modAddFails.end())
-					modAddFails[key] = SKIP_STAT_FAILED;
-			}
-			if (dolPlan.bootFile)
-			{
-				dolPlan.dolBase = dolImageBase;
-				stagedDol = dolPlan;
-				stagedDolBase = dolImageBase;
-				haveStagedDol = true;
-				Addf(out, "executable : %u composed byte(s), image size %llu, %u segment(s)\n",
-					 dolPlan.finalSize, (unsigned long long)dolSize,
-					 (unsigned)dolPlan.segs.size());
-			}
-			// Whole-file plan agrees with redirects; FST sizes below use the
-			// plan's finalSize (equal to external sizes here) as the single
-			// authoritative source going forward.
+			dolSize = DolImageSize(offs, lens, 18);
 		}
+		if (haveStagedDol)
+		{
+			if (dolSize == 0 || dolSize != earlyDolSize)
+			{
+				Addf(out, "executable span DIFFERS (early %llu, late %llu); aborting file work, no source switch\n",
+					 (unsigned long long) earlyDolSize,
+					 (unsigned long long) dolSize);
+				out += "The game boots unmodified; its memory patches are held back with the files.\n";
+				withholdStage = "EARLY_LATE_DIFF";
+				AppendLog(out);
+				free(fstData);
+				//! Same control-flow contract as the exits above: stock-
+				//! equivalent boot continues; nothing staged, booked, or
+				//! armed past here, so no stale-redirect or armed-overlay
+				//! launch is possible.
+				return;
+			}
+			stagedDol.dolBase = dolImageBase;
+			stagedDolBase = dolImageBase;
+			Addf(out, "executable : %u composed byte(s), image size %llu, %u segment(s)\n",
+				 stagedDol.finalSize, (unsigned long long)dolSize,
+				 (unsigned)stagedDol.segs.size());
+		}
+		// Externals missing at composition time, filed for the skip audit
+		// under the plan's disc keys.
+		for (size_t i = 0; i < activePlan.missingExternals.size(); ++i)
+		{
+			const std::string &key = activePlan.missingExternals[i].disc;
+			if (!key.empty()
+				&& modAddFails.find(key) == modAddFails.end())
+				modAddFails[key] = SKIP_STAT_FAILED;
+		}
+		// FST sizes below use the retained plan's finalSize as the single
+		// authoritative source going forward.
 
 		//! Size accounting. A replacement bigger than the file it stands in for
 		//! cannot be served by redirection alone: the file table still advertises
@@ -2765,33 +2817,18 @@ namespace Riivo
 		//! working pre-partition order is kept until a hardware capture
 		//! names the actual refusal (see the sourced d2x gate note at
 		//! Activate: stealth_mode AND running_title, never armed here).
-		//! The late keys (post-FST routing) meet
-		//! the early offsets through each file's pre-FST earlyKey, so
-		//! basename-routed files land on registered fragments instead of
-		//! withholding the whole table. LayoutFrom then counts builder
-		//! entries the resolved map cannot serve - the single gate below.
-		//! Layout() is only used when nothing was placed, so the report
-		//! still shows what would have happened.
+		//! The map is keyed by plan disc key on both sides - placement was
+		//! derived from the retained plan itself - so it applies directly
+		//! with no remapping step. LayoutFrom counts builder entries the
+		//! map cannot serve: the single gate below. Layout() is only used
+		//! when nothing was placed, so the report still shows what would
+		//! have happened.
 		u32 unplaced = 0;
-		u32 remapped = 0;
-		std::map<std::string, u64> lateOffsets;
 		if (!modOffsets.empty())
-		{
-			u32 resolveUnplaced = 0;
-			ResolveLateOffsets(activePlan, modOffsets, lateOffsets,
-							   resolveUnplaced, remapped);
-			unplaced = builder.LayoutFrom(lateOffsets);
-			// Both counters must agree: the resolver sees plan files, the
-			// builder sees table entries. A file the resolver cannot serve
-			// but the builder does not contain is an internal inconsistency,
-			// refused the same way.
-			if (resolveUnplaced > unplaced)
-				unplaced = resolveUnplaced;
-		}
+			unplaced = builder.LayoutFrom(modOffsets);
 		else
 			builder.Layout(region, layoutAlign);
-		LogStep("early placement applied: %u without, %u remapped by name",
-				unplaced, remapped);
+		LogStep("early placement applied: %u without", unplaced);
 
 		std::vector<u8> newFst;
 		builder.Serialize(newFst, true);
@@ -2805,10 +2842,11 @@ namespace Riivo
 		vreq.builder = &builder;
 		vreq.fst = &fst;
 		vreq.plainFst = &newFst;
-		// Late keys (post-FST routing), matching expectedModSizes and the
-		// redirect/created lists below. Passing the early map here would
-		// fail basename-routed files against their own placements.
-		vreq.modOffsets = &lateOffsets;
+		// Plan disc keys throughout: the retained plan's entries, the
+		// registration map above, and the redirect/created lists below
+		// all name the same keys, so validation looks each expectation
+		// up directly.
+		vreq.modOffsets = &modOffsets;
 		vreq.expectedModSizes = &expectedModSizes;
 		vreq.fstReserve = fstReserve;
 		vreq.region = region;
@@ -3394,6 +3432,75 @@ namespace Riivo
 			gprintf("Riivo: late FST install REFUSED - staged table failed its checksum before copying\n");
 			return false;
 		}
+		//! Two explicitly separated legs. Grown tables are apploader-owned
+		//! or nothing: verified below, or the launch is refused - a grown
+		//! mismatch is never repaired by copying a table over the game and
+		//! rewriting boot words the game is already using. In-place keeps
+		//! its legacy copy for compacted tables (stock bytes under a stock
+		//! header) plus the verified fast path for apploader-owned
+		//! same-size tables.
+		if (!pendingPlace.inPlace)
+		{
+			const u32 memPtr = *(vu32 *) 0x80000038;
+			const u32 memMax = *(vu32 *) 0x8000003C;
+			const u32 memArenaHi = *(vu32 *) 0x80000034;
+			const u32 memArenaLo = *(vu32 *) 0x80000030;
+			if (!ApploaderGrownTableOk((const u8 *) addr, pendingFst, size,
+									   memPtr, memMax, memArenaLo, memArenaHi,
+									   addr))
+			{
+				//! Bytes vs words distinguished for the blink code, as in
+				//! the legacy leg: 4 installed bytes, 5 pointers/arena.
+				installFailCode = (memcmp((const void *) addr, pendingFst, size) == 0) ? 5 : 4;
+				g_launch.Refuse(installFailCode);
+				gprintf("Riivo: grown table NOT apploader-owned (ptr %08x max %u arena [%08x,%08x), want base %08x %u bytes); refusing the launch, no repair\n",
+						memPtr, memMax, memArenaLo, memArenaHi,
+						addr, (unsigned) size);
+				return false;
+			}
+			DCFlushRange((void *) addr, size);
+			g_launch.Consume();
+			MEM2_free(pendingFst);
+			g_launch.ReleaseStaging();
+			installFailCode = 0;
+			gprintf("Riivo: grown table apploader-owned at %08x (%u bytes, arena [%08x,%08x) preserved); verified, no rewrite\n",
+					addr, (unsigned) size, memArenaLo, memArenaHi);
+			gprintf("Riivo: post-verify SP %08x, break %08x\n",
+					(unsigned) ReadStackPointer(), (unsigned) (uintptr_t) sbrk(0));
+			return true;
+		}
+		//! In-place leg below: the verified fast path first (identical
+		//! bytes and words, no rewrite), then the legacy copy for
+		//! compacted tables. Grown tables never reach here.
+		//! Apploader ownership: the boot view served the staged table at
+		//! the disc FST range, so for same-size in-place tables (and grown
+		//! tables under a grown header) the apploader already loaded these
+		//! exact bytes and published these exact words. Verified identical
+		//! here, the copy and the boot-word rewrite are skipped: identical
+		//! post-conditions (bytes, words, flushed cache), no redundant
+		//! writes into the running game's memory. A compacted table
+		//! legitimately differs (stock bytes under a stock header) and
+		//! takes the copy path below, unchanged.
+		{
+			const u32 memPtr = *(vu32 *) 0x80000038;
+			const u32 memMax = *(vu32 *) 0x8000003C;
+			const u32 memArena = *(vu32 *) 0x80000034;
+			if (ApploaderOwnsTable((const u8 *) addr, pendingFst, size,
+								   memPtr, memMax, memArena,
+								   addr, size, pendingPlace.newArenaHi))
+			{
+				DCFlushRange((void *) addr, size);
+				g_launch.Consume();
+				MEM2_free(pendingFst);
+				g_launch.ReleaseStaging();
+				installFailCode = 0;
+				gprintf("Riivo: table already owned by apploader at %08x (%u bytes, words match); verified, no rewrite\n",
+						addr, (unsigned) size);
+				gprintf("Riivo: post-verify SP %08x, break %08x\n",
+						(unsigned) ReadStackPointer(), (unsigned) (uintptr_t) sbrk(0));
+				return true;
+			}
+		}
 		const bool ok = InstallFst(pendingPlace, pendingFst, pendingFstSize);
 		if (!ok)
 			g_launch.Refuse(3);
@@ -3470,6 +3577,130 @@ namespace Riivo
 	{
 		if (what)
 			LogStep("%s", what);
+	}
+
+	//! Early table preparation (general pipeline): read and retain the
+	//! game's file table through the loader's own WBFS stack - the exact
+	//! DiscBrowser/SavePath pattern (WBFS_OpenDisc, wd_open_disc with
+	//! wbfs_disc_read, wd_extract_file on ONLY_GAME_PARTITION, then
+	//! close/free in reverse) - which reaches every WBFS backend
+	//! (WBFS/FAT/NTFS/EXT) through the same WBFS_OpenDisc entry, before
+	//! fragment registration, while the drives are still mounted. Using
+	//! the same entry point supports backend reuse; it does not prove
+	//! every backend works - the late comparison names the outcome.
+	//!
+	//! Retains the parsed table (earlyFstObj) plus its identity (earlyFst)
+	//! for the authoritative plan build that follows in PrepareFragList,
+	//! and the DOL image span (earlyDolSize) when an enabled patch routes
+	//! to the executable. Only the parsed form and the digest are kept;
+	//! the raw bytes are freed here. Every failure path closes what it
+	//! opened and frees what it extracted, and leaves haveEarlyFst false,
+	//! which the caller turns into a clean pre-registration refusal.
+	static void PrepareEarlyFst()
+	{
+		earlyFst = EarlyFstIdentity();
+		earlyFstObj = Fst();
+		haveEarlyFst = false;
+		earlyDolSize = 0;
+		earlyWantDol = false;
+		if (!bootSet)
+			return;
+		if (bootGameId[0] == 0)
+		{
+			LogStep("early FST: no game id, skipping software read");
+			return;
+		}
+		//! The executable composes against the DOL image span. A bare
+		//! "main.dol" <file> rule, or a dataless <folder> that may hold
+		//! one (nested dataless children match nothing on either phase),
+		//! needs the span; anything else skips the extra extract.
+		for (size_t i = 0; i < bootSet->files.size() && !earlyWantDol; ++i)
+			earlyWantDol = IsBootFileDisc(bootSet->files[i].disc);
+		for (size_t i = 0; i < bootSet->folders.size() && !earlyWantDol; ++i)
+			earlyWantDol = bootSet->folders[i].disc.empty();
+		LogStep("reading the file table through the software reader (early plan source)");
+		wbfs_disc_t *disc = WBFS_OpenDisc(bootGameId);
+		if (!disc)
+		{
+			gprintf("Riivo: early FST: WBFS_OpenDisc failed\n");
+			LogStep("early FST: backup open failed (backend error)");
+			return;
+		}
+		wiidisc_t *wdisc = wd_open_disc((s32(*)(void *, u32, u32, void *)) wbfs_disc_read, disc);
+		if (!wdisc)
+		{
+			gprintf("Riivo: early FST: wd_open_disc failed\n");
+			WBFS_CloseDisc(disc);
+			LogStep("early FST: disc open failed (backend error)");
+			return;
+		}
+		u8 *fstBytes = wd_extract_file(wdisc, ONLY_GAME_PARTITION, (char *) "FST");
+		const int fstLen = wdisc->extracted_size;
+		if (!fstBytes || fstLen <= 0)
+		{
+			gprintf("Riivo: early FST: extract failed (no game partition or bad length %d)\n",
+					fstLen);
+			wd_close_disc(wdisc);
+			WBFS_CloseDisc(disc);
+			LogStep("early FST: extract failed (partition selection or length)");
+			return;
+		}
+		Fst fst;
+		const bool parsed = fst.Parse(fstBytes, (u32) fstLen, true);
+		if (parsed)
+		{
+			earlyFst.size = (u32) fstLen;
+			earlyFst.files = (u32) fst.FileCount();
+			earlyFst.digest = FstDigest(fstBytes, (u32) fstLen);
+			earlyFst.valid = true;
+			earlyFstObj = fst;
+			haveEarlyFst = true;
+		}
+		gprintf("Riivo: early FST: %d bytes, %s, %u file(s), digest %08x\n",
+				fstLen, parsed ? "parsed OK" : "PARSE FAILED",
+				parsed ? (unsigned) fst.FileCount() : 0,
+				parsed ? earlyFst.digest : 0);
+		LogStep("early FST: %d bytes, %s, %u file(s)",
+				fstLen, parsed ? "parsed OK" : "PARSE FAILED",
+				parsed ? (unsigned) fst.FileCount() : 0);
+		free(fstBytes);
+		if (!parsed)
+		{
+			wd_close_disc(wdisc);
+			WBFS_CloseDisc(disc);
+			return;
+		}
+		//! DOL image span from the software-extracted executable header
+		//! (same bytes the cIOS header read sees: the file starts with
+		//! the 0x100-byte section table). The late phase re-derives the
+		//! span and requires equality when wanted.
+		if (earlyWantDol)
+		{
+			u8 *dolBytes = wd_extract_file(wdisc, ONLY_GAME_PARTITION,
+										   (char *) "main.dol");
+			const int dolLen = wdisc->extracted_size;
+			if (dolBytes && dolLen >= 0x100)
+			{
+				u32 offs[18], lens[18];
+				for (u32 i = 0; i < 18; ++i)
+				{
+					offs[i] = be32(dolBytes + 4 * i);
+					lens[i] = be32(dolBytes + 0x90 + 4 * i);
+				}
+				earlyDolSize = DolImageSize(offs, lens, 18);
+			}
+			else
+				gprintf("Riivo: early DOL: extract failed or short (%d)\n",
+						dolBytes ? dolLen : -1);
+			if (dolBytes)
+				free(dolBytes);
+			gprintf("Riivo: early DOL: image span %llu\n",
+					(unsigned long long) earlyDolSize);
+			LogStep("early DOL: image span %llu",
+					(unsigned long long) earlyDolSize);
+		}
+		wd_close_disc(wdisc);
+		WBFS_CloseDisc(disc);
 	}
 
 	void PrepareFragList()
@@ -3599,8 +3830,20 @@ namespace Riivo
 		//! returned -128 all the same, from an unsourced cause, so the
 		//! extended list is handed over before partition-open, in the same
 		//! call the loader already makes. The file table cannot be read
-		//! until afterwards, so the table is made to agree with this
-		//! placement rather than the other way round.
+		//! through the cIOS until afterwards - but the software reader CAN
+		//! see it now, while the drives are still mounted - so the ONE
+		//! patch plan is built here from the retained table, and both the
+		//! placement below and the late table build consume it. No
+		//! rebuild, no offset remapping.
+		PrepareEarlyFst();
+		if (!haveEarlyFst)
+		{
+			earlyRefusal = "the file table could not be read before registration";
+			fragRefusal = earlyRefusal;
+			fragListUntouched = true;
+			gprintf("Riivo: no early table, list left alone\n");
+			return;
+		}
 		std::vector<ModCandidate> cand;
 		//! Reads every directory the mod's rules name. On a total conversion
 		//! that is thousands of entries off FAT, and it is the slowest thing
@@ -3632,7 +3875,88 @@ namespace Riivo
 			fragRefusal = "reading the mod took longer than the time budget";
 			return;
 		}
-		if (cand.empty())
+		//! The authoritative plan, built here from the retained table -
+		//! before anything is registered, so every refusal below leaves
+		//! the fragment list exactly as it was. Whole-file finals equal
+		//! the stat sizes the enumeration stated (partials refuse below),
+		//! so this plans the same bytes the old enumeration placed.
+		BootSizes bootSizes;
+		PatchPlan plan;
+		PlannedFile dolPlan;
+		std::string planWhy;
+		{
+			FsDirLister planLister;
+			if (!BuildPatchPlan(earlyFstObj, *bootSet, bootDevice, &planLister,
+								&bootSizes, plan, planWhy,
+								earlyDolSize, earlyWantDol ? &dolPlan : 0))
+			{
+				earlyRefusal = planWhy;
+				fragRefusal = planWhy;
+				fragListUntouched = true;
+				gprintf("Riivo: early plan FAILED: %s\n", planWhy.c_str());
+				LogStep("early plan FAILED: %s", planWhy.c_str());
+				return;
+			}
+		}
+		if (!plan.errors.empty())
+		{
+			std::string why = "unsupported enabled file operation(s): ";
+			for (size_t i = 0; i < plan.errors.size() && i < 3; ++i)
+			{
+				if (i > 0)
+					why += "; ";
+				why += plan.errors[i];
+			}
+			earlyRefusal = why;
+			fragRefusal = why;
+			fragListUntouched = true;
+			gprintf("Riivo: early plan refused: %s\n", why.c_str());
+			LogStep("early plan refused: %s", why.c_str());
+			return;
+		}
+		if (plan.hasPartial)
+		{
+			earlyRefusal = "partial file replacement needs the segment runtime (whole files only)";
+			fragRefusal = earlyRefusal;
+			fragListUntouched = true;
+			gprintf("Riivo: early plan refused: %s\n", earlyRefusal.c_str());
+			LogStep("early plan refused: %s", earlyRefusal.c_str());
+			return;
+		}
+		//! Publish the plan both phases consume. The executable stages
+		//! without its base here (the partition DOL offset is only known
+		//! once the cIOS side opens); the late phase attaches it.
+		activePlan = plan;
+		haveActivePlan = true;
+		if (earlyWantDol && dolPlan.bootFile && dolPlan.finalSize > 0
+			&& (u64) dolPlan.finalSize == earlyDolSize)
+		{
+			stagedDol = dolPlan;
+			haveStagedDol = true;
+			LogStep("executable staged: %u byte(s), %u segment(s)",
+					dolPlan.finalSize, (unsigned) dolPlan.segs.size());
+		}
+		//! Placement input derived from the plan itself (composed finals
+		//! in stable disc order - no re-sort needed), keyed by plan disc
+		//! key throughout, so no early/late remapping exists anymore.
+		//! Zero-length entries share the cursor without advancing it;
+		//! the executable takes no fragments.
+		std::vector<ModCandidate> placeCand;
+		placeCand.reserve(activePlan.files.size());
+		for (size_t i = 0; i < activePlan.files.size(); ++i)
+		{
+			const PlannedFile &pf = activePlan.files[i];
+			if (pf.bootFile)
+				continue;
+			if (pf.disc.empty())
+				continue;
+			ModCandidate c;
+			c.disc = pf.disc;
+			c.external = pf.external;
+			c.size = pf.finalSize;
+			placeCand.push_back(c);
+		}
+		if (placeCand.empty())
 		{
 			fragListUntouched = true;
 			fragRefusal = "none of the mod's files were found on the card";
@@ -3660,16 +3984,16 @@ namespace Riivo
 		const u64 regionStart = PlanRegionStart(gameEnd, align);
 
 		std::vector<PlacedFile> placed;
-		placed.reserve(cand.size());
+		placed.reserve(placeCand.size());
 		modRecords.clear();
-		modRecords.reserve(cand.size());
-		//! One cursor walk for both phases (see AssignModOffsets): the late
-		//! table build meets these same offsets through ResolveLateOffsets
-		//! (keyed by each file's pre-FST earlyKey), so basename-routed files
-		//! still land on registered fragments. test_planparity pins the
-		//! early/late identity on shared fixtures.
+		modRecords.reserve(placeCand.size());
+		//! One cursor walk on the plan's composed finals, keyed by plan
+		//! disc key: the late table build consumes these same offsets
+		//! directly, so basename-routed files land on registered
+		//! fragments with no remapping step. test_planparity pins the
+		//! plan-derived placement on shared fixtures.
 		modOffsets.clear();
-		u64 cursor = AssignModOffsets(cand, regionStart, align, modOffsets,
+		u64 cursor = AssignModOffsets(placeCand, regionStart, align, modOffsets,
 									  placed, modRecords);
 		modRegionStart = regionStart;
 		modRegionEnd = cursor;
@@ -3686,9 +4010,7 @@ namespace Riivo
 			std::max(gameEnd, declaredBytes), sector, originalNum, extents);
 		if (!earlyPlan.ok) {
 			fragRefusal = earlyPlan.why;
-			modOffsets.clear();
-			modRecords.clear();
-			modRegionStart = modRegionEnd = 0;
+			DropEarlyPlan(earlyPlan.why);
 			fragListUntouched = true;
 			return;
 		}
@@ -3731,8 +4053,7 @@ namespace Riivo
 								0, 0))
 		{
 			gprintf("Riivo: fragment build failed: %s\n", fragStats.firstFailure.c_str());
-			modOffsets.clear();
-			modRecords.clear();
+			DropEarlyPlan(fragStats.firstFailure);
 			fragsRegistered = false;
 		}
 		else if (fragStats.failed)
@@ -3741,8 +4062,7 @@ namespace Riivo
 			//! rebuilt table would point the game at unmapped space and it would
 			//! read sparse zeros. Partial coverage is not a partial success.
 			gprintf("Riivo: %u file(s) could not be mapped, refusing\n", fragStats.failed);
-			modOffsets.clear();
-			modRecords.clear();
+			DropEarlyPlan("some mod files could not be mapped to fragments");
 			fragsRegistered = false;
 		}
 		else
@@ -3853,8 +4173,7 @@ namespace Riivo
 			RestoreFragList(originalNum, originalLast);
 			fragsRegistered = false;
 			fragGeneration = 0;
-			modOffsets.clear();
-			modRecords.clear();
+			DropEarlyPlan(patchWhy);
 			fragRefusal = patchWhy;
 			fragListUntouched = true;
 		}
@@ -4115,8 +4434,37 @@ namespace Riivo
 						  "  No <memory> patches requested by this mod's options;\n"
 						  "  nothing scheduled.\n");
 			}
-			withholdStage = "NO_PLACEMENT";
-			AppendLog("OUTCOME: WITHHELD NO_PLACEMENT\n");
+			//! A stage named upstream (NO_EARLY_PLAN, EARLY_LATE_DIFF)
+			//! survives: it names the actual refusal for the log and the
+			//! next launch. Only the fallthrough default becomes
+			//! NO_PLACEMENT.
+			if (withholdStage == "FST_WITHHELD")
+				withholdStage = "NO_PLACEMENT";
+			char noplace[64];
+			snprintf(noplace, sizeof(noplace), "OUTCOME: WITHHELD %s\n",
+					 withholdStage.c_str());
+			AppendLog(noplace);
+			return;
+		}
+		if (want == 0)
+		{
+			//! Selection refused up front (XML targets another game, disc,
+			//! or revision): the resolved set stayed empty, so no file,
+			//! memory, or save work is active. Persistent (this log) and
+			//! user-visible (the next launch shows the OUTCOME prompt).
+			if (!xmlRefusal.empty())
+			{
+				AppendLog("\n\nSelection refused\n-----------------\n");
+				AppendLog(xmlRefusal + "\n");
+				AppendLog("Nothing was resolved, so no file, memory, or save work\n"
+						  "is active and the game boots exactly as stock.\n");
+				AppendLog("OUTCOME: WITHHELD XML_REFUSED\n");
+				return;
+			}
+			//! No file work was ever wanted (a memory-only mod, say): record
+			//! the outcome so a WITHHELD line from an earlier file-mod boot
+			//! does not linger and mislead the next pre-launch check.
+			AppendLog("OUTCOME: NO_FILE_WORK\n");
 			return;
 		}
 		if (want == 0)

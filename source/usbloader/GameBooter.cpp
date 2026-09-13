@@ -817,7 +817,35 @@ int GameBooter::BootGame(struct discHdr *gameHdr, const s8 useOcarina)
 		bool riivoParsed = Riivo::ParseFile(game_cfg->RiivoPath.c_str(), riivoDisc, &riivoErr);
 		if (riivoParsed)
 		{
-		gprintf("Riivo: XML valid for game: %d\n", riivoDisc.IsValidForGame(riivoId, Riivo::RIIVO_DISC_UNKNOWN, Riivo::RIIVO_REVISION_UNKNOWN));
+		//! Enforce the XML's game/disc/revision filter with the real disc
+		//! metadata: a saved selection whose XML now targets another game,
+		//! disc, or revision resolves to nothing, so the boot proceeds
+		//! stock instead of applying a foreign mod. UNKNOWN used to skip
+		//! both checks, letting any parsed XML through.
+		const int riivoDiscNo = gameHeader.disc_no;
+		const int riivoRev = gameHeader.disc_ver;
+		const bool riivoValidForGame =
+			riivoDisc.IsValidForGame(riivoId, riivoDiscNo, riivoRev);
+		gprintf("Riivo: XML valid for game: %d\n", riivoValidForGame ? 1 : 0);
+		if (!riivoValidForGame)
+		{
+			gprintf("Riivo: XML targets another game/disc/revision; refusing, booting stock\n");
+			//! Belt and braces: ResolveWithStats is skipped below, so the
+			//! set is already empty - cleared explicitly so no file,
+			//! memory, or save work can survive a future reordering.
+			//! The reason persists in the boot log and surfaces on the
+			//! next launch through the OUTCOME prompt.
+			riivoSet = Riivo::ResolvedPatchSet();
+			char why[256];
+			snprintf(why, sizeof(why),
+					 "The saved selection was refused: %s targets another game, disc, or revision "
+					 "(this disc: id=%.6s disc=%u revision=%u).",
+					 game_cfg->RiivoPath.c_str(), riivoId,
+					 gameHeader.disc_no, gameHeader.disc_ver);
+			Riivo::NoteSelectionRefusal(why);
+		}
+		else
+		{
 		if (game_cfg->RiivoConfig.size() > 0)
 			Riivo::ApplySelection(riivoDisc, game_cfg->RiivoConfig);
 		Riivo::ResolveWithStats(riivoDisc, riivoId, riivoSet, riivoResolveStats);
@@ -825,6 +853,7 @@ int GameBooter::BootGame(struct discHdr *gameHdr, const s8 useOcarina)
 			riivoValuefileFails = Riivo::PreloadValueFiles(riivoSet, riivoDevice);
 			Riivo::DumpDisc(riivoDisc);
 			Riivo::DumpResolved(riivoSet);
+		}
 		}
 		else
 			gprintf("Riivo: parse failed: %s\n", riivoErr.c_str());
@@ -839,7 +868,7 @@ int GameBooter::BootGame(struct discHdr *gameHdr, const s8 useOcarina)
 						game_cfg->RiivoPath, riivoParsed ? NULL : riivoErr.c_str(),
 						riivoParsed ? &riivoDisc : NULL, riivoParsed ? &riivoSet : NULL,
 						riivoValuefileFails,
-						Riivo::RIIVO_DISC_UNKNOWN, Riivo::RIIVO_REVISION_UNKNOWN,
+						gameHeader.disc_no, gameHeader.disc_ver,
 						riivoResolveStats.skippedPatchRefs);
 
 		//! Hand the resolved set to the Phase 3 code, which runs later on, deep
