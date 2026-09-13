@@ -570,6 +570,11 @@ bool BuildPatchPlan(const Fst &fst,
 			{
 				// Host/shim listings use '/' separators; normalize.
 				std::string r = rel[j];
+				// Nested dataless children match nothing (reference parity
+				// with the early phase: a slashed name is never a bare
+				// filename). Top-level executable names route to the DOL.
+				if (dataless && r.find('/') != std::string::npos)
+					continue;
 				const std::string childExternal = JoinDiscPath(extDir, r);
 				if (childExternal.find('\\') != std::string::npos)
 					continue;

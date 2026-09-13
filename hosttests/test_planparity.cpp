@@ -57,21 +57,23 @@ static void Wr32(std::vector<u8> &v, size_t at, u32 x)
 
 struct SEnt { u8 type; std::string name; u32 a, b; };
 
-// root(11) x[2,5): Abs.BIN dup.bin gone.bin; dir[6,8): base.arc other.arc;
-// deep[9,11): nest[10,11): c.bin. Mixed case on purpose.
+// root(12) x[2,6): Abs.BIN dup.bin gone.bin base.arc#2; dir[7,9):
+// base.arc other.arc; deep[10,12): nest[11,12): c.bin. Mixed case.
+// Duplicate basename base.arc: FST-order first hit is /x/base.arc.
 static void BuildDisc(std::vector<u8> &out)
 {
 	std::vector<SEnt> e;
-	e.push_back((SEnt){1, "", 0, 11});
-	e.push_back((SEnt){1, "x", 0, 5});
+	e.push_back((SEnt){1, "", 0, 12});
+	e.push_back((SEnt){1, "x", 0, 6});
 	e.push_back((SEnt){0, "Abs.BIN", 0x20000 >> 2, 1000});
 	e.push_back((SEnt){0, "dup.bin", 0x30000 >> 2, 10});
 	e.push_back((SEnt){0, "gone.bin", 0x31000 >> 2, 300});
-	e.push_back((SEnt){1, "dir", 0, 8});
+	e.push_back((SEnt){0, "base.arc", 0x32000 >> 2, 1500});
+	e.push_back((SEnt){1, "dir", 0, 9});
 	e.push_back((SEnt){0, "base.arc", 0x40000 >> 2, 2000});
 	e.push_back((SEnt){0, "other.arc", 0x50000 >> 2, 500});
-	e.push_back((SEnt){1, "deep", 0, 11});
-	e.push_back((SEnt){1, "nest", 8, 11});
+	e.push_back((SEnt){1, "deep", 0, 12});
+	e.push_back((SEnt){1, "nest", 8, 12});
 	e.push_back((SEnt){0, "c.bin", 0x60000 >> 2, 100});
 	const u32 n = (u32)e.size();
 	out.assign(n * 12, 0);
@@ -172,6 +174,7 @@ int main()
 	mkdir((card + "/sub").c_str(), 0755);
 	mkdir((card + "/sub/nest").c_str(), 0755);
 	mkdir((card + "/newer").c_str(), 0755);
+	mkdir((card + "/newer/sub").c_str(), 0755);
 	WriteFile(card + "/abs.bin", 100, 0xA1);
 	WriteFile(card + "/base.bin", 200, 0xB2);
 	WriteFile(card + "/dup1.bin", 10, 0xD1);
@@ -183,12 +186,13 @@ int main()
 	WriteFile(card + "/newer/brandnew.bin", 90, 0xF2);
 	WriteFile(card + "/newer/main.dol", 0x1000, 0xF3);
 	WriteFile(card + "/newer/ghost2.bin", 10, 0xF4);
+	WriteFile(card + "/newer/sub/nested.bin", 40, 0xF5); // nested dataless: matches nothing, both phases
 
 	std::vector<u8> discImg;
 	BuildDisc(discImg);
 	Fst fst;
 	CHECK(fst.Parse(&discImg[0], (u32)discImg.size(), true));
-	CHECK(fst.FileCount() == 6);
+	CHECK(fst.FileCount() == 7);
 
 	ResolvedPatchSet set;
 	set.files.push_back(RF("/x/abs.bin", "abs.bin"));
@@ -251,6 +255,11 @@ int main()
 	}
 	CHECK(sawDup2 && !sawDup1); // dedup keeps the last claim
 	CHECK(!sawDol);             // executable bytes never fragment-mapped
+	bool sawNested = false;
+	for (size_t i = 0; i < cand.size(); ++i)
+		if (cand[i].external.find("nested.bin") != std::string::npos)
+			sawNested = true;
+	CHECK(!sawNested); // nested dataless children match nothing early...
 	bool sawMissing = false;
 	for (size_t i = 0; i < earlyMissing.size(); ++i)
 		if (earlyMissing[i].external.find("gone-missing.bin") != std::string::npos)
@@ -305,11 +314,23 @@ int main()
 	// 8 files: abs, base, dup, empty, deep/nest/c.bin, other, brandnew, ghost2
 	CHECK(plan.files.size() == 8);
 	{
-		bool sawDeep = false;
+		bool sawDeep = false, sawFirstHit = false, sawNestedLate = false;
 		for (size_t i = 0; i < plan.files.size(); ++i)
+		{
 			if (plan.files[i].disc == "/deep/nest/c.bin")
 				sawDeep = true;
+			// Duplicate basename: first FST-order hit wins (/x/base.arc,
+			// ahead of /dir/base.arc), reference parity.
+			if (plan.files[i].earlyKey == "/base.arc")
+				CHECK(plan.files[i].disc == "/x/base.arc");
+			if (plan.files[i].disc == "/dir/base.arc")
+				sawFirstHit = true; // must stay false: /x wins, not /dir
+			if (plan.files[i].disc.find("nested") != std::string::npos)
+				sawNestedLate = true;
+		}
 		CHECK(sawDeep); // hierarchical FST descent, not flat ranges
+		CHECK(!sawFirstHit);
+		CHECK(!sawNestedLate); // ...nor late: reference parity
 	}
 	// Directory cache replayed the early pass (same inputs, same answer).
 	{
@@ -455,8 +476,10 @@ int main()
 	unlink((card + "/newer/brandnew.bin").c_str());
 	unlink((card + "/newer/main.dol").c_str());
 	unlink((card + "/newer/ghost2.bin").c_str());
+	unlink((card + "/newer/sub/nested.bin").c_str());
 	rmdir((card + "/sub/nest").c_str());
 	rmdir((card + "/sub").c_str());
+	rmdir((card + "/newer/sub").c_str());
 	rmdir((card + "/newer").c_str());
 	rmdir(card.c_str());
 
