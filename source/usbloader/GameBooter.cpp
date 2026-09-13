@@ -398,19 +398,16 @@ void GameBooter::ShutDownDevices(int gameUSBPort)
  		wiilight_diag(0);
  	}
 
-  	//! Blink a refusal code unless on Wii U. Exact conditions: 1-5 FST
-  	//! install checks (see InstallFailCode), 6 BootPartition returned a
-  	//! null entry point, 7 late code-handler collision refusal, which
-  	//! requires Hooktype nonzero AND a protected mod range overlapping
-  	//! 0x80001000..0x80003000, 9 post-shutdown loader-live clearance for
-  	//! a grown table (stack/heap overlap or unknown bounds). Code 8 is a
-  	//! pre-shutdown withhold (card log authoritative) and never blinks.
-  	//! Note the unguarded conflict query below it
+ 	//! Blink a refusal code unless on Wii U. Exact conditions: 1-5 FST
+ 	//! install checks (see InstallFailCode), 6 BootPartition returned a
+ 	//! null entry point, 7 late code-handler collision refusal, which
+ 	//! requires Hooktype nonzero AND a protected mod range overlapping
+ 	//! 0x80001000..0x80003000. Note the unguarded conflict query below it
  	//! still runs at Hooktype=0 and sets the skip flag by design when the
  	//! mod owns that region - that is a skip, not a refusal, and blinks
  	//! nothing. A return with no code is unresolved by this scheme.
  	//!
-  	//! Meanings 1-7 and 9 are unchanged. What changed is repetition: the code
+ 	//! Meanings 1-7 are unchanged. What changed is repetition: the code
  	//! blinks THREE times with a one-second gap, because a single group
  	//! proved ambiguous - ordinary progress flicker contains two-flash
  	//! stretches, and successful boots showed them too. An irregular

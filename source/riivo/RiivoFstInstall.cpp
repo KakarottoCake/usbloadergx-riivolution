@@ -237,47 +237,6 @@ namespace Riivo
 		return p;
 	}
 
-	bool ClearsLoaderLive(u32 destLo, u32 destHi, const LoaderLive &live,
-						  const char *&why)
-	{
-		why = 0;
-		if (!(destLo < destHi))
-		{
-			why = "empty or wrapped destination";
-			return false;
-		}
-		if (!live.stackKnown || live.sp == 0)
-		{
-			why = "loader stack bounds unavailable";
-			return false;
-		}
-		if (RangesOverlap(destLo, destHi, live.stackLo, live.stackHi))
-		{
-			why = "destination overlaps the live loader stack";
-			return false;
-		}
-		// Frames below the current SP (return chain, light-out sequence)
-		// plus interrupt frames run deeper than any snapshot, so demand the
-		// documented margin below SP as well: only a destination wholly
-		// below SP minus margin is allowed.
-		if (!(destHi <= live.sp && live.sp - destHi >= STACK_MARGIN))
-		{
-			why = "destination crowds the live stack pointer";
-			return false;
-		}
-		if (!live.heapKnown)
-		{
-			why = "loader heap break unavailable";
-			return false;
-		}
-		if (live.heapBreak > destLo)
-		{
-			why = "loader heap break reaches the destination";
-			return false;
-		}
-		return true;
-	}
-
 #ifdef GEKKO
 
 	ArenaInfo ReadArenaInfo()
