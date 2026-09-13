@@ -1,10 +1,13 @@
 /* See riivo_ios.h. */
 #include "riivo_ios.h"
 
-riivo_ios_params g_params = { RIIVO_IOS_MAGIC, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
+riivo_ios_params g_params = { RIIVO_IOS_MAGIC, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+								0, 0, 0, 0, 0, 0, 0 };
 
 static rfat_vol g_vol;
 static rr_ctx g_rr;
+static sr_ctx g_sr;
+static int g_useSeg;
 
 /* Everything Starlet reads into goes through here first.
  *
@@ -63,6 +66,34 @@ int riivo_ios_init(void)
 		return RIIVO_DI_FAIL;
 	}
 
+	/* Segmented manifest service. The whole-file table stays the default:
+	   an unknown kind refuses rather than guessing which reader to run. */
+	if (g_params.tableKind == RIIVO_TABLE_RIV1)
+	{
+		unsigned long long decl =
+			(unsigned long long) g_params.declLo
+			| ((unsigned long long) g_params.declHi << 32);
+		rc = sr_init(&g_sr, (const void *) RIIVO_PHYS(g_params.table),
+					 g_params.table_len, &g_vol,
+					 g_params.genBase
+						? (const void *) RIIVO_PHYS(g_params.genBase) : 0,
+					 g_params.genSize, decl,
+					 g_params.expDiscId, g_params.expPartIdx);
+		if (rc != SR_OK)
+		{
+			g_params.state = 6;
+			return RIIVO_DI_FAIL;
+		}
+		g_useSeg = 1;
+		g_params.state = 1;
+		return RIIVO_DI_OK;
+	}
+	if (g_params.tableKind != RIIVO_TABLE_RIIV)
+	{
+		g_params.state = 7;
+		return RIIVO_DI_FAIL;
+	}
+
 	rc = rr_init(&g_rr, (const void *) RIIVO_PHYS(g_params.table),
 				 g_params.table_len, &g_vol);
 	if (rc != RR_OK)
@@ -71,6 +102,7 @@ int riivo_ios_init(void)
 		return RIIVO_DI_FAIL;
 	}
 
+	g_useSeg = 0;
 	g_params.state = 1;
 	return RIIVO_DI_OK;
 }
@@ -101,8 +133,9 @@ int riivo_di_read(unsigned int off_words, unsigned int len, void *dst)
 		if (take > sizeof(g_bounce))
 			take = sizeof(g_bounce);
 
-		rc = rr_read(&g_rr, off + done, take, g_bounce);
-		if (rc == RR_MISS)
+		rc = g_useSeg ? sr_read(&g_sr, off + done, take, g_bounce)
+					  : rr_read(&g_rr, off + done, take, g_bounce);
+		if (rc == (g_useSeg ? SR_MISS : RR_MISS))
 		{
 			/* Only meaningful before anything has been written. Once part of
 			   the buffer is ours, falling through would run the stock read
@@ -115,7 +148,7 @@ int riivo_di_read(unsigned int off_words, unsigned int len, void *dst)
 			++g_params.errors;
 			return RIIVO_DI_FAIL;
 		}
-		if (rc != RR_OK)
+		if (rc != (g_useSeg ? SR_OK : RR_OK))
 		{
 			++g_params.errors;
 			return RIIVO_DI_FAIL;

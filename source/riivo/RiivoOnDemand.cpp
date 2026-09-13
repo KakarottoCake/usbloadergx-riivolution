@@ -91,6 +91,7 @@ namespace Riivo
 #ifdef GEKKO
 
 	bool InstallOnDemand(u32 site, const std::vector<u8> &table, u32 partLba,
+						 const OnDemandMeta &meta,
 						 OnDemandLayout &layout, std::string &why)
 	{
 		layout = OnDemandLayout();
@@ -135,6 +136,13 @@ namespace Riivo
 		p.table = layout.tableAddr;
 		p.tableLen = layout.tableLen;
 		p.partLba = partLba;
+		p.tableKind = meta.kind;
+		p.genBase = meta.genBase;
+		p.genSize = meta.genSize;
+		p.declLo = (u32) (meta.declSize & 0xFFFFFFFFULL);
+		p.declHi = (u32) (meta.declSize >> 32);
+		p.expDiscId = meta.discId;
+		p.expPartIdx = meta.partIdx;
 		//! Left zero deliberately: ApplyDiPatchOnDemand finds the real
 		//! os_sync_after_write in the running plugin and overwrites this. A
 		//! guess here would be called on every single read.
@@ -159,8 +167,8 @@ namespace Riivo
 
 	//! Host build: the layout arithmetic is what the tests exercise. Writing
 	//! to IOS and to low memory is target-only by nature.
-	bool InstallOnDemand(u32, const std::vector<u8> &, u32, OnDemandLayout &,
-						 std::string &why)
+	bool InstallOnDemand(u32, const std::vector<u8> &, u32, const OnDemandMeta &,
+						 OnDemandLayout &, std::string &why)
 	{
 		why = "on-demand install is target-only";
 		return false;

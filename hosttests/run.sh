@@ -163,7 +163,7 @@ if [ -n "$MODCC" ]; then
 	MODF="-c -O2 -Wall -Wextra -mcpu=arm926ej-s -mthumb -mthumb-interwork"
 	MODF="$MODF -mbig-endian -ffreestanding -fno-builtin -fno-common"
 	MODOBJ=""
-	for m in riivo_fat riivo_redirect riivo_glue riivo_ios; do
+	for m in riivo_fat riivo_redirect riivo_segread riivo_glue riivo_ios; do
 		$MODCC $MODF -o "$OUT/$m.o" "$SRC/riivo/ios/$m.c"
 		MODOBJ="$MODOBJ $OUT/$m.o"
 	done
@@ -193,6 +193,14 @@ build_run test_netlog -DRIIVO_HOST_TEST "$SRC/riivo/RiivoNet.cpp"
 # range checks. Independent LE decode, refusals, crc integrity, and the
 # partition-range verdicts. Needs only the manifest TU.
 build_run test_manifest "$SRC/riivo/RiivoManifest.cpp"
+
+# Segment reader proof: the REAL ios/riivo_segread.c (+ ios/riivo_fat.c),
+# served from RIV1 tables built by the PRODUCTION builders (manifest +
+# redirect table for cross-format parity) over a synthetic in-memory FAT16
+# volume. Whole-file parity with the whole-file runtime, srcOffset/ZERO/
+# GENERATED segments, ORIGINAL gaps, MISS/FAIL behavior, identity and
+# anti-shadow refusals, search depth against a model.
+build_run test_segread "$SRC/riivo/ios/riivo_segread.c" "$SRC/riivo/ios/riivo_redirect.c" "$SRC/riivo/ios/riivo_fat.c" "$SRC/riivo/RiivoManifest.cpp" "$SRC/riivo/RiivoRedirectTable.cpp"
 
 # WP1 fixtures: revision/disc filters with unknown-axis skipping, multi-XML
 # merge precedence, skipped patch-ref accounting, selection round-trip.
