@@ -63,8 +63,10 @@ int main()
 		std::vector<u8> fst(256, 0x5A);
 		BootView v;
 		std::string why;
-		CHECK(v.Activate(&stock[0], (u32)stock.size(), stock, 0x4000, fst, why));
+		CHECK(v.Activate(&stock[0], (u32)stock.size(), stock, why));
 		CHECK(v.Active());
+		CHECK(v.ArmFst(0x4000, fst, (u32)fst.size(), why));
+		CHECK(v.FstArmed());
 		u8 buf[BOOTVIEW_HEADER_BYTES];
 		CHECK(v.Serve(0, buf, sizeof(buf)));
 		CHECK(memcmp(buf, &stock[0], sizeof(buf)) == 0);
@@ -77,6 +79,7 @@ int main()
 		CHECK(memcmp(sub, &fst[100], sizeof(sub)) == 0);
 		v.Deactivate();
 		CHECK(!v.Active());
+		CHECK(!v.FstArmed());
 		CHECK(!v.Serve(0, buf, 16));
 	}
 
@@ -89,7 +92,8 @@ int main()
 							  0x10000, (u32)fst.size(), (u32)fst.size(),
 							  patched, why));
 		BootView v;
-		CHECK(v.Activate(&stock[0], (u32)stock.size(), patched, 0x10000, fst, why));
+		CHECK(v.Activate(&stock[0], (u32)stock.size(), patched, why));
+		CHECK(v.ArmFst(0x10000, fst, (u32)fst.size(), why));
 		u8 hdr[12];
 		CHECK(v.Serve(BOOTVIEW_FST_OFF, hdr, sizeof(hdr)));
 		u32 offW = BootViewReadBE32(hdr);
@@ -108,7 +112,8 @@ int main()
 		std::vector<u8> fst(128, 0x11);
 		BootView v;
 		std::string why;
-		CHECK(v.Activate(&stock[0], (u32)stock.size(), stock, 0x5000, fst, why));
+		CHECK(v.Activate(&stock[0], (u32)stock.size(), stock, why));
+		CHECK(v.ArmFst(0x5000, fst, (u32)fst.size(), why));
 		u8 buf[32];
 		memset(buf, 0xCC, sizeof(buf));
 		// Header-crossing: ends past 0x440.
@@ -123,7 +128,7 @@ int main()
 		CHECK(!v.Serve(0x5000, buf, 0));
 	}
 
-	// 6. Refusals: short headers, empty table, unaligned offset, overflow.
+	// 6. Refusals: short headers, size gate, unaligned offset, overflow.
 	{
 		std::vector<u8> patched;
 		std::string why;
@@ -133,9 +138,29 @@ int main()
 		CHECK(!PatchBootHeader(&stock[0], (u32)stock.size(), 0x1001, 0x100, 0x100, patched, why));
 		BootView v;
 		std::vector<u8> empty;
-		CHECK(!v.Activate(&stock[0], (u32)stock.size(), stock, 0x1000, empty, why));
+		CHECK(v.Activate(&stock[0], (u32)stock.size(), stock, why));
+		CHECK(!v.ArmFst(0x1000, empty, 0, why));
+		CHECK(!v.FstArmed());
+		CHECK(!v.Activate(shortHdr, sizeof(shortHdr), stock, why));
 		CHECK(!v.Active());
-		CHECK(!v.Activate(shortHdr, sizeof(shortHdr), stock, 0x1000, std::vector<u8>(16, 0), why));
+		// Grown staging (256 staged vs 128 on disc): refused, header stays
+		// servable, FST falls back to stock (no truncated prefix served).
+		std::vector<u8> grown(256, 0x77);
+		CHECK(v.Activate(&stock[0], (u32)stock.size(), stock, why));
+		CHECK(!v.ArmFst(0x5000, grown, 128, why));
+		CHECK(!why.empty());
+		CHECK(!v.FstArmed());
+		u8 hbuf[16];
+		CHECK(v.Serve(0, hbuf, sizeof(hbuf)));
+		u8 fbuf[128];
+		CHECK(!v.Serve(0x5000, fbuf, sizeof(fbuf)));
+		// Compacted staging (smaller): likewise refused (exact match only).
+		std::vector<u8> small(64, 0x77);
+		CHECK(!v.ArmFst(0x5000, small, 128, why));
+		CHECK(!v.FstArmed());
+		// Arming without an active view refuses (ordering contract).
+		BootView v2;
+		CHECK(!v2.ArmFst(0x5000, small, (u32)small.size(), why));
 	}
 
 	// ---- DOL segment serving (injected readers, no console/card) ----
@@ -291,8 +316,14 @@ int main()
 		CHECK(!v.SetDol(0x100, kDolSize, dol, why)); // header overlap
 		CHECK(!v.SetDol(kDolBase, 0, dol, why)); // zero size
 		std::vector<u8> fst(128, 0x11);
-		CHECK(v.Activate(&stock[0], (u32)stock.size(), stock, kDolBase - 64, fst, why));
+		CHECK(v.Activate(&stock[0], (u32)stock.size(), stock, why));
+		CHECK(v.ArmFst(kDolBase - 64, fst, (u32)fst.size(), why));
 		CHECK(!v.SetDol(kDolBase, kDolSize, dol, why)); // FST overlap
+		// And the reverse order: arming FST over an armed DOL refuses too.
+		BootView v3;
+		CHECK(v3.Activate(&stock[0], (u32)stock.size(), stock, why));
+		CHECK(v3.SetDol(kDolBase, kDolSize, dol, why));
+		CHECK(!v3.ArmFst(kDolBase - 64, fst, (u32)fst.size(), why));
 	}
 
 

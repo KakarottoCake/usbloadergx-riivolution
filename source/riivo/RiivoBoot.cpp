@@ -1444,15 +1444,15 @@ namespace Riivo
 	static void Activate(std::string &out, const FragPlan &plan,
 						 const std::vector<PlacedFile> &placed,
 						 const std::vector<u8> &newFst,
-						 u64 fstDiscOffset);
-	static bool ArmBootView(std::string &out, u64 fstDiscOffset);
+						 u64 fstDiscOffset, u32 fstDiscSize);
+	static bool ArmBootView(std::string &out, u64 fstDiscOffset, u32 fstDiscSize);
 	static bool EmitManifest(std::string &out,
 							 const std::vector<PlacedFile> &placed);
 
 	static void Activate(std::string &out, const FragPlan &plan,
 						 const std::vector<PlacedFile> &placed,
 						 const std::vector<u8> &newFst,
-						 u64 fstDiscOffset)
+						 u64 fstDiscOffset, u32 fstDiscSize)
 	{
 		if (placed.empty())
 		{
@@ -1784,7 +1784,7 @@ namespace Riivo
 		//! a passing check proves overlay bytes, offsets and lengths agree
 		//! on real PPC, not just in a host harness. Any failure withholds
 		//! with code 8 (card log authoritative; stock boot, no blink).
-		if (!ArmBootView(out, fstDiscOffset))
+		if (!ArmBootView(out, fstDiscOffset, fstDiscSize))
 			return;
 		//! Emit the RIV1 manifest: the staged segment contract for a future
 		//! runtime, cross-checked against the served placements now. A
@@ -1848,7 +1848,8 @@ namespace Riivo
 	//! (bounded 32 KB peak); DOL sampling covers head+tail of the first
 	//! runs plus one original-identity and one zero sample. Any failure
 	//! withholds with code 8 (stock boot, memory held back, no blink).
-	static bool ArmBootView(std::string &out, u64 fstDiscOffset)
+	static bool ArmBootView(std::string &out, u64 fstDiscOffset,
+							u32 fstDiscSize)
 	{
 		static u8 ovHeader[BOOTVIEW_HEADER_BYTES] ATTRIBUTE_ALIGN(32);
 		if (WDVD_ReadStock(ovHeader, sizeof(ovHeader), 0) != 0)
@@ -1863,8 +1864,7 @@ namespace Riivo
 		std::vector<u8> patchedHeader(ovHeader, ovHeader + sizeof(ovHeader));
 		std::vector<u8> stagedView(pendingFst, pendingFst + pendingFstSize);
 		std::string why;
-		if (!bootView.Activate(ovHeader, sizeof(ovHeader), patchedHeader,
-							   fstDiscOffset, stagedView, why))
+		if (!bootView.Activate(ovHeader, sizeof(ovHeader), patchedHeader, why))
 		{
 			char line[192];
 			snprintf(line, sizeof(line),
@@ -1872,6 +1872,18 @@ namespace Riivo
 			WithholdStaged(out, "BOOTVIEW", line);
 			return false;
 		}
+		// FST coverage only when the staged table is exactly what disc
+		// readers ask for. A grown (or compacted) staging served at the
+		// disc range would hand apploader/game readers a prefix they
+		// consume as a whole table - the black screen past a refused
+		// install. Falling back to stock bytes is the coherent boot for
+		// an uninstalled table, so size mismatch logs and continues.
+		bool fstServed = false;
+		if (bootView.ArmFst(fstDiscOffset, stagedView, fstDiscSize, why))
+			fstServed = true;
+		else
+			Addf(out, "  boot view : FST served stock (%s; staged %u, disc %u)\n",
+				 why.c_str(), pendingFstSize, fstDiscSize);
 		if (haveStagedDol && !skipFstInstall)
 		{
 			if (stagedDolBase == 0 || stagedDol.discLengthOrig == 0)
@@ -1895,15 +1907,17 @@ namespace Riivo
 		{
 			out += "  DIAGNOSTIC: DOL served stock under nofstinstall (see above).\n";
 		}
-		Addf(out, "  boot view : armed (FST %u bytes at 0x%08x%s)\n",
-			 pendingFstSize, (unsigned)fstDiscOffset,
+		Addf(out, "  boot view : armed (FST %s%u bytes at 0x%08x%s)\n",
+			 fstServed ? "" : "stock, staged ",
+			 fstServed ? pendingFstSize : fstDiscSize, (unsigned)fstDiscOffset,
 			 (haveStagedDol && !skipFstInstall) ? ", DOL image served" : "");
 		// FST read-back through WDVD_Read (the apploader's function): proves
-		// overlay bytes, offsets and lengths agree on real PPC. The disc
-		// still holds stock bytes there - a mismatch names the overlay, and
-		// only the overlay, as the fault.
-		LogStep("verifying the boot view through WDVD_Read");
+		// overlay bytes, offsets and lengths agree on real PPC - but only
+		// when coverage is armed. The disc still holds stock bytes there -
+		// a mismatch names the overlay, and only the overlay, as the fault.
+		if (fstServed)
 		{
+			LogStep("verifying the boot view through WDVD_Read");
 			u32 remaining = pendingFstSize;
 			u64 off = fstDiscOffset;
 			bool ok = true;
@@ -1925,9 +1939,9 @@ namespace Riivo
 					"  boot view: FST read-back mismatch; FST withheld.\n");
 				return false;
 			}
+			Addf(out, "  boot view : FST read-back matches staged bytes (%u)\n",
+				 pendingFstSize);
 		}
-		Addf(out, "  boot view : FST read-back matches staged bytes (%u)\n",
-			 pendingFstSize);
 		// DOL samples: head+tail of the edge external runs (bounded eight),
 		// one original-identity sample (overlay vs stock, same bytes), one
 		// zero sample. Any failure withholds: no partial patched images.
@@ -3009,7 +3023,7 @@ namespace Riivo
 		else
 		{
 			LogStep("checking the mod's files through the hook");
-			Activate(out, plan, placed, newFst, fstOffset);
+			Activate(out, plan, placed, newFst, fstOffset, fstSize);
 			LogStep("file work finished");
 			//! The staged copy (or the relocorig original) already lives in
 			//! its own MEM2 buffer; holding the disc bytes too would just
