@@ -10,6 +10,8 @@
 namespace Riivo
 {
 
+static bool RangesOverlap(u64 aLo, u64 aHi, u64 bLo, u64 bHi);
+
 bool PatchBootHeader(const u8 *stockHeader, u32 stockLen,
 					 u64 fstOffsetBytes, u32 fstSizeBytes, u32 fstMaxBytes,
 					 std::vector<u8> &outPatched, std::string &why)
@@ -52,8 +54,6 @@ BootView::BootView()
 
 bool BootView::Activate(const u8 *stockHeader, u32 stockLen,
 						const std::vector<u8> &patchedHeader,
-						u64 fstOffsetBytes,
-						const std::vector<u8> &patchedFst,
 						std::string &why)
 {
 	why.clear();
@@ -68,23 +68,65 @@ bool BootView::Activate(const u8 *stockHeader, u32 stockLen,
 		why = "patched header too short";
 		return false;
 	}
+	(void)stockHeader;
+	header.assign(patchedHeader.begin(),
+				  patchedHeader.begin() + BOOTVIEW_HEADER_BYTES);
+	active = true;
+	return true;
+}
+
+bool BootView::ArmFst(u64 fstOffsetBytes,
+					  const std::vector<u8> &patchedFst,
+					  u32 discSizeBytes,
+					  std::string &why)
+{
+	why.clear();
+	// The served table must be exactly what disc readers ask for: a
+	// shorter staged table would hand a truncated prefix to a reader that
+	// consumes the whole table (black screen past a refused install), and
+	// a longer one serves bytes no disc reader requested. Size mismatch
+	// leaves prior coverage (header, DOL) untouched: the caller falls back
+	// to stock FST bytes, which is the coherent boot for an uninstalled
+	// table.
+	if (!active)
+	{
+		why = "boot view not active";
+		return false;
+	}
 	if (patchedFst.empty())
 	{
 		why = "patched table is empty";
 		return false;
 	}
-	// Bound the copy: header + table only (never whole-mod payloads).
-	// Tables are KBs (T0 150 KB, big conversions single-digit MB at most).
+	if ((u64)patchedFst.size() != (u64)discSizeBytes)
+	{
+		why = "staged table size differs from the disc table size";
+		return false;
+	}
 	if (patchedFst.size() > 16 * 1024 * 1024)
 	{
 		why = "patched table exceeds 16 MiB bound";
 		return false;
 	}
-	header.assign(patchedHeader.begin(),
-				  patchedHeader.begin() + BOOTVIEW_HEADER_BYTES);
+	if ((fstOffsetBytes & ((1ULL << BOOTVIEW_SHIFT) - 1)) != 0)
+	{
+		why = "FST offset not word-aligned";
+		return false;
+	}
+	if (fstOffsetBytes + (u64)patchedFst.size() < fstOffsetBytes)
+	{
+		why = "FST range overflow";
+		return false;
+	}
+	if (hasDol && RangesOverlap(fstOffsetBytes,
+								fstOffsetBytes + (u64)patchedFst.size(),
+								dolBase, dolBase + dolSize))
+	{
+		why = "FST range overlaps the served DOL image";
+		return false;
+	}
 	fstOffset = fstOffsetBytes;
 	fst = patchedFst;
-	active = true;
 	return true;
 }
 

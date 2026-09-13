@@ -105,16 +105,26 @@ class BootView
 public:
 	BootView();
 
-	//! Activate with stock header (for fallback bytes outside 0x424-42f),
-	//! patched header, patched FST + its partition-byte offset. Copies bytes
-	//! (bounded). Returns false + why on bad inputs (empty table, overflow,
-	//! header too short). Clears any DOL coverage: call Activate first, then
-	//! SetDol, so overlap is always checked against the final FST range.
+	//! Activate with the stock header image (for fallback bytes outside
+	//! 0x424-42f) plus the patched header to serve. Copies the header
+	//! (bounded, 0x440). Returns false + why when the images are too short.
+	//! Clears any FST/DOL coverage: call Activate first, then ArmFst, then
+	//! SetDol, so overlap is always checked against the final ranges.
 	bool Activate(const u8 *stockHeader, u32 stockLen,
 				  const std::vector<u8> &patchedHeader,
-				  u64 fstOffsetBytes,
-				  const std::vector<u8> &patchedFst,
 				  std::string &why);
+
+	//! Arm FST coverage: serve the given table bytes at fstOffsetBytes.
+	//! The served size MUST equal the on-disc table size (discSizeBytes):
+	//! a shorter staged table would serve stock-fallback callers a prefix
+	//! they consume as a whole table, and a longer one would serve bytes
+	//! past what any disc reader asked for - both corrupt. Refuses (false +
+	//! why, header/DOL coverage untouched) on size mismatch, empty table,
+	//! oversize copy, unaligned offset, or overlap with armed DOL coverage.
+	bool ArmFst(u64 fstOffsetBytes, const std::vector<u8> &patchedFst,
+				u32 discSizeBytes, std::string &why);
+
+	bool FstArmed() const { return active && !fst.empty(); }
 
 	//! True when active (consulted). False => stock behavior, Serve refuses.
 	bool Active() const { return active; }
