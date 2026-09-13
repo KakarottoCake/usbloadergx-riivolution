@@ -2850,6 +2850,20 @@ namespace Riivo
 									newFst.size() > fstReserve;
 		if (vres.useCompact)
 			newFst.swap(vres.staged);
+		//! Word-align the staged table: boot-info words carry sizes
+		//! word-shifted, so a table whose size is not a multiple of 4
+		//! cannot round-trip its own length through the apploader
+		//! (traced: 153934 staged bytes published as 153932, which the
+		//! exact size match must then refuse). At most 3 zero bytes;
+		//! count-driven FST parsing ignores trailing pad, and the
+		//! install path verifies these exact bytes.
+		{
+			const size_t before = newFst.size();
+			FstBuilder::PadTableWords(newFst);
+			if (newFst.size() != before)
+				Addf(out, "  word pad           : %u -> %u bytes\n",
+					 (unsigned)before, (unsigned)newFst.size());
+		}
 		const bool validationOom = vres.oom;
 		//! Return line: every outcome the validator can produce is named
 		//! here. Logged without pulsing so the OFF state set above survives
