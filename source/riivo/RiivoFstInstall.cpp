@@ -237,6 +237,126 @@ namespace Riivo
 		return p;
 	}
 
+	bool EvaluateReportedBase(const ArenaInfo &arena, u32 repBase, u32 repSize,
+							  u32 want,
+							  const OccupiedRange *occ, u32 occCount,
+							  u32 sp, u32 stackLo, u32 stackHi, bool stackKnown,
+							  FstPlacement &out, const char *&why)
+	{
+		why = 0;
+		out = FstPlacement();
+		// The apploader loaded repSize bytes; the staged table is want
+		// bytes. Anything but exact agreement means the loaded image is
+		// not the table (a stock prefix under a grown request, a short
+		// read, a confused apploader) - installing staged bytes at a
+		// foreign size would hand the game an image nobody verified.
+		if (repSize != want || want == 0)
+		{
+			why = "apploader-reported size differs from the staged table";
+			return false;
+		}
+		if (repBase < MEM1_BASE || repBase >= MEM1_END)
+		{
+			why = "reported base is outside MEM1";
+			return false;
+		}
+		if ((repBase & 31) != 0)
+		{
+			why = "reported base is not 32-byte aligned";
+			return false;
+		}
+		if ((u64)repBase + want < repBase || (u64)repBase + want > MEM1_END)
+		{
+			why = "reported span overflows MEM1";
+			return false;
+		}
+		if (repBase > arena.arenaHi)
+		{
+			why = "reported base is above the arena top";
+			return false;
+		}
+		// Live loaded ranges (apploader-loaded FST bytes arrive already
+		// filtered out by the caller - they die with the install by
+		// construction). Anything else intersecting the install span is a
+		// game chunk the install would clobber: refuse. Malformed entries
+		// (empty, inverted, outside MEM1) refuse outright, mirroring
+		// PlaceFst: steering around ranges that cannot be read is guessing.
+		u32 malformed = 0;
+		if (occ)
+		{
+			for (u32 i = 0; i < occCount; ++i)
+			{
+				if (IsMalformedRange(occ[i]))
+				{
+					++malformed;
+					continue;
+				}
+				if (RangesOverlap(repBase, repBase + want, occ[i].lo, occ[i].hi))
+				{
+					why = "reported span overlaps a loaded game range";
+					out.malformedRanges = malformed;
+					return false;
+				}
+			}
+		}
+		if (malformed > 0)
+		{
+			why = "loaded ranges failed validation, so coverage is incomplete";
+			out.malformedRanges = malformed;
+			return false;
+		}
+		// The executing stack, full bounds (live frames, the call chain
+		// below SP, and interrupt frames all live inside). Unknown bounds
+		// refuse rather than guess. No heap-break verdict: the break
+		// position proves nothing about reuse, and the late install plus
+		// post-copy verification is the mechanism there, as for in-place.
+		if (!stackKnown || sp == 0)
+		{
+			why = "loader stack bounds unavailable";
+			return false;
+		}
+		if (RangesOverlap(repBase, repBase + want, stackLo, stackHi))
+		{
+			why = "reported span overlaps the live loader stack";
+			return false;
+		}
+		// Heap accounting off the lowered top, same rules as PlaceFst.
+		const u32 newArenaHi = repBase;
+		u32 heapLeft = 0;
+		if (arena.arenaLo == 0)
+		{
+			if (arena.arenaHi - newArenaHi > MAX_BLIND_DROP)
+			{
+				why = "reported span needs more than 1 MB and arena low "
+					  "is not set, so the heap cannot be checked";
+				return false;
+			}
+		}
+		else
+		{
+			if (newArenaHi <= arena.arenaLo)
+			{
+				why = "reported span would swallow the game's whole heap";
+				return false;
+			}
+			heapLeft = newArenaHi - arena.arenaLo;
+			if (heapLeft < MIN_GAME_HEAP)
+			{
+				why = "reported span would leave the game under 4 MB of heap";
+				return false;
+			}
+		}
+		out.ok = true;
+		out.inPlace = false;
+		out.fstAddr = repBase;
+		out.newArenaHi = newArenaHi;
+		out.reserved = arena.arenaHi - newArenaHi;
+		out.heapLeft = heapLeft;
+		out.ignoredRanges = 0;
+		out.malformedRanges = 0;
+		return true;
+	}
+
 #ifdef GEKKO
 
 	ArenaInfo ReadArenaInfo()
