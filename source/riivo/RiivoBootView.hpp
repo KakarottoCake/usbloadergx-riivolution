@@ -129,6 +129,23 @@ public:
 
 	bool FstArmed() const { return active && !fst.empty(); }
 
+	//! Maximal run at `pos` for split serving: sets *covered for whether
+	//! the run lies inside FST coverage and returns its length capped at
+	//! maxLen (>0 whenever maxLen > 0 and the view holds FST coverage).
+	//! Pure; the production splitter and host tests share it.
+	u32 FstRun(u64 pos, u32 maxLen, bool *covered) const;
+
+	//! Serve an FST-coverage-crossing read by assembly: covered runs from
+	//! the overlay, the rest through `readers.stock` (same-offset stock
+	//! disc bytes). Any failing run fails the whole read with *doneOut =
+	//! bytes completed, so the caller discards the buffer and aborts -
+	//! never a partial image. Production and host tests share this exact
+	//! function (production binds the IOS stock reader; tests bind files).
+	//! Only meaningful after a META_SPLIT verdict; other verdicts return
+	//! false untouched.
+	bool ServeSplit(u64 offset, u8 *buffer, u32 length,
+					const BootReaders &readers, u32 *doneOut) const;
+
 	//! True when active (consulted). False => stock behavior, Serve refuses.
 	bool Active() const { return active; }
 
@@ -147,14 +164,21 @@ public:
 	//! so the production read path and host tests share one decision.
 	//! DOL touches route to ServeDol (or FAIL when straddling the image
 	//! edge - a patched image must never mix stock bytes); fully-contained
-	//! header/FST reads route to Serve; everything else falls through to
-	//! stock. Zero-length or disarmed views route to stock. Pure.
+	//! header/FST reads route to Serve; FST reads that merely overlap
+	//! coverage route to META_SPLIT (covered part staged, rest stock -
+	//! the apploader demonstrably over-reads table tails by alignment,
+	//! and the install overwrites whatever it loaded); everything else
+	//! falls through to stock. Zero-length or disarmed views route to
+	//! stock. Header crossings stay stock (header readers always ask
+	//! exactly; no install backs a mixed header). DOL straddles stay FAIL
+	//! (no install backs a mixed image either). Pure.
 	enum RouteVerdict
 	{
-		ROUTE_STOCK, // caller does the stock read (buffer untouched)
-		ROUTE_DOL,   // serve via ServeDol (may still fail -> caller aborts)
-		ROUTE_META,  // serve via Serve (header/FST, fully contained)
-		ROUTE_FAIL   // fail loudly: caller must boot nothing
+		ROUTE_STOCK,      // caller does the stock read (buffer untouched)
+		ROUTE_DOL,        // serve via ServeDol (may still fail -> abort)
+		ROUTE_META,       // serve via Serve (fully contained)
+		ROUTE_META_SPLIT, // FST overlap: staged part + stock part assembled
+		ROUTE_FAIL        // fail loudly: caller must boot nothing
 	};
 	RouteVerdict Route(u64 offset, u32 length) const;
 

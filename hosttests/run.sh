@@ -217,7 +217,7 @@ build_run test_patchplan "$SRC/riivo/RiivoPatchPlan.cpp" "$SRC/riivo/RiivoFstBui
 # plus DOL positional serving (splits, source advancement, fallback
 # identity, error propagation, coverage refusals). Production overlay code
 # only (no console, no IOS).
-build_run test_bootview "$SRC/riivo/RiivoBootView.cpp"
+build_run test_bootview "$SRC/riivo/RiivoBootView.cpp" "$SRC/riivo/RiivoFst.cpp" "$SRC/riivo/RiivoFstWalk.cpp"
 
 # Early/late placement identity through the production seam: real FsDirLister
 # + real stat over a scratch card early, same set/device/lister/sizes plus

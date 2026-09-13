@@ -220,7 +220,7 @@ namespace Riivo
 	static bool dolServing = false;
 	//! Consult counters, reported once at disarm (bounded single line).
 	static u32 ovReads = 0, ovServedDol = 0, ovServedMeta = 0, ovFatOpens = 0,
-			   ovFailed = 0;
+			   ovFailed = 0, ovServedSplit = 0;
 
 	//! Which partition the game is on, looked up in SetupDisc for the same
 	//! reason as everything else here.
@@ -405,6 +405,31 @@ namespace Riivo
 				++ovFailed;
 				return -1;
 			}
+			case BootView::ROUTE_META_SPLIT:
+			{
+				// FST read crossing the coverage edge (the apploader
+				// demonstrably over-reads table tails by alignment):
+				// shared assembly (covered runs staged, rest stock).
+				// Either half failing fails the whole read (the caller
+				// discards the buffer and aborts) - never a partial
+				// image. The install overwrites whatever the apploader
+				// loaded, and any withhold returns to the loader, so
+				// mixed transient bytes cannot reach the game.
+				BootReaders r;
+				r.stock = BootStockReader;
+				r.fat = 0;
+				r.ctx = 0;
+				u32 done = 0;
+				if (bootView.ServeSplit(offset, buffer, length, r, &done))
+				{
+					++ovServedSplit;
+					return 1;
+				}
+				++ovFailed;
+				gprintf("Riivo: boot-view split read failed at 0x%llx len %u (done %u)\n",
+						(unsigned long long)offset, length, done);
+				return -1;
+			}
 		}
 		return 0;
 	}
@@ -421,17 +446,17 @@ namespace Riivo
 	{
 		if (bootView.Active() || bootView.HasDol() || ovReads > 0)
 		{
-			gprintf("Riivo: boot view disarmed (reads %u, dol %u, meta %u, fat opens %u, failed %u)\n",
-					ovReads, ovServedDol, ovServedMeta, ovFatOpens, ovFailed);
-			char line[160];
+			gprintf("Riivo: boot view disarmed (reads %u, dol %u, meta %u, split %u, fat opens %u, failed %u)\n",
+					ovReads, ovServedDol, ovServedMeta, ovServedSplit, ovFatOpens, ovFailed);
+			char line[192];
 			snprintf(line, sizeof(line),
-				"boot view: %u read(s) consulted, %u dol + %u header/table served, %u fat open(s), %u failed\n",
-				ovReads, ovServedDol, ovServedMeta, ovFatOpens, ovFailed);
+				"boot view: %u read(s) consulted, %u dol + %u header/table + %u split served, %u fat open(s), %u failed\n",
+				ovReads, ovServedDol, ovServedMeta, ovServedSplit, ovFatOpens, ovFailed);
 			AppendLog(line);
 		}
 		bootView.Deactivate();
 		dolServing = false;
-		ovReads = ovServedDol = ovServedMeta = ovFatOpens = ovFailed = 0;
+		ovReads = ovServedDol = ovServedMeta = ovFatOpens = ovFailed = ovServedSplit = 0;
 	}
 
 	bool DolWillServe()

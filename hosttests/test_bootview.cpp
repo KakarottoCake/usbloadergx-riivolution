@@ -4,17 +4,22 @@
 // OOB, empty, and overflow inputs refuse/fall back explicitly. Production
 // linkage (RiivoBootView only, no console).
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <string>
 #include <vector>
 #include <map>
 
 #include "riivo/RiivoBootView.hpp"
+#include "riivo/RiivoFst.hpp"
+#include "riivo/RiivoReconcile.hpp"
 
 using namespace Riivo;
 
 static int checks = 0, failures = 0;
 #define CHECK(x) do { ++checks; if (!(x)) { ++failures; printf("FAIL line %d: %s\n", __LINE__, #x); } } while (0)
+
+static void R4Replay();
 
 int main()
 {
@@ -344,9 +349,23 @@ int main()
 		CHECK(v.ArmFst(0x5000, fst, (u32)fst.size(), why));
 		CHECK(v.Route(0x5000, 128) == BootView::ROUTE_META); // exact FST
 		CHECK(v.Route(0x5000 + 64, 32) == BootView::ROUTE_META); // sub-read
-		CHECK(v.Route(0x5000 + 120, 16) == BootView::ROUTE_STOCK); // past end
-		CHECK(v.Route(0x5000 - 16, 32) == BootView::ROUTE_STOCK); // straddles start
+		CHECK(v.Route(0x5000 + 120, 16) == BootView::ROUTE_META_SPLIT); // past end: split
+		CHECK(v.Route(0x5000 - 16, 32) == BootView::ROUTE_META_SPLIT); // straddles start: split
+		CHECK(v.Route(0x5000 - 64, 32) == BootView::ROUTE_STOCK); // fully outside
 		CHECK(v.Route(0xFFFFFFFFFFFFFFFFULL - 4, 16) == BootView::ROUTE_STOCK); // wrap
+		// FstRun maximal runs for the splitter: covered/stock parts.
+		{
+			bool cov = false;
+			u32 run = 0;
+			run = v.FstRun(0x5000 + 120, 64, &cov);
+			CHECK(cov && run == 8); // [0x5078,0x5080) staged...
+			run = v.FstRun(0x5000 + 128, 64, &cov);
+			CHECK(!cov && run == 64); // ...then stock takes over
+			run = v.FstRun(0x5000 - 16, 64, &cov);
+			CHECK(!cov && run == 16); // stock head...
+			run = v.FstRun(0x4000, 0, &cov);
+			CHECK(run == 0); // zero length: nothing to split
+		}
 	}
 	// 12. Route with DOL armed: DOL wins, straddles fail loudly.
 	{
@@ -371,6 +390,161 @@ int main()
 		CHECK(v.Route(0x5000, 16) == BootView::ROUTE_STOCK); // elsewhere stock
 	}
 
+	R4Replay();
+
 	printf("%d checks, %d failures\n", checks, failures);
 	return failures ? 1 : 0;
+}
+
+// R4 fixture reader: exact-size file or failure (no partial fixtures).
+static bool ReadFix(const std::string &path, std::vector<u8> &out, size_t want)
+{
+	out.clear();
+	FILE *f = fopen(path.c_str(), "rb");
+	if (!f)
+		return false;
+	fseek(f, 0, SEEK_END);
+	long n = ftell(f);
+	fseek(f, 0, SEEK_SET);
+	if (n != (long)want)
+	{
+		fclose(f);
+		return false;
+	}
+	out.resize(want);
+	bool ok = fread(&out[0], 1, want, f) == want;
+	fclose(f);
+	if (!ok)
+		out.clear();
+	return ok;
+}
+
+// 13. R4 production-equivalence replay (env-gated local fixtures).
+// Replays the 16 captured apploader triples from the R4 serving run
+// (padded T0 table 153936 served with grown header) through Route,
+// Serve and ServeSplit with the real fixture bytes, and compares
+// against what the emulator served (bootserved CRCs + file/disc spans
+// from the raw log): header triple byte-equal incl. CRC, FST chunk 1
+// byte-equal incl. CRC, tail chunk assembled staged-prefix +
+// stock-suffix byte-equal incl. CRC, all other triples stock verdicts,
+// exactly one stock callback for the uncovered tail, and the staged
+// table host-parses (count + T0 entries) separately from game parsing
+// (none observed in any idle window, stock included).
+// Set RIIVO_R4FIX to a dir with hdr-stock.bin (0x440), hdr-served.bin
+// (32), fst-staged.bin (153936), fst-stockext.bin (153952: stock FST +
+// 144xAA gap + 16 real tail bytes from the emulator hex log). Skipped
+// when absent (spectral/superstar precedent).
+static void R4Replay()
+{
+	const char *dir = getenv("RIIVO_R4FIX");
+	if (!dir)
+	{
+		printf("  (R4 replay SKIPPED: set RIIVO_R4FIX)\n");
+		return;
+	}
+	std::string d = dir;
+	std::vector<u8> hdrStock, hdrServed, staged, stockext;
+	if (!ReadFix(d + "/hdr-stock.bin", hdrStock, 0x440)
+		|| !ReadFix(d + "/hdr-served.bin", hdrServed, 32)
+		|| !ReadFix(d + "/fst-staged.bin", staged, 153936)
+		|| !ReadFix(d + "/fst-stockext.bin", stockext, 153952))
+	{
+		printf("  (R4 replay SKIPPED: fixtures missing/wrong size in %s)\n",
+			   d.c_str());
+		return;
+	}
+	const u64 kFstOff = 0x772400;
+	// Production header build must equal the served header bytes.
+	std::vector<u8> patched;
+	std::string why;
+	CHECK(PatchBootHeader(&hdrStock[0], 0x440, kFstOff, 153936, 153936,
+						  patched, why));
+	CHECK(patched.size() == BOOTVIEW_HEADER_BYTES);
+	{
+		bool headEq = true;
+		for (size_t i = 0; i < 32; ++i)
+			if (patched[0x420 + i] != hdrServed[i])
+				headEq = false;
+		CHECK(headEq);
+	}
+	CHECK(Crc32(&hdrServed[0], 32) == 0x5DB71983u); // logged bootserved CRC
+	// Host-parse the staged table separately from game parsing.
+	{
+		Fst fst;
+		CHECK(fst.Parse(&staged[0], (u32)staged.size(), true));
+		CHECK(fst.FileCount() == 3937);
+		const FstFile *fa = fst.FindFile("/GXDiagProbe/a0123456789abcdef0123456789abcdef0123456789.bin");
+		const FstFile *fb = fst.FindFile("/GXDiagProbe/b0123456789abcdef0123456789abcdef0123456789.bin");
+		CHECK(fa && fa->length == 1);
+		CHECK(fb && fb->length == 558);
+	}
+	// Production-equivalent view: grown header + staged table advertised.
+	BootView v;
+	CHECK(v.Activate(&hdrStock[0], 0x440, patched, why));
+	CHECK(v.ArmFst(kFstOff, staged, 153936, why));
+	CHECK(v.FstArmed());
+	// FST chunk 1 served byte-equal incl. CRC (logged bootserved CRC).
+	CHECK(Crc32(&staged[0], 131072) == 0xEA8F0D6Au);
+	// The 16 captured triples (dvd offset, length) in apploader order.
+	struct Triple { u64 off; u32 len; int expect; }; // 0 stock 1 meta 2 split
+	Triple triples[16] = {
+		{0x420, 32, 1}, {0x440, 32, 0}, {0x440, 8192, 0}, {0x3FF00, 256, 0},
+		{0x40000, 10016, 0}, {0x42720, 6540928, 0}, {0x67F5A0, 768, 0},
+		{0x67F8A0, 1152, 0}, {0x67FD20, 3712, 0}, {0x680BA0, 32, 0},
+		{0x680BC0, 97216, 0}, {0x698780, 835296, 0}, {0x764660, 6752, 0},
+		{0x7660C0, 49952, 0}, {0x772400, 131072, 1}, {0x792400, 22880, 2}
+	};
+	for (int i = 0; i < 16; ++i)
+	{
+		BootView::RouteVerdict want = BootView::ROUTE_STOCK;
+		if (triples[i].expect == 1)
+			want = BootView::ROUTE_META;
+		else if (triples[i].expect == 2)
+			want = BootView::ROUTE_META_SPLIT;
+		CHECK(v.Route(triples[i].off, triples[i].len) == want);
+	}
+	// Header triple bytes == served bytes; chunk 1 == staged prefix.
+	{
+		static u8 buf[131072];
+		CHECK(v.Serve(0x420, buf, 32));
+		CHECK(memcmp(buf, &hdrServed[0], 32) == 0);
+		CHECK(v.Serve(0x772400, buf, 131072));
+		CHECK(memcmp(buf, &staged[0], 131072) == 0);
+	}
+	// Tail chunk through the shared splitter with a recording stock
+	// reader over fst-stockext.bin: staged prefix + stock suffix,
+	// byte-equal to the emulator mix, CRC-equal to the logged mix.
+	struct StockCtx
+	{
+		const std::vector<u8> *ext;
+		std::vector<std::pair<u64, u32> > calls;
+	};
+	StockCtx ctx;
+	ctx.ext = &stockext;
+	BootReaders readers;
+	readers.ctx = &ctx;
+	readers.stock = [](u64 absOff, u8 *dst, u32 len, void *c) -> bool {
+		StockCtx *x = (StockCtx *)c;
+		x->calls.push_back(std::make_pair(absOff, len));
+		if (absOff < 0x772400ULL || absOff + len > 0x772400ULL + x->ext->size())
+			return false;
+		memcpy(dst, &(*x->ext)[(size_t)(absOff - 0x772400ULL)], len);
+		return true;
+	};
+	readers.fat = 0;
+	{
+		static u8 out[22880];
+		u32 done = 0;
+		CHECK(v.ServeSplit(0x792400, out, 22880, readers, &done));
+		CHECK(done == 22880);
+		CHECK(memcmp(out, &staged[131072], 22864) == 0); // staged prefix
+		CHECK(memcmp(out + 22864, &stockext[153936], 16) == 0); // real tail
+		CHECK(Crc32(out, 22880) == 0x6A4ABF98u); // logged mix CRC
+		CHECK(ctx.calls.size() == 1); // exactly one stock call...
+		if (ctx.calls.size() == 1)
+		{
+			CHECK(ctx.calls[0].first == 0x797D50u); // ...for the tail only
+			CHECK(ctx.calls[0].second == 16);
+		}
+	}
 }
