@@ -4148,7 +4148,12 @@ namespace Riivo
 		//! startup, which is the observation that decides it.
 		//! Everything below books and reports the EFFECTIVE placement.
 		FstPlacement effPlace = place;
-		if (effPlace.ok && !effPlace.inPlace)
+		// Under a served grown header the apploader's own words decide, so
+		// every placement - including one PlaceFst calls in-place (its
+		// reservation arithmetic cannot see that the words moved) - goes
+		// through reported-base evaluation below. Stock-header boots keep
+		// the cascade/in-place split exactly as before.
+		if (effPlace.ok && (!effPlace.inPlace || grownHeaderServed))
 		{
 			// Live loaded ranges: drop apploader-loaded FST bytes (matched
 			// to their yields by destination+length, identified by disc
@@ -4219,13 +4224,15 @@ namespace Riivo
 				   "  a wrong address writes over the running game and shows up as a\n"
 				   "  hang with nothing on screen.\n";
 			// After a served grown header there is no stock boot to fall
-			// back to: the apploader's reservation, loaded table and
-			// published pointers may already differ from stock, so a
-			// withheld table plus a boot would run whatever the apploader
-			// loaded - not a stock game. Block the boot instead
-			// (BootPartition returns no entry, like every failed load).
-			// Under the nofstinstall diagnostic the header stayed stock,
-			// so the plain withhold path (stock boot) remains safe there.
+			// back to - whichever gate refused (reported evaluation above
+			// or placement arithmetic), the apploader's reservation,
+			// loaded table and published pointers may already differ from
+			// stock, so a withheld table plus a boot would run whatever
+			// the apploader loaded, not a stock game. Block the boot
+			// instead (BootPartition returns no entry, like every failed
+			// load). Under the nofstinstall diagnostic the header stayed
+			// stock, so the plain withhold path (stock boot) remains safe
+			// there.
 			if (grownHeaderServed)
 			{
 				grownBlocked = true;
