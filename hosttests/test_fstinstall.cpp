@@ -658,9 +658,9 @@ int main()
 								 addr, size, 0x80004000, addr,
 								 addr),
 		   "owned grown table verifies (heap below)");
-		// Heap entirely above the span is equally disjoint.
+		// Heap entirely above the span (but inside MEM1) is equally disjoint.
 		ck(ApploaderGrownTableOk(&staged[0], &staged[0], size,
-								 addr, size, addr + size, addr + size + 0x100000,
+								 addr, size, addr + size, MEM1_END,
 								 addr),
 		   "heap-above table verifies");
 		// Anything else refuses the launch instead of repairing it.
@@ -695,6 +695,38 @@ int main()
 								  addr, size, 0, addr + 0x1000,
 								  addr),
 		   "blind overlapping heap refuses");
+		// Bounds validated before overlap: unknown, inverted, and
+		// out-of-range intervals prove nothing, even with perfect bytes.
+		ck(!ApploaderGrownTableOk(&staged[0], &staged[0], size,
+								  addr, size, 0, 0,
+								  addr),
+		   "zero bounds refuse (unknown is not proof)");
+		ck(!ApploaderGrownTableOk(&staged[0], &staged[0], size,
+								  addr, size, 0x80004000, 0,
+								  addr),
+		   "zero top refuses");
+		ck(!ApploaderGrownTableOk(&staged[0], &staged[0], size,
+								  addr, size, 0x81800000, 0x81000000,
+								  addr),
+		   "inverted interval refuses");
+		ck(!ApploaderGrownTableOk(&staged[0], &staged[0], size,
+								  addr, size, 0x80004000, 0x90000000,
+								  addr),
+		   "top above MEM1 refuses");
+		ck(!ApploaderGrownTableOk(&staged[0], &staged[0], size,
+								  addr, size, 0x100, 0x80004000,
+								  addr),
+		   "nonzero floor below MEM1 refuses");
+		ck(!ApploaderGrownTableOk(&staged[0], &staged[0], size,
+								  addr, size, 0x80004000, 0x80000000,
+								  addr),
+		   "top at MEM1 base refuses (no heap)");
+		// Unknown floor with a sane top below the table is genuinely
+		// disjoint: allowed, and the overlap test stays conservative.
+		ck(ApploaderGrownTableOk(&staged[0], &staged[0], size,
+								 addr, size, 0, addr,
+								 addr),
+		   "blind floor with top below table verifies");
 		ck(!ApploaderGrownTableOk(0, &staged[0], size,
 								  addr, size, 0x80004000, addr,
 								  addr),

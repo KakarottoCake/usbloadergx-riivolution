@@ -244,12 +244,18 @@ namespace Riivo
 	//! Whether MEM1 holds an apploader-owned grown table: the apploader
 	//! loaded exactly the staged bytes where it said it did. Location and
 	//! size are identity - a table elsewhere, or a prefix of it, is not
-	//! this table - and the apploader's own heap must clear the span for
-	//! its arena-high to be preservable (entirely below the table, or
-	//! entirely above it). Pure over caller-supplied words and bytes (the
-	//! target reads live in the caller); host-tested. False means refuse
-	//! the launch: a grown mismatch is never repaired by copying a table
-	//! over the game and rewriting boot words the game is already using.
+	//! this table. The arena interval is validated BEFORE the overlap
+	//! test: an unvalidated interval proves nothing. Zero top means the
+	//! apploader never published one; anything outside MEM1 is not a heap
+	//! bound; an inverted interval is corrupt. A zero floor is the
+	//! documented unknown (PlaceFst blindLo) and is allowed - the overlap
+	//! test below is then conservative, so an unknown floor can only
+	//! refuse, never bless. The apploader's valid values are preserved by
+	//! the caller, never rewritten. Pure over caller-supplied words and
+	//! bytes (the target reads live in the caller); host-tested. False
+	//! means refuse the launch: a grown mismatch is never repaired by
+	//! copying a table over the game and rewriting boot words the game is
+	//! already using.
 	inline bool ApploaderGrownTableOk(const u8 *mem, const u8 *staged, u32 size,
 									  u32 ptr, u32 max,
 									  u32 arenaLo, u32 arenaHi,
@@ -260,6 +266,12 @@ namespace Riivo
 		if (ptr != expAddr || max != size)
 			return false;
 		if (memcmp(mem, staged, size) != 0)
+			return false;
+		if (arenaHi <= MEM1_BASE || arenaHi > MEM1_END)
+			return false;
+		if (arenaLo != 0 && (arenaLo < MEM1_BASE || arenaLo > MEM1_END))
+			return false;
+		if (arenaLo > arenaHi)
 			return false;
 		if ((u64) arenaHi > expAddr && (u64) arenaLo < (u64) expAddr + size)
 			return false;
