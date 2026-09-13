@@ -136,7 +136,8 @@ static void TestInstallIsTargetOnly()
 	Riivo::OnDemandLayout L;
 	std::string why;
 	std::vector<u8> table(64, 0);
-	check(!Riivo::InstallOnDemand(0x93800000, table, 0, L, why),
+	Riivo::OnDemandMeta meta;
+	check(!Riivo::InstallOnDemand(0x93800000, table, 0, meta, L, why),
 		  "install refuses on the host");
 	check(!why.empty(), "and says why");
 }

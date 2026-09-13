@@ -1,0 +1,103 @@
+/****************************************************************************
+ * Riivolution support for USB Loader GX
+ *
+ * Segment-reader integration notes (branch segreader-integration).
+ *
+ * 1. Interception audit against the supported d2x path
+ *    (wiidev/d2x-cios@33ad1ee, source/dip-plugin/plugin.c).
+ *
+ * The hook (redirect_ondemand.S, built by BuildDiHookOnDemand over a
+ * probed site) replaces the head of the DIP LOW_READ worker. Its contract
+ * is unchanged: r0 = command struct ([r0,#4] = length bytes, [r0,#8] =
+ * word offset), r4 = config, r7 = outbuf. Before calling the module it
+ * adds [r4,#8]+[r4,#12] to the word offset - exactly what the stock worker
+ * adds (config.offset[0]+config.offset[1]) - so the module receives the
+ * post-addition offset the stock path would have used.
+ *
+ * Stock path from there: MODE_CRYPT check, then __DI_ReadUnencrypted adds
+ * the same offsets again? No - the worker this hook replaces has ALREADY
+ * consumed them; the stub reproduces the addition once, matching the
+ * stock instruction stream it replays on pass-through
+ * (ldr r3,[r4,#0] / lsls r2,r3,#30, then flags decide, as stock).
+ *
+ * Audited properties, each with its failure mode if violated:
+ * - MISS (1) replays the overwritten pair and returns into the branch, so
+ *   flags decide exactly as stock. A wrong lr restore would loop inside
+ *   the stub (documented in the stub; unchanged by this branch).
+ * - OK (0) means the full transfer is in the destination; the stub takes
+ *   the success epilogue with r5 = 0. No partial-ok shape exists.
+ * - Negative fails the read with the unrecovered_read error word, matching
+ *   the stock worker. The module never reports partial data as success:
+ *   sr/rr return EIO/FAIL on any sub-read failure with nothing further
+ *   attempted, and the PPC side discards the bounce buffer on FAIL.
+ * - The module never issues its own 0x71: base bytes for gaps come from
+ *   the zero rule (in-region padding, identical observable to the
+ *   whole-file runtime and to unmapped declared space on stock reads),
+ *   and fully-unmapped requests MISS so the caller runs the stock path.
+ *   No recursion into the hook is possible by construction.
+ * - OPENPART/OFFSET: nothing in this loader's flow sends IOCTL_DI_OFFSET
+ *   (WDVD_Offset has no callers) and the plugin does not handle OPENPART,
+ *   so config offsets are zero and the cIOS word offset equals the
+ *   partition offset (FragPlan documents the same). A flow that changes
+ *   this needs its own audit; the stub's addition keeps working because
+ *   it mirrors the worker rather than assuming zero.
+ * - Compile success proves none of the above: the stub is position- and
+ *   register-exact code validated by test_dihook against the probed bytes,
+ *   and the dispatch behavior is proven by the host suites, but the
+ *   decrypt/hash preservation and the MISS fall-through only execute on
+ *   a console (see hardware checks below).
+ *
+ * 2. Storage design (measured, not assumed)
+ *
+ * Pathname/blob access: extents reference blob paths resolved per open
+ * through the string table (bounds + NUL-termination validated at init;
+ * a table pointing past its end is refused). One cached open amortizes
+ * sequential reads; EIO drops it and the next read re-walks.
+ * Page crossing: reads split at extent boundaries AND at the 4 KiB bounce
+ * chunk; each sub-run is one file-range read or zeros. Worst case per DI
+ * read: one sub-op per spanned extent plus gap fills, each bounded by the
+ * table density the planner caps through the fragment budget; every chain
+ * walk is cluster-count bounded and every buffer is static (4 KiB bounce +
+ * 512 B sector cache, 32-byte aligned for DMA). No per-read heap anywhere
+ * (PROV_BOUNDED); the DI-thread stack stays small by the same loops the
+ * FAT reader already uses.
+ * Backing availability: the volume mounts once at init (states 2-5 + new
+ * 6/7 name the failing half); a later EIO fails the read, drops the
+ * caches, and the boot log's error counter - never a partial buffer.
+ * Cache invalidation: EIO clears the open-file cache; rfat_drop_cache
+ * clears the sector cache. Removal mid-game surfaces as errors, not
+ * corruption.
+ * Memory: module 8160 code + 4864 bss (measured link); table sized by
+ * ManifestTableSize at plan time and reserved with the module in one
+ * MEM2 reservation (PlanOnDemand). No safe-MEM2 claim is made here:
+ * lifetime/ownership/coherence evidence remains open and is stated as
+ * such wherever the reservation is described.
+ *
+ * 3. What still refuses, and why
+ *
+ * Partial-file planning refusal and the DVD9 refusal are untouched: the
+ * reader serves whatever segments arrive, but the emitter still writes
+ * whole-file extents and the planner still refuses dual-layer images at
+ * plan time. GENERATED extents have a reader and params but no staged
+ * store (genBase/genSize travel as zero and refuse at init); staging
+ * ORIGINAL-run slices as generated bytes is the defined next step, with
+ * the reservation layout extended to hold them.
+ *
+ * 4. Hardware checks still required (two-launch package scope)
+ *
+ * - On-demand RIV1 boot: card log shows the RIV1 staged line with the
+ *   early digest, then the late "matches the early staging (no drift)"
+ *   line, then OUTCOME: FST_STAGED. Any MANIFEST_DRIFT line invalidates
+ *   the run as an integration test (card changed between phases or the
+ *   composer drifted).
+ * - Identity refusal: a table staged for another game must MISS everything
+ *   (stock boot) with miss counter advancing and zero errors - never
+ *   partial application.
+ * - Blink/state codes on loader return name the failing half (1 nothing
+ *   staged, 2 checksum, 3 bounds, 4 bytes, 5 pointers; module states ride
+ *   in the boot log). Unreadable flashes are inconclusive, not a rerun
+ *   trigger by themselves.
+ * - T0 establishes launch integration, not consumption of added mod files;
+ *   grown-table behavior is unchanged by this branch and stays pending
+ *   its own round.
+ ***************************************************************************/

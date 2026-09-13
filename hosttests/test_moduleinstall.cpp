@@ -55,6 +55,13 @@ static Riivo::ModuleParams Good()
 	p.readB = 0x938018B0;
 	p.config = 0x13802840;
 	p.sync = 0x93801234;
+	p.tableKind = 1;
+	p.genBase = 0;
+	p.genSize = 0;
+	p.declLo = 0x48000000u;
+	p.declHi = 0x00000001u;
+	p.expDiscId = 0x53424E41u;
+	p.expPartIdx = 0;
 	return p;
 }
 
@@ -107,6 +114,13 @@ static void TestParams()
 	check(Rd32(q + 24) == p.config, "device config");
 	check(Rd32(q + 28) == p.sync, "sync routine");
 	check(Rd32(q + 32) == 0, "state left zero for the module to write");
+	check(Rd32(q + 48) == p.tableKind, "table kind selects the reader");
+	check(Rd32(q + 52) == p.genBase, "generated store base");
+	check(Rd32(q + 56) == p.genSize, "generated store size");
+	check(Rd32(q + 60) == p.declLo, "declared size, low word");
+	check(Rd32(q + 64) == p.declHi, "declared size, high word");
+	check(Rd32(q + 68) == p.expDiscId, "expected game id");
+	check(Rd32(q + 72) == p.expPartIdx, "expected partition index");
 }
 
 //! Relocation, checked by placing the same module twice and comparing.

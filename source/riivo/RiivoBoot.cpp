@@ -216,6 +216,19 @@ namespace Riivo
 	//! Bounded by the early fragment budget (refused beyond it pre-plan).
 	static PatchPlan activePlan;
 	static bool haveActivePlan = false;
+	//! Early RIV1 digest for the late drift check: the manifest staged for
+	//! the module is built pre-registration from the early plan; the late
+	//! phase rebuilds it from the same inputs and compares count, bytes
+	//! and crc. A mismatch withholds later phases - the module must never
+	//! serve a contract the table no longer matches.
+	static bool haveEarlyRiv1 = false;
+	static u32 earlyRiv1Count = 0;
+	static u64 earlyRiv1Bytes = 0;
+	static u32 earlyRiv1Crc = 0;
+	//! The early blob itself, for order-insensitive set comparison late.
+	//! Bounded by the fragment budget like every other retained plan state;
+	//! cleared per boot with everything else.
+	static std::vector<u8> earlyRiv1Blob;
 	//! True once DOL coverage is armed AND verified through the real read
 	//! path. Gates the alt-DOL stacking refusal in BootPartition: an SD
 	//! alternate DOL would overwrite the served image in MEM after the fact.
@@ -642,6 +655,8 @@ namespace Riivo
 	{
 		activePlan = PatchPlan();
 		haveActivePlan = false;
+		haveEarlyRiv1 = false;
+		earlyRiv1Blob.clear();
 		stagedDol = PlannedFile();
 		haveStagedDol = false;
 		stagedDolBase = 0;
@@ -945,6 +960,11 @@ namespace Riivo
 		modAddFails.clear();
 		activePlan = PatchPlan();
 		haveActivePlan = false;
+		haveEarlyRiv1 = false;
+		earlyRiv1Count = 0;
+		earlyRiv1Bytes = 0;
+		earlyRiv1Crc = 0;
+		earlyRiv1Blob.clear();
 		stagedDol = PlannedFile();
 		haveStagedDol = false;
 		stagedDolBase = 0;
@@ -2235,6 +2255,88 @@ namespace Riivo
 		return true;
 	}
 
+	//! Entry-set comparison between two validated manifests, insensitive to
+	//! entry order and string-blob layout (early and late placements order
+	//! files differently while naming the same bytes). Little-endian by
+	//! hand; both blobs were validated by their builders. Paths compare by
+	//! content; anything unresolvable means the blobs cannot be shown
+	//! equal - return false, never assume.
+	static u32 ManifestRd32(const std::vector<u8> &b, size_t at)
+	{
+		return (u32)b[at] | ((u32)b[at + 1] << 8) |
+			   ((u32)b[at + 2] << 16) | ((u32)b[at + 3] << 24);
+	}
+	struct ManifestEntryKey
+	{
+		u64 discOff;
+		u64 discHi;
+		u32 length;
+		u32 kindSrc;
+		u64 srcOff;
+		u64 srcHi;
+		std::string path;
+		u32 genOff;
+		bool operator<(const ManifestEntryKey &o) const
+		{
+			if (discOff != o.discOff) return discOff < o.discOff;
+			if (discHi != o.discHi) return discHi < o.discHi;
+			if (length != o.length) return length < o.length;
+			if (kindSrc != o.kindSrc) return kindSrc < o.kindSrc;
+			if (srcOff != o.srcOff) return srcOff < o.srcOff;
+			if (srcHi != o.srcHi) return srcHi < o.srcHi;
+			if (path != o.path) return path < o.path;
+			return genOff < o.genOff;
+		}
+		bool operator==(const ManifestEntryKey &o) const
+		{
+			return discOff == o.discOff && discHi == o.discHi
+				&& length == o.length && kindSrc == o.kindSrc
+				&& srcOff == o.srcOff && srcHi == o.srcHi
+				&& path == o.path && genOff == o.genOff;
+		}
+	};
+	static bool ManifestEntrySet(const std::vector<u8> &b,
+								 std::vector<ManifestEntryKey> &keys)
+	{
+		keys.clear();
+		if (b.size() < RIIVO_MANIFEST_HEADER)
+			return false;
+		u32 n = ManifestRd32(b, 20);
+		u32 strOff = ManifestRd32(b, 24);
+		if (strOff < RIIVO_MANIFEST_HEADER + n * RIIVO_MANIFEST_ENTRY
+			|| strOff > b.size())
+			return false;
+		for (u32 i = 0; i < n; ++i)
+		{
+			size_t e = (size_t)RIIVO_MANIFEST_HEADER + i * RIIVO_MANIFEST_ENTRY;
+			if (e + RIIVO_MANIFEST_ENTRY > b.size())
+				return false;
+			ManifestEntryKey k;
+			k.discOff = ManifestRd32(b, e);
+			k.discHi = ManifestRd32(b, e + 4);
+			k.length = ManifestRd32(b, e + 8);
+			k.kindSrc = ManifestRd32(b, e + 12);
+			k.srcOff = ManifestRd32(b, e + 16);
+			k.srcHi = ManifestRd32(b, e + 20);
+			u32 pathOff = ManifestRd32(b, e + 24);
+			k.genOff = ManifestRd32(b, e + 28);
+			size_t at = (size_t)strOff + pathOff;
+			if (at >= b.size())
+				return false;
+			while (at < b.size() && b[at] != 0)
+			{
+				k.path += (char)b[at];
+				if (k.path.size() > 1024)
+					return false;
+				++at;
+			}
+			if (at >= b.size())
+				return false;
+			keys.push_back(k);
+		}
+		std::sort(keys.begin(), keys.end());
+		return true;
+	}
 	//! Emit the RIV1 manifest: the staged segment contract for a future
 	//! runtime, cross-checked against the served placements now. Shared
 	//! implementation (BuildPlanManifest) with the host parity suite: a
@@ -2268,6 +2370,34 @@ namespace Riivo
 		Addf(out, "  manifest RIV1 : %u extent(s), %llu byte(s), %u blob byte(s), crc %08x (validated)\n",
 			 (unsigned)placed.size(), (unsigned long long)totalBytes,
 			 (unsigned)blob.size(), crc);
+		//! Drift check against the early staging the module may already
+		//! serve: same inputs must name the same bytes. Compared as entry
+		//! sets (order- and blob-layout-insensitive), because early and
+		//! late placements order files differently. A mismatch withholds
+		//! later phases - the table in MEM2 no longer matches the plan the
+		//! FST build is about to consume.
+		if (haveEarlyRiv1)
+		{
+			u32 lateCount = ManifestRd32(blob, 20);
+			std::vector<ManifestEntryKey> earlyKeys, lateKeys;
+			bool same = ManifestEntrySet(earlyRiv1Blob, earlyKeys)
+						&& ManifestEntrySet(blob, lateKeys)
+						&& earlyKeys.size() == lateKeys.size();
+			for (size_t i = 0; same && i < earlyKeys.size(); ++i)
+				same = (earlyKeys[i] == lateKeys[i]);
+			if (!same)
+			{
+				char line[300];
+				snprintf(line, sizeof(line),
+					"early RIV1 (files %u, bytes %u, crc %08x) names different "
+					"bytes than the late rebuild (files %u, bytes %u, crc %08x).",
+					earlyRiv1Count, (unsigned)earlyRiv1Bytes, earlyRiv1Crc,
+					lateCount, (unsigned)blob.size(), crc);
+				WithholdStaged(out, "MANIFEST_DRIFT", line);
+				return false;
+			}
+			Addf(out, "  manifest RIV1 : matches the early staging (no drift)\n");
+		}
 		return true;
 	}
 
@@ -4149,6 +4279,66 @@ namespace Riivo
 
 		if (bootProbe.patchSites.size() == 1 && onDemandPlanned)
 		{
+			//! Segmented manifest first: the RIV1 blob describes the same
+			//! whole-file extents the redirect table below carries (built
+			//! from the same plan and placements), and the module serves it
+			//! through the segment reader with the declared size as its
+			//! anti-shadow bound. Anything failing here falls back to the
+			//! whole-file table path exactly as before - a staging refusal
+			//! never changes what the game reads.
+			bool riv1Staged = false;
+			if (haveActivePlan && declared > 0)
+			{
+				u32 discId = ((u32)bootGameId[0] << 24) | ((u32)bootGameId[1] << 16) |
+							 ((u32)bootGameId[2] << 8) | (u32)bootGameId[3];
+				std::vector<u8> riv1;
+				std::string riv1Why;
+				if (BuildPlanManifest(activePlan, placed, discId, riv1, riv1Why)
+					&& riv1.size() >= RIIVO_MANIFEST_HEADER)
+				{
+					OnDemandMeta meta;
+					meta.kind = 1;
+					meta.genBase = 0;
+					meta.genSize = 0;
+					meta.declSize = declared;
+					meta.discId = discId;
+					meta.partIdx = 0;
+					OnDemandLayout riv1Layout;
+					if (InstallOnDemand(bootProbe.patchSites[0], riv1,
+										RIIVO_PART_DISCOVER, meta, riv1Layout,
+										patchWhy))
+					{
+						patchApplied = true;
+						patchStorage = riv1Layout.moduleAddr;
+						hookGeneration = g_launch.generation;
+						onDemandLayout = riv1Layout;
+						riv1Staged = true;
+						haveEarlyRiv1 = true;
+						earlyRiv1Blob = riv1;
+						earlyRiv1Count = (u32)placed.size();
+						earlyRiv1Bytes = (u32)riv1.size();
+						earlyRiv1Crc = (u32)riv1[16] | ((u32)riv1[17] << 8) |
+									  ((u32)riv1[18] << 16) | ((u32)riv1[19] << 24);
+						LogStep("on-demand: RIV1 staged, %u file(s), %u bytes, crc %08x",
+								(unsigned)placed.size(), (unsigned)riv1.size(),
+								earlyRiv1Crc);
+					}
+					else
+						gprintf("Riivo: RIV1 staging refused (%s), trying whole-file table\n",
+								patchWhy.c_str());
+				}
+				else
+					gprintf("Riivo: RIV1 build refused (%s), trying whole-file table\n",
+							riv1Why.c_str());
+			}
+			if (riv1Staged)
+			{
+				gprintf("Riivo: on-demand hook at %08x: RIV1 segment service\n",
+						bootProbe.patchSites[0]);
+				LogStep("on-demand: hook serves the RIV1 manifest");
+			}
+			else
+			{
 			//! Paths go over as the module will look them up: from the root of
 			//! the FAT partition, without the loader's device prefix.
 			std::vector<RedirectEntry> entries;
@@ -4166,8 +4356,9 @@ namespace Riivo
 			{
 				LogStep("on-demand: table built, %u file(s), %u bytes",
 						(unsigned) entries.size(), (unsigned) table.size());
+			OnDemandMeta meta;
 			patchApplied = InstallOnDemand(bootProbe.patchSites[0], table,
-										   RIIVO_PART_DISCOVER, onDemandLayout,
+										   RIIVO_PART_DISCOVER, meta, onDemandLayout,
 										   patchWhy);
 			if (patchApplied)
 			{
@@ -4177,7 +4368,8 @@ namespace Riivo
 			}
 			gprintf("Riivo: on-demand hook at %08x: %s\n",
 					bootProbe.patchSites[0],
-					patchApplied ? "applied" : patchWhy.c_str());
+					patchApplied ? "applied (whole-file table)" : patchWhy.c_str());
+			}
 		}
 		else if (bootProbe.patchSites.size() == 1)
 		{
