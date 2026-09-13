@@ -430,6 +430,94 @@ int main()
 		check(ok, "200-extent search serves model-exact bytes");
 	}
 
+	// Activation states: inactive -> filled/verified -> active, modeled
+	// against the real validator/reader. The ARM gate this mirrors is
+	// three lines in riivo_di_read (unarmed returns MISS before init);
+	// the PPC transitions are install (armed iff nothing to fill), fill +
+	// verify, then the late arm word (poison + withhold on fill failure).
+	// The model below implements the gate exactly (no init call, no
+	// reader state while unarmed) and drives the REAL sr_init/sr_read
+	// once armed, so the transition contract is pinned, not narrated.
+	struct GateModel
+	{
+		bool armed;
+		bool initialized;
+		int initCalls;
+		sr_ctx ctx;
+		// Returns 1 for MISS, 0 for served, negative for failure - the
+		// module's three shapes.
+		int read(const std::vector<u8> &table, rfat_vol *vol,
+				 unsigned long long off, unsigned len, u8 *out,
+				 unsigned long long decl, unsigned discId)
+		{
+			if (!armed)
+				return 1;
+			if (!initialized)
+			{
+				if (sr_init(&ctx, &table[0], (unsigned)table.size(), vol,
+							0, 0, decl, discId, 0) != SR_OK)
+					return -1;
+				++initCalls;
+				initialized = true;
+			}
+			return sr_read(&ctx, off, len, out) == SR_OK ? 0 : -1;
+		}
+	};
+	{
+		std::vector<Riivo::ManifestExtent> one;
+		one.push_back(Ext(kModBase, 0x200, Riivo::RIIVO_EXT_EXTERNAL,
+						  Riivo::RIIVO_SRC_SD, 0, "/HELLO.TXT", 0));
+		std::vector<u8> tb;
+		std::string w2;
+		check(Riivo::BuildManifestV1(one, Riivo::RIIVO_MANIFEST_DISCOVER,
+									 kDiscId, 0, Riivo::RIIVO_CAP_SPLIT_READ,
+									 Riivo::RIIVO_PROV_BOUNDED, tb, w2),
+			  "single-extent table encodes");
+		GateModel g;
+		g.armed = false;
+		g.initialized = false;
+		g.initCalls = 0;
+		std::vector<u8> out(0x200, 0xCC);
+		// Inactive: MISS with no init call and an untouched buffer.
+		check(g.read(tb, &vol, kModBase, 0x200, &out[0], kDecl, kDiscId) == 1,
+			  "unarmed read MISSES");
+		bool untouched = true;
+		for (size_t i = 0; i < out.size(); ++i)
+			if (out[i] != 0xCC)
+				untouched = false;
+		check(untouched, "unarmed MISS writes nothing");
+		check(g.initCalls == 0 && !g.initialized, "unarmed read never inits");
+		// Fill + verify, then arm: the first and only init happens now.
+		g.armed = true;
+		check(g.read(tb, &vol, kModBase, 0x200, &out[0], kDecl, kDiscId) == 0,
+			  "armed read serves");
+		check(g.initCalls == 1 && g.initialized, "exactly one init, after arming");
+		check(out[0] == 0x00 && out[511] == (u8)0xFF, "served bytes are file bytes");
+		// Poison under an armed flag: init refuses, reads cannot start.
+		std::vector<u8> poison = tb;
+		poison[0] = poison[1] = poison[2] = poison[3] = 0;
+		GateModel gp;
+		gp.armed = true;
+		gp.initialized = false;
+		gp.initCalls = 0;
+		std::vector<u8> out3(0x200, 0xCC);
+		check(gp.read(poison, &vol, kModBase, 0x200, &out3[0], kDecl, kDiscId) == -1,
+			  "poisoned table refuses even when armed");
+		check(gp.initCalls == 0, "refused init counts no reader");
+		// Deactivation is acknowledged: clearing armed stops reads even
+		// with a valid initialized context behind it.
+		g.armed = false;
+		std::vector<u8> out2(0x200, 0xCC);
+		check(g.read(tb, &vol, kModBase, 0x200, &out2[0], kDecl, kDiscId) == 1,
+			  "cleared armed MISSES again");
+		bool untouched2 = true;
+		for (size_t i = 0; i < out2.size(); ++i)
+			if (out2[i] != 0xCC)
+				untouched2 = false;
+		check(untouched2, "deactivation writes nothing");
+		check(g.initCalls == 1, "deactivation adds no init");
+	}
+
 	std::printf("%d checks, %d failures\n", g_checks, g_fail);
 	return g_fail ? 1 : 0;
 }

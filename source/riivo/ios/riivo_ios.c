@@ -2,7 +2,7 @@
 #include "riivo_ios.h"
 
 riivo_ios_params g_params = { RIIVO_IOS_MAGIC, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-								0, 0, 0, 0, 0, 0, 0 };
+								0, 0, 0, 0, 0, 0, 0, 0 };
 
 static rfat_vol g_vol;
 static rr_ctx g_rr;
@@ -118,6 +118,18 @@ int riivo_di_read(unsigned int off_words, unsigned int len, void *dst)
 		return RIIVO_DI_OK;
 	if (!dst)
 		return RIIVO_DI_FAIL;
+
+	/* Activation gate: the staged contract is not complete (slice store
+	   pending fill, or a fill that failed and poisoned the table). MISS
+	   without initializing, so no reader state - open files, cached
+	   ranges, validated table - can exist for a half-staged contract,
+	   and the caller runs the stock path. Counted as a miss so the boot
+	   log shows the fallback instead of silence. */
+	if (!g_params.armed)
+	{
+		++g_params.misses;
+		return RIIVO_DI_MISS;
+	}
 
 	if (riivo_ios_init() != RIIVO_DI_OK)
 		return RIIVO_DI_MISS;   /* fall through to the stock path, unmodded */

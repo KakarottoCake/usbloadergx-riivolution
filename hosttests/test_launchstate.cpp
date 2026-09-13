@@ -274,6 +274,23 @@ int main() {
         ck(f == 0, "abort hands back no staging buffer");
         ck(!l.FileWorkIncomplete(), "next boot starts clean");
     }
+    // GENFILL shape: file work wanted, slice fill failed before anything
+    // was staged, refusal recorded. Nothing is installable (no rebuilt
+    // FST offsets exist anywhere), memory stays held back, and the next
+    // boot starts clean: a failed backend cannot launch.
+    {
+        LaunchState l;
+        l.Begin();
+        l.fileWorkWanted = true;
+        l.Refuse(8);
+        ck(!l.CanInstall(), "fill-failed refusal cannot install");
+        ck(!l.HaveStaged(), "fill-failed refusal staged nothing");
+        ck(l.FileWorkIncomplete(), "wanted-but-never-live holds memory back");
+        ck(l.installFailCode == 8, "fill failure carries code 8");
+        u8 *f = l.Begin();
+        ck(f == 0, "failed boot hands back no staging buffer");
+        ck(!l.FileWorkIncomplete(), "next boot starts clean");
+    }
     printf("%d checks, %d failures\n", checks, failures);
     return failures ? 1 : 0;
 }
