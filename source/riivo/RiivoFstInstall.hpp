@@ -179,15 +179,18 @@ namespace Riivo
 		return hits;
 	}
 
-	//! Whether an apploader yield's disc offset falls inside the disc FST
+	//! Whether an apploader yield's disc span sits fully inside the disc FST
 	//! range [fstOff, fstOff+fstSize): identifies FST-load chunks among
-	//! recorded apploader reads. Those bytes are dead once the rebuilt
-	//! table installs elsewhere, so the reported-base veto below excuses
-	//! exactly them - never by address guess. Pure, host-tested.
-	inline bool NoteInFstRange(u32 noteDisc, u64 fstOff, u32 fstSize)
+	//! recorded apploader reads. Full containment (not just a touching
+	//! start) so a crossing request can never exempt unrelated loaded
+	//! code/data. Those bytes die with the install by construction, so the
+	//! reported-base veto excuses exactly them - never by address guess.
+	//! Pure, host-tested.
+	inline bool NoteInFstRange(u32 noteDisc, u32 noteLen, u64 fstOff, u32 fstSize)
 	{
-		return fstSize > 0 && (u64)noteDisc >= fstOff
-			   && (u64)noteDisc < fstOff + fstSize;
+		return fstSize > 0 && noteLen > 0
+			   && (u64)noteDisc >= fstOff
+			   && (u64)noteDisc + noteLen <= fstOff + fstSize;
 	}
 
 	//! Evaluate an apploader-REPORTED table placement for a grown table:

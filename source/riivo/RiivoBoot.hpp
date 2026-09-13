@@ -167,6 +167,21 @@ namespace Riivo
 	//! would overwrite the served image in MEM after the fact.
 	bool DolWillServe();
 
+	//! True once a grown virtual header has been served to apploader reads
+	//! this boot. From then on there is no stock boot to fall back to.
+	bool GrownHeaderServed();
+
+	//! A grown evaluation refused after a served grown header: BootPartition
+	//! must return no entry (loader, like every failed load) instead of
+	//! booting a table the loader did not approve.
+	bool GrownBlocked();
+
+	//! A grown table is booked and live for this boot (fileWorkLive with a
+	//! staged non-in-place placement). Gates the memory-failure exit: files
+	//! without their required patches park fatally, so that combination
+	//! returns to the loader instead of launching.
+	bool GrownTablePending();
+
 	//! Flip the drive light. Called from every logged boot step, and from
 	//! inside the long silent stretches that log nothing, so the console has
 	//! a visible pulse for the whole time Riivolution is working. A light

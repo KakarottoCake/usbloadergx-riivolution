@@ -192,6 +192,17 @@ namespace Riivo
 	//! size exactly). FST coverage serves the staged rebuilt bytes at the
 	//! disc FST range. Everything else falls through to stock.
 	static BootView bootView;
+	//! True once a grown virtual header has been served to apploader reads
+	//! this boot. From then on there is no stock boot to fall back to: the
+	//! apploader's reservation, loaded table and published pointers may all
+	//! differ from stock, so every later grown deviation returns to the
+	//! loader instead of booting. Cleared per boot with everything else.
+	static bool grownHeaderServed = false;
+	//! A grown evaluation refused after the header above was served: the
+	//! apploader already consumed non-stock metadata, so booting would run
+	//! a table the loader did not approve. BootPartition turns this into a
+	//! null entry (blink 6 + loader, like every other failed load).
+	static bool grownBlocked = false;
 	//! Composed executable + image base from the plan block. Persisted (small:
 	//! segments and paths only, never payloads) so Activate() can arm the
 	//! view after staging; cleared per boot with everything else.
@@ -345,24 +356,28 @@ namespace Riivo
 	//! Tri-state: 1 served (bytes in buffer), 0 fall through to stock,
 	//! -1 fail loudly (a patched range that cannot be served: the caller
 	//! must boot nothing, never mix stock bytes into a patched image).
-	//! DOL range overlaps fail rather than fall through; header/FST
-	//! crossings fall through (their readers always ask exactly).
+	//! Routing (DOL touch -> all-or-nothing; header/FST containment ->
+	//! serve; else stock) lives in BootView::Route, shared with host
+	//! tests; this function only binds readers and counts.
 	static int ServeBootRead(u64 offset, u8 *buffer, u32 length)
 	{
 		if (!buffer || length == 0)
 			return 0;
-		const bool viewLive = bootView.Active() || bootView.HasDol();
-		if (!viewLive)
-			return 0;
-		++ovReads;
-		if (bootView.HasDol())
+		// Consulted-read counter keeps its meaning (every read while any
+		// coverage is armed, including stock fallthroughs).
+		if (bootView.Active() || bootView.HasDol())
+			++ovReads;
+		switch (bootView.Route(offset, length))
 		{
-			const u64 dLo = bootView.DolBase();
-			const u64 dHi = dLo + bootView.DolSize();
-			const u64 end = offset + (u64)length;
-			if (end >= offset && offset < dHi && end > dLo)
+			case BootView::ROUTE_STOCK:
+				return 0;
+			case BootView::ROUTE_FAIL:
+				++ovFailed;
+				gprintf("Riivo: boot-view read straddles the served image at 0x%llx len %u\n",
+						(unsigned long long)offset, length);
+				return -1;
+			case BootView::ROUTE_DOL:
 			{
-				// Touches the served image: all or nothing.
 				BootReaders r;
 				r.stock = BootStockReader;
 				r.fat = BootFatReader;
@@ -378,11 +393,18 @@ namespace Riivo
 						(unsigned long long)offset, length, done);
 				return -1;
 			}
-		}
-		if (bootView.Active() && bootView.Serve(offset, buffer, length))
-		{
-			++ovServedMeta;
-			return 1;
+			case BootView::ROUTE_META:
+			{
+				if (bootView.Serve(offset, buffer, length))
+				{
+					++ovServedMeta;
+					return 1;
+				}
+				// Classified servable but not served (empty coverage after
+				// a state change mid-window): fail closed, never stock-mix.
+				++ovFailed;
+				return -1;
+			}
 		}
 		return 0;
 	}
@@ -415,6 +437,22 @@ namespace Riivo
 	bool DolWillServe()
 	{
 		return dolServing;
+	}
+
+	bool GrownHeaderServed()
+	{
+		return grownHeaderServed;
+	}
+
+	bool GrownBlocked()
+	{
+		return grownBlocked;
+	}
+
+	bool GrownTablePending()
+	{
+		return g_launch.fileWorkLive && g_launch.HaveStaged()
+			   && g_launch.placeOk && !g_launch.place.inPlace;
 	}
 
 	//! Per-disc table-build failures from PrepareFileRedirects: the redirect
@@ -852,6 +890,8 @@ namespace Riivo
 		memset(bootGameId, 0, sizeof(bootGameId));
 		ClearDirListCache();
 		ClearFileSizeCache();
+		grownHeaderServed = false;
+		grownBlocked = false;
 		// Last: disarm any leftover boot-view state. Runs after the log path
 		// is cleared so a stale summary can never land in a new boot's log;
 		// normally a silent no-op (BootPartition disarms on every exit path).
@@ -1885,6 +1925,7 @@ namespace Riivo
 		// splits hook-vs-table with a stock boot, and a grown header would
 		// corrupt that split.
 		std::vector<u8> patchedHeader(ovHeader, ovHeader + sizeof(ovHeader));
+		bool grownHeader = false;
 		if (pendingFstSize > fstDiscSize && !skipFstInstall)
 		{
 			std::string hwhy;
@@ -1899,9 +1940,11 @@ namespace Riivo
 				WithholdStaged(out, "BOOTVIEW", line);
 				return false;
 			}
+			grownHeader = true;
 			Addf(out, "  boot view : virtual header serves grown size/max %u (disc %u)\n",
 				 pendingFstSize, fstDiscSize);
 		}
+		grownHeaderServed = grownHeader;
 		std::vector<u8> stagedView(pendingFst, pendingFst + pendingFstSize);
 		std::string why;
 		if (!bootView.Activate(ovHeader, sizeof(ovHeader), patchedHeader, why))
@@ -1912,18 +1955,22 @@ namespace Riivo
 			WithholdStaged(out, "BOOTVIEW", line);
 			return false;
 		}
-		// FST coverage only when the staged table is exactly what disc
-		// readers ask for. A grown (or compacted) staging served at the
-		// disc range would hand apploader/game readers a prefix they
-		// consume as a whole table - the black screen past a refused
-		// install. Falling back to stock bytes is the coherent boot for
-		// an uninstalled table, so size mismatch logs and continues.
+		// FST coverage serves the staged table only when it is exactly what
+		// the advertised header names: the apploader asking for the whole
+		// table must get a whole table - never a truncated prefix (shorter
+		// staging) nor bytes no disc reader asked for. Under a stock header
+		// the advertised size is the disc size, so grown/compacted staging
+		// falls back to stock bytes (the coherent uninstalled boot); under
+		// a grown virtual header the advertised size is the staged size,
+		// so the apploader receives the entire grown table it was told
+		// about. Either way a withhold later cannot strand a partial image.
 		bool fstServed = false;
-		if (bootView.ArmFst(fstDiscOffset, stagedView, fstDiscSize, why))
+		const u32 advertisedSize = grownHeader ? pendingFstSize : fstDiscSize;
+		if (bootView.ArmFst(fstDiscOffset, stagedView, advertisedSize, why))
 			fstServed = true;
 		else
-			Addf(out, "  boot view : FST served stock (%s; staged %u, disc %u)\n",
-				 why.c_str(), pendingFstSize, fstDiscSize);
+			Addf(out, "  boot view : FST served stock (%s; staged %u, advertised %u)\n",
+				 why.c_str(), pendingFstSize, advertisedSize);
 		if (haveStagedDol && !skipFstInstall)
 		{
 			if (stagedDolBase == 0 || stagedDol.discLengthOrig == 0)
@@ -4114,10 +4161,12 @@ namespace Riivo
 				bool isFstLoad = false;
 				for (u32 n = 0; n < dolNoteCount; ++n)
 				{
+					// Full-span match only: a crossing yield must not exempt
+					// unrelated loaded code/data from the veto below.
 					if (dolNotes[n].dst == occ[i].lo
 						&& dolNotes[n].len == occ[i].hi - occ[i].lo
 						&& occ[i].hi > occ[i].lo
-						&& NoteInFstRange(dolNotes[n].disc,
+						&& NoteInFstRange(dolNotes[n].disc, dolNotes[n].len,
 										  trackFstOff, trackFstSize))
 					{
 						isFstLoad = true;
@@ -4169,6 +4218,20 @@ namespace Riivo
 			out += "\n  Nothing would be written. Refusing is the right outcome here -\n"
 				   "  a wrong address writes over the running game and shows up as a\n"
 				   "  hang with nothing on screen.\n";
+			// After a served grown header there is no stock boot to fall
+			// back to: the apploader's reservation, loaded table and
+			// published pointers may already differ from stock, so a
+			// withheld table plus a boot would run whatever the apploader
+			// loaded - not a stock game. Block the boot instead
+			// (BootPartition returns no entry, like every failed load).
+			// Under the nofstinstall diagnostic the header stayed stock,
+			// so the plain withhold path (stock boot) remains safe there.
+			if (grownHeaderServed)
+			{
+				grownBlocked = true;
+				out += "  No stock fallback exists past a served grown header:\n"
+					   "  this boot returns to the loader instead.\n";
+			}
 		}
 		else if (effPlace.inPlace)
 		{

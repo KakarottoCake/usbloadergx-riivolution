@@ -580,6 +580,15 @@ int main()
 								 occ, 2, 0x817fe000,
 								 0x817fd000, 0x81800000, true, p, why),
 		   "multi-MB blind drop refused");
+		// Disc-range predicate for the FST-load filter (caller side):
+		// full containment only, so crossing yields exempt nothing.
+		ck(NoteInFstRange(0x772400, 153792, 0x772400, 153792), "exact range inside");
+		ck(NoteInFstRange(0x772400, 100, 0x772400, 153792), "head inside");
+		ck(!NoteInFstRange(0x772400, 153793, 0x772400, 153792), "past-end crossing outside");
+		ck(!NoteInFstRange(0x772300, 200, 0x772400, 153792), "straddling start outside");
+		ck(!NoteInFstRange(0x40000, 256, 0x772400, 153792), "DOL range outside");
+		ck(!NoteInFstRange(0x772400, 0, 0x772400, 153792), "empty yield matches nothing");
+		ck(!NoteInFstRange(0x772400, 100, 0x772400, 0), "empty table range matches nothing");
 	}
 
 	printf("\n%d checks, %d failure(s)\n", checks, failures);

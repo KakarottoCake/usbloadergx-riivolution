@@ -209,6 +209,16 @@ u32 GameBooter::BootPartition(char *dolpath, u8 videoselected, u8 alternatedol, 
 	//! returns, and the report is written to that card.
 	Riivo::ReportFstPlacement();
 
+	//! A refused grown placement past a served grown header cannot fall back
+	//! to a stock boot (the apploader already consumed non-stock metadata):
+	//! return no entry, like every failed load (blink 6 + loader below).
+	if (Riivo::GrownBlocked())
+	{
+		gprintf("Riivo: grown placement refused after served header; refusing boot\n");
+		Riivo::LogBootStep("grown placement refused, returning to loader");
+		return 0;
+	}
+
 	//! The last line the log can ever carry. Everything after this point
 	//! runs with the card unmounted, so a boot that dies later leaves no
 	//! trace at all - which makes "the log ends here" a fact worth stating
@@ -999,7 +1009,9 @@ int GameBooter::BootGame(struct discHdr *gameHdr, const s8 useOcarina)
 			if (riivoMemHard > 0 && !Riivo::FileWorkIncomplete()
 				&& !Riivo::MemoryPatchesSuppressed())
 			{
-				if (Riivo::FileWorkLive())
+				if (Riivo::FileWorkLive() && Riivo::GrownTablePending())
+					Riivo::AppendLog("Riivo mem: consequence: whole set held back on a grown table; files without required patches park fatally and no stock fallback exists past the served header, so this boot will return to the loader after shutdown instead of launching.\n");
+				else if (Riivo::FileWorkLive())
 					Riivo::AppendLog("Riivo mem: consequence: whole set held back; the mod's files ARE installed, so the game boots files-only, NOT unmodified.\n");
 				else
 					Riivo::AppendLog("Riivo mem: consequence: whole set held back; this mod replaces no files, so the game boots unmodified.\n");
@@ -1111,6 +1123,21 @@ int GameBooter::BootGame(struct discHdr *gameHdr, const s8 useOcarina)
 	else if (!riivoSet.memories.empty() && Riivo::MemPreflightHardFails(riivoMemPre) > 0)
 	{
 		const int riivoMemHard = Riivo::MemPreflightHardFails(riivoMemPre);
+		// Grown tables with required patches: files without their patches
+		// park fatally (proven init-dependency pattern), and unlike the
+		// in-place files-only boot there is no stock-fallback state to run
+		// (the apploader already consumed the grown header). Return to the
+		// loader instead of launching; the card log and gecko name the
+		// missing patches. No blink code is assigned: the return itself,
+		// plus two written reasons, is unambiguous next to a hang.
+		if (!Riivo::FileWorkIncomplete() && !Riivo::MemoryPatchesSuppressed()
+			&& Riivo::FileWorkLive() && Riivo::GrownTablePending())
+		{
+			gprintf("Riivo mem: HELD BACK %d hard preflight failure(s) on a grown table; files without required patches park, so returning to loader\n",
+					riivoMemHard);
+			Sys_BackToLoader();
+			return -1;
+		}
 		if (!Riivo::FileWorkIncomplete() && !Riivo::MemoryPatchesSuppressed()
 			&& Riivo::FileWorkLive())
 			gprintf("Riivo mem: HELD BACK %d hard preflight failure(s); file mods ARE installed, memory patches skipped (files-only boot, NOT unmodified)\n",
