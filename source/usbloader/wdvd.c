@@ -307,14 +307,6 @@ s32 WDVD_Read(void *buf, u32 len, u64 offset)
 	//! table ranges serve composed bytes; everything else falls through to
 	//! stock. A loud failure (-1) refuses the read outright: the caller must
 	//! boot nothing rather than mix stock bytes into a patched image.
-	//! Units: `offset` is partition bytes on both sides (callers pass byte
-	//! offsets; the >>2 word conversion below only shapes the IOS request).
-	//! Only this encrypted-read path consults the view: unencrypted reads
-	//! address the raw disc (different domain) and never touch it, so the
-	//! hook cannot misroute them. Served bytes land in the caller's buffer
-	//! with no alignment needs; cache maintenance stays with the existing
-	//! callers (apploader flush/invalidate after each chunk), and the stock
-	//! fallback path is byte-identical to before (consult-then-fallthrough).
 	if (buf && len)
 	{
 		int served = RiivoBootViewServe(offset, (u8 *)buf, len);

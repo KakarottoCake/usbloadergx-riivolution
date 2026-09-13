@@ -73,21 +73,6 @@ namespace Riivo
 	//! floor is refused rather than guessed at.
 	static const u32 MAX_BLIND_DROP = 1024 * 1024;
 
-	//! Largest growth beyond the apploader reservation a MEM1 cascade may
-	//! take. Bounds the cascade bottom at least ~6 MB clear of loader-low
-	//! regions for the shipped binary size (~5 MB DOL above 0x80B00000;
-	//! reservation tops sit at MEM1 top): revisit with the linker map if the
-	//! binary ever grows several megabytes. Beyond this is a capacity
-	//! refusal with required/available, never a guess.
-	static const u32 GROWN_CASCADE_MAX = 1024 * 1024;
-
-	//! Engineering margin below the install-time stack pointer that a grown
-	//! destination must also clear: the return chain, light-out sequence and
-	//! interrupt frames that run between the copy and the jump. Generous
-	//! against measured chains (hundreds of bytes) and logged with the
-	//! actual numbers wherever it bites, so any incident is diagnosable.
-	static const u32 STACK_MARGIN = 4096;
-
 	//! The four boot-info words, read straight out of low memory.
 	struct ArenaInfo
 	{
@@ -150,38 +135,6 @@ namespace Riivo
 	//! retained host-tested for the future patched boot view. See
 	//! docs/archive/smg2-reserve/README.md.
 	FstPlacement PlaceFstMem2(const ArenaInfo &info, u32 fstSize, u32 align);
-
-	//! Loader-live state at one instant: the executing thread's stack
-	//! pointer and validated stack bounds, plus the newlib/MEM1 heap break.
-	//! With this loader's MALLOC_MEM2 = 0 the heap (including all LWP stacks
-	//! carved from the sbrk region) lives below the break, so a destination
-	//! at/above the break can never alias heap storage - past, current, or
-	//! future-reused, which no sampling scheme could otherwise exclude.
-	struct LoaderLive
-	{
-		u32 sp;          // current stack pointer (0 when unreadable)
-		u32 stackLo;     // validated stack bottom (exclusive use below SP)
-		u32 stackHi;     // validated stack top (exclusive)
-		bool stackKnown; // bounds validated AND sp inside them
-		u32 heapBreak;   // sbrk(0): first byte the heap does not own
-		bool heapKnown;  // break validated inside MEM1, nonzero
-
-		LoaderLive()
-			: sp(0), stackLo(0), stackHi(0), stackKnown(false),
-			  heapBreak(0), heapKnown(false) {}
-	};
-
-	//! Clearance of a grown (relocated) destination against loader-live
-	//! residents. Pure; host-tested. Refuses (false + literal why, no
-	//! allocation) when the destination is empty/wrapped, the stack bounds
-	//! are unknown, the destination overlaps any part of [stackLo,stackHi)
-	//! (live frames, the current call chain below SP, and interrupt frames
-	//! all live inside), the margin below SP is violated, the heap break is
-	//! unknown, or the break has reached the destination (heap storage at or
-	//! past its start). In-place destinations never consult this: they touch
-	//! nothing outside the apploader's own reservation.
-	bool ClearsLoaderLive(u32 destLo, u32 destHi, const LoaderLive &live,
-						  const char *&why);
 
 	//! Half-open interval overlap: [aLo,aHi) against [bLo,bHi). An empty or
 	//! inverted interval overlaps nothing, so a zero length always reads
