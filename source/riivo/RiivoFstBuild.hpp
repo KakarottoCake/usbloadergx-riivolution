@@ -118,28 +118,28 @@ namespace Riivo
 		void Serialize(std::vector<u8> &out, bool shifted) const;
 
 		//! Same table, suffix-compacted string table: a name that already
-	//! occurs in the emitted bytes (with its NUL) is referenced in
-	//! place instead of stored again. Entry order, names, offsets and
-	//! lengths are identical to Serialize - only string storage
-	//! overlaps, which the on-disc format allows (offsets are
-	//! arbitrary). Returns false on an internal mismatch, in which
-	//! case `out` is untouched and the caller must keep Serialize's
-	//! result. Used to fit small growth into the apploader's existing
-	//! reservation instead of relocating below it.
-	bool SerializeCompacted(std::vector<u8> &out, bool shifted) const;
+		//! occurs in the emitted bytes (with its NUL) is referenced in
+		//! place instead of stored again. Entry order, names, offsets and
+		//! lengths are identical to Serialize - only string storage
+		//! overlaps, which the on-disc format allows (offsets are
+		//! arbitrary). Returns false on an internal mismatch, in which
+		//! case `out` is untouched and the caller must keep Serialize's
+		//! result. Used to fit small growth into the apploader's existing
+		//! reservation instead of relocating below it.
+		bool SerializeCompacted(std::vector<u8> &out, bool shifted) const;
 
-	//! Pad a serialised table with zero bytes up to a whole word.
-	//! Boot-info words carry sizes word-shifted, so a table whose size
-	//! is not a multiple of 4 cannot round-trip its own length through
-	//! the apploader (observed: 153934 bytes published as 153932, which
-	//! the exact size match below must refuse). At most 3 bytes; FST
-	//! parsers read count-driven entries and ignore trailing pad.
-	//! Pure; host-tested.
-	static inline void PadTableWords(std::vector<u8> &table)
-	{
-		while ((table.size() & 3) != 0)
-			table.push_back(0);
-	}
+		//! Pad a serialised table with zero bytes up to a whole word.
+		//! Boot-info words carry sizes word-shifted, so a table whose size
+		//! is not a multiple of 4 cannot round-trip its own length through
+		//! the apploader (observed: 153934 bytes published as 153932, which
+		//! the exact size match below must refuse). At most 3 bytes; FST
+		//! parsers read count-driven entries and ignore trailing pad.
+		//! Pure; host-tested.
+		static inline void PadTableWords(std::vector<u8> &table)
+		{
+			while ((table.size() & 3) != 0)
+				table.push_back(0);
+		}
 
 			//! Look up the offset assigned to a modded file, or false.
 			bool FindAssigned(const std::string &discPath, u64 *outOffset, u32 *outLength) const;
