@@ -2296,6 +2296,22 @@ namespace Riivo
 		}
 	};
 
+	//! Save-namespace note for stock-continuation aborts below. File and
+	//! memory work stop at those returns, but a <savegame> patch was
+	//! already pointed at the mod's isolated folder before SetupDisc
+	//! (GameBooter runs SetupSavegame first), and these returns do not
+	//! undo that. Gameplay and files are stock; only the save namespace
+	//! can differ - and by construction the mod folder never aliases the
+	//! vanilla save, so the worst case is a vanilla-created save living
+	//! in the mod's folder, not a touched vanilla save. Silent only if
+	//! unstated: hence this note, wherever an abort claims stock.
+	static void AppendSaveFallbackNote(std::string &out)
+	{
+		if (bootSet && !bootSet->savegames.empty())
+			out += "  Save redirection stays pointed at the mod's isolated folder;\n"
+				   "  the vanilla save is untouched. Gameplay and files are stock.\n";
+	}
+
 	void PrepareFileRedirects()
 	{
 		if (!bootSet)
@@ -2333,29 +2349,42 @@ namespace Riivo
 				Addf(out, "  reason: %s\n", earlyRefusal.c_str());
 			else if (!fragRefusal.empty())
 				Addf(out, "  reason: %s\n", fragRefusal.c_str());
-			out += "The game boots unmodified; its memory patches are held back with the files.\n";
+			out += "Stock files, no memory patches: the game boots without the mod's content.\n";
+			AppendSaveFallbackNote(out);
 			withholdStage = "NO_EARLY_PLAN";
 			AppendLog(out);
 			//! Control flow past this return: the boot CONTINUES into the
-			//! game, stock-equivalent - it does not return to the loader.
-			//! The apploader still runs, BootPartition still returns its
-			//! entry, and the jump still happens; loader-return happens
-			//! only on apploader failure, GrownBlocked, or a refused
-			//! post-shutdown install (blink codes, GameBooter). Continuing
-			//! is safe - not silent - because every mod-activation step is
-			//! still ahead and all refuse on this state: nothing is staged
-			//! or booked (g_launch.Stage/Book never ran, so
-			//! InstallPendingFst no-ops and fileWorkLive stays false,
-			//! holding the memory set back); the boot view is never armed
-			//! (ArmBootView runs only inside Activate, unreachable past
-			//! here, and DeactivateBootView runs post-apploader anyway);
-			//! no redirect state exists yet to go stale. The registered
-			//! fragments and the cIOS hook stay, but with the stock table
-			//! nothing references the mod region - which clears the game
-			//! data end by construction - so the hook never fires: the
-			//! same dormant-hook stock boot as every other withhold path.
-			//! Restoring the fragment list instead is impossible
-			//! post-registration (late re-register returns -128).
+			//! game; it does not return to the loader. The apploader still
+			//! runs, BootPartition still returns its entry, and the jump
+			//! still happens; loader-return happens only on apploader
+			//! failure, GrownBlocked, or a refused post-shutdown install
+			//! (blink codes, GameBooter). Continuing rests on the fallback
+			//! state demonstrated here, not on precedent:
+			//! - Table: stock. Nothing is staged or booked past here, so
+			//!   InstallPendingFst no-ops, fileWorkLive stays false, and
+			//!   the memory set is held back with the files.
+			//! - Overlay: never armed. ArmBootView runs only inside
+			//!   Activate, unreachable past here, and DeactivateBootView
+			//!   runs post-apploader anyway. This PPC-side overlay is
+			//!   distinct from the IOS-side state below.
+			//! - Fragments and cIOS hook: registered, but dormant by
+			//!   dispatch key, not by absence. The registered list still
+			//!   maps every game-data offset to the backup's own sectors
+			//!   (registration only appends; merges preserve coverage),
+			//!   and the stock table addresses only game-data offsets
+			//!   below the mod region - which was laid out past the
+			//!   fragment-mapped game-data end of this same backup, whose
+			//!   layout no FST content can move. So every stock read
+			//!   resolves to backup bytes exactly as a stock boot; the mod
+			//!   fragments sit unaddressed.
+			//! - Saves: a <savegame> patch stays pointed at the mod's
+			//!   isolated folder (noted above); the vanilla save is
+			//!   untouched.
+			//! Re-registering a shrunk list instead is unattempted on this
+			//! flow and cited as proof of nothing: a late re-register once
+			//! returned -128, whose cause the d2x audit left unexplained.
+			//! It is also unnecessary, because the fallback above is
+			//! complete without it.
 			return;
 		}
 
@@ -2395,20 +2424,20 @@ namespace Riivo
 				Addf(out, "early FST : DIFFERS (early %u bytes/%u files/%08x, late %u bytes/%u files/%08x); aborting file work, no source switch\n",
 					 earlyFst.size, earlyFst.files, earlyFst.digest,
 					 fstSize, (unsigned) fst.FileCount(), lateDigest);
-				out += "The game boots unmodified; its memory patches are held back with the files.\n";
+				out += "Stock files, no memory patches: the game boots without the mod's content.\n";
+				AppendSaveFallbackNote(out);
 				withholdStage = "EARLY_LATE_DIFF";
 				AppendLog(out);
 				free(fstData);
-				//! Same control-flow contract as the NO_EARLY_PLAN exit
-				//! above: the boot continues stock-equivalent (apploader
-				//! runs, entry returned, jump happens), loader-return only
-				//! via apploader failure / GrownBlocked / refused install.
-				//! Nothing is staged or booked past here, the boot view is
-				//! never armed (Activate unreachable; DeactivateBootView
-				//! still runs post-apploader), and no redirect state was
-				//! built yet to go stale - so disagreement cannot launch
-				//! with stale redirects or an armed overlay. The hook stays
-				//! dormant under the stock table, as on every withhold.
+				//! Same fallback contract as the NO_EARLY_PLAN exit above:
+				//! the boot continues with a stock table, held-back memory,
+				//! a never-armed overlay, and registered-but-unaddressed
+				//! mod fragments (dormant by dispatch key: the stock table
+				//! cannot address above the game-data end). Save namespace
+				//! noted above. Disagreement therefore cannot launch with
+				//! stale redirects or an armed overlay: no redirect state
+				//! was built yet at this return, and arming is unreachable
+				//! past it.
 				return;
 			}
 		}
@@ -2465,14 +2494,14 @@ namespace Riivo
 				Addf(out, "executable span DIFFERS (early %llu, late %llu); aborting file work, no source switch\n",
 					 (unsigned long long) earlyDolSize,
 					 (unsigned long long) dolSize);
-				out += "The game boots unmodified; its memory patches are held back with the files.\n";
+				out += "Stock files, no memory patches: the game boots without the mod's content.\n";
+				AppendSaveFallbackNote(out);
 				withholdStage = "EARLY_LATE_DIFF";
 				AppendLog(out);
 				free(fstData);
-				//! Same control-flow contract as the exits above: stock-
-				//! equivalent boot continues; nothing staged, booked, or
-				//! armed past here, so no stale-redirect or armed-overlay
-				//! launch is possible.
+				//! Same fallback contract as the exits above: stock table,
+				//! held-back memory, never-armed overlay, dormant
+				//! registered fragments; save namespace noted above.
 				return;
 			}
 			stagedDol.dolBase = dolImageBase;
@@ -4433,6 +4462,12 @@ namespace Riivo
 						  "--------------\n"
 						  "  No <memory> patches requested by this mod's options;\n"
 						  "  nothing scheduled.\n");
+			}
+			{
+				std::string saveNote;
+				AppendSaveFallbackNote(saveNote);
+				if (!saveNote.empty())
+					AppendLog(saveNote);
 			}
 			//! A stage named upstream (NO_EARLY_PLAN, EARLY_LATE_DIFF)
 			//! survives: it names the actual refusal for the log and the
