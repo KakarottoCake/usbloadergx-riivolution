@@ -1474,10 +1474,14 @@ namespace Riivo
 		//! that is minutes of card traffic with nothing else on screen.
 
 		//! The fragments went in back in SetupDisc, inside the list the loader
-		//! handed over with set_frag_list. Nothing is registered here: d2x
-		//! blocks IOCTL_DI_FRAG_SET once a title is running, and the game
-		//! partition being open means one is - that refusal is what returned
-		//! -128 when this used to re-register at this point.
+		//! handed over with set_frag_list. Nothing is registered here: a late
+		//! re-register historically returned -128, and registration stays
+		//! pre-partition (the working order) until a hardware capture names
+		//! the actual refusal - the sourced d2x gate (stealth_mode, on by
+		//! default, AND running_title; wiidev/d2x-cios@33ad1ee dip-plugin
+		//! FRAG_SET via Stealth_CheckRunningTitle, set only by ES launch or
+		//! PPC mload-32, cleared only by IOS reload) is never armed by this
+		//! loader's flow, and partition-open sets nothing per that source.
 		if (!fragsRegistered)
 		{
 			out += "  The mod's fragments were never registered, so there is\n"
@@ -2684,9 +2688,12 @@ namespace Riivo
 		const u32 layoutAlign = bootSectorSize ? bootSectorSize : 512;
 
 		//! Apply the placement decided in SetupDisc rather than choosing a new
-		//! one: the fragments are already registered against those offsets and
-		//! cannot be changed now, because d2x refuses IOCTL_DI_FRAG_SET once
-		//! the game partition is open. The late keys (post-FST routing) meet
+		//! one: the fragments are already registered against those offsets,
+		//! and late re-registering historically returned -128, so the
+		//! working pre-partition order is kept until a hardware capture
+		//! names the actual refusal (see the sourced d2x gate note at
+		//! Activate: stealth_mode AND running_title, never armed here).
+		//! The late keys (post-FST routing) meet
 		//! the early offsets through each file's pre-FST earlyKey, so
 		//! basename-routed files land on registered fragments instead of
 		//! withholding the whole table. LayoutFrom then counts builder
@@ -3497,12 +3504,17 @@ namespace Riivo
 
 		//! Work the whole placement out HERE, from the files on the card.
 		//!
-		//! d2x blocks IOCTL_DI_FRAG_SET once a title is running
-		//! (Stealth_CheckRunningTitle in its plugin), and opening the game
-		//! partition is what starts one - so the extended list has to be handed
-		//! over before that, in the same call the loader already makes. The file
-		//! table cannot be read until afterwards, so the table is made to agree
-		//! with this placement rather than the other way round.
+		//! d2x gates IOCTL_DI_FRAG_SET (0xF9) on stealth_mode (on by
+		//! default) AND running_title (wiidev/d2x-cios@33ad1ee: dip-plugin
+		//! FRAG_SET via Stealth_CheckRunningTitle; set only by ES launch
+		//! or PPC mload-32; cleared only by IOS reload) - and nothing in
+		//! this loader's flow arms that gate, with partition-open setting
+		//! nothing per that source. A late re-register historically
+		//! returned -128 all the same, from an unsourced cause, so the
+		//! extended list is handed over before partition-open, in the same
+		//! call the loader already makes. The file table cannot be read
+		//! until afterwards, so the table is made to agree with this
+		//! placement rather than the other way round.
 		std::vector<ModCandidate> cand;
 		//! Reads every directory the mod's rules name. On a total conversion
 		//! that is thousands of entries off FAT, and it is the slowest thing
