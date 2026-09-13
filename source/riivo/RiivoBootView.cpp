@@ -118,6 +118,14 @@ bool BootView::ArmFst(u64 fstOffsetBytes,
 		why = "FST range overflow";
 		return false;
 	}
+	if (fstOffsetBytes < BOOTVIEW_HEADER_BYTES)
+	{
+		// An FST range starting inside the header would make Serve()
+		// (header-first) and FstRun (FST coverage) disagree about those
+		// bytes. Insane on any real disc; refuse explicitly.
+		why = "FST range overlaps the boot header";
+		return false;
+	}
 	if (hasDol && RangesOverlap(fstOffsetBytes,
 								fstOffsetBytes + (u64)patchedFst.size(),
 								dolBase, dolBase + dolSize))
@@ -179,10 +187,80 @@ BootView::RouteVerdict BootView::Route(u64 offset, u32 length) const
 		return ROUTE_STOCK;
 	if (offset < BOOTVIEW_HEADER_BYTES)
 		return end <= BOOTVIEW_HEADER_BYTES ? ROUTE_META : ROUTE_STOCK;
-	if (!fst.empty() && offset >= fstOffset
-		&& end >= offset && end <= fstOffset + (u64)fst.size())
-		return ROUTE_META;
+	// FST coverage: contained serves whole; overlapped-but-not-contained
+	// splits (staged part + stock part assembled by the caller). The
+	// apploader demonstrably over-reads table tails by alignment, and the
+	// install overwrites whatever it loaded - but only FST reads split:
+	// header/DOL crossings keep their existing verdicts above.
+	if (!fst.empty() && end >= offset)
+	{
+		const u64 fstEnd = fstOffset + (u64)fst.size();
+		if (offset >= fstOffset && end <= fstEnd)
+			return ROUTE_META;
+		if (offset < fstEnd && end > fstOffset)
+			return ROUTE_META_SPLIT;
+	}
 	return ROUTE_STOCK;
+}
+
+u32 BootView::FstRun(u64 pos, u32 maxLen, bool *covered) const
+{
+	bool cov = false;
+	u32 run = maxLen;
+	if (active && !fst.empty() && maxLen > 0)
+	{
+		const u64 fstEnd = fstOffset + (u64)fst.size();
+		u64 limit = pos + (u64)maxLen;
+		if (limit < pos)
+			limit = fstEnd; // unreachable at real sizes; stay bounded
+		if (pos < fstOffset)
+		{
+			u64 end2 = fstOffset < limit ? fstOffset : limit;
+			run = (u32)(end2 - pos);
+		}
+		else if (pos < fstEnd)
+		{
+			u64 end2 = fstEnd < limit ? fstEnd : limit;
+			run = (u32)(end2 - pos);
+			cov = true;
+		}
+	}
+	if (covered)
+		*covered = cov;
+	return run;
+}
+
+bool BootView::ServeSplit(u64 offset, u8 *buffer, u32 length,
+						  const BootReaders &readers, u32 *doneOut) const
+{
+	if (doneOut)
+		*doneOut = 0;
+	if (!buffer || length == 0 || !readers.stock)
+		return false;
+	u32 done = 0;
+	bool ok = true;
+	while (done < length && ok)
+	{
+		const u64 pos = offset + done;
+		bool covered = false;
+		u32 chunk = FstRun(pos, length - done, &covered);
+		if (chunk == 0)
+		{
+			ok = false;
+			break;
+		}
+		if (covered)
+		{
+			if (!Serve(pos, buffer + done, chunk))
+				ok = false;
+		}
+		else if (!readers.stock(pos, buffer + done, chunk, readers.ctx))
+			ok = false;
+		done += chunk;
+	}
+	if (doneOut)
+		*doneOut = done;
+	return ok && done == length;
 }
 
 void BootView::Deactivate()
