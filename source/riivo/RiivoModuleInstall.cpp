@@ -62,7 +62,7 @@ namespace Riivo
 
 		//! Offsets must be inside the bytes we carry, or they came from a
 		//! different build than the blob did.
-		if (RIIVO_MODULE_PARAMS_OFF + 76 > RIIVO_MODULE_CODE_LEN
+		if (RIIVO_MODULE_PARAMS_OFF + 80 > RIIVO_MODULE_CODE_LEN
 			|| RIIVO_MODULE_ENTRY_OFF >= RIIVO_MODULE_CODE_LEN)
 		{
 			why = "module offsets do not match the module bytes";
@@ -138,6 +138,7 @@ namespace Riivo
 		Wr32(q + 64, p.declHi);
 		Wr32(q + 68, p.expDiscId);
 		Wr32(q + 72, p.expPartIdx);
+		Wr32(q + 76, p.armed);
 
 		plan.addr = at;
 		plan.physAddr = phys;

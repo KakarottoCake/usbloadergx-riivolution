@@ -98,8 +98,7 @@
  * accounting is made here. PPC->ARM visibility is the same flush the
  * table already relies on; ARM->PPC uses the params sync hook.
  *
- * 4. Hardware checks still required (two-launch package scope)
- *
+ * 4. Hardware checks still required (two-launch package scope) *
  * - On-demand RIV1 boot: card log shows the RIV1 staged line with the
  *   early digest, then the late "matches the early staging (no drift)"
  *   line, then OUTCOME: FST_STAGED. Any MANIFEST_DRIFT line invalidates
@@ -119,4 +118,39 @@
  * - T0 establishes launch integration, not consumption of added mod files;
  *   grown-table behavior is unchanged by this branch and stays pending
  *   its own round.
+ *
+ * 5. Activation / failure audit (read order matters)
+ *
+ * States are explicit: inactive (installed, unarmed) -> filled + verified
+ * -> active (armed). The module's first three read-path lines return MISS
+ * before init while unarmed, so no reader state - open files, cached
+ * ranges, validated table - can predate the filled store. Install arms
+ * immediately only when no fill is pending (whole-file/RIIV path, same
+ * behavior as before); a pending store arms late after fill + read-back
+ * verify (ArmModule writes the word + flushes). Pre-fill hook reads
+ * (FST/DOL ranges through the installed hook) MISS to stock without
+ * initializing - this also closes the lazy-init-vs-poison race: poison
+ * zeroes the staged magic, and an uninitialized reader refuses it at
+ * init while an armed-but-uninitialized one never got to initialize.
+ * Clearing armed stops reads even against an initialized context
+ * (acknowledged deactivation, pinned by the GateModel host section).
+ *
+ * A GENFILL failure cannot launch with synthetic offsets: fill runs
+ * before any FST staging, WithholdStaged frees nothing staged yet and
+ * records the sticky code-8 refusal, the poisoned table forces MISS-all,
+ * and the stock FST (never replaced) keeps the game on original file
+ * locations - MISS-to-stock is correct there because nothing references
+ * the mod region. Pinned host-side by the GENFILL LaunchState case
+ * (refusal with nothing staged installs nothing, memory held back).
+ *
+ * Cache contract for the store: same flush the table already relies on
+ * (DCFlushRange at install for the table, at fill for the store), same
+ * reservation (module|table|store, one lowering), same params sync hook
+ * for the ARM->PPC direction. Stale-armed-zero fails safe (MISS to
+ * stock); a stale armed-one is impossible on first touch because the
+ * word only transitions 0->1 after the verified fill. Host byte parity
+ * does not prove survival through shutdown and game startup: this
+ * capability stays experimental until the hardware round shows the
+ * staged bytes serving post-boot. DVD9 refusal and the MEM2
+ * lifetime/ownership question are unchanged completion blockers.
  ***************************************************************************/

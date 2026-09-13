@@ -55,11 +55,13 @@ namespace Riivo
 		u32 declHi;     //!< declared virtual-disc bytes, high word
 		u32 expDiscId;  //!< game id the table was staged for
 		u32 expPartIdx; //!< partition index the table was staged for
+		u32 armed;      //!< 1 when the staged contract needs no fill
+		                //!< (loader flips it late after a verified fill)
 
 		ModuleParams()
 			: table(0), tableLen(0), partLba(0), readA(0), readB(0), config(0),
 			  sync(0), tableKind(0), genBase(0), genSize(0), declLo(0),
-			  declHi(0), expDiscId(0), expPartIdx(0) {}
+			  declHi(0), expDiscId(0), expPartIdx(0), armed(0) {}
 	};
 
 	struct ModulePlan

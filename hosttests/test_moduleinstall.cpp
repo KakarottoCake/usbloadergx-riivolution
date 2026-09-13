@@ -16,6 +16,7 @@
  ***************************************************************************/
 #include <cstdio>
 #include <cstring>
+#include <cstddef>
 #include <fstream>
 #include <iterator>
 #include <string>
@@ -24,6 +25,7 @@
 #include "riivo/RiivoModuleInstall.hpp"
 #include "riivo/RiivoModuleBlob.hpp"
 #include "riivo/RiivoMem2Reserve.hpp"
+#include "riivo/ios/riivo_ios.h"
 
 static int g_checks = 0;
 static int g_fail = 0;
@@ -56,6 +58,7 @@ static Riivo::ModuleParams Good()
 	p.config = 0x13802840;
 	p.sync = 0x93801234;
 	p.tableKind = 1;
+	p.armed = 1;
 	p.genBase = 0;
 	p.genSize = 0;
 	p.declLo = 0x48000000u;
@@ -121,6 +124,18 @@ static void TestParams()
 	check(Rd32(q + 64) == p.declHi, "declared size, high word");
 	check(Rd32(q + 68) == p.expDiscId, "expected game id");
 	check(Rd32(q + 72) == p.expPartIdx, "expected partition index");
+	check(Rd32(q + 76) == p.armed, "armed flag passes through");
+	//! The writer's literals must match the ARM struct it fills: any drift
+	//! lands the late arm (or a reader field) mid-struct on the console.
+	//! New words append after the original counters, which never move.
+	check(offsetof(riivo_ios_params, state) == 32, "state offset stable");
+	check(offsetof(riivo_ios_params, tableKind) == 48, "kind offset matches ARM");
+	check(offsetof(riivo_ios_params, genBase) == 52, "genBase offset matches ARM");
+	check(offsetof(riivo_ios_params, genSize) == 56, "genSize offset matches ARM");
+	check(offsetof(riivo_ios_params, declLo) == 60, "declLo offset matches ARM");
+	check(offsetof(riivo_ios_params, expDiscId) == 68, "discId offset matches ARM");
+	check(offsetof(riivo_ios_params, armed) == 76, "armed offset matches ARM");
+	check(sizeof(riivo_ios_params) == 80, "params size matches ARM");
 }
 
 //! Relocation, checked by placing the same module twice and comparing.

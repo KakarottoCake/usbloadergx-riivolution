@@ -38,6 +38,7 @@
 #include "RiivoPatchGuard.h"
 #include "RiivoIosProbe.hpp"
 #include "RiivoOnDemand.hpp"
+#include "RiivoModuleBlob.hpp"
 #include "RiivoRedirectTable.hpp"
 #include "RiivoDiPatch.hpp"
 #include "RiivoFragPlan.hpp"
@@ -1615,6 +1616,7 @@ namespace Riivo
 	//! by Activate above their definitions like the rest here).
 	static bool FillGenStore(std::string &out);
 	static void PoisonStagedTable();
+	static void ArmModule();
 	static bool ComposePartialReference(const PlannedFile &file, u64 slot,
 										u64 woff, u8 *dst, u32 len,
 										std::string &why);
@@ -1659,15 +1661,19 @@ namespace Riivo
 
 		//! Staged slices land before anything reads through the hook: the
 		//! segment verification below serves ORIGINAL ranges from this
-		//! store, and the game will too. A fill failure poisons the staged
-		//! table (module MISSES everything to stock) and withholds here,
-		//! before a single file is verified or staged.
+		//! store, and the game will too. Fill, verify, then arm: the module
+		//! MISSES without initializing until the arm word lands, so no
+		//! reader state can predate the filled store. A fill failure
+		//! poisons the staged table (module init refuses, every read
+		//! MISSES to stock) and withholds here, before a single file is
+		//! verified or staged.
 		if (haveEarlyRiv1 && earlyGen.total > 0)
 		{
 			LogStep("filling the staged slice store (%u slice(s))",
 					(unsigned) earlyGen.slices.size());
 			if (!FillGenStore(out))
 				return;
+			ArmModule();
 		}
 
 		//! Slots served through segments, for the verify dispatch: partial
@@ -2084,6 +2090,26 @@ namespace Riivo
 		DCFlushRange((void *) (onDemandLayout.tableAddr & ~31u),
 					 onDemandLayout.tableLen + 64);
 		gprintf("Riivo: staged table poisoned after a fill failure (module will MISS all)\n");
+	}
+
+	//! Complete the activation the install left pending: the slice store is
+	//! filled and verified, so flip the module's armed word and flush. From
+	//! here the module may initialize and serve; before here every read
+	//! MISSED without initializing, so no reader state can predate the
+	//! filled store. Whole-file installs arm at install time (nothing to
+	//! fill) and never reach here.
+	static void ArmModule()
+	{
+		if (!onDemandLayout.moduleAddr)
+			return;
+		u8 *armed = (u8 *) (onDemandLayout.moduleAddr + RIIVO_MODULE_PARAMS_OFF + 76);
+		armed[0] = 0;
+		armed[1] = 0;
+		armed[2] = 0;
+		armed[3] = 1;
+		DCFlushRange((void *) ((onDemandLayout.moduleAddr + RIIVO_MODULE_PARAMS_OFF) & ~31u),
+					 128);
+		gprintf("Riivo: module armed after verified slice fill\n");
 	}
 
 	//! Reference bytes for [slot+woff, +len) of a partial plan file:

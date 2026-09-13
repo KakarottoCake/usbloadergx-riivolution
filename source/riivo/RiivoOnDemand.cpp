@@ -166,6 +166,11 @@ namespace Riivo
 		p.declHi = (u32) (meta.declSize >> 32);
 		p.expDiscId = meta.discId;
 		p.expPartIdx = meta.partIdx;
+		//! Activation state at install: armed only when nothing remains to
+		//! fill. A pending slice store arms late after FillGenStore proves
+		//! it; until then every read MISSES without initializing, so the
+		//! module cannot serve - or cache - a half-staged contract.
+		p.armed = (genLen == 0) ? 1 : 0;
 		//! Left zero deliberately: ApplyDiPatchOnDemand finds the real
 		//! os_sync_after_write in the running plugin and overwrites this. A
 		//! guess here would be called on every single read.
