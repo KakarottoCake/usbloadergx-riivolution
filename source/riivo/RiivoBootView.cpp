@@ -160,6 +160,31 @@ bool BootView::Serve(u64 offset, u8 *buffer, u32 length) const
 	return false;
 }
 
+BootView::RouteVerdict BootView::Route(u64 offset, u32 length) const
+{
+	if (length == 0 || (!active && !hasDol))
+		return ROUTE_STOCK;
+	const u64 end = offset + (u64)length;
+	if (hasDol)
+	{
+		const u64 dHi = dolBase + dolSize;
+		if (end >= offset && offset < dHi && end > dolBase)
+		{
+			if (offset >= dolBase && end <= dHi)
+				return ROUTE_DOL;
+			return ROUTE_FAIL; // straddles the image edge: never mix
+		}
+	}
+	if (!active)
+		return ROUTE_STOCK;
+	if (offset < BOOTVIEW_HEADER_BYTES)
+		return end <= BOOTVIEW_HEADER_BYTES ? ROUTE_META : ROUTE_STOCK;
+	if (!fst.empty() && offset >= fstOffset
+		&& end >= offset && end <= fstOffset + (u64)fst.size())
+		return ROUTE_META;
+	return ROUTE_STOCK;
+}
+
 void BootView::Deactivate()
 {
 	active = false;

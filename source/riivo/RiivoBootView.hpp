@@ -115,14 +115,17 @@ public:
 				  std::string &why);
 
 	//! Arm FST coverage: serve the given table bytes at fstOffsetBytes.
-	//! The served size MUST equal the on-disc table size (discSizeBytes):
-	//! a shorter staged table would serve stock-fallback callers a prefix
-	//! they consume as a whole table, and a longer one would serve bytes
-	//! past what any disc reader asked for - both corrupt. Refuses (false +
-	//! why, header/DOL coverage untouched) on size mismatch, empty table,
-	//! oversize copy, unaligned offset, or overlap with armed DOL coverage.
+	//! The served size MUST equal the ADVERTISED size
+	//! (advertisedSizeBytes): the header the apploader consumed names that
+	//! size, so a reader asking for the whole table gets exactly a whole
+	//! table - never a truncated prefix (shorter staging) nor bytes no
+	//! disc reader asked for (longer staging). In production the advertised
+	//! size is the disc size, except under a grown virtual header where it
+	//! is the staged size. Refuses (false + why, header/DOL coverage
+	//! untouched) on mismatch, empty table, oversize copy, unaligned
+	//! offset, or overlap with armed DOL coverage.
 	bool ArmFst(u64 fstOffsetBytes, const std::vector<u8> &patchedFst,
-				u32 discSizeBytes, std::string &why);
+				u32 advertisedSizeBytes, std::string &why);
 
 	bool FstArmed() const { return active && !fst.empty(); }
 
@@ -139,6 +142,21 @@ public:
 	//! crossing requests fall back to stock (the DOL splitter below owns
 	//! multi-run reads; header/FST readers always ask exactly).
 	bool Serve(u64 offset, u8 *buffer, u32 length) const;
+
+	//! Read routing verdict: classifies a request WITHOUT touching storage,
+	//! so the production read path and host tests share one decision.
+	//! DOL touches route to ServeDol (or FAIL when straddling the image
+	//! edge - a patched image must never mix stock bytes); fully-contained
+	//! header/FST reads route to Serve; everything else falls through to
+	//! stock. Zero-length or disarmed views route to stock. Pure.
+	enum RouteVerdict
+	{
+		ROUTE_STOCK, // caller does the stock read (buffer untouched)
+		ROUTE_DOL,   // serve via ServeDol (may still fail -> caller aborts)
+		ROUTE_META,  // serve via Serve (header/FST, fully contained)
+		ROUTE_FAIL   // fail loudly: caller must boot nothing
+	};
+	RouteVerdict Route(u64 offset, u32 length) const;
 
 	//! Arm DOL coverage from a composed executable plan. Requires a bootFile
 	//! plan whose segments tile [0,size) contiguously, a nonzero image size,

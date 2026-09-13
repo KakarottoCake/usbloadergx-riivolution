@@ -327,6 +327,50 @@ int main()
 	}
 
 
+	// 11. Route classification (shared with the production read path):
+	// DOL touch -> DOL or FAIL; header/FST containment -> META; else STOCK.
+	{
+		BootView idle;
+		CHECK(idle.Route(0, 16) == BootView::ROUTE_STOCK);
+		CHECK(idle.Route(kDolBase, 16) == BootView::ROUTE_STOCK);
+		std::vector<u8> fst(128, 0x11);
+		BootView v;
+		std::string why;
+		CHECK(v.Activate(&stock[0], (u32)stock.size(), stock, why));
+		CHECK(v.Route(0, 0) == BootView::ROUTE_STOCK); // zero length
+		CHECK(v.Route(0, 16) == BootView::ROUTE_META); // header
+		CHECK(v.Route(BOOTVIEW_HEADER_BYTES - 8, 16) == BootView::ROUTE_STOCK); // crossing
+		CHECK(v.Route(0x5000, 16) == BootView::ROUTE_STOCK); // FST not armed
+		CHECK(v.ArmFst(0x5000, fst, (u32)fst.size(), why));
+		CHECK(v.Route(0x5000, 128) == BootView::ROUTE_META); // exact FST
+		CHECK(v.Route(0x5000 + 64, 32) == BootView::ROUTE_META); // sub-read
+		CHECK(v.Route(0x5000 + 120, 16) == BootView::ROUTE_STOCK); // past end
+		CHECK(v.Route(0x5000 - 16, 32) == BootView::ROUTE_STOCK); // straddles start
+		CHECK(v.Route(0xFFFFFFFFFFFFFFFFULL - 4, 16) == BootView::ROUTE_STOCK); // wrap
+	}
+	// 12. Route with DOL armed: DOL wins, straddles fail loudly.
+	{
+		const u64 base = 0x20000, size = 0x1000;
+		PlannedFile dd;
+		dd.bootFile = true;
+		dd.finalSize = (u32)size;
+		PlanSegment s;
+		s.kind = PlanSegment::SEG_ORIGINAL;
+		s.fileOffset = 0;
+		s.length = (u32)size;
+		dd.segs.push_back(s);
+		BootView v;
+		std::string why;
+		CHECK(v.Activate(&stock[0], (u32)stock.size(), stock, why));
+		CHECK(v.SetDol(base, size, dd, why));
+		CHECK(v.Route(base, 64) == BootView::ROUTE_DOL);
+		CHECK(v.Route(base + size - 64, 64) == BootView::ROUTE_DOL);
+		CHECK(v.Route(base - 64, 128) == BootView::ROUTE_FAIL); // straddles start
+		CHECK(v.Route(base + size - 32, 64) == BootView::ROUTE_FAIL); // straddles end
+		CHECK(v.Route(0, 16) == BootView::ROUTE_META); // header still served
+		CHECK(v.Route(0x5000, 16) == BootView::ROUTE_STOCK); // elsewhere stock
+	}
+
 	printf("%d checks, %d failures\n", checks, failures);
 	return failures ? 1 : 0;
 }
