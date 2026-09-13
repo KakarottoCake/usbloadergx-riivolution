@@ -281,4 +281,9 @@ build_run test_pathresolve "$SRC/riivo/RiivoFstBuild.cpp" "$SRC/riivo/RiivoFst.c
 # the sink interface). Cannot prove physical LED visibility.
 build_run test_checkpoints
 
+# Early-FST probe helpers: digest stability and early/late agreement.
+# Header-only: pins the comparison the boot log reports. Cannot prove the
+# Wii software reader matches the cIOS path; that needs hardware logs.
+build_run test_earlyfst
+
 printf '\nall suites passed\n'

@@ -379,6 +379,25 @@ Full Riivolution generality. Highest risk (FST layout + string table editing).
 
 ## 5. Key risks / open questions
 
+- **Capability gaps (explicitly refused, not silently partial).** The
+  following are coherent withholds today, each named in the boot log with
+  its own `OUTCOME: WITHHELD <stage>` line - not general compatibility:
+  - *Partial-file replacement* (`offset`/`fileoffset`/`length`/`resize`
+    sub-ranges): the fragment runtime serves whole files only
+    (`WITHHELD`, pre-registration refusal).
+  - *DOL-only mods* (a patch set touching only `main.dol`, no fragment
+    files): planned and staged, but the executable serves only through
+    the boot view armed alongside fragment activation, so with no placed
+    file the table - and the DOL coverage with it - is withheld
+    (`WITHHELD NOTHING_PLACED`). Serving the executable standalone is
+    unimplemented.
+  - *DVD9 / dual-layer probes:* reads past the single-layer ceiling must
+    keep failing (anti-piracy check); oversized placements refuse rather
+    than promote the disc.
+  - *Early/late source disagreement* (`WITHHELD EARLY_LATE_DIFF`) and
+    *foreign-XML selection* (`WITHHELD XML_REFUSED`) boot stock by
+    design; the next launch surfaces both through the OUTCOME prompt.
+
 - **cIOS dependency (Phases 3–4).** Options: (a) fork d2x and add `DI_SETREDIRECT`
   (recommended — aligns with existing SETFRAG plumbing); (b) in-RAM IOS DI hook from
   the loader (no cIOS fork, but fragile across IOS versions). Decide before Phase 3.

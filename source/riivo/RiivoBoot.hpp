@@ -56,6 +56,13 @@ namespace Riivo
 						const std::string &logPath, u32 sectorSize,
 						const u8 *gameId, int usbPort, u8 discRevision = 0xff);
 
+	//! Record that the saved selection was refused before any boot work
+	//! (XML targets another game, disc, or revision). The resolved set
+	//! stays empty, so no file, memory, or save work can be active; this
+	//! only names the reason, persistently reported in ReportFstPlacement
+	//! and surfaced on the next launch through the OUTCOME line.
+	void NoteSelectionRefusal(const std::string &reason);
+
 	//! Append a block of text to the boot log set up by SetBootContext.
 	//! No-op when there is no log path or the device has already gone away.
 	void AppendLog(const std::string &text);

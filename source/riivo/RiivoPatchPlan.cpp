@@ -55,9 +55,8 @@ static std::string ToLowerStr(const std::string &s)
 struct ComposeState
 {
 	std::string disc; // plan key (post-FST routing)
-	std::string earlyKey; // pre-FST enumeration key (rule-derived): the
-	                      // identity the early fragment placement filed this
-	                      // file under; the late layout looks offsets up here
+	std::string earlyKey; // pre-FST enumeration key (rule-derived),
+	                      // retained as metadata alongside the plan key
 	u64 origOffset;
 	u32 origLength;
 	bool existed;
@@ -620,9 +619,9 @@ bool BuildPatchPlan(const Fst &fst,
 				}
 				if (!entry && !fl.create)
 					continue;
-				// Pre-FST enumeration key (early-phase identity for the late
-				// offset lookup below).
-				const std::string earlyKey = PlanKey(JoinDiscPath(discDir, r));
+			// Pre-FST enumeration key (rule-derived disc identity, kept as
+			// composer metadata alongside the plan disc key).
+			const std::string earlyKey = PlanKey(JoinDiscPath(discDir, r));
 				std::map<std::string, size_t>::iterator it = idx.find(key);
 				size_t si;
 				if (it == idx.end())
@@ -768,32 +767,6 @@ bool BuildPatchPlan(const Fst &fst,
 		*outDol = pf;
 	}
 	return true;
-}
-
-void ResolveLateOffsets(const PatchPlan &plan,
-						const std::map<std::string, u64> &earlyOffsets,
-						std::map<std::string, u64> &lateOffsets,
-						u32 &unplaced, u32 &remapped)
-{
-	lateOffsets.clear();
-	unplaced = 0;
-	remapped = 0;
-	for (size_t i = 0; i < plan.files.size(); ++i)
-	{
-		const PlannedFile &f = plan.files[i];
-		if (f.bootFile)
-			continue; // executables take no fragments, never unplaced
-		std::map<std::string, u64>::const_iterator it =
-			earlyOffsets.find(f.earlyKey);
-		if (it == earlyOffsets.end())
-		{
-			++unplaced;
-			continue;
-		}
-		lateOffsets[f.disc] = it->second;
-		if (f.earlyKey != f.disc)
-			++remapped;
-	}
 }
 
 bool PlanToManifestRuns(const PlannedFile &file,

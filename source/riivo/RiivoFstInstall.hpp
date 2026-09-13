@@ -219,6 +219,53 @@ namespace Riivo
 	//! Read the four boot-info words out of low memory. Target only.
 	ArenaInfo ReadArenaInfo();
 
+	//! Whether MEM1 already holds the staged table with correct boot
+	//! words: the apploader loaded the final bytes itself (served through
+	//! the boot-view overlay at the disc range), so the late copy and the
+	//! boot-word rewrite would write identical values. Pure over
+	//! caller-supplied words and bytes (the target reads live in the
+	//! caller); host-tested. On true the caller flushes, consumes, and
+	//! frees without rewriting; on false it takes the copy path - a
+	//! compacted table legitimately differs there (stock bytes under a
+	//! stock header), and that path is unchanged. In-place leg only: its
+	//! expected arena-high is the apploader's own untouched value passed
+	//! through, never loader arithmetic.
+	inline bool ApploaderOwnsTable(const u8 *mem, const u8 *staged, u32 size,
+								   u32 ptr, u32 max, u32 arena,
+								   u32 expAddr, u32 expSize, u32 expArena)
+	{
+		if (!mem || !staged || size == 0)
+			return false;
+		if (ptr != expAddr || max != expSize || arena != expArena)
+			return false;
+		return memcmp(mem, staged, size) == 0;
+	}
+
+	//! Whether MEM1 holds an apploader-owned grown table: the apploader
+	//! loaded exactly the staged bytes where it said it did. Location and
+	//! size are identity - a table elsewhere, or a prefix of it, is not
+	//! this table - and the apploader's own heap must clear the span for
+	//! its arena-high to be preservable (entirely below the table, or
+	//! entirely above it). Pure over caller-supplied words and bytes (the
+	//! target reads live in the caller); host-tested. False means refuse
+	//! the launch: a grown mismatch is never repaired by copying a table
+	//! over the game and rewriting boot words the game is already using.
+	inline bool ApploaderGrownTableOk(const u8 *mem, const u8 *staged, u32 size,
+									  u32 ptr, u32 max,
+									  u32 arenaLo, u32 arenaHi,
+									  u32 expAddr)
+	{
+		if (!mem || !staged || size == 0)
+			return false;
+		if (ptr != expAddr || max != size)
+			return false;
+		if (memcmp(mem, staged, size) != 0)
+			return false;
+		if ((u64) arenaHi > expAddr && (u64) arenaLo < (u64) expAddr + size)
+			return false;
+		return true;
+	}
+
 	//! Copy `fst` to the placement and repoint the boot-info block at it.
 	//! Target only; does nothing and returns false unless `place.ok`.
 	bool InstallFst(const FstPlacement &place, const std::vector<u8> &fst);

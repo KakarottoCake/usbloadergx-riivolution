@@ -1,26 +1,30 @@
-// Early/late placement identity through the production seam.
+// Early authoritative plan through the production seam.
 //
 // The fragment list must be registered in SetupDisc before the game
-// partition (and therefore the FST) can be opened; the rebuilt table is
-// made to agree afterwards. This pins that both phases derive identical
-// placements and source mappings from shared inputs - one authoritative
-// layout, not two descriptions that happen to agree:
-//
+// partition (and therefore the FST) can be opened through the cIOS - but
+// the software reader sees the table earlier, while the drives are still
+// mounted. Production builds the ONE patch plan from the retained table
+// before registration; placement derives from the plan's composed finals
+// (keyed by plan disc key), and the late phase consumes the same plan
+// after verifying the cIOS read is identical - no rebuild, no offset
+// remapping. This pins that flow on shared inputs:
 //   early: ListModFiles (REAL FsDirLister + REAL stat over a scratch card)
+//          + BuildPatchPlan (retained FST added)
+//          -> placement input derived from the plan
 //          -> AssignModOffsets (the production cursor walk, shared code)
-//   late:  BuildPatchPlan (same set/device/lister/sizes, FST added)
-//          -> ResolveLateOffsets (pre-FST earlyKey meets early offsets)
-//          -> FstBuilder::LayoutFrom -> FindAssigned
+//   late:  agreement gate (size/count/digest via EarlyPlanUsable)
+//          -> FstBuilder::LayoutFrom on the same map -> FindAssigned
 //          -> BuildPlanManifest (RIV1, self-validated)
 //
 // Covered: absolute files, bare basenames, relative folders, dataless
-// folders (+DOL child routing + DOL exclusion early), duplicates (last
-// wins both sides), zero-length cursor sharing, missing externals,
-// created files, DOL composition served outside fragments, manifest
-// round-trip, and the divergence tripwires (dropped offset, tampered
-// placed entry). Card enumeration runs for real (POSIX scratch dir;
-// PPC never compiles host tests); the FST and the sizes stand in for
-// disc/card state with identical values on both sides.
+// folders (+DOL child routing + DOL exclusion from fragments),
+// duplicates (last wins both sides), zero-length cursor sharing, missing
+// externals, created files, DOL composition served outside fragments,
+// manifest round-trip, agreement/disagreement through the production
+// gate, and the divergence tripwires (dropped offset, tampered placed
+// entry). Card enumeration runs for real (POSIX scratch dir; PPC never
+// compiles host tests); the FST and the sizes stand in for disc/card
+// state with identical values on both sides.
 #include <stdio.h>
 #include <string.h>
 #include <string>
@@ -41,6 +45,7 @@
 #include "riivo/RiivoFragPlan.hpp"
 #include "riivo/RiivoReconcile.hpp"
 #include "riivo/RiivoManifest.hpp"
+#include "riivo/RiivoEarlyFst.hpp"
 
 using namespace Riivo;
 
@@ -126,7 +131,7 @@ static u32 Rd32le(const std::vector<u8> &v, size_t at)
 }
 
 // Ascending-offset order, mirroring CollectPlaced (production sorts served
-// placements; early keys and late keys order remapped files differently).
+// placements by offset).
 static bool ByOffset(const PlacedFile &a, const PlacedFile &b)
 {
 	return a.offset < b.offset;
@@ -228,7 +233,7 @@ int main()
 	ClearDirListCache();
 	ClearFileSizeCache();
 
-	// ---- early: real enumeration + shared cursor walk ----
+	// ---- early: real enumeration over the scratch card ----
 	FsDirLister fsLister;
 	std::vector<ModCandidate> cand;
 	std::vector<MissingExternal> earlyMissing;
@@ -267,27 +272,9 @@ int main()
 	CHECK(sawMissing);
 
 	const u64 regionStart = PlanRegionStart(0x1000000ULL, 512);
-	std::map<std::string, u64> earlyOffsets;
-	std::vector<PlacedFile> earlyPlaced;
-	std::vector<RegRecord> earlyRecords;
-	u64 regionEnd = AssignModOffsets(cand, regionStart, 512, earlyOffsets,
-									earlyPlaced, earlyRecords);
-	CHECK(regionEnd > regionStart);
-	CHECK(earlyOffsets.size() == 8);
-	{
-		bool foundEmpty = false;
-		for (size_t i = 0; i < earlyRecords.size(); ++i)
-		{
-			if (earlyRecords[i].external.find("empty.bin") != std::string::npos)
-			{
-				CHECK(earlyRecords[i].length == 0);
-				foundEmpty = true;
-			}
-		}
-		CHECK(foundEmpty);
-	}
+	u64 regionEnd = 0; // filled by the plan-derived walk below
 
-	// ---- late: same set/device/lister, FST added ----
+	// ---- plan: same set/device/lister, retained FST added ----
 	// (MemSizes mirrors the real card sizes byte-for-byte.)
 	MemSizes sizes;
 	sizes.m[card + "/abs.bin"] = 100;
@@ -339,46 +326,108 @@ int main()
 		CHECK(misses > 0 && hits > 0);
 	}
 
-	// ---- identity: every plan file meets its early offset at equal size ----
-	std::map<std::string, u64> layMap;
-	u32 unplaced = 0, remapped = 0;
-	ResolveLateOffsets(plan, earlyOffsets, layMap, unplaced, remapped);
-	CHECK(unplaced == 0);
-	CHECK(remapped == 2); // bare base.arc + dataless other.arc
-	CHECK(layMap.size() == plan.files.size());
+	// ---- placement derives from the plan (production shape) ----
+	// Mirrors PrepareFragList: skip the executable (boot view, never
+	// fragments) and empty keys; the rest walks the shared cursor keyed
+	// by plan disc key - no remapping step exists anymore.
+	std::vector<ModCandidate> placeCand;
+	for (size_t i = 0; i < plan.files.size(); ++i)
 	{
-		std::map<std::string, u32> recSize;
-		for (size_t i = 0; i < earlyRecords.size(); ++i)
-			recSize[earlyRecords[i].disc] = earlyRecords[i].length;
-		for (size_t i = 0; i < plan.files.size(); ++i)
+		const PlannedFile &f = plan.files[i];
+		CHECK(!f.bootFile); // executables compose to outDol, never files
+		if (f.bootFile || f.disc.empty())
+			continue;
+		ModCandidate c;
+		c.disc = f.disc;
+		c.external = f.external;
+		c.size = f.finalSize;
+		placeCand.push_back(c);
+	}
+	// 8 files, same set the enumeration found (DOL routed out both sides).
+	CHECK(placeCand.size() == 8);
+	CHECK(placeCand.size() == cand.size());
+	std::map<std::string, u64> planOffsets;
+	std::vector<PlacedFile> planPlaced;
+	std::vector<RegRecord> planRecords;
+	regionEnd = AssignModOffsets(placeCand, regionStart, 512, planOffsets,
+								planPlaced, planRecords);
+	CHECK(regionEnd > regionStart);
+	CHECK(planOffsets.size() == plan.files.size());
+	for (size_t i = 0; i < plan.files.size(); ++i)
+	{
+		CHECK(planOffsets.find(plan.files[i].disc) != planOffsets.end());
+	}
+	// Deterministic: the same plan walks the same cursor every boot.
+	{
+		std::map<std::string, u64> again;
+		std::vector<PlacedFile> placed2;
+		std::vector<RegRecord> records2;
+		AssignModOffsets(placeCand, regionStart, 512, again, placed2, records2);
+		CHECK(again == planOffsets);
+	}
+	// Zero-length entries share the cursor without advancing it. (The
+	// composer clears their external - nothing to map - so they are
+	// identified by disc key, the same key placement and layout use.)
+	{
+		bool foundEmpty = false;
+		for (size_t i = 0; i < planRecords.size(); ++i)
 		{
-			const PlannedFile &f = plan.files[i];
-			std::map<std::string, u64>::iterator lo = layMap.find(f.disc);
-			CHECK(lo != layMap.end());
-			if (lo == layMap.end())
-				continue;
-			CHECK(lo->second == earlyOffsets[f.earlyKey]);
-			std::map<std::string, u32>::iterator rs = recSize.find(f.earlyKey);
-			CHECK(rs != recSize.end());
-			if (rs != recSize.end())
-				CHECK(rs->second == f.finalSize); // stat/compose agreement
+			if (planRecords[i].length == 0)
+			{
+				CHECK(planRecords[i].disc == "/z/empty.bin");
+				foundEmpty = true;
+			}
 		}
+		CHECK(foundEmpty);
 	}
 
-	// ---- table build off the resolved map places identically ----
+	// ---- agreement gate: the late read must be the retained table ----
+	// Production verifies size/count/digest through EarlyPlanUsable and
+	// consumes the same plan on agreement, aborts coherently on
+	// disagreement (no source switch). Both legs run here on real bytes.
+	EarlyFstIdentity ident;
+	ident.size = (u32)discImg.size();
+	{
+		Fst recount;
+		CHECK(recount.Parse(&discImg[0], (u32)discImg.size(), true));
+		ident.files = (u32)recount.FileCount();
+	}
+	ident.digest = FstDigest(&discImg[0], (u32)discImg.size());
+	ident.valid = true;
+	CHECK(EarlyPlanUsable(true, ident, (u32)discImg.size(),
+						  ident.files, ident.digest));
+	{
+		// One flipped string-table byte: still parses, same count and
+		// size - only the digest moves, and the gate refuses.
+		std::vector<u8> mutated = discImg;
+		mutated[mutated.size() - 2] ^= 0x01;
+		Fst remparse;
+		CHECK(remparse.Parse(&mutated[0], (u32)mutated.size(), true));
+		CHECK(remparse.FileCount() == ident.files);
+		CHECK(!EarlyPlanUsable(true, ident, (u32)mutated.size(),
+							   (u32)remparse.FileCount(),
+							   FstDigest(&mutated[0], (u32)mutated.size())));
+		EarlyFstIdentity bad;
+		CHECK(!EarlyPlanUsable(true, bad, ident.size, ident.files,
+							   ident.digest));
+		CHECK(!EarlyPlanUsable(false, ident, ident.size, ident.files,
+							   ident.digest));
+	}
+
+	// ---- table build off the plan-keyed map places identically ----
 	{
 		FstBuilder builder;
 		CHECK(builder.Parse(&discImg[0], (u32)discImg.size(), true));
 		bool isNew = false;
 		for (size_t i = 0; i < plan.files.size(); ++i)
 			CHECK(builder.AddOrReplace(plan.files[i].disc, plan.files[i].finalSize, &isNew));
-		CHECK(builder.LayoutFrom(layMap) == 0);
+		CHECK(builder.LayoutFrom(planOffsets) == 0);
 		for (size_t i = 0; i < plan.files.size(); ++i)
 		{
 			u64 off = 0;
 			u32 len = 0;
 			CHECK(builder.FindAssigned(plan.files[i].disc, &off, &len));
-			CHECK(off == layMap[plan.files[i].disc]);
+			CHECK(off == planOffsets[plan.files[i].disc]);
 			CHECK(len == plan.files[i].finalSize);
 		}
 	}
@@ -403,7 +452,7 @@ int main()
 				if (devPlan.files[i].segs[s].kind == PlanSegment::SEG_EXTERNAL)
 					devPlan.files[i].segs[s].external = indexed;
 			PlacedFile p;
-			p.offset = layMap[plan.files[i].disc];
+			p.offset = planOffsets[plan.files[i].disc];
 			p.length = plan.files[i].finalSize;
 			p.external = indexed;
 			placed.push_back(p);
@@ -424,13 +473,17 @@ int main()
 	}
 
 	// ---- tripwires: dropped offset, tampered placed entry ----
+	// A builder entry with no placement refuses: the layout gate counts
+	// exactly the unservable entries.
 	{
-		std::map<std::string, u64> dropped = earlyOffsets;
+		std::map<std::string, u64> dropped = planOffsets;
 		dropped.erase(dropped.begin());
-		std::map<std::string, u64> late2;
-		u32 un2 = 0, re2 = 0;
-		ResolveLateOffsets(plan, dropped, late2, un2, re2);
-		CHECK(un2 == 1);
+		FstBuilder droppedBuilder;
+		CHECK(droppedBuilder.Parse(&discImg[0], (u32)discImg.size(), true));
+		bool isNew = false;
+		for (size_t i = 0; i < plan.files.size(); ++i)
+			CHECK(droppedBuilder.AddOrReplace(plan.files[i].disc, plan.files[i].finalSize, &isNew));
+		CHECK(droppedBuilder.LayoutFrom(dropped) == 1);
 	}
 	{
 		// Index-coupled aliasing: placed[k] <-> plan.files[srcIdx[k]] share
@@ -450,7 +503,7 @@ int main()
 				if (devPlan.files[i].segs[s].kind == PlanSegment::SEG_EXTERNAL)
 					devPlan.files[i].segs[s].external = indexed;
 			PlacedFile p;
-			p.offset = layMap[plan.files[i].disc];
+			p.offset = planOffsets[plan.files[i].disc];
 			p.length = plan.files[i].finalSize;
 			p.external = indexed;
 			placed.push_back(p);

@@ -84,13 +84,9 @@ struct PlannedFile
 	std::string disc;     // lower-cased, leading '/', e.g. "/obj/a.arc"
 	                      // (FST path for files; "/main.dol" for executables)
 	std::string earlyKey; // pre-FST enumeration key (NormaliseDiscPath of the
-	                      // rule disc / folder-joined child): the identity the
-	                      // early fragment placement filed this file under.
-	                      // The late layout looks offsets up by this key, so
-	                      // basename-routed files (bare names, dataless
-	                      // folders) still meet the offsets decided before
-	                      // the FST could be read. Equals disc for ordinary
-	                      // and created entries.
+	                      // rule disc / folder-joined child), kept as composer
+	                      // metadata. Placement and layout both key on disc;
+	                      // equals disc for ordinary and created entries.
 	u64 discOffsetOrig;   // original disc byte offset (0 when created;
 	                      // DOL image base for executable patches)
 	u32 discLengthOrig;   // original disc length (0 when created)
@@ -182,21 +178,6 @@ bool BuildPatchPlan(const Fst &fst,
 					std::string &why,
 					u64 dolSize = 0,
 					PlannedFile *outDol = 0);
-
-//! Late offset resolution: look every planned file's earlyKey up in the
-//! early placement map (decided in SetupDisc before any FST existed) and
-//! file the result under the late disc key for FstBuilder::LayoutFrom.
-//! Basename-routed files (bare names, dataless folders) meet their offsets
-//! here; exact-path files hit directly. Executable entries take no
-//! fragments and are skipped (never unplaced). Pure total function: misses
-//! are DATA (counted in unplaced for the caller's refusal gate), and
-//! remapped counts basename remaps (earlyKey != disc) for the log.
-//! The caller must refuse file work when unplaced > 0: an entry without an
-//! offset would point the game at whatever happens to be there.
-void ResolveLateOffsets(const PatchPlan &plan,
-						const std::map<std::string, u64> &earlyOffsets,
-						std::map<std::string, u64> &lateOffsets,
-						u32 &unplaced, u32 &remapped);
 
 //! Manifest derivation: External + Zero segments become ManifestExtents
 //! (Original gaps delegated, not listed). Sorted by discOffset via the
