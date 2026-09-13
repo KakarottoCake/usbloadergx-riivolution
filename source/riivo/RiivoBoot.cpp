@@ -3097,6 +3097,30 @@ namespace Riivo
 		extern u8 __stack_end[] __attribute__((weak));
 	}
 
+	//! Snapshot loader-live residents with the same validation the evidence
+	//! block documents: weak stack symbols must resolve inside MEM1 with low
+	//! < high and SP inside (otherwise stackKnown stays false and grown
+	//! installs refuse); the sbrk break must be nonzero inside MEM1.
+	//! Shared by the relocation evidence (observations) and the grown
+	//! placement/install gates (verdicts) so the two cannot disagree about
+	//! what "known" means. Target-only (stack register, sbrk).
+	static void ReadLoaderLive(LoaderLive &live)
+	{
+		live = LoaderLive();
+		live.sp = ReadStackPointer();
+		const u32 stackTop = __stack_addr ? (u32) __stack_addr : 0;
+		const u32 stackBot = __stack_end ? (u32) __stack_end : 0;
+		live.stackLo = stackBot;
+		live.stackHi = stackTop;
+		live.stackKnown = stackTop > stackBot
+			&& stackBot >= MEM1_BASE && stackTop <= MEM1_END
+			&& live.sp >= stackBot && live.sp < stackTop;
+		const u32 brk = (u32) (uintptr_t) sbrk(0);
+		live.heapBreak = brk;
+		live.heapKnown = brk != 0 && brk != 0xFFFFFFFFu
+			&& brk >= MEM1_BASE && brk <= MEM1_END;
+	}
+
 	bool HaveStagedFst()
 	{
 		return g_launch.HaveStaged();
@@ -3224,6 +3248,33 @@ namespace Riivo
 			g_launch.Refuse(2);
 			gprintf("Riivo: late FST install REFUSED - staged table failed its checksum before copying\n");
 			return false;
+		}
+		//! Grown tables additionally clear loader-live residents with FRESH
+		//! values: the stack pointer moved and the heap break may have grown
+		//! since the placement-time check (ReportLaunch strings allocate
+		//! after booking). In-place installs skip this: they touch nothing
+		//! outside the apploader's own reservation. Refusal blinks code 9.
+		if (!pendingPlace.inPlace)
+		{
+			LoaderLive liveNow;
+			ReadLoaderLive(liveNow);
+			const char *liveWhy = 0;
+			const u32 destHi = addr + size;
+			if (destHi < addr
+				|| !ClearsLoaderLive(addr, destHi, liveNow, liveWhy))
+			{
+				g_launch.Refuse(9);
+				installFailCode = 9;
+				gprintf("Riivo: grown install REFUSED at loader-live clearance: %s "
+						"(SP %08x stack [%08x,%08x)%s break %08x%s)\n",
+						liveWhy ? liveWhy : "bad destination",
+						liveNow.sp, liveNow.stackLo, liveNow.stackHi,
+						liveNow.stackKnown ? "" : " UNKNOWN",
+						liveNow.heapBreak, liveNow.heapKnown ? "" : " UNKNOWN");
+				return false;
+			}
+			gprintf("Riivo: grown install clears loader-live (SP %08x, break %08x)\n",
+					liveNow.sp, liveNow.heapBreak);
 		}
 		const bool ok = InstallFst(pendingPlace, pendingFst, pendingFstSize);
 		if (!ok)
@@ -3720,15 +3771,17 @@ namespace Riivo
 		//! but return before the copy (gamepatches, the memory engine) are
 		//! dead by then and safe to have overwritten; only frames live across
 		//! the copy matter, and no single snapshot covers them all.
-		const u32 sp = ReadStackPointer();
+		//! Acquisition shared with the grown-install gates below, so evidence
+		//! and verdicts cannot disagree about what "known" means.
+		LoaderLive liveNow;
+		ReadLoaderLive(liveNow);
+		const u32 sp = liveNow.sp;
 		const u32 self = (u32) LWP_GetSelf();
 		Addf(out, "  executing thread    : id %08x, SP %08x at placement\n", self, sp);
 
-		const u32 stackTop = __stack_addr ? (u32) __stack_addr : 0;
-		const u32 stackBot = __stack_end ? (u32) __stack_end : 0;
-		const bool stackKnown = stackTop > stackBot
-			&& stackBot >= MEM1_BASE && stackTop <= MEM1_END
-			&& sp >= stackBot && sp < stackTop;
+		const u32 stackTop = liveNow.stackHi;
+		const u32 stackBot = liveNow.stackLo;
+		const bool stackKnown = liveNow.stackKnown;
 		if (__stack_addr && __stack_end)
 			Addf(out, "  main-thread stack   : [%08x, %08x)%s\n", stackBot, stackTop,
 				 stackKnown ? " (SP inside: bounds describe this stack)"
@@ -3749,8 +3802,8 @@ namespace Riivo
 		//! interval: the floor is the startup Lo (BSS end 0x8106c260 on the
 		//! tested binary IF symbol-inited - that startup path was not
 		//! re-verified, so the floor is cited, not relied on).
-		const u32 brk = (u32) (uintptr_t) sbrk(0);
-		const bool brkOk = brk != 0xFFFFFFFFu && brk >= MEM1_BASE && brk <= MEM1_END;
+		const u32 brk = liveNow.heapBreak;
+		const bool brkOk = liveNow.heapKnown;
 		if (brkOk)
 			Addf(out, "  newlib break (sbrk): %08x\n", brk);
 		else
@@ -4001,25 +4054,61 @@ namespace Riivo
 			 arena.fstAddr, arena.fstMaxSize);
 		Addf(out, "  rebuilt size : %u bytes\n\n", want);
 
-		//! General placement policy (2026-09-12, no game-ID gates): only
-		//! in-place tables install. A grown table that fits nowhere the
-		//! apploader reserved refuses explicitly here with required vs
-		//! reserved capacity, instead of cascading into memory game startup
-		//! may clear or trusting a surveyed MEM2 window. The coherent fix is
-		//! the patched boot view (apploader allocates for the rebuilt table);
-		//! until it lands, relocation is unsupported on every title alike.
+		//! General placement policy (no game-ID gates): in-place tables install
+		//! where the apploader put them; grown tables cascade below the
+		//! reservation through PlaceFst (game ranges steered around, heap
+		//! floor honored) and additionally clear loader-live residents here
+		//! (executing stack with margin, newlib heap break) plus a cascade
+		//! size cap. A grown table that fits nowhere safe refuses explicitly
+		//! with required vs reserved capacity. Startup survival below the
+		//! reservation is verified by observed boot, not by loader checks -
+		//! stated on the grown path, never implied.
 		//! Everything below books and reports the EFFECTIVE placement.
 		FstPlacement effPlace = place;
 		if (effPlace.ok && !effPlace.inPlace)
 		{
-			char relWhy[192];
-			snprintf(relWhy, sizeof(relWhy),
-				"grown table needs %u bytes but the apploader reserved %u; "
-				"relocation requires the patched boot view (unsupported)",
-				want, arena.fstMaxSize);
-			effPlace = FstPlacement();
-			effPlace.why = relWhy;
-			Addf(out, "\n  relocation unsupported: %s\n", effPlace.why.c_str());
+			const u32 grownBy = (want > arena.fstMaxSize)
+								? want - arena.fstMaxSize : 0;
+			if (grownBy > GROWN_CASCADE_MAX)
+			{
+				char capWhy[192];
+				snprintf(capWhy, sizeof(capWhy),
+					"grown table needs %u bytes beyond the %u-byte reservation "
+					"(cap %u); relocation cannot stay clear of loader-low regions",
+					grownBy, arena.fstMaxSize, GROWN_CASCADE_MAX);
+				effPlace = FstPlacement();
+				effPlace.why = capWhy;
+				Addf(out, "\n  cascade refused: %s\n", effPlace.why.c_str());
+			}
+			else
+			{
+				LoaderLive liveNow;
+				ReadLoaderLive(liveNow);
+				const char *liveWhy = 0;
+				const u32 destHi = effPlace.fstAddr + want;
+				Addf(out, "\n  grown table would go : [%08x, %08x) (%u bytes below reservation)\n",
+					 effPlace.fstAddr, destHi, grownBy);
+				Addf(out, "  loader-live check  : SP %08x stack [%08x, %08x)%s break %08x%s\n",
+					 liveNow.sp, liveNow.stackLo, liveNow.stackHi,
+					 liveNow.stackKnown ? "" : " UNKNOWN",
+					 liveNow.heapBreak, liveNow.heapKnown ? "" : " UNKNOWN");
+				if (destHi < effPlace.fstAddr
+					|| !ClearsLoaderLive(effPlace.fstAddr, destHi, liveNow,
+										 liveWhy))
+				{
+					effPlace = FstPlacement();
+					effPlace.why = liveWhy ? liveWhy
+						: "grown destination failed loader-live clearance";
+					Addf(out, "  cascade refused: %s\n", effPlace.why.c_str());
+				}
+				else
+				{
+					Addf(out, "  cascade clears loader-live residents (stack with %u-byte margin, heap break below start)\n",
+						 STACK_MARGIN);
+					out += "  startup survival below the reservation is verified by\n"
+						   "  observed boot on this title, not by loader checks.\n";
+				}
+			}
 		}
 
 		if (!effPlace.ok)
@@ -4037,14 +4126,21 @@ namespace Riivo
 		}
 		else
 		{
-			//! Unreachable by construction: grown placements refuse above.
-			//! Retained as a defensive refusal so a future policy change
-			//! cannot silently re-activate relocation without updating this
-			//! report and the booking below.
-			Addf(out, "  REFUSED: unexpected grown placement at %08x (policy requires in-place)\n",
-				 effPlace.fstAddr);
-			effPlace = FstPlacement();
-			effPlace.why = "unexpected grown placement (policy requires in-place)";
+			Addf(out, "  would go at  : %08x  (extended downwards)\n", effPlace.fstAddr);
+			Addf(out, "  arena high   : %08x -> %08x\n", arena.arenaHi, effPlace.newArenaHi);
+			Addf(out, "  taken from the game's heap : %u KB\n", effPlace.reserved / 1024);
+			if (effPlace.heapLeft)
+				Addf(out, "  heap the game still has    : %u MB\n",
+					 effPlace.heapLeft / (1024 * 1024));
+			else
+			{
+				//! Arena low was never set, so there is no floor to measure
+				//! the heap against. The cap actually enforced in that case
+				//! is the blind-drop limit; print how much of it this takes.
+				Addf(out, "  heap the game still has    : unknown (arena low not set)\n");
+				Addf(out, "  blind-drop cap used        : %u of %u KB\n",
+					 effPlace.reserved / 1024, MAX_BLIND_DROP / 1024);
+			}
 		}
 		if (effPlace.ok)
 			Addf(out, "  loaded ranges kept clear : %u considered, %u ignored "

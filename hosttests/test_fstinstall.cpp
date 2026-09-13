@@ -493,6 +493,60 @@ int main()
 		ck(q.ok && !q.inPlace, "one byte over is grown");
 	}
 
+	printf("15. grown destinations clear loader-live residents or refuse\n");
+	{
+		//! Pure rule for the grown-install gates (placement-time and
+		//! install-time share it): T0 grown destination against the
+		//! captured live stack zone [0x817fd000, 0x81800000) clears (it
+		//! sits well below with margin); anything touching the stack,
+		//! crowding SP, exceeding a bad break, or running on unknown
+		//! bounds refuses with a literal (no allocation, blink-safe).
+		const u32 destLo = 0x817b2de0, destHi = 0x817b2de0 + 153934;
+		LoaderLive live;
+		live.sp = 0x817fe000;
+		live.stackLo = 0x817fd000;
+		live.stackHi = 0x81800000;
+		live.stackKnown = true;
+		live.heapBreak = 0x81000000;
+		live.heapKnown = true;
+		const char *why = 0;
+		ck(ClearsLoaderLive(destLo, destHi, live, why), "T0 grown clears");
+		ck(why == 0, "no reason on success");
+		// Stack reaching through the destination is detected.
+		live.stackLo = 0x817c0000;
+		live.stackHi = 0x817da740;
+		live.sp = 0x817d9000;
+		ck(!ClearsLoaderLive(destLo, destHi, live, why), "stack overlap refused");
+		ck(why != 0, "reason names the fault");
+		// SP inside the destination (same instant, bad sample) refuses.
+		live.stackLo = 0x817fd000;
+		live.stackHi = 0x81800000;
+		live.sp = destLo + 100;
+		ck(!ClearsLoaderLive(destLo, destHi, live, why), "SP inside refused");
+		// Margin: destination ending within 4 KB below SP refuses.
+		live.sp = destHi + STACK_MARGIN - 1;
+		ck(!ClearsLoaderLive(destLo, destHi, live, why), "margin enforced");
+		live.sp = destHi + STACK_MARGIN;
+		ck(ClearsLoaderLive(destLo, destHi, live, why), "margin edge passes");
+		// Heap break at/past the destination start refuses.
+		live.sp = 0x817fe000;
+		live.heapBreak = destLo;
+		ck(ClearsLoaderLive(destLo, destHi, live, why), "break adjacent passes");
+		live.heapBreak = destLo + 1;
+		ck(!ClearsLoaderLive(destLo, destHi, live, why), "break entry refused");
+		// Unknown bounds refuse rather than guess.
+		live.heapBreak = destLo;
+		live.stackKnown = false;
+		ck(!ClearsLoaderLive(destLo, destHi, live, why), "unknown stack refused");
+		live.stackKnown = true;
+		live.heapKnown = false;
+		ck(!ClearsLoaderLive(destLo, destHi, live, why), "unknown break refused");
+		live.heapKnown = true;
+		// Empty/wrapped destinations refuse.
+		ck(!ClearsLoaderLive(destLo, destLo, live, why), "empty refused");
+		ck(!ClearsLoaderLive(0xFFFFFFFFu, 16, live, why), "wrapped refused");
+	}
+
 	printf("\n%d checks, %d failure(s)\n", checks, failures);
 	return failures ? 1 : 0;
 }
