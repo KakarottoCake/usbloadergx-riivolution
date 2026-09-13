@@ -179,6 +179,40 @@ namespace Riivo
 		return hits;
 	}
 
+	//! Whether an apploader yield's disc offset falls inside the disc FST
+	//! range [fstOff, fstOff+fstSize): identifies FST-load chunks among
+	//! recorded apploader reads. Those bytes are dead once the rebuilt
+	//! table installs elsewhere, so the reported-base veto below excuses
+	//! exactly them - never by address guess. Pure, host-tested.
+	inline bool NoteInFstRange(u32 noteDisc, u64 fstOff, u32 fstSize)
+	{
+		return fstSize > 0 && (u64)noteDisc >= fstOff
+			   && (u64)noteDisc < fstOff + fstSize;
+	}
+
+	//! Evaluate an apploader-REPORTED table placement for a grown table:
+	//! the apploader read the served boot header through its own first
+	//! triple, loaded what it decided, and published w38/w3c itself
+	//! (traced end to end: boot words in, triples,FST load, w38/w3c out).
+	//! The loader installs exactly what was reported - or nothing. Pure;
+	//! host-tested. Refuses (false + literal why, no allocation) when the
+	//! reported size differs from the staged size by even one byte (a
+	//! prefix the apploader loaded is not the table), the base is outside
+	//! MEM1/misaligned/overflowing/above the arena top, any LIVE loaded
+	//! range overlaps the install span (apploader-loaded FST bytes arrive
+	//! already filtered out by the caller - they die with the install by
+	//! construction), the validated loader stack is unknown or overlapped,
+	//! or the heap accounting fails (same MIN_GAME_HEAP / blind-drop rules
+	//! as PlaceFst, shared constants). In-place tables never consult this.
+	//! Startup preservation is NOT established here: it is observed (game
+	//! boots and consumes the table) or it fails loudly past a verified
+	//! install, which isolates the fault to startup. See test_fstinstall.
+	bool EvaluateReportedBase(const ArenaInfo &arena, u32 repBase, u32 repSize,
+							  u32 want,
+							  const OccupiedRange *occ, u32 occCount,
+							  u32 sp, u32 stackLo, u32 stackHi, bool stackKnown,
+							  FstPlacement &out, const char *&why);
+
 	//! Read the four boot-info words out of low memory. Target only.
 	ArenaInfo ReadArenaInfo();
 

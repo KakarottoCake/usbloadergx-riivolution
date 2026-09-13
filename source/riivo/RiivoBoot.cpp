@@ -524,6 +524,13 @@ namespace Riivo
 	//! The game's id, needed to ask which partition it lives on.
 	static u8 bootGameId[8] = { 0 };
 
+	//! Disc FST range (partition bytes) captured with the FST read: lets
+	//! late phases tell apploader-loaded FST bytes (dead post-install)
+	//! apart from live game chunks without guessing by address. Cleared
+	//! per boot with everything else.
+	static u64 trackFstOff = 0;
+	static u32 trackFstSize = 0;
+
 	//! The USB port the backup is on, so the mod can be checked against it.
 	static int bootUsbPort = 0;
 
@@ -840,6 +847,8 @@ namespace Riivo
 		bootSectorSize = 512;
 		bootUsbPort = 0;
 		bootDiscRevision = 0xff;
+		trackFstOff = 0;
+		trackFstSize = 0;
 		memset(bootGameId, 0, sizeof(bootGameId));
 		ClearDirListCache();
 		ClearFileSizeCache();
@@ -1858,10 +1867,37 @@ namespace Riivo
 				"  boot view: stock header unreadable, cannot arm; FST withheld.\n");
 			return false;
 		}
-		// Production patches no header words (the disc image is immutable;
-		// MEM1 boot words carry the new table size at install). The served
-		// header is stock-identical: coherence plus verifiable plumbing.
+		// Virtual header: the apploader reads these words through its own
+		// first triple (partition 0x420, 32 bytes - traced) and establishes
+		// the FST destination and size from them (traced publication; a
+		// coherent grown view boots to idle in the reference backend with
+		// the base below the stock reservation). 0x420/0x424 stay disc
+		// truth (DOL offset, FST disc offset - the disc image is immutable);
+		// 0x428/0x42C both carry the staged size, matching the proven
+		// coherent header shape, so size-driven and max-driven apploader
+		// logic agree. In-place, same-size and compacted stagings keep the
+		// stock-identical header: zero behavior change there. Held to stock
+		// under nofstinstall like everything installable: the diagnostic
+		// splits hook-vs-table with a stock boot, and a grown header would
+		// corrupt that split.
 		std::vector<u8> patchedHeader(ovHeader, ovHeader + sizeof(ovHeader));
+		if (pendingFstSize > fstDiscSize && !skipFstInstall)
+		{
+			std::string hwhy;
+			if (!PatchBootHeader(ovHeader, sizeof(ovHeader), fstDiscOffset,
+								 pendingFstSize, pendingFstSize,
+								 patchedHeader, hwhy))
+			{
+				char line[224];
+				snprintf(line, sizeof(line),
+					"  boot view: grown header refused (%s); FST withheld.\n",
+					hwhy.c_str());
+				WithholdStaged(out, "BOOTVIEW", line);
+				return false;
+			}
+			Addf(out, "  boot view : virtual header serves grown size/max %u (disc %u)\n",
+				 pendingFstSize, fstDiscSize);
+		}
 		std::vector<u8> stagedView(pendingFst, pendingFst + pendingFstSize);
 		std::string why;
 		if (!bootView.Activate(ovHeader, sizeof(ovHeader), patchedHeader, why))
@@ -2161,6 +2197,9 @@ namespace Riivo
 		//! the parse so a garbage FST never spends a disc read on sections
 		//! nothing will use.
 		ReadDolSections(dolOffset, out);
+		// Disc FST range for late phases (dead-span identification).
+		trackFstOff = fstOffset;
+		trackFstSize = fstSize;
 
 		Addf(out, "patches  : %u <file>, %u <folder>\n\n",
 			 (unsigned) bootSet->files.size(), (unsigned) bootSet->folders.size());
@@ -3111,6 +3150,29 @@ namespace Riivo
 		extern u8 __stack_end[] __attribute__((weak));
 	}
 
+	//! Validated main-thread stack acquisition, shared by the relocation
+	//! evidence (observations) and the reported-base gate (verdicts) so the
+	//! two cannot disagree about what "known" means. Bounds must resolve
+	//! inside MEM1 with low < high and SP inside; anything else (absent
+	//! symbols, garbage values, a foreign thread's SP) reads unknown.
+	//! Target-only (stack register).
+	static void ReadLoaderStack(u32 &sp, u32 &stackLo, u32 &stackHi,
+								bool &stackKnown)
+	{
+		sp = ReadStackPointer();
+		stackLo = 0;
+		stackHi = 0;
+		stackKnown = false;
+		const u32 top = __stack_addr ? (u32) __stack_addr : 0;
+		const u32 bot = __stack_end ? (u32) __stack_end : 0;
+		if (!(top > bot && bot >= MEM1_BASE && top <= MEM1_END
+			  && sp >= bot && sp < top))
+			return;
+		stackLo = bot;
+		stackHi = top;
+		stackKnown = true;
+	}
+
 	bool HaveStagedFst()
 	{
 		return g_launch.HaveStaged();
@@ -3734,15 +3796,13 @@ namespace Riivo
 		//! but return before the copy (gamepatches, the memory engine) are
 		//! dead by then and safe to have overwritten; only frames live across
 		//! the copy matter, and no single snapshot covers them all.
-		const u32 sp = ReadStackPointer();
+		//! Acquisition shared with the reported-base gate below.
+		u32 sp = 0, stackBot = 0, stackTop = 0;
+		bool stackKnown = false;
+		ReadLoaderStack(sp, stackBot, stackTop, stackKnown);
 		const u32 self = (u32) LWP_GetSelf();
 		Addf(out, "  executing thread    : id %08x, SP %08x at placement\n", self, sp);
 
-		const u32 stackTop = __stack_addr ? (u32) __stack_addr : 0;
-		const u32 stackBot = __stack_end ? (u32) __stack_end : 0;
-		const bool stackKnown = stackTop > stackBot
-			&& stackBot >= MEM1_BASE && stackTop <= MEM1_END
-			&& sp >= stackBot && sp < stackTop;
 		if (__stack_addr && __stack_end)
 			Addf(out, "  main-thread stack   : [%08x, %08x)%s\n", stackBot, stackTop,
 				 stackKnown ? " (SP inside: bounds describe this stack)"
@@ -4015,25 +4075,80 @@ namespace Riivo
 			 arena.fstAddr, arena.fstMaxSize);
 		Addf(out, "  rebuilt size : %u bytes\n\n", want);
 
-		//! General placement policy (2026-09-12, no game-ID gates): only
-		//! in-place tables install. A grown table that fits nowhere the
-		//! apploader reserved refuses explicitly here with required vs
-		//! reserved capacity, instead of cascading into memory game startup
-		//! may clear or trusting a surveyed MEM2 window. The coherent fix is
-		//! the patched boot view (apploader allocates for the rebuilt table);
-		//! until it lands, relocation is unsupported on every title alike.
+		//! General placement policy (no game-ID gates): in-place tables install
+		//! where the apploader put them. A grown table installs at the
+		//! APPLOADER-REPORTED base (the 0x80000038/0x8000003C words the
+		//! apploader itself published after reading the served boot header
+		//! through its own first triple - traced end to end) - or nothing.
+		//! The reported size must equal the staged size exactly; the span
+		//! must clear MEM1 bounds, loaded game ranges (apploader-loaded FST
+		//! bytes excepted - they die with the install by construction), the
+		//! validated loader stack, and the heap accounting (same floor
+		//! rules as PlaceFst). Startup preservation is NOT established
+		//! here: a verified install that never boots isolates the fault to
+		//! startup, which is the observation that decides it.
 		//! Everything below books and reports the EFFECTIVE placement.
 		FstPlacement effPlace = place;
 		if (effPlace.ok && !effPlace.inPlace)
 		{
-			char relWhy[192];
-			snprintf(relWhy, sizeof(relWhy),
-				"grown table needs %u bytes but the apploader reserved %u; "
-				"relocation requires the patched boot view (unsupported)",
-				want, arena.fstMaxSize);
-			effPlace = FstPlacement();
-			effPlace.why = relWhy;
-			Addf(out, "\n  relocation unsupported: %s\n", effPlace.why.c_str());
+			// Live loaded ranges: drop apploader-loaded FST bytes (matched
+			// to their yields by destination+length, identified by disc
+			// source range). Everything else the install would clobber.
+			std::vector<OccupiedRange> liveOcc;
+			liveOcc.reserve(occ.size());
+			u32 fstLoadSkipped = 0;
+			for (size_t i = 0; i < occ.size(); ++i)
+			{
+				bool isFstLoad = false;
+				for (u32 n = 0; n < dolNoteCount; ++n)
+				{
+					if (dolNotes[n].dst == occ[i].lo
+						&& dolNotes[n].len == occ[i].hi - occ[i].lo
+						&& occ[i].hi > occ[i].lo
+						&& NoteInFstRange(dolNotes[n].disc,
+										  trackFstOff, trackFstSize))
+					{
+						isFstLoad = true;
+						break;
+					}
+				}
+				if (isFstLoad)
+					++fstLoadSkipped;
+				else
+					liveOcc.push_back(occ[i]);
+			}
+			u32 rsp = 0, rlo = 0, rhi = 0;
+			bool rknown = false;
+			ReadLoaderStack(rsp, rlo, rhi, rknown);
+			FstPlacement rep;
+			const char *repWhy = 0;
+			Addf(out, "\n  apploader reported : base %08x, size %u (words it published)\n",
+				 arena.fstAddr, arena.fstMaxSize);
+			Addf(out, "  staged for install : %u bytes%s\n", want,
+				 fstLoadSkipped ? "" : " (no FST-load yields filtered)");
+			if (fstLoadSkipped > 0)
+				Addf(out, "  superseded FST loads filtered from obstacles: %u\n",
+					 fstLoadSkipped);
+			if (dolNotesDropped > 0)
+				Addf(out, "  yield-note cap dropped %u range(s): filtering is incomplete, vetting stays strict\n",
+					 dolNotesDropped);
+			if (EvaluateReportedBase(arena, arena.fstAddr, arena.fstMaxSize,
+									 want,
+									 liveOcc.empty() ? 0 : &liveOcc[0],
+									 (u32)liveOcc.size(),
+									 rsp, rlo, rhi, rknown, rep, repWhy))
+			{
+				effPlace = rep;
+				Addf(out, "  installs at the reported base %08x\n", rep.fstAddr);
+				out += "  startup preservation observed, not proven: a verified\n"
+					   "  install that never boots isolates the fault to startup.\n";
+			}
+			else
+			{
+				effPlace = FstPlacement();
+				effPlace.why = repWhy ? repWhy : "reported placement refused";
+				Addf(out, "\n  reported placement refused: %s\n", effPlace.why.c_str());
+			}
 		}
 
 		if (!effPlace.ok)
@@ -4051,14 +4166,18 @@ namespace Riivo
 		}
 		else
 		{
-			//! Unreachable by construction: grown placements refuse above.
-			//! Retained as a defensive refusal so a future policy change
-			//! cannot silently re-activate relocation without updating this
-			//! report and the booking below.
-			Addf(out, "  REFUSED: unexpected grown placement at %08x (policy requires in-place)\n",
-				 effPlace.fstAddr);
-			effPlace = FstPlacement();
-			effPlace.why = "unexpected grown placement (policy requires in-place)";
+			Addf(out, "  installs at the apploader-reported base %08x\n", effPlace.fstAddr);
+			Addf(out, "  arena high   : %08x -> %08x\n", arena.arenaHi, effPlace.newArenaHi);
+			Addf(out, "  taken from the game's heap : %u KB\n", effPlace.reserved / 1024);
+			if (effPlace.heapLeft)
+				Addf(out, "  heap the game still has    : %u MB\n",
+					 effPlace.heapLeft / (1024 * 1024));
+			else
+			{
+				Addf(out, "  heap the game still has    : unknown (arena low not set)\n");
+				Addf(out, "  blind-drop cap used        : %u of %u KB\n",
+					 effPlace.reserved / 1024, MAX_BLIND_DROP / 1024);
+			}
 		}
 		if (effPlace.ok)
 			Addf(out, "  loaded ranges kept clear : %u considered, %u ignored "

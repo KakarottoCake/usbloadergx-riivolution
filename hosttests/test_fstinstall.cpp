@@ -493,6 +493,95 @@ int main()
 		ck(q.ok && !q.inPlace, "one byte over is grown");
 	}
 
+	printf("15. apploader-reported grown placement evaluates or refuses\n");
+	{
+		//! The coherent grown path installs exactly what the apploader
+		//! reported (same base the T0 cascade computed, 0x817b2de0, now
+		//! apploader-established instead of loader-guessed) - or nothing.
+		//! Captured SB4E01 arena; DOL chunk + BSS obstacles; validated
+		//! stack below the span; heap intact.
+		ArenaInfo a;
+		a.arenaLo = 0x80003100;
+		a.arenaHi = 0x817da740;
+		a.fstAddr = 0x817b2de0;   // reported base (apploader-established)
+		a.fstMaxSize = 153934;    // reported size (matches staged)
+		OccupiedRange occ[2] = { OccupiedRange(0x817d8740, 0x817da740),
+								 OccupiedRange(0x80728680, 0x807e3188) };
+		FstPlacement p;
+		const char *why = 0;
+		bool ok = EvaluateReportedBase(a, 0x817b2de0, 153934, 153934,
+									   occ, 2, 0x817fe000,
+									   0x817fd000, 0x81800000, true, p, why);
+		ck(ok, "reported grown placement accepted");
+		ck(p.ok && !p.inPlace, "reported as grown");
+		ck(p.fstAddr == 0x817b2de0, "installs at the reported base");
+		ck(p.newArenaHi == 0x817b2de0, "arena follows down to the table");
+		ck(p.reserved == 0x817da740 - 0x817b2de0, "reserved is the drop");
+		ck(p.heapLeft == 0x817b2de0 - 0x80003100, "heap measured to the table");
+		ck(why == 0, "no reason on success");
+		// Size mismatch by one byte (stock prefix under a grown request).
+		ck(!EvaluateReportedBase(a, 0x817b2de0, 153792, 153934,
+								 occ, 2, 0x817fe000,
+								 0x817fd000, 0x81800000, true, p, why),
+		   "size mismatch refused");
+		ck(why != 0, "reason names the fault");
+		// Bounds: outside MEM1, misaligned, wrapped, above arena top.
+		ck(!EvaluateReportedBase(a, 0x90000000, 153934, 153934,
+								 occ, 2, 0x817fe000,
+								 0x817fd000, 0x81800000, true, p, why),
+		   "non-MEM1 base refused");
+		ck(!EvaluateReportedBase(a, 0x817b2de1, 153934, 153934,
+								 occ, 2, 0x817fe000,
+								 0x817fd000, 0x81800000, true, p, why),
+		   "misaligned base refused");
+		ck(!EvaluateReportedBase(a, 0x817da760, 153934, 153934,
+								 occ, 2, 0x817fe000,
+								 0x817fd000, 0x81800000, true, p, why),
+		   "base above arena top refused");
+		// Loaded-range overlap (a game chunk inside the span) refuses;
+		// the apploader-loaded FST span arrives already filtered out.
+		OccupiedRange bad[3] = { occ[0], occ[1],
+								 OccupiedRange(0x817c0000, 0x817d0000) };
+		ck(!EvaluateReportedBase(a, 0x817b2de0, 153934, 153934,
+								 bad, 3, 0x817fe000,
+								 0x817fd000, 0x81800000, true, p, why),
+		   "game-range overlap refused");
+		OccupiedRange malformed[3] = { occ[0], occ[1], OccupiedRange() };
+		ck(!EvaluateReportedBase(a, 0x817b2de0, 153934, 153934,
+								 malformed, 3, 0x817fe000,
+								 0x817fd000, 0x81800000, true, p, why),
+		   "malformed range refused");
+		// Stack unknown or overlapped refuses; clear passes. No loaded
+		// ranges here, isolating the stack gate from the overlap gate.
+		ck(!EvaluateReportedBase(a, 0x817b2de0, 153934, 153934,
+								 0, 0, 0x817fe000,
+								 0, 0, false, p, why),
+		   "unknown stack refused");
+		ck(!EvaluateReportedBase(a, 0x817c0000, 0x20000, 0x20000,
+								 0, 0, 0x817d0000,
+								 0x817c8000, 0x817e0000, true, p, why),
+		   "stack overlap refused");
+		// Heap floor: under-4 MB and whole-heap refusals; blind-drop cap.
+		ArenaInfo small = a;
+		small.arenaLo = 0x817b0000;
+		ck(!EvaluateReportedBase(small, 0x817b2de0, 153934, 153934,
+								 occ, 2, 0x817fe000,
+								 0x817fd000, 0x81800000, true, p, why),
+		   "sub-4 MB heap refused");
+		ArenaInfo blind = a;
+		blind.arenaLo = 0;
+		ck(EvaluateReportedBase(blind, 0x817b2de0, 153934, 153934,
+								occ, 2, 0x817fe000,
+								0x817fd000, 0x81800000, true, p, why),
+		   "178 KB drop passes the blind cap");
+		ArenaInfo blindBig = a;
+		blindBig.arenaLo = 0;
+		ck(!EvaluateReportedBase(blindBig, 0x81000000, 0x700000, 0x700000,
+								 occ, 2, 0x817fe000,
+								 0x817fd000, 0x81800000, true, p, why),
+		   "multi-MB blind drop refused");
+	}
+
 	printf("\n%d checks, %d failure(s)\n", checks, failures);
 	return failures ? 1 : 0;
 }
