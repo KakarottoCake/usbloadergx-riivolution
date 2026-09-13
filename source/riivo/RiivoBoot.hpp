@@ -145,9 +145,10 @@ namespace Riivo
 	//! nothing staged, 2 staged pre-copy checksum, 3 InstallFst bounds,
 	//! 4 installed bytes/CRC, 5 low-memory pointer/arena, 8 pre-shutdown
 	//! withhold (boot-view verification or equivalent; the card log carries
-	//! the reason and the boot proceeds stock, so no blink is emitted for 8).
-	//! Read by the caller after a false return to blink the drive light,
-	//! since the refusal text itself only reaches gprintf past device shutdown.
+	//! the reason and the boot proceeds stock, so no blink is emitted for 8),
+	//! 9 post-shutdown loader-live clearance for a grown table. Read by the
+	//! caller after a false return to blink the drive light, since the
+	//! refusal text itself only reaches gprintf past device shutdown.
 	u32 InstallFailCode();
 
 	//! Put the game's own fragment list back after the cIOS refused the

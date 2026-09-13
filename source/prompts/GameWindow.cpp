@@ -824,8 +824,13 @@ static bool RiivoCiosCoversMod(s32 gameIOS, u8 autoIOS)
 //! replacement, if that is how the last boot ended. Activation happens
 //! after the UI is gone, so the next launch is the only screen that can
 //! show it. Returns the warning text, or empty when there is nothing to
-//! report (no log yet, no OUTCOME line, or the files went live). Bounded:
-//! only the tail that can hold the outcome is read.
+//! report (no log yet, no OUTCOME line, or the outcome was FST_STAGED).
+//! Exact checkpoint semantics: FST_STAGED was written when the rebuilt
+//! table was booked pre-shutdown, BEFORE the post-shutdown install and the
+//! jump. It is not an installation or consumption proof - a later install
+//! refusal returns to the loader (blink code) instead of jumping, which is
+//! the observable that separates them. Bounded: only the tail that can
+//! hold the outcome is read.
 static std::string RiivoPreviousOutcome(const char *riivoPath, const char *gameId)
 {
 	if (!riivoPath || !*riivoPath || !gameId || !*gameId)
