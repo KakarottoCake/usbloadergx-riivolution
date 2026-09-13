@@ -38,6 +38,8 @@ namespace Riivo
 		u32 moduleAddr;   //!< module base, cache-line aligned
 		u32 tableAddr;    //!< the redirect table
 		u32 tableLen;
+		u32 genAddr;      //!< staged ORIGINAL-slice store (0 when none)
+		u32 genLen;       //!< bytes reserved at genAddr
 		u32 newArenaHi;   //!< what MEM2 arena high must become
 		u32 reserved;     //!< total taken from the game
 		u32 heapLeft;
@@ -45,13 +47,14 @@ namespace Riivo
 
 		OnDemandLayout()
 			: ok(false), moduleAddr(0), tableAddr(0), tableLen(0),
-			  newArenaHi(0), reserved(0), heapLeft(0) {}
+			  genAddr(0), genLen(0), newArenaHi(0), reserved(0), heapLeft(0) {}
 	};
 
 	//! Decide the layout for a table of `tableLen` bytes plus the module,
-	//! given the game's MEM2 arena. Refuses rather than overlapping anything.
+	//! with `genLen` staged-slice bytes after the table, given the game's
+	//! MEM2 arena. Refuses rather than overlapping anything.
 	bool PlanOnDemand(const Mem2Arena &arena, u32 tableLen,
-					  OnDemandLayout &out);
+					  OnDemandLayout &out, u32 genLen = 0);
 
 	//! What the staged table is and what bounds it. `site` is a patch site
 	//! the probe found. `partLba` is the FAT partition the table's paths
@@ -80,11 +83,13 @@ namespace Riivo
 	//! is the whole-file redirect table (all existing behavior), kind 1 is
 	//! the RIV1 manifest served by the segment reader with the declared
 	//! size as its anti-shadow bound and the staged game/partition identity
-	//! it must match. Generated stores are not staged yet, so genBase and
-	//! genSize travel as zero and any GENERATED extent refuses at init.
+	//! it must match. The ORIGINAL-slice store travels in the same
+	//! reservation after the table (`genLen` below); an empty store with
+	//! GENERATED extents refuses at module init, never serves partial.
 	bool InstallOnDemand(u32 site, const std::vector<u8> &table, u32 partLba,
 						 const OnDemandMeta &meta,
-						 OnDemandLayout &layout, std::string &why);
+						 OnDemandLayout &layout, std::string &why,
+						 u32 genLen = 0);
 }
 
 #endif

@@ -16,7 +16,8 @@
 
 namespace Riivo
 {
-	bool PlanOnDemand(const Mem2Arena &arena, u32 tableLen, OnDemandLayout &out)
+	bool PlanOnDemand(const Mem2Arena &arena, u32 tableLen,
+					  OnDemandLayout &out, u32 genLen)
 	{
 		out = OnDemandLayout();
 
@@ -25,7 +26,6 @@ namespace Riivo
 			out.why = "no redirect table to place";
 			return false;
 		}
-
 		const u32 moduleBytes = ModuleFootprint();
 		if (moduleBytes == 0)
 		{
@@ -33,9 +33,10 @@ namespace Riivo
 			return false;
 		}
 
-		//! One reservation for both. Rounding the total up to a cache line
-		//! keeps the module - which is placed first - aligned for the DMA
-		//! buffers inside it.
+		//! One reservation for module, table, and staged slices. Rounding
+		//! each part up to a cache line keeps the module - which is placed
+		//! first - aligned for the DMA buffers inside it, and the store
+		//! 32-aligned so the storage layer can DMA straight into it.
 		const u32 align = MEM2_RESERVE_ALIGN;
 		const u32 modulePart = (moduleBytes + align - 1) & ~(align - 1);
 		if (modulePart < moduleBytes)
@@ -43,14 +44,26 @@ namespace Riivo
 			out.why = "module size overflows when aligned";
 			return false;
 		}
-		const u32 total = modulePart + tableLen;
-		if (total < modulePart)
+		const u32 tablePart = (tableLen + align - 1) & ~(align - 1);
+		if (tablePart < tableLen)
+		{
+			out.why = "table size overflows when aligned";
+			return false;
+		}
+		const u32 genPart = (genLen + align - 1) & ~(align - 1);
+		if (genLen > 0 && genPart < genLen)
+		{
+			out.why = "slice store size overflows when aligned";
+			return false;
+		}
+		u64 total = (u64) modulePart + tablePart + genPart;
+		if (total > 0xFFFFFFFFULL)
 		{
 			out.why = "reservation overflows";
 			return false;
 		}
 
-		Mem2Reservation r = ReserveMem2(arena, total, align);
+		Mem2Reservation r = ReserveMem2(arena, (u32) total, align);
 		if (!r.ok)
 		{
 			out.why = r.why;
@@ -60,17 +73,26 @@ namespace Riivo
 		out.moduleAddr = r.addr;
 		out.tableAddr = r.addr + modulePart;
 		out.tableLen = tableLen;
+		out.genAddr = genLen ? r.addr + modulePart + tablePart : 0;
+		out.genLen = genLen;
 		out.newArenaHi = r.newArenaHi;
 		out.reserved = r.reserved;
 		out.heapLeft = r.heapLeft;
 
-		//! Both must sit inside what was actually reserved. ReserveMem2 has
-		//! already proved the block fits; this proves the split of it does,
-		//! which is the part that would silently overlap.
+		//! All three must sit inside what was actually reserved.
+		//! ReserveMem2 has already proved the block fits; this proves the
+		//! split of it does, which is the part that would silently overlap.
 		if (out.tableAddr < out.moduleAddr
 			|| (u64) out.tableAddr + tableLen > (u64) r.addr + r.reserved)
 		{
 			out.why = "table does not fit alongside the module";
+			return false;
+		}
+		if (genLen > 0
+			&& (out.genAddr < out.tableAddr + tablePart
+				|| (u64) out.genAddr + genLen > (u64) r.addr + r.reserved))
+		{
+			out.why = "slice store does not fit alongside the table";
 			return false;
 		}
 		if ((u64) out.moduleAddr + moduleBytes > out.tableAddr)
@@ -92,7 +114,8 @@ namespace Riivo
 
 	bool InstallOnDemand(u32 site, const std::vector<u8> &table, u32 partLba,
 						 const OnDemandMeta &meta,
-						 OnDemandLayout &layout, std::string &why)
+						 OnDemandLayout &layout, std::string &why,
+						 u32 genLen)
 	{
 		layout = OnDemandLayout();
 		why.clear();
@@ -104,7 +127,7 @@ namespace Riivo
 		}
 
 		const Mem2Arena arena = ReadMem2Arena();
-		if (!PlanOnDemand(arena, (u32) table.size(), layout))
+		if (!PlanOnDemand(arena, (u32) table.size(), layout, genLen))
 		{
 			why = layout.why;
 			return false;
@@ -137,8 +160,8 @@ namespace Riivo
 		p.tableLen = layout.tableLen;
 		p.partLba = partLba;
 		p.tableKind = meta.kind;
-		p.genBase = meta.genBase;
-		p.genSize = meta.genSize;
+		p.genBase = layout.genAddr;
+		p.genSize = layout.genLen;
 		p.declLo = (u32) (meta.declSize & 0xFFFFFFFFULL);
 		p.declHi = (u32) (meta.declSize >> 32);
 		p.expDiscId = meta.discId;
@@ -160,6 +183,9 @@ namespace Riivo
 				layout.tableAddr, (unsigned) layout.tableLen,
 				layout.moduleAddr, layout.newArenaHi,
 				(unsigned) layout.heapLeft);
+		if (layout.genLen > 0)
+			gprintf("Riivo: on-demand slice store %08x (%u bytes, fill pending)\n",
+					layout.genAddr, (unsigned) layout.genLen);
 		return true;
 	}
 
@@ -168,7 +194,7 @@ namespace Riivo
 	//! Host build: the layout arithmetic is what the tests exercise. Writing
 	//! to IOS and to low memory is target-only by nature.
 	bool InstallOnDemand(u32, const std::vector<u8> &, u32, const OnDemandMeta &,
-						 OnDemandLayout &, std::string &why)
+						 OnDemandLayout &, std::string &why, u32)
 	{
 		why = "on-demand install is target-only";
 		return false;

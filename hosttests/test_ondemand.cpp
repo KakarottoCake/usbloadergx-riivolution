@@ -117,6 +117,33 @@ static void TestRefusals()
 }
 
 //! Two reservations composed: the FST already takes MEM1, and a second
+//! The slice store rides in the same reservation after the table: aligned,
+//! disjoint, and refused when it does not fit. Zero store length lays out
+//! exactly as before (backwards compatible by construction).
+static void TestGenStore()
+{
+	const u32 tableLen = 95284; // RIV1 2802-file shape, from armbudget
+	const u32 genLen = 1048576;
+	Riivo::OnDemandLayout L;
+	check(Riivo::PlanOnDemand(Typical(), tableLen, L, genLen), "table+store plans");
+	check(L.why.empty(), "no reason given on success");
+	check(L.genLen == genLen, "store length recorded");
+	check((L.genAddr & 31) == 0, "store is cache-line aligned");
+	check(L.genAddr >= L.tableAddr + tableLen, "store comes after the table");
+	check((u64)L.genAddr + genLen <= (u64)L.moduleAddr + L.reserved,
+		  "store ends inside the reservation");
+	check((u64)L.tableAddr + tableLen <= L.genAddr, "table and store disjoint");
+	Riivo::OnDemandLayout Z;
+	check(Riivo::PlanOnDemand(Typical(), tableLen, Z), "zero store still plans");
+	check(Z.genAddr == 0 && Z.genLen == 0, "zero store lays out nothing");
+	check(Z.tableAddr - Z.moduleAddr == L.tableAddr - L.moduleAddr,
+		  "zero store changes nothing about the module/table split");
+	check(L.reserved >= Z.reserved + genLen, "the tail pays for the store");
+	check(!Riivo::PlanOnDemand(Typical(), tableLen, L, 0xF0000000u),
+		  "refuses an implausible store");
+	check(!L.ok, "and leaves the layout unusable");
+}
+
 //! MEM2 request after this one must still land below what we took.
 static void TestComposes()
 {
@@ -147,6 +174,7 @@ int main()
 	TestLayout();
 	TestSizes();
 	TestRefusals();
+	TestGenStore();
 	TestComposes();
 	TestInstallIsTargetOnly();
 

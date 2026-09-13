@@ -878,4 +878,184 @@ bool BuildPlanManifest(const PatchPlan &plan,
 	return true;
 }
 
+bool BuildSegmentManifest(const PatchPlan &plan,
+						  const std::map<std::string, u64> &bases,
+						  FileSizeProvider *sizes,
+						  u32 discId, u32 partIdx,
+						  std::vector<u8> &blob, GenLayout &gen,
+						  std::string &why)
+{
+	why.clear();
+	blob.clear();
+	gen = GenLayout();
+	if (!sizes)
+	{
+		why = "segment manifest: no size provider (externals unverifiable)";
+		return false;
+	}
+	std::vector<ManifestExtent> exts;
+	u32 caps = RIIVO_CAP_SPLIT_READ;
+	u64 genTotal = 0;
+	for (size_t i = 0; i < plan.files.size(); ++i)
+	{
+		const PlannedFile &f = plan.files[i];
+		if (f.bootFile || f.finalSize == 0)
+			continue; // executable serves via boot view; empty files need no bytes
+		std::map<std::string, u64>::const_iterator bi = bases.find(f.disc);
+		if (bi == bases.end())
+		{
+			char b[256];
+			snprintf(b, sizeof(b), "segment manifest: no slot for %s",
+				f.disc.c_str());
+			why = b;
+			return false;
+		}
+		const u64 base = bi->second;
+		if (f.wholeFile)
+		{
+			u32 extSize = 0;
+			if (!sizes->GetSize(f.external, &extSize) || extSize != f.finalSize)
+			{
+				char b[300];
+				snprintf(b, sizeof(b), "segment manifest: %s changed size "
+					"(plan %u)", f.disc.c_str(), f.finalSize);
+				why = b;
+				return false;
+			}
+			ManifestExtent e;
+			e.discOffset = base;
+			e.length = f.finalSize;
+			e.kind = RIIVO_EXT_EXTERNAL;
+			if (!ManifestSourceFor(f.external, e.source))
+			{
+				char b[256];
+				snprintf(b, sizeof(b), "unknown device in %s",
+					f.external.c_str());
+				why = b;
+				return false;
+			}
+			e.srcOffset = 0;
+			e.path = ManifestPathFor(f.external);
+			e.genOff = 0;
+			exts.push_back(e);
+			continue;
+		}
+		// Partial file: per-segment runs at base + fileOffset. ORIGINAL
+		// runs name staged slices (bytes filled late from the disc).
+		for (size_t s = 0; s < f.segs.size(); ++s)
+		{
+			const PlanSegment &seg = f.segs[s];
+			if (seg.length == 0)
+				continue;
+			const u64 at = base + seg.fileOffset;
+			if (at < base || at + seg.length < at)
+			{
+				why = "segment manifest: file range overflows";
+				return false;
+			}
+			if (seg.kind == PlanSegment::SEG_ORIGINAL)
+			{
+				if (f.isNew)
+				{
+					char b[256];
+					snprintf(b, sizeof(b), "segment manifest: %s keeps "
+						"original bytes it never had", f.disc.c_str());
+					why = b;
+					return false;
+				}
+				const u64 origAbs = f.discOffsetOrig + seg.fileOffset;
+				if (origAbs < f.discOffsetOrig
+					|| origAbs + seg.length < origAbs)
+				{
+					why = "segment manifest: original range overflows";
+					return false;
+				}
+				if (genTotal + seg.length < genTotal
+					|| genTotal + seg.length > RIV1_GEN_MAX)
+				{
+					char b[256];
+					snprintf(b, sizeof(b), "segment manifest: staged slices "
+						"exceed %u bytes", (unsigned) RIV1_GEN_MAX);
+					why = b;
+					return false;
+				}
+				GenSlice slice;
+				slice.disc = f.disc;
+				slice.fileOffset = seg.fileOffset;
+				slice.length = seg.length;
+				slice.origAbs = origAbs;
+				slice.genOff = (u32) genTotal;
+				gen.slices.push_back(slice);
+				genTotal += seg.length;
+				ManifestExtent e;
+				e.discOffset = at;
+				e.length = seg.length;
+				e.kind = RIIVO_EXT_GENERATED;
+				e.source = RIIVO_SRC_NONE;
+				e.srcOffset = 0;
+				e.genOff = slice.genOff;
+				exts.push_back(e);
+				caps |= RIIVO_CAP_GENERATED;
+				continue;
+			}
+			if (seg.kind == PlanSegment::SEG_ZERO)
+			{
+				ManifestExtent e;
+				e.discOffset = at;
+				e.length = seg.length;
+				e.kind = RIIVO_EXT_ZERO;
+				e.source = RIIVO_SRC_NONE;
+				e.srcOffset = 0;
+				e.genOff = 0;
+				exts.push_back(e);
+				caps |= RIIVO_CAP_ZERO_FILL;
+				continue;
+			}
+			u32 extSize = 0;
+			if (!sizes->GetSize(seg.external, &extSize)
+				|| (u64) seg.srcOffset + seg.length > extSize)
+			{
+				char b[300];
+				snprintf(b, sizeof(b), "segment manifest: %s of %s "
+					"unavailable", seg.external.c_str(), f.disc.c_str());
+				why = b;
+				return false;
+			}
+			ManifestExtent e;
+			e.discOffset = at;
+			e.length = seg.length;
+			e.kind = RIIVO_EXT_EXTERNAL;
+			if (!ManifestSourceFor(seg.external, e.source))
+			{
+				char b[256];
+				snprintf(b, sizeof(b), "unknown device in %s",
+					seg.external.c_str());
+				why = b;
+				return false;
+			}
+			e.srcOffset = seg.srcOffset;
+			e.path = ManifestPathFor(seg.external);
+			e.genOff = 0;
+			exts.push_back(e);
+		}
+	}
+	if (genTotal > 0xFFFFFFFFULL)
+	{
+		why = "segment manifest: staged slices exceed address range";
+		return false;
+	}
+	gen.total = (u32) genTotal;
+	if (!BuildManifestV1(exts, RIIVO_MANIFEST_DISCOVER, discId, partIdx,
+						 caps, RIIVO_PROV_BOUNDED, blob, why))
+		return false;
+	if (blob.size() < RIIVO_MANIFEST_HEADER
+		|| !ValidateManifestV1(&blob[0], (u32)blob.size(), why))
+	{
+		if (why.empty())
+			why = "self-validation refused";
+		return false;
+	}
+	return true;
+}
+
 } // namespace Riivo
