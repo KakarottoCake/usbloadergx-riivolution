@@ -240,7 +240,8 @@ int main()
 	}
 
 	// 9. Failures: no readers, outside range, FAT error, stock error.
-	// doneOut reports completed bytes and the buffer must be discarded.
+	// doneOut reports completed bytes; everything from done on is proven
+	// untouched, so a caller discarding the buffer on false is safe.
 	{
 		BootView v;
 		std::string why;
@@ -248,7 +249,9 @@ int main()
 		u8 buf[0x200];
 		u32 done = 0xFFFF;
 		BootReaders none;
+		memset(buf, 0xCC, sizeof(buf));
 		CHECK(!v.ServeDol(kDolBase, buf, sizeof(buf), none, &done)); // null readers
+		CHECK(buf[0] == 0xCC && buf[sizeof(buf) - 1] == 0xCC);
 		CHECK(!v.ServeDol(kDolBase - 0x100, buf, 0x100, readers, 0)); // before
 		CHECK(!v.ServeDol(kDolBase + kDolSize - 0x100, buf, 0x200, readers, 0)); // past end
 		CHECK(!v.ServeDol(kDolBase, buf, 0, readers, 0)); // zero length
@@ -257,11 +260,17 @@ int main()
 		memset(buf, 0xCC, sizeof(buf));
 		CHECK(!v.ServeDol(kDolBase, buf, sizeof(buf), readers, &done));
 		CHECK(done == 0x100); // original head completed, external failed
+		for (size_t i = done; i < sizeof(buf); ++i)
+		{
+			if (buf[i] != 0xCC) { CHECK(false); break; } // tail untouched
+		}
 		ctx.failFat = false;
 		ctx.failStock = true;
 		done = 0;
+		memset(buf, 0xCC, sizeof(buf));
 		CHECK(!v.ServeDol(kDolBase, buf, 0x80, readers, &done));
 		CHECK(done == 0);
+		CHECK(buf[0] == 0xCC); // nothing completed, nothing written
 		ctx.failStock = false;
 	}
 
