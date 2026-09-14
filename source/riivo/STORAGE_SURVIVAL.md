@@ -97,21 +97,28 @@
  *   Table + gen slices live as FILES on the mod volume (already FAT-
  *   reachable pre-shutdown for staging, and at runtime through the
  *   module's rfat - same mechanism as NAND emu). Resident per pager:
- *   index (10 B/page, 220 B @2802, capped 4 KB), one 4 KB page, 256 B
- *   path scratch, ~64 B context: ~4.6 KB. Worst case per lookup one
- *   page fetch; spanning reads sequential through one buffer; open-time
- *   CRC over the file refuses corruption before service; gaps are MISS
- *   (delegate), never zeros-from-nowhere; failures are EIO, never
- *   partial. test_page: 8175 checks over production-built tables
- *   (paged lookups == resident scans, fetch bounds, path exactness,
- *   corruptions refused). ARM compiles clean (1976 B text).
- *   GENERATED slices become plain file ranges (the emitter already maps
- *   genOff to file offsets): no store reservation, no fill/poison path.
- *   Integration (Boot staging the table FILE, init params change,
- *   sr via pager) is the next slice after review - NOT in this commit.
- *   Resident placement (~12 KB minimum: 6.9 KB code + state + pager +
- *   shared scratch) still needs (5): it fits neither game RAM (wiped)
- *   nor provably the DIP slack or IOS heap from here.
+ *   5456 B index + 4096 B page + 512 B path scratch + 600 B context
+ *   (measured nm; full budget in RESIDENT_BUDGET.md). Worst case per
+ *   lookup one page fetch; covered requests serve sequential through
+ *   the 4 KiB bounce after a read-only covers pre-scan; open-time
+ *   CRC/identity/epoch over the file refuses corruption and staleness
+ *   before service; unlisted bytes stop with GAP and the dispatcher
+ *   delegates the request whole (MISS) - zeros come only from
+ *   plan-defined ZERO runs and sector-tail padding, never from gaps.
+ *   Failures are EIO, never partial. test_page: 8202 checks over
+ *   production-built tables (paged lookups == resident scans, fetch
+ *   bounds, cross-page abutting span, ZERO-vs-gap, corruptions
+ *   refused) plus test_segread: 86 (resident serve/GAP/covers, rr
+ *   parity, real dispatch gate). ARM links at 12064 code + 15552
+ *   bss = 27616 resident (test_moduleinstall byte-matches the fresh
+ *   link). GENERATED slices are plain staged bytes the reader
+ *   addresses by offset: no MEM2 store reservation, no fill/poison
+ *   path for the paged backend (fill/verify/arm still stage the gen
+ *   FILE pre-boot; see CONNECTED_PATH.md). The retired framing that
+ *   sized an "IOS allocation" is corrected there too: the module
+ *   lives in a MEM2 reservation and consumes <1 KB of DI-thread
+ *   stack (measured); what remains hardware-only is MEM2 survival,
+ *   per-slot sync presence, and routine behavior under the hook.
  *
  * 5. One combined hardware check (genuinely hardware-only remainder)
  *

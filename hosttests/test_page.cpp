@@ -3,8 +3,10 @@
 // volume holding a table file sliced from a PRODUCTION RIV1 blob by the
 // PRODUCTION pager encoder (BuildPagedFile): no second format exists to
 // drift. Paged lookups equal resident scans; the real segment reader
-// (sr_init_paged) serves complete reads across page/segment boundaries,
-// storage failures, and MISS delegation. Exit 0 = pass.
+// (sr_init_paged) serves complete reads across page/segment boundaries
+// where covered, stops with GAP at unlisted disc (delegated whole,
+// never zero-filled), and reports storage failures loudly. Plan-defined
+// ZERO runs still read as zero. Exit 0 = pass.
 #include <cstdio>
 #include <cstring>
 #include <string>
@@ -139,9 +141,16 @@ int main()
 	std::vector<u8> acard(4096);
 	for (size_t i = 0; i < acard.size(); ++i)
 		acard[i] = (u8)(0xC0 + (i & 0x3F));
+	// Second card file, large enough to back a multi-sector extent that
+	// abuts its neighbour: the cross-page serving span below is fully
+	// mapped, so it proves assembly without touching delegation.
+	std::vector<u8> bcard(0x8000);
+	for (size_t i = 0; i < bcard.size(); ++i)
+		bcard[i] = (u8)(0x40 + (i & 0x3F));
 	// 300 extents in 3 pages (128+128+44), with gaps, ZERO runs, one
 	// dangling path (EIO, never partial), shared-prefix paths, and two
-	// /A.BIN extents straddling the page 0/1 boundary (serving proof).
+	// extents abutting across the page 0/1 boundary (extent 127 ends
+	// exactly where 128 begins: the fully mapped cross-page span).
 	std::vector<ManifestExtent> exts;
 	char pb[96];
 	for (int i = 0; i < 300; ++i)
@@ -153,8 +162,8 @@ int main()
 			exts.push_back(Ext(off, 0x1000, RIIVO_EXT_EXTERNAL, RIIVO_SRC_SD,
 							   0, "/A.BIN", 0));
 		else if (i == 127)
-			exts.push_back(Ext(off, 0x800, RIIVO_EXT_EXTERNAL, RIIVO_SRC_SD,
-							   0, "/A.BIN", 0));
+			exts.push_back(Ext(off, 0x8000, RIIVO_EXT_EXTERNAL, RIIVO_SRC_SD,
+							   0, "/B.BIN", 0));
 		else if (i == 128)
 			exts.push_back(Ext(off, 0x800, RIIVO_EXT_EXTERNAL, RIIVO_SRC_SD,
 							   0x800, "/A.BIN", 0));
@@ -185,9 +194,13 @@ int main()
 	ImgFile af;
 	af.name83 = "A       BIN";
 	af.data = acard;
+	ImgFile bf;
+	bf.name83 = "B       BIN";
+	bf.data = bcard;
 	std::vector<ImgFile> files;
 	files.push_back(pgf);
 	files.push_back(af);
+	files.push_back(bf);
 	MemDisk d;
 	BuildImage(d, files);
 	rfat_vol vol;
@@ -292,60 +305,71 @@ int main()
 					ok = false;
 			CHECK(ok, "served bytes equal card bytes");
 		}
-		// Spanning read across a segment boundary: extent 127 tail
-		// (/A.BIN @0x700, 0x100 bytes) then the gap after it pads zero
-		// (extent 128 starts 0x7800 later, so this span never reaches it).
+		// Spanning read inside one mapped extent: extent 127
+		// (/B.BIN @0x700, 0x300 bytes, fully covered).
 		{
 			u64 a = exts[127].discOffset + 0x700;
 			const u32 len = 0x300;
 			std::vector<u8> out(len, 0xCC);
 			unsigned f0 = ctx.fetches;
 			CHECK(sr_read(&sc, a, len, &out[0]) == SR_OK, "spanning read served");
+			CHECK(sr_covers(&sc, a, len) == 1, "covered span queries covered");
 			bool ok = true;
 			for (u32 i = 0; i < len && ok; ++i)
-			{
-				u8 want = (i < 0x100) ? acard[0x700 + i] : 0;
-				if (out[i] != want)
+				if (out[i] != bcard[0x700 + i])
 					ok = false;
-			}
-			CHECK(ok, "tail bytes exact, gap pads zero in one span");
+			CHECK(ok, "mapped span bytes exact");
 			CHECK(ctx.fetches <= f0 + 2, "span costs at most two page fetches");
 		}
-		// Cross-page span in one read: extent 127 tail, the 0x7800 gap,
-		// then extent 128 head on the next page (/A.BIN @0x800).
+		// Cross-page span in one read: extent 127 tail (/B.BIN) then
+		// extent 128 head on the next page (/A.BIN @0x800), abutting
+		// with no gap between them.
 		{
 			u64 a = exts[127].discOffset + 0x700;
 			u32 len = (u32)(exts[128].discOffset + 0x100 - a);
 			CHECK(len == 0x7A00, "span reaches the next page head");
+			CHECK(exts[127].discOffset + exts[127].length == exts[128].discOffset,
+				  "test setup: the pair abuts across the page boundary");
 			std::vector<u8> out(len, 0xCC);
 			unsigned f0 = ctx.fetches;
 			CHECK(sr_read(&sc, a, len, &out[0]) == SR_OK, "cross-page span served");
+			CHECK(sr_covers(&sc, a, len) == 1, "abutting span queries covered");
 			bool ok = true;
 			for (u32 i = 0; i < len && ok; ++i)
 			{
 				u8 want;
-				if (i < 0x100)
-					want = acard[0x700 + i];
-				else if (a + i >= exts[128].discOffset)
-					want = acard[0x800 + (u32)(a + i - exts[128].discOffset)];
+				if (a + i < exts[128].discOffset)
+					want = bcard[0x700 + i];
 				else
-					want = 0;
+					want = acard[0x800 + (u32)(a + i - exts[128].discOffset)];
 				if (out[i] != want)
 					ok = false;
 			}
-			CHECK(ok, "tail, gap zeros, and next-page head exact in one read");
+			CHECK(ok, "tail and next-page head exact in one read");
 			CHECK(ctx.fetches <= f0 + 3, "cross-page span costs at most three fetches");
 		}
-		// Gap inside the span reads zero; MISS outside leaves the buffer.
+		// Plan-defined ZERO runs serve as zeros; unlisted gaps stop
+		// with GAP (original-disc bytes, delegated whole by the
+		// dispatcher); MISS outside leaves the buffer.
 		{
+			u64 zoff = exts[12].discOffset; // ZERO kind by construction
+			CHECK(exts[12].kind == RIIVO_EXT_ZERO, "test setup: extent 12 is ZERO");
+			std::vector<u8> outz(0x200, 0xCC);
+			CHECK(sr_read(&sc, zoff, 0x200, &outz[0]) == SR_OK, "ZERO run served");
+			bool zok = true;
+			for (size_t i = 0; i < outz.size() && zok; ++i)
+				if (outz[i] != 0)
+					zok = false;
+			CHECK(zok, "plan-defined ZERO reads as zero");
+			CHECK(sr_covers(&sc, zoff, 0x200) == 1, "ZERO run queries covered");
 			u64 gap = exts[0].discOffset + exts[0].length + 0x10;
 			std::vector<u8> out(0x40, 0xCC);
-			CHECK(sr_read(&sc, gap, 0x40, &out[0]) == SR_OK, "gap read served");
-			bool ok = true;
-			for (size_t i = 0; i < out.size() && ok; ++i)
-				if (out[i] != 0)
-					ok = false;
-			CHECK(ok, "in-span gap pads zero");
+			CHECK(sr_read(&sc, gap, 0x40, &out[0]) == SR_GAP, "unlisted gap stops with GAP");
+			CHECK(sr_covers(&sc, gap, 0x40) == 0, "unlisted gap queries uncovered");
+			std::vector<u8> out3((size_t)exts[0].length + 0x40, 0xCC);
+			CHECK(sr_read(&sc, exts[0].discOffset, exts[0].length + 0x40,
+						  &out3[0]) == SR_GAP,
+				  "mapped + gap stops with GAP, never zero-padded");
 			std::vector<u8> out2(0x40, 0xCC);
 			CHECK(sr_read(&sc, 0x100, 0x40, &out2[0]) == SR_MISS, "outside is MISS");
 			bool untouched = true;
