@@ -63,28 +63,34 @@
  *   all ZERO; stable and identical at +6/+10 min; arena words fixed at
  *   every sample; live-read check PASS; ~111 CPU-s burned (game ran).
  *   Edge pinned at 1 KB: first live word 0x935E0400 (top ~124 KB
- *   survives with a ~2.5 KB ragged edge). Conclusion: startup
- *   bulk-zeroes everything below ~124 KB under arena top while the
- *   words stay fixed. A reservation there is wiped no matter what the
- *   words say; the surviving sliver is unexplained (mechanism unknown)
- *   and explicitly NOT selected - no quiet-looking addresses.
+ *   survives with a ~2.5 KB ragged edge). What this establishes is
+ *   narrow: overwrite happened in THAT emulator configuration, writer
+ *   unidentified (game PPC code vs IOS-on-its-behalf is not
+ *   distinguished by this test), and identical behavior under GX's
+ *   different arena setup is NOT proven. What it rules out is the
+ *   claim that a fixed arena word protects memory: words fixed,
+ *   memory wiped. The surviving sliver is unexplained (mechanism
+ *   unknown) and explicitly NOT selected - no quiet-looking addresses.
  *
- *   Fidelity bounds: the writer is game PPC code or IOS-on-its-behalf
- *   post-entry (apploader done pre-entry; HLE IOS does not bulk-write
- *   game MEM2). The instruction stream is identical to hardware; heap
- *   geometry differs (see arena note), so only the mechanism transfers.
+ *   Fidelity bounds: HLE IOS does not bulk-write game MEM2, and the PPC
+ *   instruction stream observed is the retail game's own; heap geometry
+ *   differs (see arena note), so only the overwrite-with-fixed-words
+ *   observation transfers, not addresses or timing.
  *
- * 3. Sync-hook trace (source, wiidev/d2x-cios master)
+ * 3. Sync-hook trace (pinned revision: wiidev/d2x-cios tag d2x-v11-beta3)
  *
- *   os_sync_after_write is syscall 0x40, found per running plugin by
- *   call-pattern (device routines calling it), not by table: robust
- *   across bases 56/57/58 IF their readers call it. Confirmed on the
- *   measured module only (singular data point). Absence -> MODACK
- *   withhold by design (ack unobservable AND served bytes possibly
- *   stale - the whole serving path is suspect, not just the ack).
- *   No alternative primitive identified: PPC cannot reach into the
- *   transaction, and no other Starlet maintenance hook is known.
- *   Gap: per-base/slot presence survey needs hardware (see 5).
+ *   os_sync_after_write is syscall 0x40 in that tag's own sources
+ *   (cios-lib/direct_syscalls.s: `direct_syscall 0x40,
+ *   direct_os_sync_after_write`), and our probe finds it per running
+ *   plugin by call-pattern (device routines calling it), not by table:
+ *   robust across bases 56/57/58 IF their readers call it. Confirmed
+ *   on the measured module only (singular data point). Absence ->
+ *   MODACK withhold by design (ack unobservable AND served bytes
+ *   possibly stale - the whole serving path is suspect, not just the
+ *   ack). No VALIDATED alternative exists (not "none exists": PPC
+ *   cannot reach into the transaction, and no other Starlet
+ *   maintenance hook is proven - absence of evidence, stated as
+ *   such). Gap: per-base/slot presence survey needs hardware (see 5).
  *
  * 4. Replacement: storage-backed paging (implemented, host-tested)
  *
@@ -107,23 +113,40 @@
  *   shared scratch) still needs (5): it fits neither game RAM (wiped)
  *   nor provably the DIP slack or IOS heap from here.
  *
- * 5. Smallest hardware experiment (genuinely hardware-only remainder)
+ * 5. One combined hardware check (genuinely hardware-only remainder)
+ *
+ *   A successful iosAlloc(12K) would establish allocation AT THAT
+ *   MOMENT only - not lifetime (freed? retained across game I/O?),
+ *   not 32-byte alignment, not executability of heap memory, and not
+ *   the total runtime budget under game load. The check below is
+ *   designed so each of those gets its own observable; anything
+ *   unobserved stays open, never assumed.
  *
  *   One boot, T0 mod (in-place control, already boots), plus a probe
- *   module variant that (a) attempts iosAlloc(12K) and (b) reports DIP
- *   BSS bounds + sync presence, all through the existing MEM2 mailbox
- *   pre-shutdown - no new tester workflow, no gameplay needed:
+ *   module variant that, pre-shutdown through the existing MEM2
+ *   mailbox: (a) attempts iosAlloc(4096/12288/18432) and reports each
+ *   result + returned alignment; (b) reports DIP ram usage bounds for
+ *   the running build + sync presence; (c) writes a sentinel band and
+ *   re-reads it after a fixed delay (lifetime smoke, minutes not
+ *   seconds). No new tester workflow, no gameplay needed:
  *   - Control first: stock T0 boot log (OUTCOME: FST_STAGED) - if the
  *     control fails, the run says nothing about storage.
- *   - Observations: iosAlloc(12K) success/failure; DIP ram usage bounds;
- *     sync hook present/absent (slot/base recorded); ack attempt lines.
- *   - Distinguishes: (i) IOS heap fits resident -> place there, proceed
- *     to serving test; (ii) heap refuses but DIP slack measures
- *     sufficient on this exact build -> pinned-version slack placement
- *     (fragile, version-locked, stated as such); (iii) neither ->
- *     backend needs a new runtime home (stated, not designed here).
+ *   - Observations: alloc results + alignments; DIP bounds; sync
+ *     present/absent (slot/base recorded); sentinel band intact or
+ *     not; ack attempt lines.
+ *   - Distinguishes: (i) 12K+ allocs succeed, aligned, sentinel holds
+ *     -> place resident in IOS heap, proceed to a serving test;
+ *     (ii) allocs fail but DIP slack measures sufficient on this
+ *     exact build -> pinned-version slack placement (fragile,
+ *     version-locked, stated as such); (iii) neither -> backend
+ *     needs a new runtime home (stated, not designed here).
+ *   - Executability is NOT covered by allocation success: if (i) wins,
+ *     the serving test itself (post-boot reads through the hook) is
+ *     what proves heap execution, and it follows only then.
  *   - Sync presence per tested slot/base is recorded in the same run.
  *   - Unreadable flashes inconclusive, never a rerun trigger alone.
+ *   No separate allocation-only round: this one check covers
+ *   allocation, cache (ack lines), and serving readiness together.
  *
  * 6. What stays refused / open
  *

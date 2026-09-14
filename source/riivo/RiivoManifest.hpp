@@ -126,6 +126,22 @@ namespace Riivo
 	//! header length, total size, crc, count/strOff bounds, entry order and
 	//! overlap, blob termination. False + why on any failure.
 	bool ValidateManifestV1(const u8 *base, u32 len, std::string &why);
+
+	//! Paged table file for storage-backed serving (see ios/riivo_page.h
+	//! for the layout contract, mirrored field for field here). Slices
+	//! the entry array of a VALIDATED manifest blob into 4 KiB pages,
+	//! prepends the resident index, appends the string blob verbatim, and
+	//! covers [512, fileSize) with a CRC. Refuses corrupt input, empty
+	//! tables, or shapes exceeding the pager caps. Pure (no console).
+	//! The scratch/table path constants below must match ios/riivo_page.h;
+	//! test_moduleinstall-adjacent coverage in test_page asserts equality.
+	static const u32 RIIVO_PAGED_MAGIC = 0x50314750u; // 'PG1P' LE
+	static const u32 RIIVO_PAGED_MAX_PAGES = 341;    // index stays <= 4 KB
+	static const u32 RIIVO_PAGED_MAX_FILE = 4u << 20;
+	static const char *const RIIVO_PAGED_TABLE_PATH = "/riivolution/rxivtbl.bin";
+	static const char *const RIIVO_PAGED_GEN_PATH = "/riivolution/rxivgen.bin";
+	bool BuildPagedFile(const std::vector<u8> &manifest, u32 epoch,
+						std::vector<u8> &out, std::string &why);
 }
 
 #endif

@@ -61,14 +61,16 @@ static int pg_pread(pg_ctx *c, unsigned int off, void *buf, unsigned int len)
 
 int pg_open(pg_ctx *c, rfat_vol *vol, const char *path,
 			pg_idx *idxBuf, unsigned int idxCap,
-			unsigned char *pageBuf, char *pathBuf)
+			unsigned char *pageBuf,
+			unsigned int expDiscId, unsigned int expPartIdx,
+			unsigned int expEpoch)
 {
-	unsigned char head[32];
+	unsigned char head[64];
 	unsigned int i, pagesOff, blobOff, wantCrc;
 	unsigned int crc, at;
 	unsigned long long prevFirst;
 
-	if (!c || !vol || !path || !idxBuf || !pageBuf || !pathBuf)
+	if (!c || !vol || !path || !idxBuf || !pageBuf)
 		return PG_EINVAL;
 	c->cachedValid = 0;
 	c->cachedPage = 0;
@@ -76,12 +78,14 @@ int pg_open(pg_ctx *c, rfat_vol *vol, const char *path,
 	c->pathReads = 0;
 	c->index = 0;
 	c->page = 0;
+	c->rangeLo = 0;
+	c->rangeHi = 0;
 	if (rfat_open(vol, path, &c->file) != RFAT_OK)
 		return PG_EIO;
 	c->fileSize = c->file.size;
 	if (c->fileSize < 512 || c->fileSize > PG_FILE_MAX)
 		return PG_EBADTABLE;
-	if (pg_pread(c, 0, head, 32) != PG_OK)
+	if (pg_pread(c, 0, head, 64) != PG_OK)
 		return PG_EBADTABLE;
 	if (pg_rd32(head) != PG_MAGIC)
 		return PG_EBADTABLE;
@@ -110,6 +114,16 @@ int pg_open(pg_ctx *c, rfat_vol *vol, const char *path,
 	if (blobOff < pagesOff + (unsigned int) c->nPages * PG_SIZE)
 		return PG_EBADTABLE;
 	if (blobOff > c->fileSize)
+		return PG_EBADTABLE;
+	/* Identity: staged for one game, one partition, one boot. A stale
+	   file from an earlier boot refuses here, not at serve time. */
+	if (pg_rd32(head + 32) != expDiscId
+		|| pg_rd32(head + 36) != expPartIdx
+		|| pg_rd32(head + 40) != expEpoch)
+		return PG_EBADTABLE;
+	c->rangeLo = pg_rd64(head + 44);
+	c->rangeHi = pg_rd64(head + 52);
+	if (c->rangeHi < c->rangeLo)
 		return PG_EBADTABLE;
 	/* Index rows: 12 bytes each, firstKeys strictly ordered, page ids
 	   identity (transposition would route reads to the wrong page). */
@@ -160,7 +174,6 @@ int pg_open(pg_ctx *c, rfat_vol *vol, const char *path,
 	c->index = idxBuf;
 	c->indexCap = idxCap;
 	c->page = pageBuf;
-	c->pathTmp = pathBuf;
 	c->pagesOff = pagesOff;
 	c->blobOff = blobOff;
 	c->cachedValid = 0;
@@ -284,4 +297,55 @@ int pg_path(pg_ctx *c, unsigned int blobOff, char *buf, unsigned int bufLen)
 			return PG_OK;
 	}
 	return PG_EIO;
+}
+
+void pg_range(const pg_ctx *c, unsigned long long *lo, unsigned long long *hi)
+{
+	if (!c || c->nPages == 0)
+	{
+		if (lo)
+			*lo = 0;
+		if (hi)
+			*hi = 0;
+		return;
+	}
+	if (lo)
+		*lo = c->rangeLo;
+	if (hi)
+		*hi = c->rangeHi;
+}
+
+unsigned long long pg_next(pg_ctx *c, unsigned long long off)
+{
+	unsigned int lo, hi, page, k, have, base;
+	if (!c || !c->index || !c->page)
+		return ~(unsigned long long) 0;
+	/* Last page whose first key is at or below off; the answer is either
+	   inside that page past off, or the next page's first key. */
+	lo = 0;
+	hi = c->nPages;
+	while (lo + 1 < hi)
+	{
+		unsigned int mid = lo + (hi - lo) / 2;
+		if (c->index[mid].first <= off)
+			lo = mid;
+		else
+			hi = mid;
+	}
+	page = c->index[lo].page;
+	if (pg_fetch(c, page) != PG_OK)
+		return ~(unsigned long long) 0;
+	base = page * PG_PER_PAGE;
+	have = c->nEntries > base ? c->nEntries - base : 0;
+	if (have > PG_PER_PAGE)
+		have = PG_PER_PAGE;
+	for (k = 0; k < have; ++k)
+	{
+		unsigned long long eoff = pg_rd64(c->page + k * 32);
+		if (eoff > off)
+			return eoff;
+	}
+	if (lo + 1 < c->nPages)
+		return c->index[lo + 1].first;
+	return ~(unsigned long long) 0;
 }

@@ -883,7 +883,8 @@ bool BuildSegmentManifest(const PatchPlan &plan,
 						  FileSizeProvider *sizes,
 						  u32 discId, u32 partIdx,
 						  std::vector<u8> &blob, GenLayout &gen,
-						  std::string &why)
+						  std::string &why,
+						  const std::string &scratchExternal)
 {
 	why.clear();
 	blob.clear();
@@ -892,6 +893,21 @@ bool BuildSegmentManifest(const PatchPlan &plan,
 	{
 		why = "segment manifest: no size provider (externals unverifiable)";
 		return false;
+	}
+	//! Scratch mode resolves once: every ORIGINAL run in this manifest
+	//! names the same file, so one mapping proves the whole mode.
+	u16 scratchSource = 0;
+	std::string scratchPath;
+	if (!scratchExternal.empty())
+	{
+		if (!ManifestSourceFor(scratchExternal, scratchSource)
+			|| (scratchPath = ManifestPathFor(scratchExternal),
+				scratchPath.empty() || scratchPath[0] != '/'))
+		{
+			why = "segment manifest: scratch file unresolvable: "
+				+ scratchExternal;
+			return false;
+		}
 	}
 	std::vector<ManifestExtent> exts;
 	u32 caps = RIIVO_CAP_SPLIT_READ;
@@ -990,6 +1006,20 @@ bool BuildSegmentManifest(const PatchPlan &plan,
 				ManifestExtent e;
 				e.discOffset = at;
 				e.length = seg.length;
+				if (!scratchExternal.empty())
+				{
+					//! Filed run: the slice bytes land in the scratch
+					//! file at the same genOff the layout records, so
+					//! the runtime serves original content through the
+					//! ordinary file path - no reserved store involved.
+					e.kind = RIIVO_EXT_EXTERNAL;
+					e.source = scratchSource;
+					e.srcOffset = slice.genOff;
+					e.path = scratchPath;
+					e.genOff = 0;
+					exts.push_back(e);
+					continue;
+				}
 				e.kind = RIIVO_EXT_GENERATED;
 				e.source = RIIVO_SRC_NONE;
 				e.srcOffset = 0;

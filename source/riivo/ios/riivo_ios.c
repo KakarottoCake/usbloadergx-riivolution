@@ -10,6 +10,15 @@ static rr_ctx g_rr;
 static sr_ctx g_sr;
 static int g_useSeg;
 
+/* Paged-table resident state: index (sized for the pager cap), one page,
+   both in module BSS alongside everything else above. The table file
+   itself stays on the card; ~8.3 KB here replaces ~140 KB of MEM2 table.
+   Must stay 32-byte aligned for the DMA below (page buffer doubles as a
+   bounce source through rfat_read). */
+static pg_idx g_pgIndex[341];
+static unsigned char g_pgPage[4096] __attribute__((aligned(32)));
+static pg_ctx g_pg;
+
 /* Everything Starlet reads into goes through here first.
  *
  * The alternative - handing the caller's buffer straight to d2x's device
@@ -71,17 +80,24 @@ int riivo_ios_init(void)
 	}
 	if (!g_params.table || !g_params.table_len)
 	{
-		g_params.state = 3;
-		return RIIVO_DI_FAIL;
+		/* Paged tables live as files, not MEM2 words: the pointer check
+		   below does not apply (params carry zeros by design there). */
+		if (g_params.tableKind != RIIVO_TABLE_PAGED)
+		{
+			g_params.state = 3;
+			return RIIVO_DI_FAIL;
+		}
 	}
-
-	/* The table the installer flushed: invalidate before parsing so the
-	   CRC validates what is really in MEM2, not a stale cached copy.
-	   Capped at the largest reservation the installer can build: a longer
-	   length is corrupt params, and an unbounded invalidate would hang
-	   the DI thread. Validation refuses it right below (safe direction);
-	   the cap only bounds how much we invalidate first. */
+	else
 	{
+		/* The table the installer flushed: invalidate before parsing so
+		   the CRC validates what is really in MEM2, not a stale cached
+		   copy. Capped at the largest reservation the installer can
+		   build: a longer length is corrupt params, and an unbounded
+		   invalidate would hang the DI thread. Validation refuses it
+		   right below (safe direction); the cap only bounds how much
+		   we invalidate first. Paged tables skip this (file-backed;
+		   pg_open validates + CRCs on open instead). */
 		unsigned int invLen = g_params.table_len > (8u << 20)
 							  ? (8u << 20) : g_params.table_len;
 		riivo_inv_range((void *) RIIVO_PHYS(g_params.table), invLen);
@@ -135,6 +151,39 @@ int riivo_ios_init(void)
 		   cache where no PPC uncached read can see it. Without the hook
 		   the word stays invisible and the PPC withholds (named at the
 		   probe); that is safe but disables the backend, never silent. */
+		if (g_params.epoch)
+			g_params.acked = g_params.epoch;
+		if (g_params.sync)
+			((riivo_sync_fn) RIIVO_PHYS(g_params.sync))(
+				counters_line(), 32);
+		return RIIVO_DI_OK;
+	}
+	/* Paged RIV1: entries come from the staged table file through the
+	   pager (resident index + one page), not from MEM2 words. Same
+	   contract as above - validate, acknowledge, publish - with the
+	   open (magic/CRC/order/identity/epoch) doing the trusting. */
+	if (g_params.tableKind == RIIVO_TABLE_PAGED)
+	{
+		unsigned long long decl =
+			(unsigned long long) g_params.declLo
+			| ((unsigned long long) g_params.declHi << 32);
+		rc = pg_open(&g_pg, &g_vol, RIIVO_PAGED_TABLE_FILE,
+					 g_pgIndex, 341, g_pgPage,
+					 g_params.expDiscId, g_params.expPartIdx,
+					 g_params.epoch);
+		if (rc != PG_OK)
+		{
+			g_params.state = 9;
+			return RIIVO_DI_FAIL;
+		}
+		rc = sr_init_paged(&g_sr, &g_pg, &g_vol, decl);
+		if (rc != SR_OK)
+		{
+			g_params.state = 6;
+			return RIIVO_DI_FAIL;
+		}
+		g_useSeg = 1;
+		g_params.state = 1;
 		if (g_params.epoch)
 			g_params.acked = g_params.epoch;
 		if (g_params.sync)

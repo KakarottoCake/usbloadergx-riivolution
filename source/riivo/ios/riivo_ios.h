@@ -29,6 +29,16 @@
 #define RIIVO_TABLE_RIIV  0
 #define RIIVO_TABLE_RIV1  1
 
+/* Paged RIV1: the table lives as a file on the mod volume (fixed paths
+   below), paged through a resident index. Anything else refuses at init:
+   serving a table whose format is unknown would be guessing. */
+#define RIIVO_TABLE_PAGED 2
+
+/* Table-file paths on the mod volume, shared with the PPC stager
+   (RiivoManifest RIIVO_PAGED_*): byte-identical strings asserted host-side. */
+#define RIIVO_PAGED_TABLE_FILE "/riivolution/rxivtbl.bin"
+#define RIIVO_PAGED_GEN_FILE   "/riivolution/rxivgen.bin"
+
 /* PPC 0x80xxxxxx -> 0x00xxxxxx, 0x90xxxxxx -> 0x10xxxxxx. */
 #ifdef RIIVO_HOST_TEST
 /* Host tests exercise only paths that never dereference a masked pointer
@@ -91,7 +101,9 @@ typedef struct
 	   only and must never flush this line after handoff (a writeback of
 	   a PPC-dirty line would clobber ARM's counts). Never invalidated:
 	   that would discard ARM's own dirty data. */
-	unsigned int state;       /* 0 untried, 1 ready, else the init error */
+	unsigned int state;       /* 0 untried, 1 ready, else init error:
+								   2 glue, 3 table, 4 mount, 5 rr, 6 sr,
+								   7 kind, 8 gen cap, 9 paged open */
 	unsigned int reads;       /* DI reads served */
 	unsigned int misses;      /* DI reads that were not ours */
 	unsigned int errors;

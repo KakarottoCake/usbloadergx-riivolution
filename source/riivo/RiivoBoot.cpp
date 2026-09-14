@@ -102,18 +102,6 @@ namespace Riivo
 		return true;
 	}
 
-	//! "usb1:/Spectral/x.arc" -> "/Spectral/x.arc". The module mounts the FAT
-	//! partition itself and knows nothing about the loader's device names.
-	static std::string PartitionPath(const std::string &external)
-	{
-		const size_t colon = external.find(':');
-		if (colon == std::string::npos)
-			return external;
-		std::string rest = external.substr(colon + 1);
-		if (rest.empty() || rest[0] != '/')
-			rest = "/" + rest;
-		return rest;
-	}
 	static std::string bootLogPath;
 
 	//! Size of the table PrepareFileRedirects worked out, carried across to
@@ -1615,7 +1603,7 @@ namespace Riivo
 							 const std::vector<PlacedFile> &placed);
 	//! Staged-slice fill + partial slot verification (defined below, used
 	//! by Activate above their definitions like the rest here).
-	static bool FillGenStore(std::string &out);
+	static bool FillGenFile(std::string &out);
 	static void PoisonStagedTable();
 	static void DisarmModule();
 	static void ArmModule();
@@ -1665,18 +1653,17 @@ namespace Riivo
 		sumFailed = 0;
 
 		//! Staged slices land before anything reads through the hook: the
-		//! segment verification below serves ORIGINAL ranges from this
-		//! store, and the game will too. Fill, verify, then arm: the module
-		//! MISSES without initializing until the arm word lands, so no
-		//! reader state can predate the filled store. A fill failure
-		//! poisons the staged table (module init refuses, every read
-		//! MISSES to stock) and withholds here, before a single file is
-		//! verified or staged.
+		//! segment verification below serves ORIGINAL ranges from the
+		//! scratch file, and the game will too. Fill, verify, then arm:
+		//! the module MISSES without initializing until the arm word
+		//! lands, so no reader state can predate the filled file. A fill
+		//! failure removes the torn file and withholds here, before a
+		//! single file is verified or staged.
 		if (haveEarlyRiv1 && earlyGen.total > 0)
 		{
-			LogStep("filling the staged slice store (%u slice(s))",
+			LogStep("filling the staged slice file (%u slice(s))",
 					(unsigned) earlyGen.slices.size());
-			if (!FillGenStore(out))
+			if (!FillGenFile(out))
 				return;
 			ArmModule();
 		}
@@ -2052,6 +2039,7 @@ namespace Riivo
 	//! Bounded verification buffers (one IOS-sized chunk each). Static: no
 	//! per-boot allocation failure mode, freed never (loader lifetime).
 	static u8 verifyBounce[32768] ATTRIBUTE_ALIGN(32);
+	static u8 verifyBack[32768] ATTRIBUTE_ALIGN(32);
 	static u8 verifyExpect[32768] ATTRIBUTE_ALIGN(32);
 
 	//! Withhold a staged table with an explicit stage: free the staging
@@ -2100,23 +2088,16 @@ namespace Riivo
 		return true;
 	}
 
-	//! Zero the staged table's magic and flush: module init refuses a
-	//! bad-magic table, so every later read MISSES to the stock path
-	//! instead of serving a contract whose slices never arrived. Always
-	//! paired with DisarmModule below: the magic stops future inits while
-	//! the cleared armed word stops an already-initialized reader at the
-	//! per-read gate. The boot then continues stock through the normal
-	//! withhold below.
+	//! The paged flow stages no MEM2 table, so there is nothing here to
+	//! zero: disarming alone stops every later read at the per-read gate
+	//! (even an initialized reader), and the torn-file removal in the
+	//! fill path plus the open-time CRC keep a partial contract from
+	//! ever serving. Kept as one named step so every failure path reads
+	//! the same: disarm, then withhold.
 	static void PoisonStagedTable()
 	{
 		DisarmModule();
-		if (!onDemandLayout.tableAddr || !onDemandLayout.tableLen)
-			return;
-		u8 zero[4] = { 0, 0, 0, 0 };
-		memcpy((void *) onDemandLayout.tableAddr, zero, sizeof(zero));
-		DCFlushRange((void *) (onDemandLayout.tableAddr & ~31u),
-					 onDemandLayout.tableLen + 64);
-		gprintf("Riivo: staged table poisoned after a fill failure (module will MISS all)\n");
+		gprintf("Riivo: staged contract disarmed after a fill failure (module will MISS all)\n");
 	}
 
 	//! Clear the activation word and flush exactly its cache line. That
@@ -2417,49 +2398,28 @@ namespace Riivo
 		return true;
 	}
 
-	//! Fill the staged ORIGINAL-slice store from the disc: late, partition
-	//! open, card mounted, hook installed but irrelevant (stock reads only).
-	//! Chunked through the aligned bounce into the reserved store, flushed,
-	//! then read back and compared. Any failure poisons the staged table
-	//! and withholds: the module would otherwise serve unfilled reservation
-	//! memory as game data.
-	static bool FillGenStore(std::string &out)
+	//! Fill the staged ORIGINAL-slice FILE from the disc: late, partition
+	//! open, card mounted, hook installed but irrelevant (stock reads
+	//! only). The paged flow keeps no MEM2 slice store: slice bytes go
+	//! straight to the scratch file at the layout offsets, then read
+	//! back and compared. Any failure removes the torn file and
+	//! withholds (GENFILL): the module would otherwise serve a missing
+	//! or partial scratch file as game data (init refuses a missing
+	//! table, but a torn scratch file has no such guard).
+	static bool FillGenFile(std::string &out)
 	{
 		if (earlyGen.total == 0)
 			return true;
-		if (!onDemandLayout.genAddr || onDemandLayout.genLen < earlyGen.total)
+		const std::string path = bootDevice + RIIVO_PAGED_GEN_PATH;
+		FILE *f = fopen(path.c_str(), "wb");
+		if (!f)
 		{
-			PoisonStagedTable();
-			WithholdStaged(out, "GENFILL",
-				"  slice store missing from the reservation; table poisoned.\n");
+			char line[256];
+			snprintf(line, sizeof(line),
+				"  slice file could not be created; GENFILL withhold.\n");
+			WithholdStaged(out, "GENFILL", line);
 			return false;
 		}
-		u8 *store = (u8 *) onDemandLayout.genAddr;
-		for (size_t i = 0; i < earlyGen.slices.size(); ++i)
-		{
-			const GenSlice &s = earlyGen.slices[i];
-			u32 done = 0;
-			while (done < s.length)
-			{
-				u32 chunk = s.length - done;
-				if (chunk > sizeof(verifyBounce))
-					chunk = sizeof(verifyBounce);
-				if (WDVD_ReadStock(verifyBounce, chunk, s.origAbs + done) != 0)
-				{
-					char line[256];
-					snprintf(line, sizeof(line),
-						"  slice fill failed for %s (original unreadable); table poisoned.\n",
-						s.disc.c_str());
-					PoisonStagedTable();
-					WithholdStaged(out, "GENFILL", line);
-					return false;
-				}
-				memcpy(store + s.genOff + done, verifyBounce, chunk);
-				done += chunk;
-			}
-		}
-		DCFlushRange((void *) (onDemandLayout.genAddr & ~31u),
-					 onDemandLayout.genLen + 64);
 		for (size_t i = 0; i < earlyGen.slices.size(); ++i)
 		{
 			const GenSlice &s = earlyGen.slices[i];
@@ -2470,20 +2430,64 @@ namespace Riivo
 				if (chunk > sizeof(verifyBounce))
 					chunk = sizeof(verifyBounce);
 				if (WDVD_ReadStock(verifyBounce, chunk, s.origAbs + done) != 0
-					|| memcmp(store + s.genOff + done, verifyBounce, chunk) != 0)
+					|| fseek(f, (long) (s.genOff + done), SEEK_SET) != 0
+					|| fwrite(verifyBounce, 1, chunk, f) != chunk)
 				{
 					char line[256];
 					snprintf(line, sizeof(line),
-						"  slice verify failed for %s; table poisoned.\n",
+						"  slice fill failed for %s; GENFILL withhold.\n",
 						s.disc.c_str());
-					PoisonStagedTable();
+					fclose(f);
+					remove(path.c_str());
 					WithholdStaged(out, "GENFILL", line);
 					return false;
 				}
 				done += chunk;
 			}
 		}
-		Addf(out, "  slice store        : %u slice(s), %u bytes filled + verified\n",
+		if (fclose(f) != 0)
+		{
+			remove(path.c_str());
+			WithholdStaged(out, "GENFILL",
+				"  slice file would not close; GENFILL withhold.\n");
+			return false;
+		}
+		FILE *r = fopen(path.c_str(), "rb");
+		if (!r)
+		{
+			remove(path.c_str());
+			WithholdStaged(out, "GENFILL",
+				"  slice file unreadable after write; GENFILL withhold.\n");
+			return false;
+		}
+		for (size_t i = 0; i < earlyGen.slices.size(); ++i)
+		{
+			const GenSlice &s = earlyGen.slices[i];
+			u32 done = 0;
+			while (done < s.length)
+			{
+				u32 chunk = s.length - done;
+				if (chunk > sizeof(verifyBounce))
+					chunk = sizeof(verifyBounce);
+				if (WDVD_ReadStock(verifyBounce, chunk, s.origAbs + done) != 0
+					|| fseek(r, (long) (s.genOff + done), SEEK_SET) != 0
+					|| fread(verifyBack, 1, chunk, r) != chunk
+					|| memcmp(verifyBack, verifyBounce, chunk) != 0)
+				{
+					char line[256];
+					snprintf(line, sizeof(line),
+						"  slice verify failed for %s; GENFILL withhold.\n",
+						s.disc.c_str());
+					fclose(r);
+					remove(path.c_str());
+					WithholdStaged(out, "GENFILL", line);
+					return false;
+				}
+				done += chunk;
+			}
+		}
+		fclose(r);
+		Addf(out, "  slice file         : %u slice(s), %u bytes filled + verified\n",
 			 (unsigned) earlyGen.slices.size(), (unsigned) earlyGen.total);
 		return true;
 	}
@@ -2854,11 +2858,10 @@ namespace Riivo
 	}
 	//! Emit the RIV1 manifest: the staged segment contract, rebuilt here
 	//! from the same plan and slots the early staging used, through the
-	//! same builder. Whole files emit single runs; partial files emit
-	//! composed runs with ORIGINAL slices staged alongside. A mismatch
+	//! same builder in the same scratch mode - so the late rebuild names
+	//! the same scratch runs the staged table file serves. A mismatch
 	//! means the plan and the placements drifted - withhold rather than
-	//! serve either. The digest (entries, bytes, blob size,
-	//! crc) is the artifact to compare.
+	//! serve either.
 	static bool EmitManifest(std::string &out,
 							 const std::vector<PlacedFile> &placed)
 	{
@@ -2872,8 +2875,9 @@ namespace Riivo
 		GenLayout gen;
 		std::string why;
 		BootSizes bootSizes;
+		const std::string scratchExt = bootDevice + RIIVO_PAGED_GEN_PATH;
 		if (!BuildSegmentManifest(activePlan, modOffsets, &bootSizes,
-								  discId, 0, blob, gen, why))
+								  discId, 0, blob, gen, why, scratchExt))
 		{
 			char line[300];
 			snprintf(line, sizeof(line),
@@ -4406,6 +4410,40 @@ namespace Riivo
 		WBFS_CloseDisc(disc);
 	}
 
+	//! Write a staging file to the card, verifying the byte count back.
+	//! Staged tables/slices must arrive whole: a short write that went
+	//! unnoticed would serve a torn contract, so any failure removes the
+	//! partial file and reports false. Caller refuses outright on false.
+	static bool WriteCardFile(const std::string &path,
+							  const std::vector<u8> &bytes)
+	{
+		if (bytes.empty())
+			return false;
+		FILE *f = fopen(path.c_str(), "wb");
+		if (!f)
+			return false;
+		bool ok = (fwrite(&bytes[0], 1, bytes.size(), f) == bytes.size());
+		if (fclose(f) != 0)
+			ok = false;
+		if (ok)
+		{
+			FILE *r = fopen(path.c_str(), "rb");
+			if (!r)
+				ok = false;
+			else
+			{
+				fseek(r, 0, SEEK_END);
+				long len = ftell(r);
+				fclose(r);
+				if (len < 0 || (size_t) len != bytes.size())
+					ok = false;
+			}
+		}
+		if (!ok)
+			remove(path.c_str());
+		return ok;
+	}
+
 	void PrepareFragList()
 	{
 		if (!bootSet)
@@ -4825,17 +4863,13 @@ namespace Riivo
 
 		if (bootProbe.patchSites.size() == 1 && onDemandPlanned)
 		{
-			//! Segmented manifest first: per-segment runs (whole files as
-			//! single runs, partial files as composed runs with ORIGINAL
-			//! slices staged alongside) built from the same plan and slots
-			//! the table build consumes late. The module serves it through
-			//! the segment reader with the declared size as its anti-shadow
-			//! bound. Falling back to the whole-file table is only allowed
-			//! when the plan needs no segments: with partial content a
-			//! fallback would silently drop it, so a failed staging with
-			//! segments required refuses activation outright instead.
-			const bool needSeg = PlanNeedsSegments(activePlan);
-			bool riv1Staged = false;
+			//! Paged serving: the manifest goes to a table FILE on the mod
+			//! volume (the module keeps a resident index + one page), and
+			//! ORIGINAL slices go to a second file written late. NOTHING
+			//! large stays in game RAM: the reservation holds the module
+			//! alone. Any staging failure refuses outright - there is no
+			//! fallback shape that is both lossless and owned.
+			bool pagedStaged = false;
 			if (haveActivePlan && declared > 0)
 			{
 				u32 discId = ((u32)bootGameId[0] << 24) | ((u32)bootGameId[1] << 16) |
@@ -4843,27 +4877,39 @@ namespace Riivo
 				std::vector<u8> riv1;
 				GenLayout gen;
 				std::string riv1Why;
-				if (BuildSegmentManifest(activePlan, modOffsets, &bootSizes,
-										 discId, 0, riv1, gen, riv1Why))
+				const std::string scratchExt = bootDevice + RIIVO_PAGED_GEN_PATH;
+				std::vector<u8> pgfile;
+				std::string stageWhy;
+				if (!BuildSegmentManifest(activePlan, modOffsets, &bootSizes,
+										  discId, 0, riv1, gen, riv1Why, scratchExt))
+					stageWhy = riv1Why;
+				else if (!BuildPagedFile(riv1, g_launch.generation, pgfile, stageWhy))
+				{
+					//! keep the builder's reason
+				}
+				else if (!WriteCardFile(bootDevice + RIIVO_PAGED_TABLE_PATH, pgfile))
+					stageWhy = "could not stage the paged table file";
+				else
 				{
 					OnDemandMeta meta;
-					meta.kind = 1;
-					meta.genBase = 0; // reservation assigns the store below
+					meta.kind = RIIVO_TABLEKIND_PAGED;
+					meta.genBase = 0;
 					meta.genSize = 0;
 					meta.declSize = declared;
 					meta.discId = discId;
 					meta.partIdx = 0;
 					meta.epoch = g_launch.generation;
-					OnDemandLayout riv1Layout;
-					if (InstallOnDemand(bootProbe.patchSites[0], riv1,
-										RIIVO_PART_DISCOVER, meta, riv1Layout,
-										patchWhy, gen.total))
+					OnDemandLayout pagedLayout;
+					std::vector<u8> noTable;
+					if (InstallOnDemand(bootProbe.patchSites[0], noTable,
+										RIIVO_PART_DISCOVER, meta, pagedLayout,
+										patchWhy, 0))
 					{
 						patchApplied = true;
-						patchStorage = riv1Layout.moduleAddr;
+						patchStorage = pagedLayout.moduleAddr;
 						hookGeneration = g_launch.generation;
-						onDemandLayout = riv1Layout;
-						riv1Staged = true;
+						onDemandLayout = pagedLayout;
+						pagedStaged = true;
 						//! From here the FST commit additionally requires the
 						//! ARM ack (ModuleAckProbe in Activate): installing
 						//! the module is not proof it runs this boot.
@@ -4875,71 +4921,21 @@ namespace Riivo
 						earlyRiv1Bytes = (u32)riv1.size();
 						earlyRiv1Crc = (u32)riv1[16] | ((u32)riv1[17] << 8) |
 									  ((u32)riv1[18] << 16) | ((u32)riv1[19] << 24);
-						LogStep("on-demand: RIV1 staged, %u file(s), %u bytes, crc %08x, %u staged slice(s)",
+						LogStep("on-demand: paged table staged, %u file(s), %u bytes, crc %08x, %u slice(s)",
 								(unsigned)activePlan.files.size(), (unsigned)riv1.size(),
 								earlyRiv1Crc, (unsigned)gen.slices.size());
 					}
-					else
-						gprintf("Riivo: RIV1 staging refused (%s)\n",
-								patchWhy.c_str());
 				}
-				else
-					gprintf("Riivo: RIV1 build refused (%s)\n",
-							riv1Why.c_str());
-				if (!riv1Staged && needSeg)
-				{
-					char refuse[320];
-					snprintf(refuse, sizeof(refuse),
-						"RIV1 staging failed but the plan needs segments; "
-						"the whole-file table cannot serve it: %s",
-						!riv1Why.empty() ? riv1Why.c_str() : patchWhy.c_str());
-					patchWhy = refuse;
-					gprintf("Riivo: %s\n", refuse);
-					LogStep("RIV1 unavailable for a segmented plan - file work refused");
-				}
+				if (!pagedStaged && patchWhy.empty())
+					patchWhy = stageWhy;
+				if (!pagedStaged)
+					gprintf("Riivo: paged staging refused (%s)\n", patchWhy.c_str());
 			}
-			if (riv1Staged)
+			if (pagedStaged)
 			{
-				gprintf("Riivo: on-demand hook at %08x: RIV1 segment service\n",
+				gprintf("Riivo: on-demand hook at %08x: paged segment service\n",
 						bootProbe.patchSites[0]);
-				LogStep("on-demand: hook serves the RIV1 manifest");
-			}
-			else if (!needSeg)
-			{
-			//! Paths go over as the module will look them up: from the root of
-			//! the FAT partition, without the loader's device prefix.
-			std::vector<RedirectEntry> entries;
-			entries.reserve(placed.size());
-			for (size_t i = 0; i < placed.size(); ++i)
-				entries.push_back(RedirectEntry(placed[i].offset, placed[i].length,
-												PartitionPath(placed[i].external)));
-
-			std::vector<u8> table;
-			if (!BuildRedirectTable(entries, RIIVO_PART_DISCOVER, table, patchWhy))
-			{
-				gprintf("Riivo: redirect table refused: %s\n", patchWhy.c_str());
-			}
-			else
-			{
-				LogStep("on-demand: table built, %u file(s), %u bytes",
-						(unsigned) entries.size(), (unsigned) table.size());
-			OnDemandMeta meta;
-			meta.epoch = g_launch.generation;
-			patchApplied = InstallOnDemand(bootProbe.patchSites[0], table,
-										   RIIVO_PART_DISCOVER, meta, onDemandLayout,
-										   patchWhy);
-			if (patchApplied)
-			{
-				patchStorage = onDemandLayout.moduleAddr;
-				hookGeneration = g_launch.generation;
-				//! Same gate as the RIV1 path: the whole-file module must
-				//! also prove it runs this boot before anything commits.
-				g_launch.RequireModuleAck();
-			}
-			}
-			gprintf("Riivo: on-demand hook at %08x: %s\n",
-					bootProbe.patchSites[0],
-					patchApplied ? "applied (whole-file table)" : patchWhy.c_str());
+				LogStep("on-demand: hook serves the paged table file");
 			}
 		}
 		else if (bootProbe.patchSites.size() == 1)
