@@ -66,6 +66,7 @@ static Riivo::ModuleParams Good()
 	p.expDiscId = 0x53424E41u;
 	p.expPartIdx = 0;
 	p.epoch = 7;
+	p.armed = 1;
 	return p;
 }
 
@@ -155,6 +156,19 @@ static void TestParams()
 		  "counters line holds no PPC-mutated word");
 	check(Riivo::RIIVO_PARAM_ARMED_OFF % 32 == 0,
 		  "armed word starts its line (flush covers exactly one line)");
+	//! Absolute spans, not just relative offsets: the block itself sits 8
+	//! into a line (PARAMS_OFF % 32 == 8), so verify the flushed armed
+	//! line and the ARM-owned counters line are disjoint in absolute
+	//! terms. A struct reorder that packed them together would pass the
+	//! relative checks above and still corrupt counters on a flush.
+	{
+		const u32 po = Riivo::RIIVO_MODULE_PARAMS_OFF;
+		const u32 armLine = (po + Riivo::RIIVO_PARAM_ARMED_OFF) & ~31u;
+		const u32 ctrLine = (po + Riivo::RIIVO_PARAM_STATE_OFF) & ~31u;
+		check(armLine + 32 <= ctrLine, "armed flush line ends before counters line");
+		check(((po + Riivo::RIIVO_PARAM_ACKED_OFF) & ~31u) == ctrLine,
+			  "acked shares the counters line, not the armed line");
+	}
 }
 
 //! Relocation, checked by placing the same module twice and comparing.

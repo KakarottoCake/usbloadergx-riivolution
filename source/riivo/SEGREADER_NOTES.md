@@ -114,7 +114,9 @@
  * - Blink/state codes on loader return name the failing half (1 nothing
  *   staged, 2 checksum, 3 bounds, 4 bytes, 5 pointers; module states ride
  *   in the boot log). Unreadable flashes are inconclusive, not a rerun
- *   trigger by themselves.
+ *   trigger by themselves. A MODACK loader-return (plus the ack attempt
+ *   lines) is a valid negative result: backend unproven on that console,
+ *   launch correctly refused.
  * - T0 establishes launch integration, not consumption of added mod files;
  *   grown-table behavior is unchanged by this branch and stays pending
  *   its own round.
@@ -122,8 +124,8 @@
  * 5. Activation protocol (implemented; read order matters)
  *
  * States are explicit: inactive (installed, unarmed) -> filled + verified
- * -> active (armed) -> acknowledged (ARM echoed this generation after
- * serving). The module's read path returns MISS before init while unarmed
+ * -> active (armed) -> acknowledged (ARM echoed this generation at
+ * init-complete and cleaned it where the sync hook exists). The module's read path returns MISS before init while unarmed
  * (invalidating the armed word first, so a stale cached line cannot fake
  * it), so no reader state can predate the filled store. Install arms
  * immediately only when no fill is pending (whole-file/RIIV path, same
@@ -135,25 +137,35 @@
  * Cache-line ownership (params block, offsets pinned against the ARM
  * struct by test_moduleinstall): original inputs (0-28) and RIV1 inputs
  * incl. epoch (32-60) are PPC-written once at install and ARM-read-only;
- * the armed word owns its line (64-92, pad otherwise); counters + acked
- * (96-116) are ARM-written, PPC-read-uncached-only, never flushed by the
- * PPC and never invalidated by ARM. The late arm/disarm flush covers the
- * armed line alone. Invalidation points: armed line before every armed
+ * the armed word (64) shares its flushed line with install-time PPC
+ * words only - never ARM counters; counters + acked (96-116) are
+ * ARM-written, PPC-read-uncached-only, never flushed by the PPC and
+ * never invalidated by ARM. The late arm/disarm flush covers the armed
+ * line alone. Invalidation points: armed line before every armed
  * load; input lines + table range + filled store range once at init
  * (bounded; gen over 8 MB refuses with state 8). Table/store content is
  * never re-invalidated per read because no writer touches them after the
  * pre-arm fill - stated here, not assumed.
  *
  * Acknowledgment: at init-complete ARM stores the installed epoch to
- * acked; the PPC runs a bounded probe (3 attempts: content-matched hook
- * read proving service - the on-demand path maps no fragments, so stock
- * cannot produce these bytes - plus reads-counter advance plus
- * acked==epoch, all counters via uncached reads) and records it in the
- * launch state. FST commit (Book) and install (CanInstall) both require
- * the ack when the module is installed; a miss here disarms + poisons +
- * withholds MODACK, so activation timeout/failure launches nothing with
+ * acked and publishes the counters line through the sync hook when one
+ * exists (a plain store would sit dirty where no PPC uncached read can
+ * see it). The PPC runs a bounded probe (3 attempts: content-matched
+ * hook read proving service - the on-demand path maps no fragments, so
+ * stock cannot produce these bytes - plus acked==epoch, counters via
+ * uncached reads) and records it in the launch state. The reads-counter
+ * advance is deliberately NOT consulted: ARM increments it write-back-
+ * cached and only the ack word is cleaned, so polling it would fail
+ * spuriously. Without the sync hook the ack stays invisible and the
+ * probe withholds MODACK by design - safe, but the backend stays dark.
+ * FST commit (Book) and install (CanInstall) both require the ack when
+ * the module is installed; a miss here disarms + poisons + withholds
+ * MODACK, so activation timeout/failure launches nothing with
  * synthetic offsets. MISS-to-stock is NOT described as safe past an
- * active rebuilt FST anywhere in this design.
+ * active rebuilt FST anywhere in this design: a mismatch fallback now
+ * reads "unmodified game files with mod save redirection retained,"
+ * never "fully stock," and vanilla-save isolation is a design property,
+ * not a verified one.
  *
  * Deactivation and in-flight handling: disarm (armed=0 + line flush) runs
  * on the boot thread between synchronous DI calls - ARM executes only
@@ -165,16 +177,33 @@
  * argument: the argument is gate-before-init plus invalidate-before-load
  * plus single-threaded mutation windows, each pinned or stated.
  *
- * Reservation ownership across shutdown/startup: writers are exactly the
- * loader pre-shutdown (install writes, fill writes, arm/disarm writes -
- * all flushed), ARM post-install (counters + acked on their own line),
- * and nobody else. The game is excluded by the lowered arena high it
- * reads at OSInit; IOS never allocates game MEM2; a second boot in one
- * session re-reserves fresh and the stale hook/fragments guard refuses
- * new file work rather than layering generations. What "the loader never
- * frees it" does NOT cover - a game ignoring its arena words, an IOS
- * reload (blocked by default because the fraglist path needs it too) -
- * is stated here as the remaining hardware verification, not as proven.
+ * Reservation ownership, stated as three separate claims because the
+ * first two do not establish the third:
+ * (1) Allocation exclusion (implemented): one MEM2 reservation for
+ * module|table|store, carved by lowering arena high before the jump.
+ * Writers are exactly the loader pre-shutdown (install, fill, arm/disarm
+ * writes - all flushed) and ARM post-install (counters + acked on their
+ * own line); post-shutdown the PPC mutates nothing. Absolute alignment,
+ * verified not assumed: the params block sits 8 into a line
+ * (PARAMS_OFF 0x2048), so the flushed armed line also covers install-time
+ * PPC words - never ARM counters - and the counters line holds no
+ * PPC-mutated word (pinned by the absolute-span test, not just relative
+ * offsets).
+ * (2) Activation acknowledgment (implemented, host-pinned logic):
+ * epoch installed, ARM echoes it to acked at init-complete and cleans
+ * that line when the sync hook exists; the PPC bounds a 3-attempt probe
+ * and withholds MODACK otherwise.
+ * (3) Startup survival (OPEN): which reservation bounds startup actually
+ * honors is unverified on hardware. Lowering an arena word is necessary,
+ * not sufficient - our own experiments showed it alone does not
+ * guarantee preservation, and a game ignoring its arena words, an IOS
+ * reload (blocked by default because the fraglist path needs it too),
+ * or a second boot layering generations (refused by the stale
+ * hook/fragments guard, which covers the module - same install moment)
+ * each break this independently of (1) and (2). A second boot in one
+ * session re-reserves fresh; the old module is unreachable (hook
+ * repointed or refused) and the old reservation stays mapped but
+ * unreferenced. Do not present (1) as completed ownership proof.
  *
  * What mocks do and do not prove: the host suite executes the real
  * dispatch gate (unarmed MISS, invalidate sequencing incl. counters-line

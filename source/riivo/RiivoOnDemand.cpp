@@ -183,6 +183,10 @@ namespace Riivo
 			why = inst.why;
 			return false;
 		}
+		//! Whether the module can publish its acknowledgment where the
+		//! probe can see it. Without the maintenance hook its counters
+		//! stay dirty in Starlet's cache and the ack gate below withholds.
+		layout.syncFound = (inst.sync != 0);
 
 		gprintf("Riivo: on-demand ready - table %08x (%u bytes), module %08x, "
 				"arena2Hi -> %08x, %u bytes left to the game\n",

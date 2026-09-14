@@ -43,11 +43,14 @@ namespace Riivo
 		u32 newArenaHi;   //!< what MEM2 arena high must become
 		u32 reserved;     //!< total taken from the game
 		u32 heapLeft;
+		bool syncFound;   //!< the module got a cache-maintenance hook;
+		                  //!< without one its ack/counters may be invisible
 		std::string why;
 
 		OnDemandLayout()
 			: ok(false), moduleAddr(0), tableAddr(0), tableLen(0),
-			  genAddr(0), genLen(0), newArenaHi(0), reserved(0), heapLeft(0) {}
+			  genAddr(0), genLen(0), newArenaHi(0), reserved(0), heapLeft(0),
+			  syncFound(false) {}
 	};
 
 	//! Decide the layout for a table of `tableLen` bytes plus the module,
