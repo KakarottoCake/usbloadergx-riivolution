@@ -279,7 +279,8 @@ bool BuildDiHook(const u8 *image, u32 size, u32 base, u32 site,
 }
 
 bool BuildDiHookOnDemand(const u8 *image, u32 size, u32 base, u32 site,
-                         u32 moduleEntry, DiHookPlan &plan, std::string &why) {
+                         u32 moduleEntry, u32 moduleFlag, u32 moduleEpoch,
+                         DiHookPlan &plan, std::string &why) {
     // Bit 0 of a Thumb symbol is state, not address. The BL encoding has no
     // room for it and rounding it off here would be a guess about which way.
     if (moduleEntry & 1) {
@@ -307,17 +308,22 @@ bool BuildDiHookOnDemand(const u8 *image, u32 size, u32 base, u32 site,
     }
 
     // Bytes assembled from ios/redirect_ondemand.S, ARMv5TE big-endian
-    // Thumb-1. Offsets mirror the redirect2_* labels: the call to the module,
-    // then the epilogue word. The host test reassembles the .S and checks
-    // these bytes against it, so the two can never skew silently.
-    static const u32 CALL_OFF = 0x1A;
-    static const u32 EPI2_OFF = 0x48;
+    // Thumb-1. Offsets mirror the redirect2_* labels: the publication
+    // prologue sits at the entry (push first, so the worker lr survives
+    // the island call), then the call to the module, then the flag,
+    // epoch and epilogue words. The host test reassembles the .S and
+    // checks these bytes against it, so the two can never skew silently.
+    static const u32 CALL_OFF = 0x2A;
+    static const u32 FLAG_OFF = 0x68;
+    static const u32 EPOCH_OFF = 0x6C;
+    static const u32 EPI2_OFF = 0x70;
     static const u32 STORAGE_SIZE = 0xC4;
     const std::vector<u8> code = Hex(
-        "20A00200477046C0B5D96841688268A368E0181B18D20010003A"
-        "F7FFFFFE2801D0032800D1070005E009BCD9BC02468E6823079A"
-        "47704B05612325A0022DBCD9B0014B01471846C0000000000003"
-        "1100");
+        "20A00200477046C0B5D94917680A4B17429AD002600BF000F8"
+        "1F6841688268A368E0181B18D20010003AF7FFFFFE2801D003"
+        "2800D1070005E009BCD9BC02468E6823079A47704B0B612325"
+        "A0022DBCD9B0014B07471846C0E3A02000EE072F15EE072F9A"
+        "E12FFF1E00000000000000000000000000031100");
     if (code.size() > STORAGE_SIZE) {
         why = "on-demand hook does not fit the storage site";
         return false;
@@ -331,6 +337,24 @@ bool BuildDiHookOnDemand(const u8 *image, u32 size, u32 base, u32 site,
         why = "module is too far from the hook for a Thumb call";
         return false;
     }
+    // The publication epoch word lives at the fixed first word of module
+    // BSS, so its address is the module base plus the code length - no
+    // layout knowledge needed beyond the blob's own sizes. The expected
+    // epoch rides in its own literal. Both refused null (and the flag
+    // unaligned) rather than patched, because a wrong publication word
+    // corrupts module state or skips publication with silence. Epoch 0
+    // is refused too: BSS clears to 0, so 0 could never distinguish a
+    // fresh boot from a stale line.
+    if (moduleFlag == 0 || (moduleFlag & 3u)) {
+        why = "no usable publication flag address; no IOS code changed";
+        return false;
+    }
+    if (moduleEpoch == 0) {
+        why = "no publication epoch; no IOS code changed";
+        return false;
+    }
+    Write32(&plan.code[FLAG_OFF], moduleFlag);
+    Write32(&plan.code[EPOCH_OFF], moduleEpoch);
     // Already carries bit 0 from BuildDiHook. bx takes its target state from
     // that bit: written even, the core switches to ARM and runs the Thumb
     // epilogue as ARM instructions.

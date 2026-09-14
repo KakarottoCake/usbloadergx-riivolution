@@ -29,11 +29,20 @@ bool BuildDiHook(const u8 *image, u32 size, u32 base, u32 site,
 // own). An odd address is refused rather than silently rounded, because
 // rounding the wrong way lands mid-instruction.
 //
+// `moduleFlag` is the ARM-view address of the publication epoch word: the
+// fixed first word of module BSS (reservation base plus the code length).
+// The stub compares it against `moduleEpoch` and publishes (whole-I-cache
+// invalidate) on mismatch, once per boot. Null or unaligned flag, or a
+// zero epoch (indistinguishable from cleared BSS), is refused, for the
+// same reason: a wrong publication word would corrupt module state or
+// skip publication with silence.
+//
 // There is no limit word here. The module returns MISS for anything outside
 // the mod region, so that decision is made once rather than duplicated in two
 // places that can drift.
 bool BuildDiHookOnDemand(const u8 *image, u32 size, u32 base, u32 site,
-                         u32 moduleEntry, DiHookPlan &plan, std::string &why);
+                         u32 moduleEntry, u32 moduleFlag, u32 moduleEpoch,
+                         DiHookPlan &plan, std::string &why);
 bool EncodeThumbCall(u32 from, u32 to, u8 *out);
 bool DecodeThumbCall(u32 from, const u8 *in, u32 &to);
 bool DecodeThumbBranch(u32 from, u16 insn, u32 &to);

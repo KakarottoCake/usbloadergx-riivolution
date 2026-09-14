@@ -42,13 +42,21 @@ def main():
             syms[parts[2]] = int(parts[0], 16)
 
     for need in ("riivo_di_read", "g_params", "__riivo_bss_start",
-                 "__riivo_bss_end"):
+                 "__riivo_bss_end", "g_iinvDone"):
         if need not in syms:
             sys.exit("missing symbol: %s" % need)
 
     base = syms["__riivo_bss_start"] & ~0xFFFFF  # link ORIGIN, 1 MB aligned
     copy_len = syms["__riivo_bss_start"] - base
     bss_len = syms["__riivo_bss_end"] - syms["__riivo_bss_start"]
+
+    # The hook's publication epoch word must sit at the fixed first word of
+    # BSS: the installer addresses it as reservation base + code length
+    # with no other layout knowledge, so anything else here is a corrupt
+    # publication address and a corrupted module word at runtime.
+    if syms["g_iinvDone"] - base != copy_len:
+        sys.exit("publication word at %x, expected first BSS word %x"
+                 % (syms["g_iinvDone"], base + copy_len))
 
     raw = elf + ".bin"
     run(OBJCOPY, "-O", "binary", "--only-section=.text",

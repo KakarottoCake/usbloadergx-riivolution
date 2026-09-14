@@ -10,6 +10,13 @@ static rr_ctx g_rr;
 static sr_ctx g_sr;
 static int g_useSeg;
 
+/* I-publication epoch word, compared (and stamped on mismatch) by the
+ * hook before its first module call each boot (fixed section first in
+ * .bss, so its address is always the reservation base plus the code
+ * length). Installer-written per boot. Global so the link keeps it for
+ * the blob-time offset check; nothing in C reads it (the stub owns it). */
+unsigned int g_iinvDone __attribute__((section(".bss.riivo_flag")));
+
 /* Paged-table resident state: index (sized for the pager cap), one page,
    both in module BSS alongside everything else above. The table file
    itself stays on the card; ~8.3 KB here replaces ~140 KB of MEM2 table.
