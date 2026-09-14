@@ -156,11 +156,12 @@ namespace Riivo
 		u32 params;
 		u32 storage;       //!< the hook body inside the plugin
 		u32 readA, readB, config;   //!< the storage routines it was given
+		u32 sync;                 //!< cache-maintenance hook, or 0 if absent
 		std::string why;
 
 		OnDemandInstall()
 			: ok(false), moduleAddr(0), modulePhys(0), moduleEntry(0),
-			  params(0), storage(0), readA(0), readB(0), config(0) {}
+			  params(0), storage(0), readA(0), readB(0), config(0), sync(0) {}
 	};
 
 	//! The on-demand path: find the cIOS storage routines, place the module in

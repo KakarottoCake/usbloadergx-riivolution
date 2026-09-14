@@ -31,6 +31,14 @@ static void copy_out(unsigned char *dst, const unsigned char *src,
 		dst[i] = src[i];
 }
 
+/* The ARM-owned counters line, for publish maintenance after the ack
+   store. Aligned down; uintptr_t so LP64 host builds compile (the
+   dispatch that matters runs on 32-bit Starlet). */
+static void *counters_line(void)
+{
+	return (void *) ((uintptr_t) &g_params.state & ~(uintptr_t) 31u);
+}
+
 int riivo_ios_init(void)
 {
 	int rc;
@@ -122,10 +130,16 @@ int riivo_ios_init(void)
 		g_params.state = 1;
 		/* Acknowledgment for the installing generation: the PPC commits
 		   nothing depending on this backend until it observes this word
-		   equal the epoch it installed. Written once, at init-complete;
-		   never re-armed here (re-install rewrites the whole block). */
+		   equal the epoch it installed. Published through the sync hook
+		   when present - a plain store would sit in this core's dirty
+		   cache where no PPC uncached read can see it. Without the hook
+		   the word stays invisible and the PPC withholds (named at the
+		   probe); that is safe but disables the backend, never silent. */
 		if (g_params.epoch)
 			g_params.acked = g_params.epoch;
+		if (g_params.sync)
+			((riivo_sync_fn) RIIVO_PHYS(g_params.sync))(
+				counters_line(), 32);
 		return RIIVO_DI_OK;
 	}
 	if (g_params.tableKind != RIIVO_TABLE_RIIV)
@@ -146,6 +160,9 @@ int riivo_ios_init(void)
 	g_params.state = 1;
 	if (g_params.epoch)
 		g_params.acked = g_params.epoch;
+	if (g_params.sync)
+		((riivo_sync_fn) RIIVO_PHYS(g_params.sync))(
+			counters_line(), 32);
 	return RIIVO_DI_OK;
 }
 

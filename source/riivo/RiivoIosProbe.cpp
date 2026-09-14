@@ -467,6 +467,7 @@ namespace Riivo
 		out.readA = sp.readA;
 		out.readB = sp.readB;
 		out.config = sp.config;
+		out.sync = sp.sync;
 
 		//! 2. The module, relocated to where it will actually sit.
 		ModulePlan mp;

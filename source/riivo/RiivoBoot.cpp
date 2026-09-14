@@ -2119,14 +2119,14 @@ namespace Riivo
 		gprintf("Riivo: staged table poisoned after a fill failure (module will MISS all)\n");
 	}
 
-	//! Clear the activation word and flush exactly its cache line. The
-	//! armed word owns its 32-byte line (see riivo_ios.h): no ARM-written
-	//! counter shares it, so this writeback cannot clobber ARM state, and
-	//! every later module read MISSES at the per-read gate - including an
-	//! already-initialized reader, whose cached table is never consulted
-	//! past a cleared armed word. Runs between synchronous DI calls on the
-	//! boot thread (ARM executes only inside our own WDVD calls), so no
-	//! read is in flight here; post-shutdown this never runs at all.
+	//! Clear the activation word and flush exactly its cache line. That
+	//! line holds no ARM-written word (inputs + pad, all PPC-owned), so
+	//! this writeback cannot clobber ARM state, and every later module
+	//! read MISSES at the per-read gate - including an already-initialized
+	//! reader, whose cached table is never consulted past a cleared armed
+	//! word. Runs between synchronous DI calls on the boot thread (ARM
+	//! executes only inside our own WDVD calls), so no read is in flight
+	//! here; post-shutdown this never runs at all.
 	static void DisarmModule()
 	{
 		if (!onDemandLayout.moduleAddr)
@@ -2143,12 +2143,12 @@ namespace Riivo
 
 	//! Complete the activation the install left pending: the slice store is
 	//! filled and verified, so flip the module's armed word and flush
-	//! exactly its cache line (RIIVO_PARAM_ARMED_OFF: the word owns the
-	//! line, so no ARM-written counter is touched). From here the module
-	//! may initialize and serve; before here every read MISSED without
-	//! initializing, so no reader state can predate the filled store.
-	//! Whole-file installs arm at install time (nothing to fill) and
-	//! never reach here.
+	//! exactly its cache line (RIIVO_PARAM_ARMED_OFF sits with PPC-owned
+	//! words only, so no ARM-written counter is touched). From here the
+	//! module may initialize and serve; before here every read MISSED
+	//! without initializing, so no reader state can predate the filled
+	//! store. Whole-file installs arm at install time (nothing to fill)
+	//! and never reach here.
 	static void ArmModule()
 	{
 		if (!onDemandLayout.moduleAddr)
@@ -2177,11 +2177,14 @@ namespace Riivo
 	//! committed that depends on it. One probe read through the hook plus
 	//! the echoed generation: content match proves the module served (the
 	//! on-demand path maps no fragments, so the stock path cannot produce
-	//! these bytes), the reads counter advancing proves it served NOW, and
-	//! acked==epoch binds that service to this boot's install. Bounded to
-	//! three attempts - DI calls block with IOS timeouts, so attempts, not
-	//! wall time, are the bound. Failure disarms + poisons + withholds
-	//! (MODACK) via the caller: no Book, no FST commit, memory held back.
+	//! these bytes - a stock read of the synthetic window fails), and
+	//! acked==epoch binds that service to this boot's install. The
+	//! reads-counter advance is deliberately NOT consulted: ARM increments
+	//! it write-back-cached and only the ack word is cleaned, so an
+	//! uncached poll of it would fail spuriously. Bounded to three
+	//! attempts - DI calls block with IOS timeouts, so attempts bound the
+	//! wait. Failure disarms + poisons + withholds (MODACK) via the
+	//! caller: no Book, no FST commit, memory held back.
 	static bool ModuleAckProbe(std::string &out,
 							   const std::map<u64, const PlannedFile *> &partialSlots,
 							   const std::vector<PlacedFile> &placedFiles)
@@ -2228,6 +2231,18 @@ namespace Riivo
 				"  module acknowledgment impossible: boot has no generation.\n");
 			return false;
 		}
+		if (!onDemandLayout.syncFound)
+		{
+			Addf(out, "  module ack         : no cache-maintenance hook on this cIOS, so the ARM\n"
+					  "  acknowledgment word can never become visible; withholding (MODACK).\n"
+					  "  The module may be serving correctly - this build refuses to launch\n"
+					  "  on an unobservable ack rather than guess.\n");
+			DisarmModule();
+			PoisonStagedTable();
+			WithholdStaged(out, "MODACK",
+				"  module acknowledgment unobservable: no cache-maintenance hook.\n");
+			return false;
+		}
 		if (!haveProbe)
 		{
 			Addf(out, "  module ack         : no servable byte (empty files only), nothing to acknowledge\n");
@@ -2249,23 +2264,21 @@ namespace Riivo
 					 attempt, refWhy.empty() ? probeExternal.c_str() : refWhy.c_str());
 				continue;
 			}
-			const u32 reads0 = ModuleReadUncached(params + RIIVO_PARAM_READS_OFF);
 			memset(have, 0, sizeof(have));
 			const s32 rr = WDVD_Read(have, sizeof(have), probeOff);
-			const u32 reads1 = ModuleReadUncached(params + RIIVO_PARAM_READS_OFF);
 			const u32 acked = ModuleReadUncached(params + RIIVO_PARAM_ACKED_OFF);
 			if (rr == 0 && memcmp(have, want, sizeof(want)) == 0
-				&& reads1 > reads0 && acked == wantEpoch)
+				&& acked == wantEpoch)
 			{
-				Addf(out, "  module ack         : ARM served + echoed generation %u (attempt %d, reads %u->%u)\n",
-					 wantEpoch, attempt, reads0, reads1);
+				Addf(out, "  module ack         : ARM served + echoed generation %u (attempt %d)\n",
+					 wantEpoch, attempt);
 				return g_launch.NoteModuleAck(acked);
 			}
 			Addf(out, "  module ack         : attempt %d not acknowledged "
-				 "(read %d, content %s, reads %u->%u, acked %08x, want %08x)\n",
+				 "(read %d, content %s, acked %08x, want %08x)\n",
 				 attempt, (int)rr,
 				 (rr == 0 && memcmp(have, want, sizeof(want)) == 0) ? "match" : "MISMATCH",
-				 reads0, reads1, acked, wantEpoch);
+				 acked, wantEpoch);
 		}
 		DisarmModule();
 		PoisonStagedTable();
