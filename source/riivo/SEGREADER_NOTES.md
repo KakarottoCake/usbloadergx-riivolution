@@ -119,38 +119,81 @@
  *   grown-table behavior is unchanged by this branch and stays pending
  *   its own round.
  *
- * 5. Activation / failure audit (read order matters)
+ * 5. Activation protocol (implemented; read order matters)
  *
  * States are explicit: inactive (installed, unarmed) -> filled + verified
- * -> active (armed). The module's first three read-path lines return MISS
- * before init while unarmed, so no reader state - open files, cached
- * ranges, validated table - can predate the filled store. Install arms
+ * -> active (armed) -> acknowledged (ARM echoed this generation after
+ * serving). The module's read path returns MISS before init while unarmed
+ * (invalidating the armed word first, so a stale cached line cannot fake
+ * it), so no reader state can predate the filled store. Install arms
  * immediately only when no fill is pending (whole-file/RIIV path, same
  * behavior as before); a pending store arms late after fill + read-back
- * verify (ArmModule writes the word + flushes). Pre-fill hook reads
- * (FST/DOL ranges through the installed hook) MISS to stock without
- * initializing - this also closes the lazy-init-vs-poison race: poison
- * zeroes the staged magic, and an uninitialized reader refuses it at
- * init while an armed-but-uninitialized one never got to initialize.
- * Clearing armed stops reads even against an initialized context
- * (acknowledged deactivation, pinned by the GateModel host section).
+ * verify (ArmModule writes the word + flushes exactly its line).
+ * Pre-fill hook reads MISS to stock without initializing - closing the
+ * lazy-init-vs-poison race structurally, not by timing.
+ *
+ * Cache-line ownership (params block, offsets pinned against the ARM
+ * struct by test_moduleinstall): original inputs (0-28) and RIV1 inputs
+ * incl. epoch (32-60) are PPC-written once at install and ARM-read-only;
+ * the armed word owns its line (64-92, pad otherwise); counters + acked
+ * (96-116) are ARM-written, PPC-read-uncached-only, never flushed by the
+ * PPC and never invalidated by ARM. The late arm/disarm flush covers the
+ * armed line alone. Invalidation points: armed line before every armed
+ * load; input lines + table range + filled store range once at init
+ * (bounded; gen over 8 MB refuses with state 8). Table/store content is
+ * never re-invalidated per read because no writer touches them after the
+ * pre-arm fill - stated here, not assumed.
+ *
+ * Acknowledgment: at init-complete ARM stores the installed epoch to
+ * acked; the PPC runs a bounded probe (3 attempts: content-matched hook
+ * read proving service - the on-demand path maps no fragments, so stock
+ * cannot produce these bytes - plus reads-counter advance plus
+ * acked==epoch, all counters via uncached reads) and records it in the
+ * launch state. FST commit (Book) and install (CanInstall) both require
+ * the ack when the module is installed; a miss here disarms + poisons +
+ * withholds MODACK, so activation timeout/failure launches nothing with
+ * synthetic offsets. MISS-to-stock is NOT described as safe past an
+ * active rebuilt FST anywhere in this design.
+ *
+ * Deactivation and in-flight handling: disarm (armed=0 + line flush) runs
+ * on the boot thread between synchronous DI calls - ARM executes only
+ * inside our own WDVD calls, so no read is in flight; post-shutdown the
+ * PPC never mutates the reservation at all. Clearing armed stops reads
+ * even against an initialized context at the per-read gate; poison
+ * additionally stops future inits. Withhold paths disarm whenever a
+ * module was installed. An aligned flag load alone was never the
+ * argument: the argument is gate-before-init plus invalidate-before-load
+ * plus single-threaded mutation windows, each pinned or stated.
+ *
+ * Reservation ownership across shutdown/startup: writers are exactly the
+ * loader pre-shutdown (install writes, fill writes, arm/disarm writes -
+ * all flushed), ARM post-install (counters + acked on their own line),
+ * and nobody else. The game is excluded by the lowered arena high it
+ * reads at OSInit; IOS never allocates game MEM2; a second boot in one
+ * session re-reserves fresh and the stale hook/fragments guard refuses
+ * new file work rather than layering generations. What "the loader never
+ * frees it" does NOT cover - a game ignoring its arena words, an IOS
+ * reload (blocked by default because the fraglist path needs it too) -
+ * is stated here as the remaining hardware verification, not as proven.
+ *
+ * What mocks do and do not prove: the host suite executes the real
+ * dispatch gate (unarmed MISS, invalidate sequencing incl. counters-line
+ * protection, zero-length), the real validator/reader, the epoch/ack
+ * state machine, and the line-ownership arithmetic - with the cache
+ * primitive mocked as a call log and LP64-unrepresentable paths
+ * (masked-pointer dereference) excluded by construction. Starlet cache
+ * behavior, MCR legality in situ, and post-shutdown survival remain
+ * hardware-only checks: ack observed in the card log, served post-boot
+ * bytes, and (for the negative) MODACK loader-returns - never a rerun
+ * trigger on unreadable flashes alone.
  *
  * A GENFILL failure cannot launch with synthetic offsets: fill runs
  * before any FST staging, WithholdStaged frees nothing staged yet and
  * records the sticky code-8 refusal, the poisoned table forces MISS-all,
  * and the stock FST (never replaced) keeps the game on original file
- * locations - MISS-to-stock is correct there because nothing references
- * the mod region. Pinned host-side by the GENFILL LaunchState case
+ * locations. Pinned host-side by the GENFILL LaunchState case
  * (refusal with nothing staged installs nothing, memory held back).
  *
- * Cache contract for the store: same flush the table already relies on
- * (DCFlushRange at install for the table, at fill for the store), same
- * reservation (module|table|store, one lowering), same params sync hook
- * for the ARM->PPC direction. Stale-armed-zero fails safe (MISS to
- * stock); a stale armed-one is impossible on first touch because the
- * word only transitions 0->1 after the verified fill. Host byte parity
- * does not prove survival through shutdown and game startup: this
- * capability stays experimental until the hardware round shows the
- * staged bytes serving post-boot. DVD9 refusal and the MEM2
- * lifetime/ownership question are unchanged completion blockers.
+ * DVD9 refusal stays explicit. The capability stays experimental until
+ * hardware shows staged bytes serving post-boot.
  ***************************************************************************/

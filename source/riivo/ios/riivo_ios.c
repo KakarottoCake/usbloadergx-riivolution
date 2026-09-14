@@ -1,8 +1,9 @@
 /* See riivo_ios.h. */
 #include "riivo_ios.h"
+#include "riivo_cache.h"
 
 riivo_ios_params g_params = { RIIVO_IOS_MAGIC, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-								0, 0, 0, 0, 0, 0, 0, 0 };
+								0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
 
 static rfat_vol g_vol;
 static rr_ctx g_rr;
@@ -39,6 +40,13 @@ int riivo_ios_init(void)
 	if (g_params.state != 0)
 		return RIIVO_DI_FAIL;   /* already failed; do not retry per read */
 
+	/* PPC-owned input lines, invalidated before first use: the installer
+	   flushed them, but this core may hold older lines from... nothing
+	   yet on a fresh boot, and defensively always. The counters line is
+	   NEVER invalidated here (ARM-owned once touched; at this point it is
+	   still the installer's zeros, which init does not read). */
+	riivo_inv_range(&g_params.magic, 64);
+
 	/* The loader finds these by scanning a snapshot it took through the PPC's
 	   view of MEM2, so they arrive as 0x93xxxxxx. We are executing on Starlet,
 	   where the same code and data are at 0x13xxxxxx. Calling the unmasked
@@ -59,6 +67,18 @@ int riivo_ios_init(void)
 		return RIIVO_DI_FAIL;
 	}
 
+	/* The table the installer flushed: invalidate before parsing so the
+	   CRC validates what is really in MEM2, not a stale cached copy.
+	   Capped at the largest reservation the installer can build: a longer
+	   length is corrupt params, and an unbounded invalidate would hang
+	   the DI thread. Validation refuses it right below (safe direction);
+	   the cap only bounds how much we invalidate first. */
+	{
+		unsigned int invLen = g_params.table_len > (8u << 20)
+							  ? (8u << 20) : g_params.table_len;
+		riivo_inv_range((void *) RIIVO_PHYS(g_params.table), invLen);
+	}
+
 	rc = rfat_mount(&g_vol, rg_read, &g_rg, g_params.part_lba);
 	if (rc != RFAT_OK)
 	{
@@ -73,19 +93,39 @@ int riivo_ios_init(void)
 		unsigned long long decl =
 			(unsigned long long) g_params.declLo
 			| ((unsigned long long) g_params.declHi << 32);
+		const void *genBase = g_params.genBase
+			? (const void *) RIIVO_PHYS(g_params.genBase) : 0;
+		/* The store the emitter caps at 8 MB: anything larger is corrupt
+		   params, and invalidating an unbounded range would hang the DI
+		   thread. Refuse with its own state, like every other bad input. */
+		if (g_params.genSize > (8u << 20))
+		{
+			g_params.state = 8;
+			return RIIVO_DI_FAIL;
+		}
 		rc = sr_init(&g_sr, (const void *) RIIVO_PHYS(g_params.table),
 					 g_params.table_len, &g_vol,
-					 g_params.genBase
-						? (const void *) RIIVO_PHYS(g_params.genBase) : 0,
-					 g_params.genSize, decl,
+					 genBase, g_params.genSize, decl,
 					 g_params.expDiscId, g_params.expPartIdx);
 		if (rc != SR_OK)
 		{
 			g_params.state = 6;
 			return RIIVO_DI_FAIL;
 		}
+		/* The filled store, invalidated once now that it is final: no PPC
+		   writer touches it after the pre-arm fill, and this core has
+		   never loaded it (init only checks presence). Later serves hit
+		   validated lines. */
+		if (g_params.genSize)
+			riivo_inv_range((void *) genBase, g_params.genSize);
 		g_useSeg = 1;
 		g_params.state = 1;
+		/* Acknowledgment for the installing generation: the PPC commits
+		   nothing depending on this backend until it observes this word
+		   equal the epoch it installed. Written once, at init-complete;
+		   never re-armed here (re-install rewrites the whole block). */
+		if (g_params.epoch)
+			g_params.acked = g_params.epoch;
 		return RIIVO_DI_OK;
 	}
 	if (g_params.tableKind != RIIVO_TABLE_RIIV)
@@ -104,6 +144,8 @@ int riivo_ios_init(void)
 
 	g_useSeg = 0;
 	g_params.state = 1;
+	if (g_params.epoch)
+		g_params.acked = g_params.epoch;
 	return RIIVO_DI_OK;
 }
 
@@ -124,7 +166,12 @@ int riivo_di_read(unsigned int off_words, unsigned int len, void *dst)
 	   without initializing, so no reader state - open files, cached
 	   ranges, validated table - can exist for a half-staged contract,
 	   and the caller runs the stock path. Counted as a miss so the boot
-	   log shows the fallback instead of silence. */
+	   log shows the fallback instead of silence.
+	   The armed word is invalidated first: the PPC flushed the late arm
+	   (or the install-time arm) to MEM2, and this core may hold the older
+	   line from unarmed reads. Invalidate-only is safe here because ARM
+	   never stores anywhere on that line (params inputs + pad). */
+	riivo_inv_range(&g_params.armed, 4);
 	if (!g_params.armed)
 	{
 		++g_params.misses;

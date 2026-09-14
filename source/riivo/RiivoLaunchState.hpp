@@ -55,6 +55,9 @@ struct LaunchState
 	bool placeOk;        // a live booking exists (false once consumed)
 	bool fileWorkWanted; // the selection needs file replacement
 	bool fileWorkLive;   // ...and the files were actually installed
+	bool needModuleAck;  // the FST depends on the on-demand module: Book
+	                     // additionally requires an ARM ack for this boot
+	bool moduleAcked;    // ARM echoed the current generation after serving
 	u32 plannedFstSize;  // room the rebuilt table wants (for placement)
 	u32 installFailCode; // last install verdict, for the blink code
 	u32 generation;      // boot generation; bumped by Begin()
@@ -63,6 +66,7 @@ struct LaunchState
 	LaunchState()
 		: stageBytes(0), stageSize(0), stageCrc(0), stageGeneration(0),
 		  placeOk(false), fileWorkWanted(false), fileWorkLive(false),
+		  needModuleAck(false), moduleAcked(false),
 		  plannedFstSize(0), installFailCode(0),
 		  generation(0), stage(LaunchStage::None) {}
 
@@ -97,11 +101,15 @@ struct LaunchState
 
 	//! Record a placement booking. The game is live from here: fileWorkLive
 	//! is what later stages consult, never a leftover flag. Refuses invalid
-	//! placements and any re-booking: one boot gets exactly one booking,
-	//! and a refused launch stays refused.
+	//! placements, any re-booking, and - when the FST depends on the
+	//! on-demand module - a booking the ARM side never acknowledged: the
+	//! game must not be pointed at synthetic offsets nothing serves. A
+	//! refused launch stays refused.
 	bool Book(const FstPlacement &p)
 	{
 		if (stage != LaunchStage::Staged || !p.ok)
+			return false;
+		if (needModuleAck && !moduleAcked)
 			return false;
 		place = p;
 		placeOk = true;
@@ -114,13 +122,40 @@ struct LaunchState
 	//! Pure logic over owned fields, so host tests exercise the real rule.
 	bool FileWorkIncomplete() const { return fileWorkWanted && !fileWorkLive; }
 
+	//! The on-demand module installed this boot: the FST commit additionally
+	//! requires the ARM side to have echoed this boot's generation after
+	//! serving. Called once, right after a successful install.
+	void RequireModuleAck() { needModuleAck = true; moduleAcked = false; }
+
+	//! Record the ARM acknowledgment. Accepts only the live generation:
+	//! a stale echo (or zero, which no boot uses) leaves the gate closed.
+	//! Returns whether the gate is satisfied now.
+	bool NoteModuleAck(u32 ackedEpoch)
+	{
+		if (needModuleAck && ackedEpoch == generation && ackedEpoch != 0)
+			moduleAcked = true;
+		return ModuleAckSatisfied();
+	}
+
+	//! True when no ack is required, or the current boot's was observed.
+	bool ModuleAckSatisfied() const
+	{
+		return !needModuleAck || moduleAcked;
+	}
+
+	//! Whether any FST commit this boot additionally requires the ack.
+	bool NeedsModuleAck() const { return needModuleAck; }
+
 	//! True when a booked install from THIS boot may be consumed: a live
-	//! booking, staged bytes of this generation. A table staged by an
-	//! aborted earlier boot can never satisfy this after Begin() ran.
+	//! booking, staged bytes of this generation, and - when the FST
+	//! depends on the on-demand module - its acknowledgment. A table
+	//! staged by an aborted earlier boot can never satisfy this after
+	//! Begin() ran.
 	bool CanInstall() const
 	{
 		return stage == LaunchStage::Booked && placeOk && stageBytes &&
-			   stageSize && stageGeneration == generation;
+			   stageSize && stageGeneration == generation &&
+			   ModuleAckSatisfied();
 	}
 
 	//! True when a staged table is booked for install (same-boot view).

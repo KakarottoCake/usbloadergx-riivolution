@@ -65,6 +65,7 @@ static Riivo::ModuleParams Good()
 	p.declHi = 0x00000001u;
 	p.expDiscId = 0x53424E41u;
 	p.expPartIdx = 0;
+	p.epoch = 7;
 	return p;
 }
 
@@ -116,26 +117,44 @@ static void TestParams()
 	check(Rd32(q + 20) == p.readB, "four-argument reader");
 	check(Rd32(q + 24) == p.config, "device config");
 	check(Rd32(q + 28) == p.sync, "sync routine");
-	check(Rd32(q + 32) == 0, "state left zero for the module to write");
-	check(Rd32(q + 48) == p.tableKind, "table kind selects the reader");
-	check(Rd32(q + 52) == p.genBase, "generated store base");
-	check(Rd32(q + 56) == p.genSize, "generated store size");
-	check(Rd32(q + 60) == p.declLo, "declared size, low word");
-	check(Rd32(q + 64) == p.declHi, "declared size, high word");
-	check(Rd32(q + 68) == p.expDiscId, "expected game id");
-	check(Rd32(q + 72) == p.expPartIdx, "expected partition index");
-	check(Rd32(q + 76) == p.armed, "armed flag passes through");
+	check(Rd32(q + 32) == p.tableKind, "table kind selects the reader");
+	check(Rd32(q + 36) == p.genBase, "generated store base");
+	check(Rd32(q + 40) == p.genSize, "generated store size");
+	check(Rd32(q + 44) == p.declLo, "declared size, low word");
+	check(Rd32(q + 48) == p.declHi, "declared size, high word");
+	check(Rd32(q + 52) == p.expDiscId, "expected game id");
+	check(Rd32(q + 56) == p.expPartIdx, "expected partition index");
+	check(Rd32(q + Riivo::RIIVO_PARAM_EPOCH_OFF) == p.epoch, "epoch passes through");
+	check(Rd32(q + Riivo::RIIVO_PARAM_ARMED_OFF) == p.armed, "armed flag passes through");
 	//! The writer's literals must match the ARM struct it fills: any drift
 	//! lands the late arm (or a reader field) mid-struct on the console.
-	//! New words append after the original counters, which never move.
-	check(offsetof(riivo_ios_params, state) == 32, "state offset stable");
-	check(offsetof(riivo_ios_params, tableKind) == 48, "kind offset matches ARM");
-	check(offsetof(riivo_ios_params, genBase) == 52, "genBase offset matches ARM");
-	check(offsetof(riivo_ios_params, genSize) == 56, "genSize offset matches ARM");
-	check(offsetof(riivo_ios_params, declLo) == 60, "declLo offset matches ARM");
-	check(offsetof(riivo_ios_params, expDiscId) == 68, "discId offset matches ARM");
-	check(offsetof(riivo_ios_params, armed) == 76, "armed offset matches ARM");
-	check(sizeof(riivo_ios_params) == 80, "params size matches ARM");
+	//! The original eight input words never move; everything else is
+	//! checked against the named constants both sides share.
+	check(offsetof(riivo_ios_params, state) == Riivo::RIIVO_PARAM_STATE_OFF, "state offset stable");
+	check(offsetof(riivo_ios_params, reads) == Riivo::RIIVO_PARAM_READS_OFF, "reads offset stable");
+	check(offsetof(riivo_ios_params, misses) == Riivo::RIIVO_PARAM_MISSES_OFF, "misses offset stable");
+	check(offsetof(riivo_ios_params, errors) == Riivo::RIIVO_PARAM_ERRORS_OFF, "errors offset stable");
+	check(offsetof(riivo_ios_params, tableKind) == 32, "kind offset matches ARM");
+	check(offsetof(riivo_ios_params, genBase) == 36, "genBase offset matches ARM");
+	check(offsetof(riivo_ios_params, genSize) == 40, "genSize offset matches ARM");
+	check(offsetof(riivo_ios_params, declLo) == 44, "declLo offset matches ARM");
+	check(offsetof(riivo_ios_params, declHi) == 48, "declHi offset matches ARM");
+	check(offsetof(riivo_ios_params, expDiscId) == 52, "discId offset matches ARM");
+	check(offsetof(riivo_ios_params, expPartIdx) == 56, "partIdx offset matches ARM");
+	check(offsetof(riivo_ios_params, epoch) == Riivo::RIIVO_PARAM_EPOCH_OFF, "epoch offset matches ARM");
+	check(offsetof(riivo_ios_params, armed) == Riivo::RIIVO_PARAM_ARMED_OFF, "armed offset matches ARM");
+	check(offsetof(riivo_ios_params, acked) == Riivo::RIIVO_PARAM_ACKED_OFF, "acked offset matches ARM");
+	check(sizeof(riivo_ios_params) == Riivo::RIIVO_PARAM_SIZE, "params size matches ARM");
+	//! Cache-line ownership, the property the whole protocol rests on:
+	//! the PPC-mutated armed word shares its line with nothing ARM-written
+	//! (inputs + pad), and no PPC-maintained line holds ARM counters.
+	check(Riivo::RIIVO_PARAM_ARMED_OFF / 32 != Riivo::RIIVO_PARAM_ACKED_OFF / 32
+		  && Riivo::RIIVO_PARAM_ARMED_OFF / 32 != 96 / 32,
+		  "armed line holds no ARM-written word");
+	check(96 / 32 != Riivo::RIIVO_PARAM_ARMED_OFF / 32,
+		  "counters line holds no PPC-mutated word");
+	check(Riivo::RIIVO_PARAM_ARMED_OFF % 32 == 0,
+		  "armed word starts its line (flush covers exactly one line)");
 }
 
 //! Relocation, checked by placing the same module twice and comparing.
@@ -156,7 +175,10 @@ static void TestRelocation()
 		for (u32 k = 0; k < 4; ++k)
 			isReloc[Riivo::RIIVO_MODULE_RELOCS[i] + k] = true;
 	//! The parameter block is written, not relocated, so exclude it too.
-	for (u32 k = 0; k < 32; ++k)
+	//! Sized from the ARM struct: the block grew past 32 bytes when the
+	//! counters moved to their own line, and a literal here would be the
+	//! next drift bug.
+	for (u32 k = 0; k < (u32) sizeof(riivo_ios_params); ++k)
 		isReloc[Riivo::RIIVO_MODULE_PARAMS_OFF + k] = true;
 
 	bool strayDiff = false;

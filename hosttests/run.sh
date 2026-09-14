@@ -199,8 +199,13 @@ build_run test_manifest "$SRC/riivo/RiivoManifest.cpp"
 # redirect table for cross-format parity) over a synthetic in-memory FAT16
 # volume. Whole-file parity with the whole-file runtime, srcOffset/ZERO/
 # GENERATED segments, ORIGINAL gaps, MISS/FAIL behavior, identity and
-# anti-shadow refusals, search depth against a model.
-build_run test_segread "$SRC/riivo/ios/riivo_segread.c" "$SRC/riivo/ios/riivo_redirect.c" "$SRC/riivo/ios/riivo_fat.c" "$SRC/riivo/RiivoManifest.cpp" "$SRC/riivo/RiivoRedirectTable.cpp"
+# anti-shadow refusals, search depth against a model. Plus the REAL
+# ios/riivo_ios.c dispatch gate (unarmed MISS before init, invalidate
+# sequencing, counters-line protection) with the cache primitive mocked;
+# armed-path init needs 32-bit device addresses the host cannot provide,
+# so init-success dispatch stays covered by the sr-direct sections above
+# plus the ARM build - stated, not stubbed into passing.
+build_run test_segread -DRIIVO_HOST_TEST "$SRC/riivo/ios/riivo_segread.c" "$SRC/riivo/ios/riivo_redirect.c" "$SRC/riivo/ios/riivo_fat.c" "$SRC/riivo/ios/riivo_ios.c" "$SRC/riivo/ios/riivo_glue.c" "$SRC/riivo/RiivoManifest.cpp" "$SRC/riivo/RiivoRedirectTable.cpp"
 
 # WP1 fixtures: revision/disc filters with unknown-axis skipping, multi-XML
 # merge precedence, skipped patch-ref accounting, selection round-trip.
