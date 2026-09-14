@@ -4880,7 +4880,14 @@ namespace Riivo
 				const std::string scratchExt = bootDevice + RIIVO_PAGED_GEN_PATH;
 				std::vector<u8> pgfile;
 				std::string stageWhy;
-				if (!BuildSegmentManifest(activePlan, modOffsets, &bootSizes,
+				//! Dual-layer images stay refused on the segment path, the
+				//! same line the fragment path refuses (PlanFragRegion):
+				//! layer-1 diversion through this hook is unproven on
+				//! hardware, and the safe direction is an explicit refusal,
+				//! not a boot that serves layer 0 and guesses layer 1.
+				if (declared >= RIIVO_DVD9_PROBE_BYTES)
+					stageWhy = "dual-layer images are not supported by this read hook";
+				else if (!BuildSegmentManifest(activePlan, modOffsets, &bootSizes,
 										  discId, 0, riv1, gen, riv1Why, scratchExt))
 					stageWhy = riv1Why;
 				else if (!BuildPagedFile(riv1, g_launch.generation, pgfile, stageWhy))

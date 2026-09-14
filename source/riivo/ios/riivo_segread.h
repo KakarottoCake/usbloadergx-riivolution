@@ -24,6 +24,7 @@
 #define SR_EBADTABLE  -2
 #define SR_MISS       -3   /* not ours; the caller should do a normal read */
 #define SR_EIO        -4
+#define SR_GAP        -5   /* range crosses unlisted disc; delegate whole */
 
 typedef struct
 {
@@ -87,11 +88,25 @@ int sr_init_paged(sr_ctx *c, pg_ctx *pg, rfat_vol *vol,
 void sr_range(const sr_ctx *c, unsigned long long *lo, unsigned long long *hi);
 
 /* Serve a read. Returns SR_MISS if the range touches nothing in the table,
-   in which case nothing has been written to buf. In-region gaps and the tail
-   past the last file read back as zero - the same observable behavior as the
-   whole-file runtime and as unmapped declared space on a stock read. Any
-   sub-read failure returns SR_EIO with nothing further attempted; the caller
-   must discard the buffer, never serve it partial. */
+   in which case nothing has been written to buf. Every listed kind serves:
+   EXTERNAL from the card, GENERATED from the staged store, ZERO as zeros,
+   and the sector-rounding tail past a file's real end as zeros (the
+   planner sizes extents up, so that tail is padding by construction).
+   Anything UNLISTED inside the range - original-disc bytes the table
+   never claimed - stops the read with SR_GAP: the caller must delegate
+   the whole request to the stock path, never serve it partial, because
+   only the stock path can read original bytes and this buffer may
+   already hold served bytes. sr_covers answers the same question
+   without writing anything, so the dispatcher asks first and serves
+   only fully covered requests. Any sub-read failure returns SR_EIO
+   with nothing further attempted; the caller must discard the buffer,
+   never serve it partial. */
 int sr_read(sr_ctx *c, unsigned long long offset, unsigned int len, void *buf);
+
+/* Coverage query: 1 if every byte of [off, off+len) sits in a listed
+   extent (any kind), 0 if any byte is unlisted, the range wraps, or the
+   context is unusable. Reads nothing but the table (page fetches at
+   most), opens no files, writes no buffers: safe to ask before serving. */
+int sr_covers(sr_ctx *c, unsigned long long off, unsigned int len);
 
 #endif

@@ -169,10 +169,11 @@ int rr_read(rr_ctx *c, unsigned long long offset, unsigned int len, void *buf)
 
 		if (idx >= c->count)
 		{
-			/* Past the last file: the rest of the request is padding. */
-			while (done < len)
-				out[done++] = 0;
-			break;
+			/* Past the last file: unlisted disc, not padding. The
+			   table never claimed these bytes, so the whole request
+			   must be delegated (see rr_covers); stopping here keeps
+			   a direct caller from completing it partial. */
+			return RR_GAP;
 		}
 
 		e_off = entry_off(c, idx);
@@ -180,15 +181,9 @@ int rr_read(rr_ctx *c, unsigned long long offset, unsigned int len, void *buf)
 
 		if (pos < e_off)
 		{
-			/* A gap between two placed files. The disc would read as zero
-			   here, so that is what it reads as. */
-			unsigned long long gap = e_off - pos;
-			take = (gap > (unsigned long long) (len - done))
-				   ? (len - done) : (unsigned int) gap;
-			while (take--)
-				out[done++] = 0;
-			pos = offset + done;
-			continue;
+			/* A gap between two placed files: original-disc bytes,
+			   same delegation as above, never zero-filled. */
+			return RR_GAP;
 		}
 
 		take = (e_end - pos > (unsigned long long) (len - done))
@@ -215,4 +210,33 @@ int rr_read(rr_ctx *c, unsigned long long offset, unsigned int len, void *buf)
 		pos = offset + done;
 	}
 	return RR_OK;
+}
+
+int rr_covers(rr_ctx *c, unsigned long long off, unsigned int len)
+{
+	unsigned long long pos, end;
+
+	if (!c || !c->count)
+		return 0;
+	if (len == 0)
+		return 1;
+	end = off + len;
+	if (end < off)
+		return 0;
+
+	for (pos = off; pos < end;)
+	{
+		unsigned int idx = find_index(c, pos);
+		unsigned long long e_off, e_end;
+		if (idx >= c->count)
+			return 0;
+		e_off = entry_off(c, idx);
+		if (pos < e_off)
+			return 0;
+		e_end = e_off + entry_len(c, idx);
+		if (e_end <= pos)
+			return 0;
+		pos = e_end > end ? end : e_end;
+	}
+	return 1;
 }

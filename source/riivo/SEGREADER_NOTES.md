@@ -30,11 +30,15 @@
  *   the stock worker. The module never reports partial data as success:
  *   sr/rr return EIO/FAIL on any sub-read failure with nothing further
  *   attempted, and the PPC side discards the bounce buffer on FAIL.
- * - The module never issues its own 0x71: base bytes for gaps come from
- *   the zero rule (in-region padding, identical observable to the
- *   whole-file runtime and to unmapped declared space on stock reads),
- *   and fully-unmapped requests MISS so the caller runs the stock path.
- *   No recursion into the hook is possible by construction.
+ * - The module never issues its own 0x71: unlisted bytes are original-disc
+ *   content only the stock path can read, so in-span gaps stop the read
+ *   with GAP (sr/rr) and the dispatcher pre-scans every request with
+ *   sr_covers/rr_covers, delegating the whole request (MISS) when any
+ *   byte is unlisted. Fully-unmapped requests MISS as before. Zeros come
+ *   only from plan-defined sources: ZERO-kind extents and the
+ *   sector-rounding tail past a file's real end (extents are sized up,
+ *   so that tail is padding by construction). No recursion into the
+ *   hook is possible by construction.
  * - OPENPART/OFFSET: nothing in this loader's flow sends IOCTL_DI_OFFSET
  *   (WDVD_Offset has no callers) and the plugin does not handle OPENPART,
  *   so config offsets are zero and the cIOS word offset equals the
@@ -53,31 +57,44 @@
  * through the string table (bounds + NUL-termination validated at init;
  * a table pointing past its end is refused). One cached open amortizes
  * sequential reads; EIO drops it and the next read re-walks.
- * Page crossing: reads split at extent boundaries AND at the 4 KiB bounce
- * chunk; each sub-run is one file-range read or zeros. Worst case per DI
- * read: one sub-op per spanned extent plus gap fills, each bounded by the
- * table density the planner caps through the fragment budget; every chain
- * walk is cluster-count bounded and every buffer is static (4 KiB bounce +
- * 512 B sector cache, 32-byte aligned for DMA). No per-read heap anywhere
- * (PROV_BOUNDED); the DI-thread stack stays small by the same loops the
- * FAT reader already uses.
+ * Page crossing: the dispatcher covers-scans the whole request first;
+ * covered requests split only at the 4 KiB bounce chunk, every sub-run
+ * a listed file-range read, ZERO fill, or store slice. A request the
+ * scan rejects MISSES whole before anything is served or copied, so
+ * the caller's buffer is still untouched. Worst case per DI read: one
+ * sub-op per spanned extent, each bounded by the table density the
+ * planner caps through the fragment budget; every chain walk is
+ * cluster-count bounded and every buffer is static (4 KiB bounce +
+ * 512 B sector cache, 32-byte aligned for DMA). No per-read heap
+ * anywhere (PROV_BOUNDED); the DI-thread stack stays small by the
+ * same loops the FAT reader already uses (own-frame worst case
+ * 824 B measured, RESIDENT_BUDGET.md).
  * Backing availability: the volume mounts once at init (states 2-5 + new
  * 6/7 name the failing half); a later EIO fails the read, drops the
  * caches, and the boot log's error counter - never a partial buffer.
  * Cache invalidation: EIO clears the open-file cache; rfat_drop_cache
  * clears the sector cache. Removal mid-game surfaces as errors, not
  * corruption.
- * Memory: module 8160 code + 4864 bss (measured link); table sized by
- * ManifestTableSize at plan time and reserved with the module in one
- * MEM2 reservation (PlanOnDemand). No safe-MEM2 claim is made here:
+ * Memory: module 12064 code + 15552 bss = 27616 resident (measured
+ * ARM link, devkitARM -O2 Thumb; BSS verified symbol-by-symbol, no
+ * state outside it except <1 KB of DI-thread stack frames -
+ * RESIDENT_BUDGET.md). Resident tables are sized by ManifestTableSize
+ * at plan time and reserved with the module in one MEM2 reservation
+ * (PlanOnDemand); paged tables live as files and the reservation holds
+ * the module alone. No safe-MEM2 claim is made here:
  * lifetime/ownership/coherence evidence remains open and is stated as
  * such wherever the reservation is described.
  *
  * 3. What still refuses, and why
  *
- * The DVD9 refusal is untouched: dual-layer payloads can overlap the
- * restricted window, so plan-time refusal stands until a membership-only
- * routing proves itself on hardware. Partial-file planning refusal now
+ * The DVD9 refusal now covers both paths: the fragment path refuses at
+ * plan time (payloads can overlap the restricted window), and the paged
+ * segment path refuses at staging (declared image size at or above the
+ * dual-layer probe floor) because layer-1 diversion through the hook is
+ * unproven on hardware. Partition-relative offsets are layer-agnostic
+ * in principle and delegation preserves stock layer handling, but
+ * principle is not proof: the gate stands until a DVD9 game proves
+ * diverted layer-1 reads on a console. Partial-file planning refusal now
  * applies to the fragment path only; the on-demand path serves partial
  * files through per-segment extents (EXTERNAL + source offsets, ZERO)
  * with ORIGINAL slices staged pre-boot as GENERATED bytes. The emitter

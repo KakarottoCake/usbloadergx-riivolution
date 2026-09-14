@@ -246,22 +246,38 @@ int main()
 		check(rr_init(&rc, &riiV[0], (unsigned) riiV.size(), &vol) == RR_OK,
 			  "whole-file runtime adopts it");
 		const u64 offs[] = { kModBase, kModBase + 0x100, kModBase + 0x300,
-							 kModBase + 0x1000, kModBase + 0x1050 };
+							 kModBase + 0x1000, kModBase + 0x10E0 };
 		const u32 lens[] = { 0x400, 0x200, 0x300, 0x100, 0x40 };
+		// First, second and fourth reads sit fully inside listed files;
+		// third and fifth cross into unlisted disc (gap / past-end).
+		const bool span[] = { false, false, true, false, true };
 		bool ok = true;
 		for (int r = 0; r < 5 && ok; ++r)
 		{
 			std::vector<u8> a(lens[r], 0xCC), b(lens[r], 0xCC);
-			if (sr_read(&ctx, offs[r], lens[r], &a[0]) != SR_OK
-				|| rr_read(&rc, offs[r], lens[r], &b[0]) != RR_OK
-				|| a != b)
+			int ra = sr_read(&ctx, offs[r], lens[r], &a[0]);
+			int rb = rr_read(&rc, offs[r], lens[r], &b[0]);
+			if (span[r])
+			{
+				if (ra != SR_GAP || rb != RR_GAP)
+					ok = false;
+			}
+			else if (ra != SR_OK || rb != RR_OK || a != b)
 				ok = false;
 		}
-		check(ok, "RIV1/sr parity with RIIV/rr on whole files");
+		check(ok, "RIV1/sr parity with RIIV/rr: bytes where covered, GAP where not");
+		check(rr_covers(&rc, kModBase, 0x400) == 1, "rr covers a listed file");
+		check(rr_covers(&rc, kModBase + 0x300, 0x300) == 0, "rr gap breaks coverage");
+		check(rr_covers(&rc, kModBase + 0x1000, 0x100) == 1, "rr covers the second file");
+		check(rr_covers(&rc, kModBase + 0x10E0, 0x40) == 0, "rr past-end breaks coverage");
+		check(rr_covers(&rc, kModBase + 0x5000, 0x10) == 0, "rr outside uncovered");
+		check(rr_covers(&rc, kModBase, 0) == 1, "rr zero length covered");
+		check(rr_covers(0, kModBase, 8) == 0, "rr null context uncovered");
 	}
 
 	// Segmented file through the real reader: srcOffset advancement,
-	// ZERO runs, ORIGINAL gaps, GENERATED store, spanning assembly.
+	// ZERO runs, GENERATED store, per-run serving; unlisted ORIGINAL
+	// gaps delegate whole (GAP), never zero-fill.
 	{
 		std::vector<u8> seg;
 		check(SegmentedTable(seg, why), "production builds segmented RIV1");
@@ -273,14 +289,15 @@ int main()
 					  &gen[0], (u32) gen.size(), kDecl, kDiscId, 0) == SR_OK,
 			  "segmented table adopted with a store");
 		{
-			// Spanning read: ORIGINAL gap + EXT + ZERO + EXT + gap + GEN.
+			// Each listed run serves on its own: EXT with srcOffset,
+			// ZERO as zeros, short EXT as zero tail-pad, GENERATED
+			// from the store. One request crossing into unlisted
+			// disc stops with GAP instead of zero-filling it: those
+			// bytes are original content only the stock path can read.
 			std::vector<u8> out;
-			check(ServeAll(sc, kModBase, 0x900, out) == SR_OK,
-				  "spanning segmented read served");
+			check(ServeAll(sc, kModBase + 100, 200, out) == SR_OK,
+				  "covered EXT served");
 			bool ok = true;
-			for (u32 i = 0; i < 100 && ok; ++i) // ORIGINAL gap: zeros
-				if (out[i] != 0)
-					ok = false;
 			for (u32 i = 0; i < 200 && ok; ++i) // EXT at srcOffset 500
 			{
 				u32 fo = 500 + i;
@@ -289,30 +306,59 @@ int main()
 					want = (u8) (fo & 0xFF);
 				else if (fo < 600)
 					want = (u8) (0x80 + ((fo - 512) & 0x7F));
-				if (out[100 + i] != want)
+				if (out[i] != want)
 					ok = false;
 			}
-			for (u32 i = 300; i < 340 && ok; ++i) // ZERO run
+			check(ok, "EXT bytes exact incl srcOffset");
+			check(ServeAll(sc, kModBase + 300, 40, out) == SR_OK,
+				  "ZERO run served");
+			ok = true;
+			for (u32 i = 0; i < 40 && ok; ++i)
 				if (out[i] != 0)
 					ok = false;
-			for (u32 i = 0; i < 100 && ok; ++i) // EXT at srcOffset 700 (short: 600B file)
-			{
-				u32 fo = 700 + i;
-				u8 want = 0;
-				if (fo < 512)
-					want = (u8) (fo & 0xFF);
-				else if (fo < 600)
-					want = (u8) (0x80 + ((fo - 512) & 0x7F));
-				if (out[340 + i] != want)
-					ok = false;
-			}
-			for (u32 i = 440; i < 0x800 && ok; ++i) // gap to GENERATED
+			check(ok, "plan-defined ZERO reads as zero");
+			// EXT at srcOffset 700 over a 600-byte file: every byte is
+			// sector-rounding tail padding, which reads as zero.
+			check(ServeAll(sc, kModBase + 340, 100, out) == SR_OK,
+				  "short EXT served");
+			ok = true;
+			for (u32 i = 0; i < 100 && ok; ++i)
 				if (out[i] != 0)
 					ok = false;
-			for (u32 i = 0; i < 0x100 && ok; ++i) // GENERATED at genOff 0x40
-				if (out[0x800 + i] != (u8) (0xE0 + ((0x40 + i) & 0x1F)))
+			check(ok, "short-file tail pads zero");
+			check(ServeAll(sc, kModBase + 0x800, 0x100, out) == SR_OK,
+				  "GENERATED served");
+			ok = true;
+			for (u32 i = 0; i < 0x100 && ok; ++i)
+				if (out[i] != (u8) (0xE0 + ((0x40 + i) & 0x1F)))
 					ok = false;
-			check(ok, "segment assembly exact incl srcOffset/ZERO/store");
+			check(ok, "store bytes exact at genOff");
+			// Spanning reads stop at unlisted disc: the [0,100)
+			// ORIGINAL gap, the gap before GENERATED, and the
+			// pre-range lead-in are all original bytes, delegated
+			// whole - never completed with zeros.
+			check(ServeAll(sc, kModBase, 0x900, out) == SR_GAP,
+				  "mapped + ORIGINAL gap stops with GAP");
+			check(ServeAll(sc, kModBase + 340, 0x500, out) == SR_GAP,
+				  "mapped + inter-run gap stops with GAP");
+			check(ServeAll(sc, kModBase - 0x100, 0x200, out) == SR_GAP,
+				  "lead-in gap + mapped stops with GAP");
+			check(ServeAll(sc, kModBase + 0x800, 0x200, out) == SR_GAP,
+				  "mapped + past-end gap stops with GAP");
+			// The query agrees without serving: covered runs true,
+			// anything touching unlisted disc false, degenerate
+			// inputs safe.
+			check(sr_covers(&sc, kModBase + 100, 200) == 1, "covers EXT");
+			check(sr_covers(&sc, kModBase + 300, 40) == 1, "covers ZERO");
+			check(sr_covers(&sc, kModBase + 340, 100) == 1, "covers short EXT");
+			check(sr_covers(&sc, kModBase + 0x800, 0x100) == 1, "covers GENERATED");
+			check(sr_covers(&sc, kModBase + 100, 240) == 1, "covers EXT+ZERO+EXT");
+			check(sr_covers(&sc, kModBase, 0x900) == 0, "gap breaks coverage");
+			check(sr_covers(&sc, kModBase - 0x100, 0x200) == 0, "lead-in breaks coverage");
+			check(sr_covers(&sc, kModBase + 0x10000, 0x40) == 0, "outside uncovered");
+			check(sr_covers(&sc, kModBase + 100, 0) == 1, "zero length covered");
+			check(sr_covers(&sc, ~(u64)0 - 10, 20) == 0, "wrapping range uncovered");
+			check(sr_covers(0, kModBase, 10) == 0, "null context uncovered");
 		}
 		{
 			// GENERATED without a store refuses at init, never partial.
@@ -417,13 +463,26 @@ int main()
 		bool ok = true;
 		for (int r = 0; r < 40 && ok; ++r)
 		{
-			u64 off = kModBase + (u64) ((r * 37) % 200) * 0x1000 + (r * 13) % 0x180;
+			u64 ebase = kModBase + (u64) ((r * 37) % 200) * 0x1000;
+			u64 insoff = (r * 13) % 0x180;
+			u64 off = ebase + insoff;
+			// Extents are 0x200 long: reads starting past 0x80 run
+			// into the unlisted gap and must delegate, not zero-fill.
+			bool covered = (insoff + 0x180 <= 0x200);
 			std::vector<u8> out(0x180, 0xCC);
-			if (sr_read(&mc, off, 0x180, &out[0]) != SR_OK)
+			int rc = sr_read(&mc, off, 0x180, &out[0]);
+			if (covered && rc != SR_OK)
 			{
 				ok = false;
 				break;
 			}
+			if (!covered && rc != SR_GAP)
+			{
+				ok = false;
+				break;
+			}
+			if (!covered)
+				continue;
 			for (u32 i = 0; i < 0x180 && ok; ++i)
 			{
 				u64 p = off + i;
@@ -448,7 +507,7 @@ int main()
 					ok = false;
 			}
 		}
-		check(ok, "200-extent search serves model-exact bytes");
+		check(ok, "200-extent search: model-exact where covered, GAP at gaps");
 	}
 
 	// Activation states: inactive -> filled/verified -> active, modeled

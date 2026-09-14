@@ -16,10 +16,15 @@
  * Failure posture, stated once: init validates everything the loader claims
  * (a table pointing past its own end would read arbitrary IOS memory as a
  * filename). Reads that touch nothing return MISS with the buffer untouched
- * so the caller runs the stock path. Anything failing mid-read returns EIO
- * with nothing further attempted - the caller must discard the buffer, never
- * boot or serve it partial. A table reaching below the declared size is
- * refused at init: it would shadow game data.
+ * so the caller runs the stock path. Reads that touch unlisted disc inside
+ * the table's span stop with GAP: those bytes are original-disc content the
+ * table never claimed (preserved ORIGINAL runs reach the manifest as
+ * GENERATED slices, never as gaps), and only the stock path can read
+ * them - zero-filling would corrupt the game with silence. Anything
+ * failing mid-read returns EIO with nothing further attempted - the caller
+ * must discard the buffer, never boot or serve it partial. A table
+ * reaching below the declared size is refused at init: it would shadow
+ * game data.
  *
  * Constraints, from the IOS side rather than taste (same as riivo_fat.c):
  * no libc, no allocation, no recursion. Field assembly is by hand, never by
@@ -418,17 +423,14 @@ int sr_read(sr_ctx *c, unsigned long long offset, unsigned int len, void *buf)
 			return SR_EIO;
 		if (fr == SF_GAP)
 		{
-			/* Past the last extent, or a gap between placed extents:
-			   the rest (or run) reads as zero padding. */
-			unsigned long long fillEnd = gapNext;
-			unsigned long long reqEnd = offset + len;
-			if (fillEnd > reqEnd || gapNext == ~(unsigned long long) 0)
-				fillEnd = reqEnd;
-			take = (unsigned int) (fillEnd - pos);
-			while (take--)
-				out[done++] = 0;
-			pos = offset + done;
-			continue;
+			/* Unlisted disc inside the span: original bytes this table
+			   never claimed. Stop without writing them (or zeros) - the
+			   dispatcher asked sr_covers first, so reaching here means
+			   the card changed under a live read or a direct caller
+			   skipped the query; either way the whole request must be
+			   delegated, never completed partial. */
+			(void) gapNext;
+			return SR_GAP;
 		}
 
 		e_off = s.off;
@@ -491,4 +493,37 @@ int sr_read(sr_ctx *c, unsigned long long offset, unsigned int len, void *buf)
 	}
 
 	return SR_OK;
+}
+
+int sr_covers(sr_ctx *c, unsigned long long off, unsigned int len)
+{
+	unsigned long long pos, end;
+
+	if (!c || s_count(c) == 0)
+		return 0;
+	if (len == 0)
+		return 1;
+	end = off + len;
+	if (end < off)
+		return 0;
+
+	/* Every listed kind serves (EXTERNAL/GENERATED/ZERO alike), so any
+	   FOUND position is covered; any gap or failure is not. This walks
+	   the table without opening files or writing buffers - the page
+	   cache may fill, which only helps the serve that follows. */
+	for (pos = off; pos < end;)
+	{
+		sentry s;
+		unsigned long long gapNext = 0;
+		unsigned long long e_end;
+		int fr = s_locate(c, pos, &s, &gapNext);
+		(void) gapNext;
+		if (fr != SF_FOUND)
+			return 0;
+		e_end = s.off + s.length;
+		if (e_end <= pos)
+			return 0;
+		pos = e_end > end ? end : e_end;
+	}
+	return 1;
 }

@@ -37,6 +37,7 @@
 #define RR_EBADTABLE  -2
 #define RR_MISS       -3   /* not ours; the caller should do a normal read */
 #define RR_EIO        -4
+#define RR_GAP        -5   /* range crosses unlisted disc; delegate whole */
 
 typedef struct
 {
@@ -65,9 +66,19 @@ int rr_init(rr_ctx *c, const void *table, unsigned int table_len, rfat_vol *vol)
 void rr_range(const rr_ctx *c, unsigned long long *lo, unsigned long long *hi);
 
 /* Serve a read. Returns RR_MISS if the range touches nothing in the table, in
-   which case nothing has been written to buf. Bytes inside the region but past
-   a file's end - the padding between placed files - read back as zero, which
-   is what the disc would give. */
+   which case nothing has been written to buf. The sector-rounding tail past
+   a file's real end reads as zero (placed extents are sized up, so that
+   tail is padding by construction). Anything UNLISTED inside the range -
+   original-disc bytes the table never claimed - stops the read with
+   RR_GAP: the caller must delegate the whole request to the stock path,
+   never serve it partial. rr_covers answers the same question without
+   writing anything, so the dispatcher asks first and serves only fully
+   covered requests. */
 int rr_read(rr_ctx *c, unsigned long long offset, unsigned int len, void *buf);
+
+/* Coverage query: 1 if every byte of [off, off+len) sits in a listed
+   file, 0 if any byte is unlisted, the range wraps, or the context is
+   unusable. Opens no files, writes no buffers. */
+int rr_covers(rr_ctx *c, unsigned long long off, unsigned int len);
 
 #endif

@@ -250,6 +250,24 @@ int riivo_di_read(unsigned int off_words, unsigned int len, void *dst)
 	off = (unsigned long long) off_words * 4u;
 	out = (unsigned char *) RIIVO_PHYS(dst);
 
+	/* Coverage gate: every byte of this request must sit in a listed
+	   extent, or the whole request delegates to stock. Unlisted bytes
+	   are original-disc content the table never claimed, and the module
+	   has no path that reads original bytes - zero-filling them would
+	   corrupt the game with silence, while serving the mapped prefix
+	   and MISSING the rest would mix stock over served bytes in the
+	   caller's buffer. Asking first (a read-only walk: no files
+	   opened, nothing written) keeps MISS exact: with done == 0 below,
+	   the caller's buffer is still untouched. A covered request can
+	   never meet a gap in the serve loop, so per-chunk MISS/GAP there
+	   is dead defense, kept for a card changing mid-read. */
+	if (!(g_useSeg ? sr_covers(&g_sr, off, len)
+				   : rr_covers(&g_rr, off, len)))
+	{
+		++g_params.misses;
+		return RIIVO_DI_MISS;
+	}
+
 	while (done < len)
 	{
 		unsigned int take = len - done;
@@ -260,7 +278,8 @@ int riivo_di_read(unsigned int off_words, unsigned int len, void *dst)
 
 		rc = g_useSeg ? sr_read(&g_sr, off + done, take, g_bounce)
 					  : rr_read(&g_rr, off + done, take, g_bounce);
-		if (rc == (g_useSeg ? SR_MISS : RR_MISS))
+		if (rc == (g_useSeg ? SR_MISS : RR_MISS)
+			|| rc == (g_useSeg ? SR_GAP : RR_GAP))
 		{
 			/* Only meaningful before anything has been written. Once part of
 			   the buffer is ours, falling through would run the stock read
