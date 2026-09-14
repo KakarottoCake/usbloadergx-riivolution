@@ -52,6 +52,26 @@ int riivo_ios_init(void)
 {
 	int rc;
 
+#ifdef __arm__
+	/* Boot-reuse guard, first: this reservation address may have served
+	   a previous boot in this power session, and Starlet's data cache
+	   persists across game boots (IOS keeps running d2x throughout).
+	   The installer flushed its writes, but ARM lines from the last
+	   occupant are still tagged here - including a stale state word
+	   that would skip init entirely and serve garbage contexts. The
+	   whole writable span (.data through .bss) is discarded before a
+	   single word of it is read. Code needs no such treatment: the
+	   blob is byte-identical every boot of one loader build, so stale
+	   instruction or literal lines can only hold the same bytes. */
+	{
+		extern unsigned char __riivo_writable_start[];
+		extern unsigned char __riivo_writable_last[];
+		riivo_inv_range(__riivo_writable_start,
+						(unsigned int) (__riivo_writable_last
+										- __riivo_writable_start) + 1u);
+	}
+#endif
+
 	if (g_params.state == 1)
 		return RIIVO_DI_OK;
 	if (g_params.state != 0)

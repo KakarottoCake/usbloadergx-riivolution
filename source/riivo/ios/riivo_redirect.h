@@ -66,10 +66,10 @@ int rr_init(rr_ctx *c, const void *table, unsigned int table_len, rfat_vol *vol)
 void rr_range(const rr_ctx *c, unsigned long long *lo, unsigned long long *hi);
 
 /* Serve a read. Returns RR_MISS if the range touches nothing in the table, in
-   which case nothing has been written to buf. The sector-rounding tail past
-   a file's real end reads as zero (placed extents are sized up, so that
-   tail is padding by construction). Anything UNLISTED inside the range -
-   original-disc bytes the table never claimed - stops the read with
+   which case nothing has been written to buf. Entries match their backing
+   files exactly, so a short backing file is truncation and fails EIO -
+   never zero-padded; intentional padding is explicit ZERO extents in the
+   segment runtime. Anything UNLISTED inside the range stops the read with
    RR_GAP: the caller must delegate the whole request to the stock path,
    never serve it partial. rr_covers answers the same question without
    writing anything, so the dispatcher asks first and serves only fully

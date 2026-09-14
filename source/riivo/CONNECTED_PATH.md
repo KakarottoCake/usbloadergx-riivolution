@@ -9,7 +9,13 @@
    (~4872) rebuilds the RIV1 manifest from it via BuildSegmentManifest
    (planner-owned routing/dedup/DOL-exclusion; preserved ORIGINAL runs
    materialize as GENERATED slices in GenLayout, never as gaps).
-   Dual-layer images refuse here before anything is staged
+   Interior gaps between packed slots are alignment slop with no
+   original bytes anywhere, so the emitter sorts the runs and names
+   every gap explicitly as a ZERO run: the emitted span then has no
+   unlisted bytes, and tail -> gap -> head requests compose exactly
+   instead of delegating away their replacements (host proof:
+   test_plansegments decisive span, 61 checks green). Dual-layer
+   images refuse here before anything is staged
    (declared >= RIIVO_DVD9_PROBE_BYTES, same floor as the fragment
    path's PlanFragRegion refusal): layer-1 diversion is unproven, so
    the safe direction is explicit refusal, not a half-layered boot.
@@ -20,7 +26,7 @@
    (RIIVO_PAGED_TABLE_PATH) and size-readbacks it - a short file is
    removed and staging refuses (4417-4447). NOTHING large stays in
    game RAM: the reservation holds the module alone (PlanOnDemand,
-   RiivoOnDemand.cpp:19-122; 27616 bytes per RESIDENT_BUDGET.md).
+   RiivoOnDemand.cpp:19-122; 27648 bytes per RESIDENT_BUDGET.md).
 
 3. Install (unarmed by construction)
    InstallOnDemand places the module, writes params (table 0/len 0 by
@@ -42,19 +48,27 @@
    instead of serving a stale table.
 
 5. Serve (per read, on the DI thread)
-   armed gate -> init once (invalidate inputs; mount; pg_open checks
+   armed gate -> init once, which FIRST discards the whole writable
+   span (boot-reuse guard: Starlet's cache persists across game boots,
+   so a reused reservation address still has the last boot's lines -
+   RESIDENT_BUDGET.md) -> invalidate inputs; mount; pg_open checks
    magic/CRC/order/identity/epoch; sr_init_paged re-checks the
    anti-shadow rule; acked = epoch, published via sync) -> covers
    pre-scan of the WHOLE request (sr_covers/rr_covers: read-only walk,
    no files opened, nothing written) -> serve chunked through the
    4 KiB bounce, or MISS whole with the caller buffer untouched.
-   Listed kinds serve (EXTERNAL/GENERATED/ZERO + sector-tail pad);
-   unlisted bytes stop with GAP and delegate whole - only the stock
-   path can read original bytes. Counters (reads/misses/errors) are
-   ARM-owned and never invalidated. Host proof: test_segread 86
-   (resident serve/GAP/covers/rr parity/dispatch gate), test_page
-   8202 (pager-backed serve, cross-page abutting span, ZERO vs gap,
-   torn-chain EIO, epoch/identity refusals).
+   Listed kinds serve (EXTERNAL/GENERATED/ZERO); every DMA-backed
+   buffer is invalidated after the device read (rg_read), so reused
+   sector/page/bounce buffers cannot serve stale bytes. A short
+   backing file fails EIO - extents match their files exactly, so
+   short means truncation, never padding (intentional padding is
+   explicit ZERO). Unlisted bytes stop with GAP and delegate whole -
+   unreachable for planner-built tables (no interior gaps by
+   construction), kept as defense. Counters (reads/misses/errors) are
+   ARM-owned and never invalidated. Host proof: test_segread 97
+   (resident serve/GAP/covers/truncation-EIO/DMA-invalidate/rr parity/
+   real dispatch gate), test_page 8202 (pager-backed serve, cross-page
+   abutting span, ZERO vs gap, torn-chain EIO, epoch/identity refusals).
 
 6. Failure, interruption, and staleness
    staging refusal     -> patchWhy surfaced, gprintf, ordinary launch
@@ -69,15 +83,23 @@
    mid-boot file swap  -> open/read fails -> EIO, caches dropped,
                           never partial. Host-tested (torn chain).
    OPEN HOLES (named, not hidden):
-   a. Mod-file mutation between staging and serving is served live:
-      the table carries no per-file content hash, only the table CRC.
-      Candidate fix: snapshot sizes at stage, verify at first open.
-   b. Truncation past the placed extent masks as zero tail-pad. Same
-      fix as (a) covers it.
+   a. Same-size content mutation is not detected: no hashes ride with
+      the plan (hashing every mod file pre-boot costs a full extra
+      read pass - stated tradeoff, not oversight). The supported
+      file-immutability contract: mod files must not change from plan
+      through boot. Size changes are refused pre-arm (the late rebuild
+      re-queries every size; drift withholds) and fail EIO post-arm
+      (exact-size extents make every serve a size check). Content
+      changes at equal size are served as-is: operator responsibility.
+      Truncation specifically is closed: short reads fail EIO at first
+      serve (host-tested), never zero-pad.
    c. Staged files are never deleted on success: stale rxivtbl/rxivgen
       linger, guarded by epoch but not cleaned. Hygiene item.
-   d. A game read spanning mapped + unlisted bytes delegates WHOLE to
-      stock (all-original for that request): correct bytes need
-      split-serving at a layer that can read stock, which the module
-      cannot (no frag replication). Safe direction, documented
-      limitation; spanning WITHIN coverage serves exact.
+   d. A game read spanning mapped + TRULY unlisted bytes (outside the
+      emitted span, or a hand-built table) delegates WHOLE to stock:
+      the module cannot read stock bytes itself (no frag replication),
+      and composing with zeros would invent data. For planner-built
+      tables this is unreachable inside the span - every interior gap
+      is an explicit ZERO run, so spanning requests compose exact
+      (decisive test above). It remains the correct backstop for
+      anything the plan never claimed.

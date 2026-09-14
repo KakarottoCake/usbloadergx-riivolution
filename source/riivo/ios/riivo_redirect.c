@@ -200,11 +200,14 @@ int rr_read(rr_ctx *c, unsigned long long offset, unsigned int len, void *buf)
 			c->cached_valid = 0;
 			return RR_EIO;
 		}
-		/* The placed extent is rounded up to a sector, so the tail past the
-		   file's real end is padding and reads as zero. rfat_read reports a
-		   short count there rather than failing. */
-		while (got < take)
-			out[done + got++] = 0;
+		/* Extents match their backing files exactly (the planner refuses
+		   size changes at build), so a short count is truncation, never
+		   padding: fail loud rather than serve invented bytes. */
+		if (got != take)
+		{
+			c->cached_valid = 0;
+			return RR_EIO;
+		}
 
 		done += take;
 		pos = offset + done;

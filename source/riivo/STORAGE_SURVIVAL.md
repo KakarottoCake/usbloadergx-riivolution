@@ -102,16 +102,21 @@
  *   lookup one page fetch; covered requests serve sequential through
  *   the 4 KiB bounce after a read-only covers pre-scan; open-time
  *   CRC/identity/epoch over the file refuses corruption and staleness
- *   before service; unlisted bytes stop with GAP and the dispatcher
- *   delegates the request whole (MISS) - zeros come only from
- *   plan-defined ZERO runs and sector-tail padding, never from gaps.
- *   Failures are EIO, never partial. test_page: 8202 checks over
- *   production-built tables (paged lookups == resident scans, fetch
- *   bounds, cross-page abutting span, ZERO-vs-gap, corruptions
- *   refused) plus test_segread: 86 (resident serve/GAP/covers, rr
- *   parity, real dispatch gate). ARM links at 12064 code + 15552
- *   bss = 27616 resident (test_moduleinstall byte-matches the fresh
- *   link). GENERATED slices are plain staged bytes the reader
+ *   before service; the emitter leaves no interior gaps (alignment
+ *   slop becomes explicit ZERO runs, true originals ride as GENERATED
+ *   slices), so mixed tail -> gap -> head requests compose exactly;
+ *   anything still unlisted stops with GAP and delegates whole.
+ *   Zeros come only from plan-defined ZERO runs; short backing files
+ *   fail EIO as truncation, never zero-pad. Failures are EIO, never
+ *   partial. test_page: 8202 checks over production-built tables
+ *   (paged lookups == resident scans, fetch bounds, cross-page
+ *   abutting span, ZERO-vs-gap, corruptions refused) plus
+ *   test_segread: 97 (resident serve/GAP/covers/truncation-EIO,
+ *   DMA-invalidate, rr parity, real dispatch gate) plus
+ *   test_plansegments: 61 (planner gap ZERO-fill, decisive composed
+ *   span with failure propagation). ARM links at 12096 code + 15552
+ *   bss = 27648 resident (test_moduleinstall byte-matches the fresh
+ *   link, including the relocation audit).
  *   addresses by offset: no MEM2 store reservation, no fill/poison
  *   path for the paged backend (fill/verify/arm still stage the gen
  *   FILE pre-boot; see CONNECTED_PATH.md). The retired framing that

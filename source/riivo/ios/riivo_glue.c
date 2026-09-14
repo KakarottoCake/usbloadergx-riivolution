@@ -1,5 +1,6 @@
 /* See riivo_glue.h. */
 #include "riivo_glue.h"
+#include "riivo_cache.h"
 
 rg_ctx g_rg;
 
@@ -47,5 +48,14 @@ int rg_read(void *ctx, unsigned int lba, unsigned int count, void *buf)
 		++c->failures;
 		return 0;
 	}
+	/* The engines DMA into buf, and Starlet's data cache does not snoop
+	   them: without this the first read of a line is correct (cold miss)
+	   and every re-read of a reused buffer (sector cache, table page,
+	   serve bounce) risks the previous occupant's bytes. Invalidating
+	   after every successful device read is unconditional - it costs
+	   nothing when the driver already maintained the range, and it is
+	   the only correct posture when it did not. (Unaligned buffers
+	   cannot reach here: refused above.) */
+	riivo_inv_range(buf, count * 512u);
 	return 1;
 }

@@ -28,6 +28,7 @@ SECTIONS
 	} > ALL
 
 	.data : {
+		__riivo_writable_start = .;
 		*(.data*)
 		. = ALIGN(32);
 	} > ALL
@@ -39,6 +40,10 @@ SECTIONS
 		. = ALIGN(32);
 	} > ALL
 	__riivo_bss_end = .;
+	/* Last addressable writable byte, for span arithmetic that must only
+	 * name strictly-inside pointers (an exclusive end has no dereference
+	 * and trips the install-time relocation audit). */
+	__riivo_writable_last = __riivo_bss_end - 1;
 
 	/DISCARD/ : { *(.ARM.exidx*) *(.comment) *(.note*) *(.ARM.attributes) }
 }

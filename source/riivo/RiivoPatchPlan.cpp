@@ -878,6 +878,15 @@ bool BuildPlanManifest(const PatchPlan &plan,
 	return true;
 }
 
+//! Visit order for gap detection: ascending disc offset. Equal offsets
+//! keep plan order (stable_sort) so genuine overlaps still refuse
+//! downstream exactly as before.
+static bool ManifestExtentLess(const ManifestExtent &a,
+							   const ManifestExtent &b)
+{
+	return a.discOffset < b.discOffset;
+}
+
 bool BuildSegmentManifest(const PatchPlan &plan,
 						  const std::map<std::string, u64> &bases,
 						  FileSizeProvider *sizes,
@@ -1068,6 +1077,58 @@ bool BuildSegmentManifest(const PatchPlan &plan,
 			e.genOff = 0;
 			exts.push_back(e);
 		}
+	}
+	//! Interior gaps are alignment slop between packed slots (AssignModOffsets
+	//! walks one cursor: every file advances past its size, so consecutive
+	//! files abut except for alignment). No original bytes exist for gap
+	//! addresses anywhere - true ORIGINAL runs already became GENERATED
+	//! slices above - so gaps are named explicitly as ZERO runs. Zeros cost
+	//! no storage and no fill time, which is what makes this unconditional:
+	//! the emitted span then has no unlisted bytes, and a request spanning
+	//! replacement tail -> gap -> replacement head composes exactly instead
+	//! of delegating away its replacements. (Sorted first, stable: the
+	//! builder refuses misordered extents, and gap detection needs visit
+	//! order. A no-op when emission is already ordered; previously-refused
+	//! misordered plans now encode, which is the safe direction.)
+	std::stable_sort(exts.begin(), exts.end(), ManifestExtentLess);
+	{
+		std::vector<ManifestExtent> filled;
+		filled.reserve(exts.size());
+		u64 prevEnd = 0;
+		bool havePrev = false;
+		for (size_t i = 0; i < exts.size(); ++i)
+		{
+			const ManifestExtent &e = exts[i];
+			u64 eEnd = e.discOffset + e.length;
+			if (havePrev && e.discOffset > prevEnd)
+			{
+				u64 gapLen = e.discOffset - prevEnd;
+				if (gapLen > 0xFFFFFFFFULL)
+				{
+					char b[300];
+					snprintf(b, sizeof(b), "segment manifest: unfillable "
+						"gap of %llu bytes at %llu", gapLen, prevEnd);
+					why = b;
+					return false;
+				}
+				ManifestExtent z;
+				z.discOffset = prevEnd;
+				z.length = (u32) gapLen;
+				z.kind = RIIVO_EXT_ZERO;
+				z.source = RIIVO_SRC_NONE;
+				z.srcOffset = 0;
+				z.genOff = 0;
+				filled.push_back(z);
+				caps |= RIIVO_CAP_ZERO_FILL;
+			}
+			if (!havePrev || eEnd > prevEnd)
+			{
+				prevEnd = eEnd;
+				havePrev = true;
+			}
+			filled.push_back(e);
+		}
+		exts.swap(filled);
 	}
 	if (genTotal > 0xFFFFFFFFULL)
 	{

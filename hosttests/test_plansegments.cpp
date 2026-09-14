@@ -145,6 +145,7 @@ static void BuildImage(MemDisk &d)
 	Put16(m, 512 + 0, 0xFFF8);
 	Put16(m, 512 + 2, 0xFFFF);
 	Put16(m, 512 + 4, 0xFFFF);
+	Put16(m, 512 + 6, 0xFFFF);
 	memcpy(&m[1024], &m[512], 512);
 	memcpy(&m[1536], "P       BIN", 11);
 	m[1536 + 11] = 0x20;
@@ -152,6 +153,12 @@ static void BuildImage(MemDisk &d)
 	Put32(m, 1536 + 28, 100);
 	for (int i = 0; i < 100; ++i)
 		m[2048 + i] = (u8)(0xC0 + i);
+	memcpy(&m[1568], "Q       BIN", 11);
+	m[1568 + 11] = 0x20;
+	Put16(m, 1568 + 26, 3);
+	Put32(m, 1568 + 28, 200);
+	for (int i = 0; i < 200; ++i)
+		m[2560 + i] = (u8)(0x80 + (i & 0x7F));
 }
 
 int main()
@@ -199,14 +206,16 @@ int main()
 		CHECK(MakeFst(fst, img, 1024));
 		ResolvedPatchSet set;
 		set.files.push_back(RF("/a.bin", "/P.BIN", "/riivolution", 40, 10, 20, false));
+		set.files.push_back(RF("/dir/b.arc", "/Q.BIN"));
 		MemLister lister;
 		sizes.Put("sd:/P.BIN", 100);
+		sizes.Put("sd:/Q.BIN", 200);
 		std::string why;
 		CHECK(BuildPatchPlan(fst, set, "sd:", &lister, &sizes, plan, why));
 		CHECK(plan.errors.empty());
 		CHECK(plan.hasPartial);
 		CHECK(PlanNeedsSegments(plan));
-		CHECK(plan.files.size() == 1);
+		CHECK(plan.files.size() == 2);
 		const PlannedFile &f = plan.files[0];
 		CHECK(f.finalSize == 1024 && !f.wholeFile);
 		CHECK(f.segs.size() == 3);
@@ -216,6 +225,10 @@ int main()
 			CHECK(f.segs[1].kind == PlanSegment::SEG_EXTERNAL && f.segs[1].fileOffset == 40 && f.segs[1].length == 20 && f.segs[1].srcOffset == 10);
 			CHECK(f.segs[2].kind == PlanSegment::SEG_ORIGINAL && f.segs[2].fileOffset == 60 && f.segs[2].length == 964);
 		}
+		if (plan.files.size() == 2)
+		{
+			CHECK(plan.files[1].wholeFile && plan.files[1].finalSize == 200);
+		}
 		origBase = f.discOffsetOrig;
 	}
 	std::vector<u8> segBlob;
@@ -223,6 +236,10 @@ int main()
 	{
 		std::map<std::string, u64> bases;
 		bases["/a.bin"] = kBase;
+		// Second file two sectors past the first file's end: the
+		// 0x1C00 interior gap is alignment-style slop the emitter
+		// must name explicitly (ZERO), never leave unlisted.
+		bases["/dir/b.arc"] = kBase + 0x2000;
 		std::string why;
 		CHECK(BuildSegmentManifest(plan, bases, &sizes, kDiscId, 0, segBlob, gen, why));
 		CHECK(gen.total == 1004 && gen.slices.size() == 2);
@@ -232,6 +249,27 @@ int main()
 			CHECK(gen.slices[1].genOff == 40 && gen.slices[1].length == 964 && gen.slices[1].origAbs == origBase + 60);
 		}
 		CHECK(ValidateManifestV1(&segBlob[0], (u32)segBlob.size(), why));
+		// The emitter names the interior gap explicitly: one ZERO run
+		// covering exactly [kBase+1024, kBase+0x2000), found by walking
+		// the encoded entries (off64 + len32 + kind16).
+		{
+			u32 n = (u32)segBlob[20] | ((u32)segBlob[21] << 8)
+				  | ((u32)segBlob[22] << 16) | ((u32)segBlob[23] << 24);
+			bool gapNamed = false;
+			for (u32 i = 0; i < n; ++i)
+			{
+				size_t e = 48 + (size_t)i * 32;
+				u64 off = 0;
+				for (int k = 7; k >= 0; --k)
+					off = (off << 8) | segBlob[e + (size_t)k];
+				u32 len = (u32)segBlob[e + 8] | ((u32)segBlob[e + 9] << 8)
+						| ((u32)segBlob[e + 10] << 16) | ((u32)segBlob[e + 11] << 24);
+				u32 kind = (u32)segBlob[e + 12] | ((u32)segBlob[e + 13] << 8);
+				if (off == kBase + 1024 && len == 0x1C00 && kind == 3)
+					gapNamed = true;
+			}
+			CHECK(gapNamed, "interior gap emitted as an explicit ZERO run");
+		}
 	}
 
 	// C. Complete bytes through the REAL segment reader: the store filled
@@ -292,11 +330,58 @@ int main()
 					ok = false;
 		}
 		CHECK(ok, "complete bytes match the reference composition");
-		// MISS outside the file leaves the buffer alone.
+		// Decisive mixed request through the production path: one read
+		// spanning replacement tail (GENERATED original-suffix bytes) ->
+		// named ZERO gap -> replacement head (EXTERNAL /Q.BIN bytes),
+		// with three distinct byte regions. The emitter filled the gap,
+		// so the reader composes the whole request exactly instead of
+		// delegating away its replacements.
+		{
+			const u64 a = kBase + 1000;
+			const u32 spanLen = 24 + 0x1C00 + 24;
+			std::vector<u8> out(spanLen, 0xCC);
+			CHECK(sr_covers(&ctx, a, spanLen) == 1, "mixed span queries covered");
+			CHECK(sr_read(&ctx, a, spanLen, &out[0]) == SR_OK, "mixed span served whole");
+			bool mok = true;
+			for (u32 i = 0; i < 24 && mok; ++i) // GENERATED tail: orig[1000+i]
+				if (out[i] != orig[(size_t)(1000 + i)])
+					mok = false;
+			for (u32 i = 24; i < 24 + 0x1C00 && mok; ++i) // named ZERO gap
+				if (out[i] != 0)
+					mok = false;
+			for (u32 i = 0; i < 24 && mok; ++i) // EXTERNAL head: Q[0+i]
+				if (out[24 + 0x1C00 + i] != (u8)(0x80 + (i & 0x7F)))
+					mok = false;
+			CHECK(mok, "tail + gap + head compose exactly in one request");
+		}
+		// Failure propagation across the same span: with /Q.BIN missing,
+		// the whole composed request fails EIO - the served tail and gap
+		// bytes never reach the caller as a partial success.
+		{
+			MemDisk noq;
+			noq.img = d.img;
+			noq.img[1568] = 0xE5;
+			rfat_drop_cache();
+			rfat_vol vol2;
+			CHECK(rfat_mount(&vol2, DiskRead, &noq, plba) == RFAT_OK,
+				  "remounts without /Q.BIN");
+			sr_ctx nc;
+			CHECK(sr_init(&nc, &segBlob[0], (u32)segBlob.size(), &vol2,
+						  &genStore[0], (u32)genStore.size(), kDecl, kDiscId,
+						  0) == SR_OK,
+				  "adopts over the Q-less image");
+			const u64 a = kBase + 1000;
+			const u32 spanLen = 24 + 0x1C00 + 24;
+			std::vector<u8> out(spanLen, 0xCC);
+			CHECK(sr_read(&nc, a, spanLen, &out[0]) == SR_EIO,
+				  "missing head file fails the composed span, never partial");
+			rfat_drop_cache();
+		}
+		// MISS outside the span leaves the buffer alone.
 		{
 			std::vector<u8> out(0x40, 0xCC);
-			CHECK(sr_read(&ctx, kBase + 0x2000, 0x40, &out[0]) == SR_MISS,
-				  "outside the file is MISS");
+			CHECK(sr_read(&ctx, kBase + 0x3000, 0x40, &out[0]) == SR_MISS,
+				  "outside the span is MISS");
 			bool untouched = true;
 			for (size_t i = 0; i < out.size(); ++i)
 				if (out[i] != 0xCC)
