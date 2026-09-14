@@ -482,11 +482,16 @@ int sr_read(sr_ctx *c, unsigned long long offset, unsigned int len, void *buf)
 			c->cached_valid = 0;
 			return SR_EIO;
 		}
-		/* The placed extent is rounded up to a sector, so the tail past the
-		   file's real end is padding and reads as zero. rfat_read reports a
-		   short count there rather than failing. */
-		while (got < take)
-			out[done + got++] = 0;
+		/* The planner sizes every extent exactly to its backing bytes, so
+		   a short count means the file shrank after planning (or the
+		   table lies): truncation, never padding. Intentional padding is
+		   explicit ZERO extents. Fail loud - zero-filling here would
+		   serve invented bytes as game data. */
+		if (got != take)
+		{
+			c->cached_valid = 0;
+			return SR_EIO;
+		}
 
 		done += take;
 		pos = offset + done;

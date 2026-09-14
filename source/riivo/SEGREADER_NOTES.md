@@ -30,15 +30,18 @@
  *   the stock worker. The module never reports partial data as success:
  *   sr/rr return EIO/FAIL on any sub-read failure with nothing further
  *   attempted, and the PPC side discards the bounce buffer on FAIL.
- * - The module never issues its own 0x71: unlisted bytes are original-disc
- *   content only the stock path can read, so in-span gaps stop the read
+ * - The module never issues its own 0x71: it cannot read stock bytes
+ *   (no frag replication), so bytes no listed run claims stop the read
  *   with GAP (sr/rr) and the dispatcher pre-scans every request with
  *   sr_covers/rr_covers, delegating the whole request (MISS) when any
- *   byte is unlisted. Fully-unmapped requests MISS as before. Zeros come
- *   only from plan-defined sources: ZERO-kind extents and the
- *   sector-rounding tail past a file's real end (extents are sized up,
- *   so that tail is padding by construction). No recursion into the
- *   hook is possible by construction.
+ *   byte is unclaimed. Planner-built tables have no interior gaps to
+ *   hit: slots are packed (AssignModOffsets cursor walk), true
+ *   ORIGINAL runs are GENERATED slices, and the emitter names every
+ *   remaining alignment gap explicitly as ZERO - so mixed
+ *   tail -> gap -> head requests compose exactly. Zeros come only
+ *   from plan-defined ZERO runs; a short backing file fails EIO as
+ *   truncation, never zero-pads. No recursion into the hook is
+ *   possible by construction.
  * - OPENPART/OFFSET: nothing in this loader's flow sends IOCTL_DI_OFFSET
  *   (WDVD_Offset has no callers) and the plugin does not handle OPENPART,
  *   so config offsets are zero and the cIOS word offset equals the
@@ -75,10 +78,11 @@
  * Cache invalidation: EIO clears the open-file cache; rfat_drop_cache
  * clears the sector cache. Removal mid-game surfaces as errors, not
  * corruption.
- * Memory: module 12064 code + 15552 bss = 27616 resident (measured
+ * Memory: module 12096 code + 15552 bss = 27648 resident (measured
  * ARM link, devkitARM -O2 Thumb; BSS verified symbol-by-symbol, no
  * state outside it except <1 KB of DI-thread stack frames -
- * RESIDENT_BUDGET.md). Resident tables are sized by ManifestTableSize
+ * RESIDENT_BUDGET.md, which also audits ownership by writer class:
+ * PPC write+verify, ARM boot-reuse discard, post-DMA invalidates).
  * at plan time and reserved with the module in one MEM2 reservation
  * (PlanOnDemand); paged tables live as files and the reservation holds
  * the module alone. No safe-MEM2 claim is made here:

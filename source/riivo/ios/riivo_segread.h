@@ -89,14 +89,15 @@ void sr_range(const sr_ctx *c, unsigned long long *lo, unsigned long long *hi);
 
 /* Serve a read. Returns SR_MISS if the range touches nothing in the table,
    in which case nothing has been written to buf. Every listed kind serves:
-   EXTERNAL from the card, GENERATED from the staged store, ZERO as zeros,
-   and the sector-rounding tail past a file's real end as zeros (the
-   planner sizes extents up, so that tail is padding by construction).
-   Anything UNLISTED inside the range - original-disc bytes the table
-   never claimed - stops the read with SR_GAP: the caller must delegate
-   the whole request to the stock path, never serve it partial, because
-   only the stock path can read original bytes and this buffer may
-   already hold served bytes. sr_covers answers the same question
+   EXTERNAL from the card, GENERATED from the staged store, ZERO as zeros.
+   Extents match their backing bytes exactly, so a short backing file is
+   truncation and fails EIO - never zero-padded. Intentional padding is
+   explicit ZERO extents; see the file-immutability contract in
+   CONNECTED_PATH.md. Anything UNLISTED inside the range - bytes the
+   table never claimed - stops the read with SR_GAP: the caller must
+   delegate the whole request to the stock path, never serve it partial,
+   because only the stock path can read unclaimed bytes and this buffer
+   may already hold served bytes. sr_covers answers the same question
    without writing anything, so the dispatcher asks first and serves
    only fully covered requests. Any sub-read failure returns SR_EIO
    with nothing further attempted; the caller must discard the buffer,

@@ -36,6 +36,24 @@ void riivo_inv_range(void *addr, unsigned len)
 	g_invLog.push_back(c);
 }
 
+// Fake d2x sector readers for the glue test: single-sector, always
+// succeed, fill a known pattern so the test sees the bytes move.
+static unsigned char fakeSec[512];
+static int fakeReadA(unsigned int lba, unsigned int count, void *buf)
+{
+	(void)lba;
+	if (count != 1)
+		return 1;
+	memcpy(buf, fakeSec, 512);
+	return 0;
+}
+static int fakeReadB(unsigned int zero, unsigned int lba,
+					 unsigned int count, void *buf)
+{
+	(void)zero;
+	return fakeReadA(lba, count, buf);
+}
+
 static int g_checks = 0, g_fail = 0;
 static void check(bool cond, const char *what)
 {
@@ -95,7 +113,8 @@ static void BuildImage(MemDisk &d)
 	Put16(m, 512 + 2, 0xFFFF);
 	Put16(m, 512 + 4, 3);
 	Put16(m, 512 + 6, 0xFFFF);
-	Put16(m, 512 + 8, 0xFFFF);
+	Put16(m, 512 + 8, 5);
+	Put16(m, 512 + 10, 0xFFFF);
 	memcpy(&m[1024], &m[512], 512);
 	memcpy(&m[1536], "HELLO   TXT", 11);
 	m[1536 + 11] = 0x20;
@@ -104,13 +123,13 @@ static void BuildImage(MemDisk &d)
 	memcpy(&m[1568], "SMALL   BIN", 11);
 	m[1568 + 11] = 0x20;
 	Put16(m, 1568 + 26, 4);
-	Put32(m, 1568 + 28, 100);
+	Put32(m, 1568 + 28, 600);
 	for (int i = 0; i < 512; ++i)
 		m[2048 + i] = (u8) (i & 0xFF);
 	for (int i = 0; i < 88; ++i)
 		m[2560 + i] = (u8) (0x80 + (i & 0x7F));
-	for (int i = 0; i < 100; ++i)
-		m[3072 + i] = (u8) (0x40 + (i & 0x3F));
+	for (int i = 0; i < 600; ++i)
+		m[(i < 512 ? 3072 : 3584 - 512) + i] = (u8) (0x40 + (i & 0x3F));
 }
 
 static const u32 kDiscId = 0x53424E41u;
@@ -135,7 +154,7 @@ static Riivo::ManifestExtent Ext(u64 off, u32 len, u16 kind, u16 src,
 static bool WholeFileTable(std::vector<u8> &blob, std::string &why)
 {
 	std::vector<Riivo::ManifestExtent> exts;
-	exts.push_back(Ext(kModBase, 0x400, Riivo::RIIVO_EXT_EXTERNAL,
+	exts.push_back(Ext(kModBase, 600, Riivo::RIIVO_EXT_EXTERNAL,
 					   Riivo::RIIVO_SRC_SD, 0, "/HELLO.TXT", 0));
 	exts.push_back(Ext(kModBase + 0x1000, 0x100, Riivo::RIIVO_EXT_EXTERNAL,
 					   Riivo::RIIVO_SRC_SD, 0, "/SMALL.BIN", 0));
@@ -149,24 +168,25 @@ static bool WholeFileTable(std::vector<u8> &blob, std::string &why)
 static bool WholeFileRiiv(std::vector<u8> &blob, std::string &why)
 {
 	std::vector<Riivo::RedirectEntry> entries;
-	entries.push_back(Riivo::RedirectEntry(kModBase, 0x400, "/HELLO.TXT"));
+	entries.push_back(Riivo::RedirectEntry(kModBase, 600, "/HELLO.TXT"));
 	entries.push_back(Riivo::RedirectEntry(kModBase + 0x1000, 0x100, "/SMALL.BIN"));
 	return Riivo::BuildRedirectTable(entries, Riivo::RIIVO_PART_DISCOVER,
 									 blob, why);
 }
 
-// Multi-segment file: ORIGINAL [0,100) delegated, EXTERNAL [100,300) at
-// file offset 500, ZERO [300,340), EXTERNAL [340,440) at file offset 700.
-// Plus a GENERATED [0x800,0x900) run reading the reserved store.
+// Multi-segment file: EXT [100,300) at file offset 400, ZERO [300,340),
+// EXT [340,440) at file offset 500. All slice ranges sit exactly inside
+// the 600-byte card file: any short backing file is truncation (EIO),
+// never padding. Plus a GENERATED [0x800,0x900) run reading the store.
 static bool SegmentedTable(std::vector<u8> &blob, std::string &why)
 {
 	std::vector<Riivo::ManifestExtent> exts;
 	exts.push_back(Ext(kModBase + 100, 200, Riivo::RIIVO_EXT_EXTERNAL,
-					   Riivo::RIIVO_SRC_SD, 500, "/HELLO.TXT", 0));
+					   Riivo::RIIVO_SRC_SD, 400, "/HELLO.TXT", 0));
 	exts.push_back(Ext(kModBase + 300, 40, Riivo::RIIVO_EXT_ZERO,
 					   Riivo::RIIVO_SRC_NONE, 0, "", 0));
 	exts.push_back(Ext(kModBase + 340, 100, Riivo::RIIVO_EXT_EXTERNAL,
-					   Riivo::RIIVO_SRC_SD, 700, "/HELLO.TXT", 0));
+					   Riivo::RIIVO_SRC_SD, 500, "/HELLO.TXT", 0));
 	exts.push_back(Ext(kModBase + 0x800, 0x100, Riivo::RIIVO_EXT_GENERATED,
 					   Riivo::RIIVO_SRC_NONE, 0, "", 0x40));
 	return Riivo::BuildManifestV1(exts, Riivo::RIIVO_MANIFEST_DISCOVER,
@@ -210,9 +230,9 @@ int main()
 		check(lo == kModBase && hi == kModBase + 0x1100, "range spans extents");
 	}
 	{
-		// Exact hit: 600 file bytes + sector-round tail pad.
+		// Exact hit: the extent matches the file byte for byte.
 		std::vector<u8> out;
-		check(ServeAll(ctx, kModBase, 0x400, out) == SR_OK, "hit served");
+		check(ServeAll(ctx, kModBase, 600, out) == SR_OK, "hit served");
 		bool ok = true;
 		for (int i = 0; i < 512 && ok; ++i)
 			if (out[i] != (u8) (i & 0xFF))
@@ -220,10 +240,27 @@ int main()
 		for (int i = 0; i < 88 && ok; ++i)
 			if (out[512 + i] != (u8) (0x80 + (i & 0x7F)))
 				ok = false;
-		for (u32 i = 600; i < 0x400 && ok; ++i)
-			if (out[i] != 0)
-				ok = false;
-		check(ok, "hit bytes + tail pad exact");
+		check(ok, "hit bytes exact, no padding to invent");
+	}
+	{
+		// Truncation is loud: the same table over a card where the
+		// file shrank to 512 bytes fails EIO instead of serving 88
+		// invented zero bytes. Sizes are exact by planner construction;
+		// a short backing file means change, never padding.
+		MemDisk shrunk = d;
+		Put32(shrunk.img, 1536 + 28, 512);
+		rfat_drop_cache();
+		rfat_vol sv;
+		check(rfat_mount(&sv, DiskRead, &shrunk, plba) == RFAT_OK,
+			  "remounts the shrunk image");
+		sr_ctx sc;
+		check(sr_init(&sc, &blob[0], (u32) blob.size(), &sv,
+					  0, 0, kDecl, kDiscId, 0) == SR_OK,
+			  "table still adopts (sizes are a serve-time check)");
+		std::vector<u8> out(600, 0xCC);
+		check(sr_read(&sc, kModBase, 600, &out[0]) == SR_EIO,
+			  "shrunk file fails EIO, never zero-padded");
+		rfat_drop_cache();
 	}
 	{
 		// MISS outside the region: untouched, no lookup spent.
@@ -245,12 +282,13 @@ int main()
 		rr_ctx rc;
 		check(rr_init(&rc, &riiV[0], (unsigned) riiV.size(), &vol) == RR_OK,
 			  "whole-file runtime adopts it");
-		const u64 offs[] = { kModBase, kModBase + 0x100, kModBase + 0x300,
+		const u64 offs[] = { kModBase, kModBase + 0x100, kModBase + 0x200,
 							 kModBase + 0x1000, kModBase + 0x10E0 };
-		const u32 lens[] = { 0x400, 0x200, 0x300, 0x100, 0x40 };
-		// First, second and fourth reads sit fully inside listed files;
-		// third and fifth cross into unlisted disc (gap / past-end).
-		const bool span[] = { false, false, true, false, true };
+		const u32 lens[] = { 600, 0x200, 0x100, 0x100, 0x40 };
+		// First and fourth reads sit fully inside listed files; the
+		// rest cross into unlisted disc (tail gap, lead-in gap,
+		// past-end gap).
+		const bool span[] = { false, true, true, false, true };
 		bool ok = true;
 		for (int r = 0; r < 5 && ok; ++r)
 		{
@@ -266,7 +304,7 @@ int main()
 				ok = false;
 		}
 		check(ok, "RIV1/sr parity with RIIV/rr: bytes where covered, GAP where not");
-		check(rr_covers(&rc, kModBase, 0x400) == 1, "rr covers a listed file");
+		check(rr_covers(&rc, kModBase, 600) == 1, "rr covers a listed file");
 		check(rr_covers(&rc, kModBase + 0x300, 0x300) == 0, "rr gap breaks coverage");
 		check(rr_covers(&rc, kModBase + 0x1000, 0x100) == 1, "rr covers the second file");
 		check(rr_covers(&rc, kModBase + 0x10E0, 0x40) == 0, "rr past-end breaks coverage");
@@ -290,22 +328,20 @@ int main()
 			  "segmented table adopted with a store");
 		{
 			// Each listed run serves on its own: EXT with srcOffset,
-			// ZERO as zeros, short EXT as zero tail-pad, GENERATED
-			// from the store. One request crossing into unlisted
-			// disc stops with GAP instead of zero-filling it: those
-			// bytes are original content only the stock path can read.
+			// ZERO as zeros, second EXT exact to end of file,
+			// GENERATED from the store. One request crossing into
+			// unlisted disc stops with GAP instead of zero-filling
+			// it: those bytes are unclaimed, and only the stock path
+			// may read them.
 			std::vector<u8> out;
 			check(ServeAll(sc, kModBase + 100, 200, out) == SR_OK,
 				  "covered EXT served");
 			bool ok = true;
-			for (u32 i = 0; i < 200 && ok; ++i) // EXT at srcOffset 500
+			for (u32 i = 0; i < 200 && ok; ++i) // EXT at srcOffset 400
 			{
-				u32 fo = 500 + i;
-				u8 want = 0;
-				if (fo < 512)
-					want = (u8) (fo & 0xFF);
-				else if (fo < 600)
-					want = (u8) (0x80 + ((fo - 512) & 0x7F));
+				u32 fo = 400 + i;
+				u8 want = (fo < 512) ? (u8) (fo & 0xFF)
+									 : (u8) (0x80 + ((fo - 512) & 0x7F));
 				if (out[i] != want)
 					ok = false;
 			}
@@ -317,15 +353,20 @@ int main()
 				if (out[i] != 0)
 					ok = false;
 			check(ok, "plan-defined ZERO reads as zero");
-			// EXT at srcOffset 700 over a 600-byte file: every byte is
-			// sector-rounding tail padding, which reads as zero.
+			// EXT at srcOffset 500 over the 600-byte file ends exactly
+			// at end of file: every byte is real, none invented.
 			check(ServeAll(sc, kModBase + 340, 100, out) == SR_OK,
-				  "short EXT served");
+				  "second EXT served");
 			ok = true;
 			for (u32 i = 0; i < 100 && ok; ++i)
-				if (out[i] != 0)
+			{
+				u32 fo = 500 + i;
+				u8 want = (fo < 512) ? (u8) (fo & 0xFF)
+									 : (u8) (0x80 + ((fo - 512) & 0x7F));
+				if (out[i] != want)
 					ok = false;
-			check(ok, "short-file tail pads zero");
+			}
+			check(ok, "second EXT bytes exact to end of file");
 			check(ServeAll(sc, kModBase + 0x800, 0x100, out) == SR_OK,
 				  "GENERATED served");
 			ok = true;
@@ -491,13 +532,14 @@ int main()
 				u8 want = 0;
 				if (idx < 200 && p - eoff < 0x200)
 				{
+					// Slice ranges sit exactly inside the 600-byte card
+					// files by construction ((i*7)%64 <= 63 and at most
+					// 0x1FF into the extent keeps fo < 575 < 600), so
+					// every covered byte is a real file byte.
 					u64 fo = (u64) (idx * 7) % 64 + (p - eoff);
 					if (idx % 2)
-					{
-						if (fo < 100)
-							want = (u8) (0x40 + (fo & 0x3F));
-					}
-					else if (fo < 600)
+						want = (u8) (0x40 + (fo & 0x3F));
+					else
 					{
 						want = (fo < 512) ? (u8) (fo & 0xFF)
 										  : (u8) (0x80 + ((fo - 512) & 0x7F));
@@ -655,6 +697,54 @@ int main()
 		check(riivo_di_read(0x60000000u, 0, &out[0]) == RIIVO_DI_OK,
 			  "zero-length read succeeds");
 		check(g_invLog.size() == invBefore, "zero-length touches nothing");
+	}
+
+	// Device-read cache maintenance through the real glue: every
+	// successful DMA into a caller buffer is invalidated before anyone
+	// reads it, so a reused sector/page/bounce buffer can never serve
+	// the previous occupant's bytes. Unaligned destinations are
+	// refused outright (silent DMA corruption is worse than an error).
+	{
+		static unsigned char tbuf[512] __attribute__((aligned(32)));
+		static unsigned int cfg[3] = { 0, 0, 0 };
+		rg_ctx gc;
+		gc.read_a = fakeReadA;
+		gc.read_b = fakeReadB;
+		gc.config = cfg;
+		gc.calls = 0;
+		gc.sectors = 0;
+		gc.failures = 0;
+		for (int i = 0; i < 512; ++i)
+		{
+			fakeSec[i] = (unsigned char)(0xA0 + (i & 0x1F));
+			tbuf[i] = 0xCC;
+		}
+		g_invLog.clear();
+		check(rg_read(&gc, 0, 1, tbuf) == 1, "device read succeeds");
+		bool served = true;
+		for (int i = 0; i < 512 && served; ++i)
+			if (tbuf[i] != fakeSec[i])
+				served = false;
+		check(served, "device bytes land in the buffer");
+		bool invd = false;
+		for (size_t i = 0; i < g_invLog.size() && !invd; ++i)
+		{
+			uintptr_t a = (uintptr_t)g_invLog[i].addr;
+			uintptr_t e = a + g_invLog[i].len;
+			if (a <= (uintptr_t)tbuf && e >= (uintptr_t)tbuf + 512)
+				invd = true;
+		}
+		check(invd, "successful DMA is invalidated before use");
+		// Four-argument convention path maintains too.
+		cfg[2] = 1;
+		g_invLog.clear();
+		check(rg_read(&gc, 0, 1, tbuf) == 1, "four-arg read succeeds");
+		check(!g_invLog.empty(), "four-arg DMA is invalidated too");
+		// Unaligned destination: refused, device never called.
+		unsigned callsBefore = gc.calls;
+		check(rg_read(&gc, 0, 1, tbuf + 1) == 0, "unaligned refused");
+		check(gc.calls == callsBefore, "refused read issues no DMA");
+		check(gc.failures == 1, "refusal counted once");
 	}
 
 	std::printf("%d checks, %d failures\n", g_checks, g_fail);
