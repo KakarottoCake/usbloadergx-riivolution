@@ -729,12 +729,16 @@ int main()
 		bool invd = false;
 		for (size_t i = 0; i < g_invLog.size() && !invd; ++i)
 		{
+			// Line-exact: the buffer is 32-aligned and 512 is a line
+			// multiple, so maintenance must name exactly these bytes -
+			// no rounding outward onto adjacent (possibly ARM-written)
+			// state, and nothing of the DMA left covered.
 			uintptr_t a = (uintptr_t)g_invLog[i].addr;
 			uintptr_t e = a + g_invLog[i].len;
-			if (a <= (uintptr_t)tbuf && e >= (uintptr_t)tbuf + 512)
+			if (a == (uintptr_t)tbuf && e == (uintptr_t)tbuf + 512)
 				invd = true;
 		}
-		check(invd, "successful DMA is invalidated before use");
+		check(invd, "successful DMA is invalidated exactly, nothing more");
 		// Four-argument convention path maintains too.
 		cfg[2] = 1;
 		g_invLog.clear();

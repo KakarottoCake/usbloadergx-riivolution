@@ -23,6 +23,26 @@
  * so lr has been clobbered and has to be restored off the stack. Returning
  * with the wrong lr lands somewhere inside this routine and loops.
  *
+ * Execution publication: the module is PPC-written into a reservation whose
+ * address varies per boot, then executed here on Starlet - whose instruction
+ * cache persists across game boots (IOS keeps running d2x throughout) and
+ * may still hold the last occupant's lines for these addresses. Same
+ * reservation address plus different relocated bytes (another loader build,
+ * another boot) would otherwise execute stale code with silence. So the
+ * first hook hit of each boot publishes the module: an epoch word in module
+ * BSS (fixed first word, installer-written per boot and flushed) is compared
+ * against the expected boot epoch (second literal); on mismatch the stub
+ * stamps it and runs a whole-I-cache invalidate on an ARM island below -
+ * once per boot, before the first module fetch, including the module's own
+ * prologue, which a later invalidate could not retroactively fix. An epoch
+ * (not a boolean) because a cleared-or-stale zero must never read as
+ * "already published": only an exact epoch match skips, and every mismatch
+ * converges to invalidating, which is always the safe direction.
+ * The mcr needs no new privilege: the module already executes data-cache
+ * maintenance in this exact context on every init and every armed read.
+ * And a fault here (rather than mid-gameplay) can only land inside the
+ * pre-launch ack probe, which withholds the boot instead of corrupting it.
+ *
  * The module's three arguments are (word offset, length in bytes, destination)
  * and it returns 0 for served, 1 for not ours, negative for failed. It masks
  * the destination to a physical address itself - see riivo_ios.h - because
@@ -34,15 +54,26 @@
 .section .text
 .balign 4
 .global redirect2_start, redirect2_entry, redirect2_end
-.global redirect2_call, redirect2_epilogue
+.global redirect2_call, redirect2_epilogue, redirect2_flag
 redirect2_start:
     movs r0, #0xa0
     lsls r0, r0, #8          /* error return, matches the stock worker */
     bx lr
     nop
 redirect2_entry:
+    /* The worker lr is saved BEFORE any branch-and-link: bl clobbers lr,
+     * and restoring the island's return address as the worker's would loop
+     * inside this routine (the documented redirect.S hazard). */
     push {r0, r3, r4, r6, r7, lr}
-    ldr r1, [r0, #4]         /* length in bytes */
+    ldr r1, flag_addr       /* BSS epoch word (installer-patched) */
+    ldr r2, [r1]
+    ldr r3, epoch_val       /* expected boot epoch (installer-patched) */
+    cmp r2, r3
+    beq published           /* exact match: published already this boot */
+    str r3, [r1]            /* stamp BEFORE invalidating: both orders safe */
+    bl iinv_island          /* publish the module's bytes to the I-cache */
+published:
+    ldr r1, [r0, #4]        /* length in bytes */
     ldr r2, [r0, #8]         /* word offset (inbuf[2]) */
     ldr r3, [r4, #8]
     ldr r0, [r4, #12]
@@ -75,7 +106,28 @@ finish:
     add sp, #4
     ldr r3, redirect2_epilogue /* patched: the dispatcher's return sequence */
     bx r3
-.balign 4
+/* ARM island: whole-I-cache invalidate plus drain, then back to Thumb.
+ * Entered by bl, so lr carries the Thumb bit and bx lr interworks home.
+ * r1/r2 are scratch (the flag address and value are dead past the store);
+ * r0/r3/r4/r7 and the flags the body needs are reloaded fresh below, and
+ * the worker lr already sits on the stack. */
+    .balign 4
+    .arm
+iinv_island:
+    mov r2, #0
+    mcr p15, 0, r2, c7, c5, 0
+    mcr p15, 0, r2, c7, c10, 4
+    bx lr
+    .thumb
+    .balign 4
+flag_addr:
+    .global redirect2_flag
+redirect2_flag:
+    .word 0                  /* patched: ARM-view address of the epoch word */
+epoch_val:
+    .global redirect2_epoch
+redirect2_epoch:
+    .word 0                  /* patched: expected boot epoch (nonzero) */
 redirect2_epilogue:
     .word 0                  /* the add-sp / mov-r0 / pop sequence address */
 unrecovered_read:

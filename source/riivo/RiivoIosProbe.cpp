@@ -475,10 +475,29 @@ namespace Riivo
 			return false;
 
 		//! 3. The hook that calls it. Built BEFORE anything is written, so a
-		//! plugin this code cannot hook costs no writes at all.
+		//! plugin this code cannot hook costs no writes at all. The
+		//! publication epoch word is the fixed first word of module BSS:
+		//! reservation base plus code length, in the physical view the
+		//! stub runs in. Bounded here so a layout surprise refuses
+		//! before any write, rather than corrupting module state. Epoch
+		//! 0 is refused: BSS clears to 0, so only a nonzero epoch can
+		//! distinguish a fresh boot from a stale cache line.
 		DiHookPlan hp;
+		const u32 flagPhys = mp.physAddr + mp.codeLen;
+		if (params.epoch == 0) {
+			out.why = "no publication epoch; no IOS code changed";
+			return false;
+		}
+		if (mp.codeLen == 0 || mp.bssLen == 0
+			|| flagPhys < mp.physAddr
+			|| (u64) flagPhys + 4 > (u64) mp.physAddr + ModuleFootprint())
+		{
+			out.why = "publication word outside the module; no IOS code changed";
+			return false;
+		}
 		if (!BuildDiHookOnDemand(&snapshot[0], snapshot.size(), base, site,
-								 mp.entry, hp, out.why))
+								 mp.entry, flagPhys, params.epoch,
+								 hp, out.why))
 			return false;
 
 		//! 4. The module first. Nothing reaches it until step 5 redirects the
@@ -491,6 +510,23 @@ namespace Riivo
 		if (!ClearMem(mp.addr + mp.codeLen, mp.bssLen)) {
 			out.why = "module bss did not clear; no IOS code changed";
 			return false;
+		}
+		//! The publication epoch, written and verified like code: the stub
+		//! compares this word before its first module call each boot, so a
+		//! torn or missing write must refuse here rather than mis-publish.
+		//! Written after the BSS clearing (which zeroes it) and before the
+		//! hook goes live, so no read can observe a half-staged word.
+		{
+			const u32 epoch = params.epoch;
+			u8 epochBytes[4];
+			epochBytes[0] = (u8) (epoch & 0xFF);
+			epochBytes[1] = (u8) ((epoch >> 8) & 0xFF);
+			epochBytes[2] = (u8) ((epoch >> 16) & 0xFF);
+			epochBytes[3] = (u8) ((epoch >> 24) & 0xFF);
+			if (!WriteCode(mp.addr + mp.codeLen, epochBytes, 4)) {
+				out.why = "publication epoch did not stick; no IOS code changed";
+				return false;
+			}
 		}
 
 		//! 5. Now the hook, with the same rollback ApplyDiPatch uses.

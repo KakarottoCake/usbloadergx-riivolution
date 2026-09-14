@@ -35,6 +35,11 @@ SECTIONS
 
 	__riivo_bss_start = .;
 	.bss : {
+		/* First, at a build-independent offset: the I-publication epoch
+		 * word the hook compares before its first module call. Its
+		 * address is the reservation base plus the code length, which
+		 * the installer already knows - no layout knowledge needed. */
+		*(.bss.riivo_flag)
 		*(.bss*)
 		*(COMMON)
 		. = ALIGN(32);
