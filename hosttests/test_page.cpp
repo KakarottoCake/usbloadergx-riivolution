@@ -1,8 +1,10 @@
-// Paged RIV1 table access: production-built tables, paged lookups equal
-// resident scans, fetch behavior bounded, corruptions refused.
+// Paged RIV1 table access + serving through the pager backend.
 // The pager (ios/riivo_page.c, real code) runs over a synthetic FAT16
-// volume holding a paged table file sliced from a PRODUCTION RIV1 blob
-// (BuildManifestV1): no second format exists to drift. Exit 0 = pass.
+// volume holding a table file sliced from a PRODUCTION RIV1 blob by the
+// PRODUCTION pager encoder (BuildPagedFile): no second format exists to
+// drift. Paged lookups equal resident scans; the real segment reader
+// (sr_init_paged) serves complete reads across page/segment boundaries,
+// storage failures, and MISS delegation. Exit 0 = pass.
 #include <cstdio>
 #include <cstring>
 #include <string>
@@ -11,12 +13,17 @@
 
 #include "riivo/ios/riivo_fat.h"
 #include "riivo/ios/riivo_page.h"
+#include "riivo/ios/riivo_segread.h"
 #include "riivo/RiivoManifest.hpp"
 
 using namespace Riivo;
 
 static int checks = 0, failures = 0;
 #define CHECK(x, ...) do { ++checks; if (!(x)) { ++failures; printf("FAIL line %d: %s\n", __LINE__, #x); } } while (0)
+
+static const u32 kDiscId = 0x53424E41u;
+static const u32 kEpoch = 7;
+static const u64 kDecl = 0x100000ULL; // == first extent: anti-shadow passes
 
 struct MemDisk
 {
@@ -46,22 +53,21 @@ static void Put32(std::vector<u8> &v, size_t at, unsigned long x)
 	v[at + 3] = (u8)((x >> 24) & 0xFF);
 }
 
-static u32 Rd32le(const std::vector<u8> &v, size_t at)
+struct ImgFile
 {
-	return (u32)v[at] | ((u32)v[at + 1] << 8) | ((u32)v[at + 2] << 16) |
-		   ((u32)v[at + 3] << 24);
-}
+	std::string name83; // 11-char "PG      BIN" form
+	std::vector<u8> data;
+};
 
-// FAT16 image with one file PG.BIN laid sequentially from cluster 2.
-// Sized like the segread fixture (4096 data clusters -> FAT16; the file
-// itself uses only its head) so the volume mounts as FAT16.
-static void BuildImage(MemDisk &d, const std::vector<u8> &pgbin)
+// FAT16 image with the given files laid sequentially from cluster 2.
+// 4096 data clusters -> FAT16 (only the files' own clusters are chained;
+// chaining the whole area would run past the 1-sector FAT).
+static void BuildImage(MemDisk &d, const std::vector<ImgFile> &files)
 {
 	const unsigned clusters = 4096;
 	const unsigned fatSectors = 1;
-	const unsigned total = 1 + 2 * fatSectors + 1 + clusters; // res+FATs+root+data
-	const unsigned fileClusters = (unsigned)((pgbin.size() + 511) / 512);
-	d.img.assign((total + 8) * 512, 0);
+	const unsigned total = 1 + 2 * fatSectors + 1 + clusters;
+	d.img.assign(total * 512, 0);
 	std::vector<u8> &m = d.img;
 	Put16(m, 11, 512);
 	m[13] = 1;
@@ -76,18 +82,25 @@ static void BuildImage(MemDisk &d, const std::vector<u8> &pgbin)
 	const unsigned fat0 = 512;
 	Put16(m, fat0 + 0, 0xFFF8);
 	Put16(m, fat0 + 2, 0xFFFF);
-	// Chain only the file's own clusters (2..); the rest of the 4096-cluster
-	// data area stays free (zeros). A full-length chain would run past this
-	// 1-sector FAT into the mirror, root dir, and data.
-	for (unsigned c = 0; c < fileClusters; ++c)
-		Put16(m, fat0 + 4 + c * 2, (c + 1 < fileClusters) ? (3 + c) : 0xFFFF);
+	unsigned clus = 2;
+	size_t dir = 1536;
+	for (size_t f = 0; f < files.size(); ++f)
+	{
+		const std::vector<u8> &data = files[f].data;
+		const unsigned need = (unsigned)((data.size() + 511) / 512);
+		for (unsigned c = 0; c < need; ++c)
+			Put16(m, fat0 + 4 + (clus - 2 + c) * 2,
+				  (c + 1 < need) ? (clus + 1 + c) : 0xFFFF);
+		memcpy(&m[dir], files[f].name83.c_str(), 11);
+		m[dir + 11] = 0x20;
+		Put16(m, dir + 26, clus);
+		Put32(m, dir + 28, (unsigned long)data.size());
+		dir += 32;
+		// Data area starts at LBA 4: cluster 2 lives at byte 2048.
+		memcpy(&m[(2 + clus) * 512], &data[0], data.size());
+		clus += need;
+	}
 	memcpy(&m[1024], &m[512], 512);
-	const unsigned root = 1536;
-	memcpy(&m[root], "PG      BIN", 11);
-	m[root + 11] = 0x20;
-	Put16(m, root + 26, 2);
-	Put32(m, root + 28, (unsigned long)pgbin.size());
-	memcpy(&m[2048], &pgbin[0], pgbin.size());
 }
 
 static ManifestExtent Ext(u64 off, u32 len, u16 kind, u16 src,
@@ -102,79 +115,6 @@ static ManifestExtent Ext(u64 off, u32 len, u16 kind, u16 src,
 	e.path = path;
 	e.genOff = gen;
 	return e;
-}
-
-// Slice a production blob's entry array + string blob into the paged
-// file format (documented in riivo_page.h). Test-side encoder; the
-// equivalence checks below prove it names the same extents.
-static bool PageEncode(const std::vector<u8> &blob, std::vector<u8> &out,
-					   std::string &why)
-{
-	if (!ValidateManifestV1(&blob[0], (u32)blob.size(), why))
-		return false;
-	const u32 count = Rd32le(blob, 20);
-	const u32 strOff = Rd32le(blob, 24);
-	const u32 nPages = (count + 127) / 128;
-	if (nPages == 0 || nPages > 341)
-	{
-		why = "fixture too big";
-		return false;
-	}
-	const u32 pagesOff = (512 + nPages * 12 + 511) & ~511u;
-	const u32 blobLen = (u32)blob.size() - strOff;
-	std::vector<u8> file(pagesOff + nPages * 4096 + blobLen, 0);
-	// header
-	file[0] = 'P';
-	file[1] = 'G';
-	file[2] = '1';
-	file[3] = 'P';
-	file[4] = 1;
-	file[5] = 0;
-	file[6] = 12;
-	file[7] = 0;
-	// u32s LE: nPages, nEntries, pagesOff, blobOff, crc (patched later), reserved
-	u32 hdr[7] = { nPages, count, pagesOff, (u32)(pagesOff + nPages * 4096), 0, 0, 0 };
-	for (int i = 0; i < 7; ++i)
-	{
-		file[8 + i * 4 + 0] = (u8)(hdr[i] & 0xFF);
-		file[8 + i * 4 + 1] = (u8)((hdr[i] >> 8) & 0xFF);
-		file[8 + i * 4 + 2] = (u8)((hdr[i] >> 16) & 0xFF);
-		file[8 + i * 4 + 3] = (u8)((hdr[i] >> 24) & 0xFF);
-	}
-	// index + pages from the blob entry array at [48, 48+count*32)
-	for (u32 p = 0; p < nPages; ++p)
-	{
-		u32 first = p * 128;
-		u64 firstKey = Rd32le(blob, 48 + first * 32)
-					 | ((u64)Rd32le(blob, 48 + first * 32 + 4) << 32);
-		size_t at = 512 + p * 12;
-		for (int k = 0; k < 8; ++k)
-			file[at + k] = (u8)((firstKey >> (8 * k)) & 0xFF);
-		file[at + 8] = (u8)(p & 0xFF);
-		file[at + 9] = (u8)((p >> 8) & 0xFF);
-		file[at + 10] = 0;
-		file[at + 11] = 0;
-		u32 n = count - first;
-		if (n > 128)
-			n = 128;
-		memcpy(&file[pagesOff + p * 4096], &blob[48 + first * 32], n * 32);
-	}
-	memcpy(&file[pagesOff + nPages * 4096], &blob[strOff], blobLen);
-	// CRC over [512, end)
-	u32 crc = 0xFFFFFFFFu;
-	for (size_t i = 512; i < file.size(); ++i)
-	{
-		crc ^= file[i];
-		for (int b = 0; b < 8; ++b)
-			crc = (crc & 1) ? (crc >> 1) ^ 0xEDB88320u : crc >> 1;
-	}
-	crc ^= 0xFFFFFFFFu;
-	file[24] = (u8)(crc & 0xFF);
-	file[25] = (u8)((crc >> 8) & 0xFF);
-	file[26] = (u8)((crc >> 16) & 0xFF);
-	file[27] = (u8)((crc >> 24) & 0xFF);
-	out.swap(file);
-	return true;
 }
 
 // Resident reference scan over the production extent vector.
@@ -195,8 +135,13 @@ static bool RefFind(const std::vector<ManifestExtent> &exts, u64 off,
 
 int main()
 {
-	// 300 extents in 3 pages (128+128+44), with gaps, ZERO runs, and
-	// shared-prefix paths. Grouped 10 covered + 1 gap apart.
+	// Card file with known content (served bytes reference).
+	std::vector<u8> acard(4096);
+	for (size_t i = 0; i < acard.size(); ++i)
+		acard[i] = (u8)(0xC0 + (i & 0x3F));
+	// 300 extents in 3 pages (128+128+44), with gaps, ZERO runs, one
+	// dangling path (EIO, never partial), shared-prefix paths, and two
+	// /A.BIN extents straddling the page 0/1 boundary (serving proof).
 	std::vector<ManifestExtent> exts;
 	char pb[96];
 	for (int i = 0; i < 300; ++i)
@@ -204,8 +149,20 @@ int main()
 		// 10 files of 0x8000 per group (span 0x50000), groups 0x100000
 		// apart: dense but non-overlapping, 3 pages at 128/page.
 		u64 off = 0x100000ULL + (u64)(i / 10) * 0x100000ULL + (u64)(i % 10) * 0x8000ULL;
-		if (i % 25 == 12)
+		if (i == 0)
+			exts.push_back(Ext(off, 0x1000, RIIVO_EXT_EXTERNAL, RIIVO_SRC_SD,
+							   0, "/A.BIN", 0));
+		else if (i == 127)
+			exts.push_back(Ext(off, 0x800, RIIVO_EXT_EXTERNAL, RIIVO_SRC_SD,
+							   0, "/A.BIN", 0));
+		else if (i == 128)
+			exts.push_back(Ext(off, 0x800, RIIVO_EXT_EXTERNAL, RIIVO_SRC_SD,
+							   0x800, "/A.BIN", 0));
+		else if (i % 25 == 12)
 			exts.push_back(Ext(off, 0x1000, RIIVO_EXT_ZERO, RIIVO_SRC_NONE, 0, "", 0));
+		else if (i == 299)
+			exts.push_back(Ext(off, 0x100, RIIVO_EXT_EXTERNAL, RIIVO_SRC_SD,
+							   0, "/NOPE.BIN", 0));
 		else
 		{
 			snprintf(pb, sizeof(pb), "/mod/dir%02d/file%04d.bin", i % 17, i);
@@ -215,13 +172,24 @@ int main()
 	}
 	std::vector<u8> blob;
 	std::string why;
-	CHECK(Riivo::BuildManifestV1(exts, Riivo::RIIVO_MANIFEST_DISCOVER, 0x53424E41u, 0,
+	CHECK(Riivo::BuildManifestV1(exts, Riivo::RIIVO_MANIFEST_DISCOVER, kDiscId, 0,
 								 Riivo::RIIVO_CAP_SPLIT_READ | Riivo::RIIVO_CAP_ZERO_FILL,
 								 Riivo::RIIVO_PROV_BOUNDED, blob, why));
+	// Production pager encoder (not a test-local fork): the file the
+	// module opens is byte-shaped by production code on both sides.
 	std::vector<u8> pgfile;
-	CHECK(PageEncode(blob, pgfile, why));
+	CHECK(Riivo::BuildPagedFile(blob, kEpoch, pgfile, why));
+	ImgFile pgf;
+	pgf.name83 = "PG      BIN";
+	pgf.data = pgfile;
+	ImgFile af;
+	af.name83 = "A       BIN";
+	af.data = acard;
+	std::vector<ImgFile> files;
+	files.push_back(pgf);
+	files.push_back(af);
 	MemDisk d;
-	BuildImage(d, pgfile);
+	BuildImage(d, files);
 	rfat_vol vol;
 	unsigned int plba = 0xDEADu;
 	CHECK(rfat_find_partition(DiskRead, &d, 0, &plba) == RFAT_OK, "partition found");
@@ -230,8 +198,8 @@ int main()
 	pg_ctx ctx;
 	pg_idx index[341];
 	unsigned char page[4096];
-	char pathTmp[512];
-	CHECK(pg_open(&ctx, &vol, "/PG.BIN", index, 341, page, pathTmp) == PG_OK,
+	CHECK(pg_open(&ctx, &vol, "/PG.BIN", index, 341, page,
+				  kDiscId, 0, kEpoch) == PG_OK,
 		  "paged table opens");
 	CHECK(ctx.nPages == 3, "300 extents need 3 pages");
 	CHECK(ctx.fetches == 0, "open fetches no pages (index only)");
@@ -293,27 +261,207 @@ int main()
 		CHECK(exts[7].path == buf, "path bytes exact");
 		CHECK(pg_path(&ctx, 0xFFFFFFu, buf, sizeof(buf)) == PG_EIO, "wild path offset refused");
 	}
-	// Corruptions refuse: bad magic, bad CRC, unsorted index, wrong page
-	// id, missing file. Each is a fresh image + open (no state carried).
+	// pg_range costs no fetch; pg_next costs at most one (mid-page scan).
 	{
-		MemDisk d2 = d;
+		unsigned long long lo = 0, hi = 0;
+		unsigned f0 = ctx.fetches;
+		pg_range(&ctx, &lo, &hi);
+		CHECK(lo == exts[0].discOffset, "range low is first extent");
+		CHECK(hi == exts[299].discOffset + exts[299].length, "range high is last end");
+		CHECK(pg_next(&ctx, exts[0].discOffset) == exts[1].discOffset,
+			  "next inside first page");
+		CHECK(pg_next(&ctx, exts[299].discOffset + 0x1000) == ~(u64)0,
+			  "next past the end is unbounded");
+		CHECK(ctx.fetches <= f0 + 1, "range/next cost at most one fetch");
+	}
+	// Served reads through the real pager-backed segment reader:
+	// complete bytes across page/segment boundaries, MISS delegation,
+	// storage failure without partial success.
+	{
+		sr_ctx sc;
+		CHECK(sr_init_paged(&sc, &ctx, &vol, kDecl) == SR_OK,
+			  "segment reader adopts the pager");
+		// Whole-file read off /A.BIN (extent 0).
+		{
+			std::vector<u8> out(0x400, 0xCC);
+			CHECK(sr_read(&sc, exts[0].discOffset, 0x400, &out[0]) == SR_OK,
+				  "file read served");
+			bool ok = true;
+			for (u32 i = 0; i < 0x400 && ok; ++i)
+				if (out[i] != acard[i])
+					ok = false;
+			CHECK(ok, "served bytes equal card bytes");
+		}
+		// Spanning read across a segment boundary: extent 127 tail
+		// (/A.BIN @0x700, 0x100 bytes) then the gap after it pads zero
+		// (extent 128 starts 0x7800 later, so this span never reaches it).
+		{
+			u64 a = exts[127].discOffset + 0x700;
+			const u32 len = 0x300;
+			std::vector<u8> out(len, 0xCC);
+			unsigned f0 = ctx.fetches;
+			CHECK(sr_read(&sc, a, len, &out[0]) == SR_OK, "spanning read served");
+			bool ok = true;
+			for (u32 i = 0; i < len && ok; ++i)
+			{
+				u8 want = (i < 0x100) ? acard[0x700 + i] : 0;
+				if (out[i] != want)
+					ok = false;
+			}
+			CHECK(ok, "tail bytes exact, gap pads zero in one span");
+			CHECK(ctx.fetches <= f0 + 2, "span costs at most two page fetches");
+		}
+		// Cross-page span in one read: extent 127 tail, the 0x7800 gap,
+		// then extent 128 head on the next page (/A.BIN @0x800).
+		{
+			u64 a = exts[127].discOffset + 0x700;
+			u32 len = (u32)(exts[128].discOffset + 0x100 - a);
+			CHECK(len == 0x7A00, "span reaches the next page head");
+			std::vector<u8> out(len, 0xCC);
+			unsigned f0 = ctx.fetches;
+			CHECK(sr_read(&sc, a, len, &out[0]) == SR_OK, "cross-page span served");
+			bool ok = true;
+			for (u32 i = 0; i < len && ok; ++i)
+			{
+				u8 want;
+				if (i < 0x100)
+					want = acard[0x700 + i];
+				else if (a + i >= exts[128].discOffset)
+					want = acard[0x800 + (u32)(a + i - exts[128].discOffset)];
+				else
+					want = 0;
+				if (out[i] != want)
+					ok = false;
+			}
+			CHECK(ok, "tail, gap zeros, and next-page head exact in one read");
+			CHECK(ctx.fetches <= f0 + 3, "cross-page span costs at most three fetches");
+		}
+		// Gap inside the span reads zero; MISS outside leaves the buffer.
+		{
+			u64 gap = exts[0].discOffset + exts[0].length + 0x10;
+			std::vector<u8> out(0x40, 0xCC);
+			CHECK(sr_read(&sc, gap, 0x40, &out[0]) == SR_OK, "gap read served");
+			bool ok = true;
+			for (size_t i = 0; i < out.size() && ok; ++i)
+				if (out[i] != 0)
+					ok = false;
+			CHECK(ok, "in-span gap pads zero");
+			std::vector<u8> out2(0x40, 0xCC);
+			CHECK(sr_read(&sc, 0x100, 0x40, &out2[0]) == SR_MISS, "outside is MISS");
+			bool untouched = true;
+			for (size_t i = 0; i < out2.size(); ++i)
+				if (out2[i] != 0xCC)
+					untouched = false;
+			CHECK(untouched, "MISS writes nothing");
+		}
+		// Storage failure (torn chain) fails loudly, never partial.
+		// /A.BIN starts right after PG.BIN's clusters; break its chain
+		// at the second cluster (rfat reports corrupt, not short).
+		{
+			MemDisk d2 = d;
+			const unsigned pgClus =
+				(unsigned)((pgfile.size() + 511) / 512);
+			const unsigned victim = 2 + pgClus + 1; // /A.BIN cluster 2
+			d2.img[512 + 4 + (victim - 2) * 2] = 0x00;
+			d2.img[512 + 4 + (victim - 2) * 2 + 1] = 0x00;
+			rfat_drop_cache();
+			rfat_vol v2;
+			CHECK(rfat_mount(&v2, DiskRead, &d2, plba) == RFAT_OK, "remounts edited image");
+			pg_ctx c2;
+			pg_idx idx2[341];
+			unsigned char pg2[4096];
+			CHECK(pg_open(&c2, &v2, "/PG.BIN", idx2, 341, pg2,
+						  kDiscId, 0, kEpoch) == PG_OK,
+				  "table still opens (chain break is in data, not table)");
+			sr_ctx sc2;
+			CHECK(sr_init_paged(&sc2, &c2, &v2, kDecl) == SR_OK,
+				  "reader adopts over edited image");
+			std::vector<u8> out(0x1000, 0xCC);
+			CHECK(sr_read(&sc2, exts[0].discOffset, 0x1000, &out[0]) == SR_EIO,
+				  "torn chain fails loudly");
+			rfat_drop_cache();
+		}
+		// Dangling path fails loudly, never partial.
+		{
+			std::vector<u8> out(0x80, 0xCC);
+			CHECK(sr_read(&sc, exts[299].discOffset, 0x80, &out[0]) == SR_EIO,
+				  "missing file is EIO, never partial");
+		}
+		// Wrong epoch refuses at open (stale file under a new boot).
+		{
+			pg_ctx c3;
+			pg_idx idx3[341];
+			unsigned char pg3[4096];
+			CHECK(pg_open(&c3, &vol, "/PG.BIN", idx3, 341, pg3,
+						  kDiscId, 0, kEpoch + 1) == PG_EBADTABLE,
+				  "stale epoch refused");
+		}
+		// Wrong identity refuses at open.
+		{
+			pg_ctx c3;
+			pg_idx idx3[341];
+			unsigned char pg3[4096];
+			CHECK(pg_open(&c3, &vol, "/PG.BIN", idx3, 341, pg3,
+						  0xDEADBEEFu, 0, kEpoch) == PG_EBADTABLE,
+				  "foreign game refused");
+		}
+		// Anti-shadow: a table below the declared size refuses at adopt.
+		{
+			std::vector<ManifestExtent> low;
+			low.push_back(Ext(0x1000, 0x100, RIIVO_EXT_EXTERNAL, RIIVO_SRC_SD,
+							  0, "/A.BIN", 0));
+			std::vector<u8> lblob, lfile;
+			CHECK(Riivo::BuildManifestV1(low, Riivo::RIIVO_MANIFEST_DISCOVER,
+										  kDiscId, 0, Riivo::RIIVO_CAP_SPLIT_READ,
+										  Riivo::RIIVO_PROV_BOUNDED, lblob, why));
+			CHECK(Riivo::BuildPagedFile(lblob, kEpoch, lfile, why));
+			ImgFile lf;
+			lf.name83 = "LOW     BIN";
+			lf.data = lfile;
+			std::vector<ImgFile> lfiles;
+			lfiles.push_back(lf);
+			MemDisk ld;
+			BuildImage(ld, lfiles);
+			rfat_drop_cache();
+			rfat_vol lv;
+			CHECK(rfat_mount(&lv, DiskRead, &ld, plba) == RFAT_OK, "mounts low image");
+			pg_ctx lc;
+			pg_idx lidx[341];
+			unsigned char lpg[4096];
+			CHECK(pg_open(&lc, &lv, "/LOW.BIN", lidx, 341, lpg,
+						  kDiscId, 0, kEpoch) == PG_OK,
+				  "low table opens (bounds are the reader's job)");
+			sr_ctx sc3;
+			CHECK(sr_init_paged(&sc3, &lc, &lv, kDecl) == SR_EBADTABLE,
+				  "table below declared size refused at adopt");
+			rfat_drop_cache();
+		}
+	}
+	// Corruptions refuse: bad magic, bad CRC, unsorted index, wrong page
+	// id, missing file, undersized index buffer.
+	{
 		pg_ctx c2;
-		CHECK(pg_open(&c2, &vol, "/NOPE.BIN", index, 341, page, pathTmp) == PG_EIO,
+		pg_idx idx2[341];
+		unsigned char pg2[4096];
+		CHECK(pg_open(&c2, &vol, "/NOPE.BIN", idx2, 341, pg2,
+					  kDiscId, 0, kEpoch) == PG_EIO,
 			  "missing table file is EIO");
 	}
 	{
 		// Flip one page byte inside the file image (entry area).
 		MemDisk d2 = d;
-		const unsigned pagesOff = 512 + ((3 * 12 + 511) & ~511u);
+		const unsigned pagesOff = (512u + 3u * 12u + 511u) & ~511u;
 		d2.img[2048 + pagesOff + 100] ^= 0xFF;
+		rfat_drop_cache();
 		rfat_vol v2;
 		CHECK(rfat_mount(&v2, DiskRead, &d2, plba) == RFAT_OK, "remounts edited image");
 		pg_ctx c2;
 		pg_idx idx2[341];
 		unsigned char pg2[4096];
-		char pt2[512];
-		CHECK(pg_open(&c2, &v2, "/PG.BIN", idx2, 341, pg2, pt2) == PG_EBADTABLE,
+		CHECK(pg_open(&c2, &v2, "/PG.BIN", idx2, 341, pg2,
+					  kDiscId, 0, kEpoch) == PG_EBADTABLE,
 			  "flipped page byte fails the open CRC");
+		rfat_drop_cache();
 	}
 	{
 		// Swap two index rows (order violation).
@@ -322,35 +470,39 @@ int main()
 		memcpy(tmp, &d2.img[2048 + 512], 12);
 		memcpy(&d2.img[2048 + 512], &d2.img[2048 + 524], 12);
 		memcpy(&d2.img[2048 + 524], tmp, 12);
+		rfat_drop_cache();
 		rfat_vol v2;
 		CHECK(rfat_mount(&v2, DiskRead, &d2, plba) == RFAT_OK, "remounts edited image");
 		pg_ctx c2;
 		pg_idx idx2[341];
 		unsigned char pg2[4096];
-		char pt2[512];
-		CHECK(pg_open(&c2, &v2, "/PG.BIN", idx2, 341, pg2, pt2) == PG_EBADTABLE,
+		CHECK(pg_open(&c2, &v2, "/PG.BIN", idx2, 341, pg2,
+					  kDiscId, 0, kEpoch) == PG_EBADTABLE,
 			  "swapped index rows refused (order or CRC)");
+		rfat_drop_cache();
 	}
 	{
 		// Truncated magic.
 		MemDisk d2 = d;
 		d2.img[2048] ^= 0xFF;
+		rfat_drop_cache();
 		rfat_vol v2;
 		CHECK(rfat_mount(&v2, DiskRead, &d2, plba) == RFAT_OK, "remounts edited image");
 		pg_ctx c2;
 		pg_idx idx2[341];
 		unsigned char pg2[4096];
-		char pt2[512];
-		CHECK(pg_open(&c2, &v2, "/PG.BIN", idx2, 341, pg2, pt2) == PG_EBADTABLE,
+		CHECK(pg_open(&c2, &v2, "/PG.BIN", idx2, 341, pg2,
+					  kDiscId, 0, kEpoch) == PG_EBADTABLE,
 			  "bad magic refused");
+		rfat_drop_cache();
 	}
 	{
 		// Index buffer too small for the table.
 		pg_ctx c2;
 		pg_idx small[2];
 		unsigned char pg2[4096];
-		char pt2[512];
-		CHECK(pg_open(&c2, &vol, "/PG.BIN", small, 2, pg2, pt2) == PG_EBADTABLE,
+		CHECK(pg_open(&c2, &vol, "/PG.BIN", small, 2, pg2,
+					  kDiscId, 0, kEpoch) == PG_EBADTABLE,
 			  "undersized index buffer refused");
 	}
 	printf("%d checks, %d failures\n", checks, failures);

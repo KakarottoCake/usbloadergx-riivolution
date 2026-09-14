@@ -36,10 +36,11 @@ namespace Riivo
 	{
 		bool ok;
 		u32 moduleAddr;   //!< module base, cache-line aligned
-		u32 tableAddr;    //!< the redirect table
+		u32 tableAddr;    //!< the redirect table (0 when tableOnStorage)
 		u32 tableLen;
 		u32 genAddr;      //!< staged ORIGINAL-slice store (0 when none)
 		u32 genLen;       //!< bytes reserved at genAddr
+		bool tableOnStorage; //!< table lives as a file, not MEM2 bytes
 		u32 newArenaHi;   //!< what MEM2 arena high must become
 		u32 reserved;     //!< total taken from the game
 		u32 heapLeft;
@@ -49,15 +50,19 @@ namespace Riivo
 
 		OnDemandLayout()
 			: ok(false), moduleAddr(0), tableAddr(0), tableLen(0),
-			  genAddr(0), genLen(0), newArenaHi(0), reserved(0), heapLeft(0),
+			  genAddr(0), genLen(0), tableOnStorage(false),
+			  newArenaHi(0), reserved(0), heapLeft(0),
 			  syncFound(false) {}
 	};
 
 	//! Decide the layout for a table of `tableLen` bytes plus the module,
 	//! with `genLen` staged-slice bytes after the table, given the game's
-	//! MEM2 arena. Refuses rather than overlapping anything.
+	//! MEM2 arena. Refuses rather than overlapping anything. With
+	//! `tableOnStorage` the table (and any store) live as files: the
+	//! reservation holds the module alone.
 	bool PlanOnDemand(const Mem2Arena &arena, u32 tableLen,
-					  OnDemandLayout &out, u32 genLen = 0);
+					  OnDemandLayout &out, u32 genLen = 0,
+					  bool tableOnStorage = false);
 
 	//! What the staged table is and what bounds it. `site` is a patch site
 	//! the probe found. `partLba` is the FAT partition the table's paths

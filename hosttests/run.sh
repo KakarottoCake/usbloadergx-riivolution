@@ -163,7 +163,7 @@ if [ -n "$MODCC" ]; then
 	MODF="-c -O2 -Wall -Wextra -mcpu=arm926ej-s -mthumb -mthumb-interwork"
 	MODF="$MODF -mbig-endian -ffreestanding -fno-builtin -fno-common"
 	MODOBJ=""
-	for m in riivo_fat riivo_redirect riivo_segread riivo_glue riivo_ios; do
+	for m in riivo_fat riivo_redirect riivo_segread riivo_glue riivo_ios riivo_page; do
 		$MODCC $MODF -o "$OUT/$m.o" "$SRC/riivo/ios/$m.c"
 		MODOBJ="$MODOBJ $OUT/$m.o"
 	done
@@ -205,14 +205,17 @@ build_run test_manifest "$SRC/riivo/RiivoManifest.cpp"
 # armed-path init needs 32-bit device addresses the host cannot provide,
 # so init-success dispatch stays covered by the sr-direct sections above
 # plus the ARM build - stated, not stubbed into passing.
-build_run test_segread -DRIIVO_HOST_TEST "$SRC/riivo/ios/riivo_segread.c" "$SRC/riivo/ios/riivo_redirect.c" "$SRC/riivo/ios/riivo_fat.c" "$SRC/riivo/ios/riivo_ios.c" "$SRC/riivo/ios/riivo_glue.c" "$SRC/riivo/RiivoManifest.cpp" "$SRC/riivo/RiivoRedirectTable.cpp"
+build_run test_segread -DRIIVO_HOST_TEST "$SRC/riivo/ios/riivo_segread.c" "$SRC/riivo/ios/riivo_redirect.c" "$SRC/riivo/ios/riivo_fat.c" "$SRC/riivo/ios/riivo_ios.c" "$SRC/riivo/ios/riivo_glue.c" "$SRC/riivo/ios/riivo_page.c" "$SRC/riivo/RiivoManifest.cpp" "$SRC/riivo/RiivoRedirectTable.cpp"
 
 # Paged RIV1 table access: production-built tables sliced into pages,
 # paged lookups equal to resident scans, fetch behavior bounded, path
 # resolution exact, corruptions refused. Real ios/riivo_page.c over a
 # synthetic FAT16 volume. The storage half of the survival answer: the
-# table file lives on the card, ~4.6 KB stays resident.
-build_run test_page "$SRC/riivo/ios/riivo_page.c" "$SRC/riivo/ios/riivo_fat.c" "$SRC/riivo/RiivoManifest.cpp"
+# table file lives on the card, ~4.6 KB stays resident. The serving half
+# runs the real segment reader over the pager (sr_init_paged) against
+# the same fixtures: complete reads across page/segment boundaries,
+# storage failures, and MISS delegation.
+build_run test_page -DRIIVO_HOST_TEST "$SRC/riivo/ios/riivo_page.c" "$SRC/riivo/ios/riivo_fat.c" "$SRC/riivo/ios/riivo_segread.c" "$SRC/riivo/RiivoManifest.cpp"
 
 # WP1 fixtures: revision/disc filters with unknown-axis skipping, multi-XML
 # merge precedence, skipped patch-ref accounting, selection round-trip.
@@ -230,7 +233,7 @@ build_run test_manifest_extents "$SRC/riivo/RiivoFstBuild.cpp" "$SRC/riivo/Riivo
 # (original prefix -> external slice -> original suffix) served complete
 # through ios/riivo_segread.c, whole-file parity with BuildPlanManifest,
 # the no-silent-downgrade gate, emitter refusals incl. the 8 MB store cap.
-build_run test_plansegments "$SRC/riivo/RiivoPatchPlan.cpp" "$SRC/riivo/RiivoFstBuild.cpp" "$SRC/riivo/RiivoFst.cpp" "$SRC/riivo/RiivoFstWalk.cpp" "$SRC/riivo/RiivoFragPlan.cpp" "$SRC/riivo/RiivoValidate.cpp" "$SRC/riivo/RiivoFile.cpp" "$SRC/riivo/RiivoManifest.cpp" "$SRC/riivo/RiivoRedirectTable.cpp" "$SRC/riivo/RiivoConfig.cpp" "$SRC/xml/pugixml.cpp" "$SRC/riivo/ios/riivo_segread.c" "$SRC/riivo/ios/riivo_redirect.c" "$SRC/riivo/ios/riivo_fat.c"
+build_run test_plansegments "$SRC/riivo/RiivoPatchPlan.cpp" "$SRC/riivo/RiivoFstBuild.cpp" "$SRC/riivo/RiivoFst.cpp" "$SRC/riivo/RiivoFstWalk.cpp" "$SRC/riivo/RiivoFragPlan.cpp" "$SRC/riivo/RiivoValidate.cpp" "$SRC/riivo/RiivoFile.cpp" "$SRC/riivo/RiivoManifest.cpp" "$SRC/riivo/RiivoRedirectTable.cpp" "$SRC/riivo/RiivoConfig.cpp" "$SRC/xml/pugixml.cpp" "$SRC/riivo/ios/riivo_segread.c" "$SRC/riivo/ios/riivo_redirect.c" "$SRC/riivo/ios/riivo_fat.c" "$SRC/riivo/ios/riivo_page.c"
 
 # Coherent patch plan through the production builder: file replacement and
 # creation, folder recursion + dataless basename, duplicate precedence,

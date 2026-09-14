@@ -6,6 +6,7 @@
  ***************************************************************************/
 #include "RiivoManifest.hpp"
 
+#include <cstring>
 #include <map>
 
 namespace Riivo
@@ -364,6 +365,91 @@ namespace Riivo
 				}
 			}
 		}
+		return true;
+	}
+
+	bool BuildPagedFile(const std::vector<u8> &manifest, u32 epoch,
+						std::vector<u8> &out, std::string &why)
+	{
+		why.clear();
+		out.clear();
+		if (manifest.size() < RIIVO_MANIFEST_HEADER
+			|| !ValidateManifestV1(&manifest[0], (u32) manifest.size(), why))
+		{
+			if (why.empty())
+				why = "paged file: manifest invalid";
+			return false;
+		}
+		const u8 *m = &manifest[0];
+		const u32 count = GetLE32(m + 20);
+		const u32 strOff = GetLE32(m + 24);
+		const u32 discId = GetLE32(m + 32);
+		const u32 partIdx = GetLE32(m + 36);
+		const u32 nPages = (count + 127) / 128;
+		if (count == 0 || nPages == 0 || nPages > RIIVO_PAGED_MAX_PAGES)
+		{
+			why = "paged file: extent count outside pageable range";
+			return false;
+		}
+		u64 rangeLo = ~(u64) 0, rangeHi = 0;
+		for (u32 i = 0; i < count; ++i)
+		{
+			const u8 *e = m + RIIVO_MANIFEST_HEADER + i * RIIVO_MANIFEST_ENTRY;
+			u64 off = (u64) GetLE32(e) | ((u64) GetLE32(e + 4) << 32);
+			u32 len = GetLE32(e + 8);
+			if (off < rangeLo)
+				rangeLo = off;
+			if (len > 0 && off + len > rangeHi)
+				rangeHi = off + len;
+			else if (len == 0 && off >= rangeHi)
+				rangeHi = off;
+		}
+		const u32 pagesOff = (512u + nPages * 12u + 511u) & ~511u;
+		const u32 blobLen = (u32) manifest.size() - strOff;
+		u64 total = (u64) pagesOff + (u64) nPages * 4096 + blobLen;
+		if (total > RIIVO_PAGED_MAX_FILE)
+		{
+			why = "paged file: exceeds file cap";
+			return false;
+		}
+		std::vector<u8> file((size_t) total, 0);
+		// Absolute-offset stores (PutLE appends; the header lives at [0,64)).
+		u32 hdr[16] = {
+			RIIVO_PAGED_MAGIC, (1u | (12u << 16)), nPages, count,
+			pagesOff, (u32) (pagesOff + (u64) nPages * 4096), 0, 0,
+			discId, partIdx, epoch,
+			(u32) (rangeLo & 0xFFFFFFFFULL), (u32) (rangeLo >> 32),
+			(u32) (rangeHi & 0xFFFFFFFFULL), (u32) (rangeHi >> 32), 0
+		};
+		for (int i = 0; i < 16; ++i)
+		{
+			file[i * 4 + 0] = (u8) (hdr[i] & 0xFF);
+			file[i * 4 + 1] = (u8) ((hdr[i] >> 8) & 0xFF);
+			file[i * 4 + 2] = (u8) ((hdr[i] >> 16) & 0xFF);
+			file[i * 4 + 3] = (u8) ((hdr[i] >> 24) & 0xFF);
+		}
+		for (u32 p = 0; p < nPages; ++p)
+		{
+			u32 first = p * 128;
+			const u8 *e = m + RIIVO_MANIFEST_HEADER + first * RIIVO_MANIFEST_ENTRY;
+			u64 firstKey = (u64) GetLE32(e) | ((u64) GetLE32(e + 4) << 32);
+			size_t at = 512 + p * 12;
+			for (int k = 0; k < 8; ++k)
+				file[at + k] = (u8) ((firstKey >> (8 * k)) & 0xFF);
+			file[at + 8] = (u8) (p & 0xFF);
+			file[at + 9] = (u8) ((p >> 8) & 0xFF);
+			u32 n = count - first;
+			if (n > 128)
+				n = 128;
+			memcpy(&file[pagesOff + p * 4096], e, n * 32);
+		}
+		memcpy(&file[pagesOff + (u64) nPages * 4096], m + strOff, blobLen);
+		u32 crc = Crc32(&file[512], (u32) total - 512);
+		file[24] = (u8) (crc & 0xFF);
+		file[25] = (u8) ((crc >> 8) & 0xFF);
+		file[26] = (u8) ((crc >> 16) & 0xFF);
+		file[27] = (u8) ((crc >> 24) & 0xFF);
+		out.swap(file);
 		return true;
 	}
 }

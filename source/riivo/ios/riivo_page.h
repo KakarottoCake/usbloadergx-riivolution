@@ -14,7 +14,10 @@
  *   [8]    u32 nPages, u32 nEntries
  *   [16]   u32 pagesOff (512-aligned), u32 blobOff
  *   [24]   u32 crc32 over [512, fileSize), u32 reserved (0)
- *   [32..511] reserved zeros (header block is 512 bytes)
+ *   [32]   u32 discId, u32 partIdx (identity: stale file under a new
+ *          boot refuses), u32 epoch (must equal the installed epoch)
+ *   [44]   u64 rangeLo, u64 rangeHi (covered span, for fast reject)
+ *   [60..511] reserved zeros (header block is 512 bytes)
  *   [512]  index: nPages x {u64 firstKey, u16 pageId, u16 pad} (12 B)
  *   [pagesOff]  pages: nPages x 4096 B entry slices
  *   [blobOff]   string blob (manifest verbatim)
@@ -71,29 +74,44 @@ typedef struct
 	unsigned int pagesOff;
 	unsigned int blobOff;
 	unsigned int fileSize;
+	unsigned long long rangeLo;
+	unsigned long long rangeHi;
 	/* Resident caller buffers: index (nPages rows), one page, path tmp. */
 	pg_idx *index;
 	unsigned int indexCap;
 	unsigned char *page;
 	unsigned int cachedPage;
 	int cachedValid;
-	char *pathTmp;
+	char path[512];
 	/* Counters, so tests (and the boot log) can prove fetch behavior. */
 	unsigned int fetches;
 	unsigned int pathReads;
 } pg_ctx;
 
-/* Open and validate: magic, version, shift, counts vs cap, index order
-   and page ids, offsets inside the file. Reads the index once into the
-   caller buffer. Refuses without touching anything else on any failure. */
+/* Open and validate: magic, version, shift, counts vs cap, identity
+   (disc/part/epoch against the install's values - a stale file from an
+   earlier boot refuses here, not at serve time), offsets inside the
+   file, index order and page ids, then the CRC over [512, fileSize).
+   Reads the index once into the caller buffer. Refuses without touching
+   anything else on any failure. */
 int pg_open(pg_ctx *c, rfat_vol *vol, const char *path,
 			pg_idx *idxBuf, unsigned int idxCap,
-			unsigned char *pageBuf, char *pathBuf);
+			unsigned char *pageBuf,
+			unsigned int expDiscId, unsigned int expPartIdx,
+			unsigned int expEpoch);
 
 /* Locate the extent containing `off`. PG_MISS when none does (a gap the
    caller delegates, exactly like an unlisted manifest range). At most one
    page fetch; a cached page costs none. Never partial: fields or nothing. */
 int pg_locate(pg_ctx *c, unsigned long long off, pg_entry *out);
+
+/* Covered span for fast reject (from the validated header, no fetch). */
+void pg_range(const pg_ctx *c, unsigned long long *lo, unsigned long long *hi);
+
+/* First extent start strictly above `off`, or ~(u64)0 if none: the gap
+   bound the router needs after a MISS inside the span. Index-only unless
+   the answer hides mid-page (at most one fetch). */
+unsigned long long pg_next(pg_ctx *c, unsigned long long off);
 
 /* Resolve a blob path into buf (always NUL-terminated on success).
    Bounded by the file size and PG_PATH_MAX; refuses otherwise. */

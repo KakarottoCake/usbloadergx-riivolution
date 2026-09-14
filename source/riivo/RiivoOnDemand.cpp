@@ -17,15 +17,18 @@
 namespace Riivo
 {
 	bool PlanOnDemand(const Mem2Arena &arena, u32 tableLen,
-					  OnDemandLayout &out, u32 genLen)
+					  OnDemandLayout &out, u32 genLen,
+					  bool tableOnStorage)
 	{
 		out = OnDemandLayout();
 
-		if (tableLen == 0)
+		if (tableLen == 0 && !tableOnStorage)
 		{
 			out.why = "no redirect table to place";
 			return false;
 		}
+		if (tableOnStorage)
+			out.tableOnStorage = true;
 		const u32 moduleBytes = ModuleFootprint();
 		if (moduleBytes == 0)
 		{
@@ -33,8 +36,9 @@ namespace Riivo
 			return false;
 		}
 
-		//! One reservation for module, table, and staged slices. Rounding
-		//! each part up to a cache line keeps the module - which is placed
+		//! One reservation for module, table, and staged slices - or the
+		//! module alone when the table lives as a file. Rounding each
+		//! part up to a cache line keeps the module - which is placed
 		//! first - aligned for the DMA buffers inside it, and the store
 		//! 32-aligned so the storage layer can DMA straight into it.
 		const u32 align = MEM2_RESERVE_ALIGN;
@@ -44,14 +48,16 @@ namespace Riivo
 			out.why = "module size overflows when aligned";
 			return false;
 		}
-		const u32 tablePart = (tableLen + align - 1) & ~(align - 1);
-		if (tablePart < tableLen)
+		const u32 tablePart = tableOnStorage
+							  ? 0 : (tableLen + align - 1) & ~(align - 1);
+		if (!tableOnStorage && tablePart < tableLen)
 		{
 			out.why = "table size overflows when aligned";
 			return false;
 		}
-		const u32 genPart = (genLen + align - 1) & ~(align - 1);
-		if (genLen > 0 && genPart < genLen)
+		const u32 genPart = (tableOnStorage || genLen == 0)
+							? 0 : (genLen + align - 1) & ~(align - 1);
+		if (!tableOnStorage && genLen > 0 && genPart < genLen)
 		{
 			out.why = "slice store size overflows when aligned";
 			return false;
@@ -71,34 +77,39 @@ namespace Riivo
 		}
 
 		out.moduleAddr = r.addr;
-		out.tableAddr = r.addr + modulePart;
-		out.tableLen = tableLen;
-		out.genAddr = genLen ? r.addr + modulePart + tablePart : 0;
-		out.genLen = genLen;
+		out.tableAddr = tableOnStorage ? 0 : r.addr + modulePart;
+		out.tableLen = tableOnStorage ? 0 : tableLen;
+		out.genAddr = (!tableOnStorage && genLen) ? r.addr + modulePart + tablePart : 0;
+		out.genLen = tableOnStorage ? 0 : genLen;
 		out.newArenaHi = r.newArenaHi;
 		out.reserved = r.reserved;
 		out.heapLeft = r.heapLeft;
 
-		//! All three must sit inside what was actually reserved.
+		//! All parts must sit inside what was actually reserved.
 		//! ReserveMem2 has already proved the block fits; this proves the
 		//! split of it does, which is the part that would silently overlap.
-		if (out.tableAddr < out.moduleAddr
-			|| (u64) out.tableAddr + tableLen > (u64) r.addr + r.reserved)
+		//! Storage-backed layouts hold the module alone (no table/store
+		//! addresses to check).
+		if (!tableOnStorage)
 		{
-			out.why = "table does not fit alongside the module";
-			return false;
-		}
-		if (genLen > 0
-			&& (out.genAddr < out.tableAddr + tablePart
-				|| (u64) out.genAddr + genLen > (u64) r.addr + r.reserved))
-		{
-			out.why = "slice store does not fit alongside the table";
-			return false;
-		}
-		if ((u64) out.moduleAddr + moduleBytes > out.tableAddr)
-		{
-			out.why = "module and table overlap";
-			return false;
+			if (out.tableAddr < out.moduleAddr
+				|| (u64) out.tableAddr + tableLen > (u64) r.addr + r.reserved)
+			{
+				out.why = "table does not fit alongside the module";
+				return false;
+			}
+			if (genLen > 0
+				&& (out.genAddr < out.tableAddr + tablePart
+					|| (u64) out.genAddr + genLen > (u64) r.addr + r.reserved))
+			{
+				out.why = "slice store does not fit alongside the table";
+				return false;
+			}
+			if ((u64) out.moduleAddr + moduleBytes > out.tableAddr)
+			{
+				out.why = "module and table overlap";
+				return false;
+			}
 		}
 		if (out.moduleAddr & (align - 1))
 		{
@@ -120,14 +131,19 @@ namespace Riivo
 		layout = OnDemandLayout();
 		why.clear();
 
-		if (table.empty())
+		//! Paged tables live as files (staged by the caller before this
+		//! runs); the reservation holds the module alone and nothing is
+		//! copied. Every other kind still carries its table bytes here.
+		const bool paged = (meta.kind == RIIVO_TABLEKIND_PAGED);
+		if (table.empty() && !paged)
 		{
 			why = "no redirect table to install";
 			return false;
 		}
 
 		const Mem2Arena arena = ReadMem2Arena();
-		if (!PlanOnDemand(arena, (u32) table.size(), layout, genLen))
+		if (!PlanOnDemand(arena, paged ? 0 : (u32) table.size(), layout,
+						  paged ? 0 : genLen, paged))
 		{
 			why = layout.why;
 			return false;
@@ -151,13 +167,18 @@ namespace Riivo
 
 		//! The table, where the module will read it. IOS reads this across the
 		//! bus, so it has to reach memory rather than sit in the PPC's cache.
-		memcpy((void *) layout.tableAddr, &table[0], table.size());
-		DCFlushRange((void *) (layout.tableAddr & ~31u),
-					 (u32) table.size() + 64);
+		//! Paged tables skip the copy (the module pages the staged file);
+		//! the reservation holds the module alone.
+		if (!paged)
+		{
+			memcpy((void *) layout.tableAddr, &table[0], table.size());
+			DCFlushRange((void *) (layout.tableAddr & ~31u),
+						 (u32) table.size() + 64);
+		}
 
 		ModuleParams p;
-		p.table = layout.tableAddr;
-		p.tableLen = layout.tableLen;
+		p.table = paged ? 0 : layout.tableAddr;
+		p.tableLen = paged ? 0 : layout.tableLen;
 		p.partLba = partLba;
 		p.tableKind = meta.kind;
 		p.genBase = layout.genAddr;
@@ -168,10 +189,12 @@ namespace Riivo
 		p.expPartIdx = meta.partIdx;
 		p.epoch = meta.epoch;
 		//! Activation state at install: armed only when nothing remains to
-		//! fill. A pending slice store arms late after FillGenStore proves
-		//! it; until then every read MISSES without initializing, so the
-		//! module cannot serve - or cache - a half-staged contract.
-		p.armed = (genLen == 0) ? 1 : 0;
+		//! stage. A pending MEM2 slice store arms late after FillGenStore
+		//! proves it; a paged contract arms late after its files land
+		//! (FillGenFile + ArmModule in Activate). Until then every read
+		//! MISSES without initializing, so the module cannot serve - or
+		//! cache - a half-staged contract.
+		p.armed = (!paged && genLen == 0) ? 1 : 0;
 		//! Left zero deliberately: ApplyDiPatchOnDemand finds the real
 		//! os_sync_after_write in the running plugin and overwrites this. A
 		//! guess here would be called on every single read.
@@ -188,11 +211,15 @@ namespace Riivo
 		//! stay dirty in Starlet's cache and the ack gate below withholds.
 		layout.syncFound = (inst.sync != 0);
 
-		gprintf("Riivo: on-demand ready - table %08x (%u bytes), module %08x, "
-				"arena2Hi -> %08x, %u bytes left to the game\n",
-				layout.tableAddr, (unsigned) layout.tableLen,
+		gprintf("Riivo: on-demand ready - module %08x, arena2Hi -> %08x, "
+				"%u bytes left to the game\n",
 				layout.moduleAddr, layout.newArenaHi,
 				(unsigned) layout.heapLeft);
+		if (paged)
+			gprintf("Riivo: on-demand table lives as a file (no MEM2 copy)\n");
+		else
+			gprintf("Riivo: on-demand table %08x (%u bytes, MEM2 copy)\n",
+					layout.tableAddr, (unsigned) layout.tableLen);
 		if (layout.genLen > 0)
 			gprintf("Riivo: on-demand slice store %08x (%u bytes, fill pending)\n",
 					layout.genAddr, (unsigned) layout.genLen);

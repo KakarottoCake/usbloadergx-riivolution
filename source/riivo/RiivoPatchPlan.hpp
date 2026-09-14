@@ -258,7 +258,10 @@ inline bool PlanNeedsSegments(const PatchPlan &plan)
 //! files. Whole files emit one EXTERNAL run each (srcOffset 0), identical
 //! to BuildPlanManifest for the same inputs; partial files emit per-segment
 //! runs (EXTERNAL with source offsets, ZERO) with ORIGINAL runs staged as
-//! GENERATED slices in `gen` (bytes filled late from the disc, pre-boot).
+//! GENERATED slices in `gen` (bytes filled late from the disc, pre-boot) -
+//! unless `scratchExternal` names a scratch file, in which case ORIGINAL
+//! runs emit as EXTERNAL runs into it (srcOffset = genOff, same layout in
+//! `gen` for the file writer) and no GENERATED run is produced at all.
 //! Executable and zero-length entries never appear. `bases` maps plan disc
 //! key -> slot base (PartitionBytes); `sizes` verifies every referenced
 //! external (missing/short refuses naming the file). Sorted, built and
@@ -268,7 +271,8 @@ bool BuildSegmentManifest(const PatchPlan &plan,
 						  FileSizeProvider *sizes,
 						  u32 discId, u32 partIdx,
 						  std::vector<u8> &blob, GenLayout &gen,
-						  std::string &why);
+						  std::string &why,
+						  const std::string &scratchExternal = "");
 
 } // namespace Riivo
 

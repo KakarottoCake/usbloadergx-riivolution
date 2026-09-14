@@ -50,6 +50,12 @@ namespace Riivo
 	static const u32 RIIVO_PARAM_ERRORS_OFF = 108;
 	static const u32 RIIVO_PARAM_ACKED_OFF = 112;
 	static const u32 RIIVO_PARAM_SIZE = 116;
+
+	//! Table kinds the module serves (mirror ios/riivo_ios.h - checked
+	//! equal host-side; a mismatch serves the wrong contract).
+	static const u32 RIIVO_TABLEKIND_RIIV = 0;
+	static const u32 RIIVO_TABLEKIND_RIV1 = 1;
+	static const u32 RIIVO_TABLEKIND_PAGED = 2;
 	//! Everything the module cannot know until the console is running.
 	struct ModuleParams
 	{
