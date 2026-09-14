@@ -166,6 +166,7 @@ namespace Riivo
 		p.declHi = (u32) (meta.declSize >> 32);
 		p.expDiscId = meta.discId;
 		p.expPartIdx = meta.partIdx;
+		p.epoch = meta.epoch;
 		//! Activation state at install: armed only when nothing remains to
 		//! fill. A pending slice store arms late after FillGenStore proves
 		//! it; until then every read MISSES without initializing, so the

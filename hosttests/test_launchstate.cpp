@@ -291,6 +291,51 @@ int main() {
         ck(f == 0, "failed boot hands back no staging buffer");
         ck(!l.FileWorkIncomplete(), "next boot starts clean");
     }
+    // Module acknowledgment gate: an FST depending on the on-demand
+    // module commits only after ARM echoes this boot's generation.
+    {
+        LaunchState l;
+        l.Begin();
+        u32 gen = l.generation;
+        ck(gen != 0, "generation nonzero");
+        ck(!l.NeedsModuleAck(), "no requirement by default");
+        ck(l.ModuleAckSatisfied(), "satisfied when not required");
+        l.fileWorkWanted = true;
+        l.Stage(bootABytes, sizeof(bootABytes), 1);
+        FstPlacement p;
+        p.ok = true;
+        l.RequireModuleAck();
+        ck(l.NeedsModuleAck(), "requirement recorded");
+        ck(!l.ModuleAckSatisfied(), "unsatisfied before any ack");
+        ck(!l.Book(p), "booking refused without the ack");
+        ck(!l.fileWorkLive, "nothing went live on the refused booking");
+        ck(!l.NoteModuleAck(0), "zero echo satisfies nothing");
+        ck(!l.NoteModuleAck(gen + 1), "stale/future echo satisfies nothing");
+        ck(!l.ModuleAckSatisfied(), "still unsatisfied");
+        ck(!l.Book(p), "booking still refused");
+        ck(l.NoteModuleAck(gen), "live-generation echo satisfies");
+        ck(l.ModuleAckSatisfied(), "gate open now");
+        ck(l.Book(p), "booking accepted after the ack");
+        ck(l.CanInstall(), "installable once booked with the ack");
+        l.Refuse(4);
+        ck(!l.CanInstall(), "refusal still wins over a satisfied gate");
+    }
+    // The gate does not leak across boots: a second boot re-requires.
+    {
+        LaunchState l;
+        l.Begin();
+        l.fileWorkWanted = true;
+        l.Stage(bootABytes, sizeof(bootABytes), 1);
+        l.RequireModuleAck();
+        l.NoteModuleAck(l.generation);
+        FstPlacement p;
+        p.ok = true;
+        ck(l.Book(p), "first boot books with its ack");
+        u8 *f = l.Begin();
+        (void)f;
+        ck(!l.NeedsModuleAck(), "requirement cleared by Begin");
+        ck(l.ModuleAckSatisfied(), "satisfied vacuously after Begin");
+    }
     printf("%d checks, %d failures\n", checks, failures);
     return failures ? 1 : 0;
 }

@@ -35,6 +35,21 @@
 
 namespace Riivo
 {
+	//! Parameter-block word offsets from g_params. The writer, the PPC
+	//! late-mutators (armed word), the uncached counter readers, and the
+	//! host offset tests all use these: a literal anywhere else is a drift
+	//! bug waiting for a struct reorder. Cache lines: 0-28 PPC install
+	//! inputs, 32-60 PPC RIV1 inputs, 64-92 activation word + pad
+	//! (PPC-owned), 96+ ARM-owned counters (PPC reads uncached, never
+	//! flushes; ARM never invalidates).
+	static const u32 RIIVO_PARAM_EPOCH_OFF = 60;
+	static const u32 RIIVO_PARAM_ARMED_OFF = 64;
+	static const u32 RIIVO_PARAM_STATE_OFF = 96;
+	static const u32 RIIVO_PARAM_READS_OFF = 100;
+	static const u32 RIIVO_PARAM_MISSES_OFF = 104;
+	static const u32 RIIVO_PARAM_ERRORS_OFF = 108;
+	static const u32 RIIVO_PARAM_ACKED_OFF = 112;
+	static const u32 RIIVO_PARAM_SIZE = 116;
 	//! Everything the module cannot know until the console is running.
 	struct ModuleParams
 	{
@@ -55,13 +70,14 @@ namespace Riivo
 		u32 declHi;     //!< declared virtual-disc bytes, high word
 		u32 expDiscId;  //!< game id the table was staged for
 		u32 expPartIdx; //!< partition index the table was staged for
+		u32 epoch;      //!< PPC boot generation; ARM echoes it to acked
 		u32 armed;      //!< 1 when the staged contract needs no fill
 		                //!< (loader flips it late after a verified fill)
 
 		ModuleParams()
 			: table(0), tableLen(0), partLba(0), readA(0), readB(0), config(0),
 			  sync(0), tableKind(0), genBase(0), genSize(0), declLo(0),
-			  declHi(0), expDiscId(0), expPartIdx(0), armed(0) {}
+			  declHi(0), expDiscId(0), expPartIdx(0), epoch(0), armed(0) {}
 	};
 
 	struct ModulePlan

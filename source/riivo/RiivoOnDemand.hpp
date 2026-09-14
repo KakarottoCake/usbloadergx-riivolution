@@ -67,10 +67,11 @@ namespace Riivo
 		u64 declSize;   //!< declared virtual-disc bytes (anti-shadow bound)
 		u32 discId;     //!< game id the table was staged for
 		u32 partIdx;    //!< partition index the table was staged for
+		u32 epoch;      //!< PPC boot generation the ARM ack must echo
 
 		OnDemandMeta()
 			: kind(0), genBase(0), genSize(0), declSize(0), discId(0),
-			  partIdx(0) {}
+			  partIdx(0), epoch(0) {}
 	};
 
 	//! Carry out the layout: lower the arena, copy the table, install the

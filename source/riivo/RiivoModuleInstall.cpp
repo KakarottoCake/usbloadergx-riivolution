@@ -61,8 +61,12 @@ namespace Riivo
 		}
 
 		//! Offsets must be inside the bytes we carry, or they came from a
-		//! different build than the blob did.
-		if (RIIVO_MODULE_PARAMS_OFF + 80 > RIIVO_MODULE_CODE_LEN
+		//! different build than the blob did. The block is RIIVO_PARAM_SIZE
+		//! bytes now: 8 original input words, 8 RIV1 input words, the
+		//! activation word plus pad, then the ARM-owned counters.
+		//! test_moduleinstall pins every offset against the ARM struct,
+		//! including the line split.
+		if (RIIVO_MODULE_PARAMS_OFF + RIIVO_PARAM_SIZE > RIIVO_MODULE_CODE_LEN
 			|| RIIVO_MODULE_ENTRY_OFF >= RIIVO_MODULE_CODE_LEN)
 		{
 			why = "module offsets do not match the module bytes";
@@ -121,7 +125,10 @@ namespace Riivo
 		}
 
 		//! Fill the parameter block. Field order matches riivo_ios.h; the
-		//! counters after it are left zero for the module to write.
+		//! ARM-owned counters after it are left zero for the module to
+		//! write. Layout by cache line: original inputs, RIV1 inputs,
+		//! activation word + pad, then counters - see riivo_cache.h for
+		//! why each side may only maintain its own lines.
 		u8 *q = &img[RIIVO_MODULE_PARAMS_OFF];
 		Wr32(q + 0, RIIVO_MODULE_MAGIC);
 		Wr32(q + 4, p.table);
@@ -131,14 +138,15 @@ namespace Riivo
 		Wr32(q + 20, p.readB);
 		Wr32(q + 24, p.config);
 		Wr32(q + 28, p.sync);
-		Wr32(q + 48, p.tableKind);
-		Wr32(q + 52, p.genBase);
-		Wr32(q + 56, p.genSize);
-		Wr32(q + 60, p.declLo);
-		Wr32(q + 64, p.declHi);
-		Wr32(q + 68, p.expDiscId);
-		Wr32(q + 72, p.expPartIdx);
-		Wr32(q + 76, p.armed);
+		Wr32(q + 32, p.tableKind);
+		Wr32(q + 36, p.genBase);
+		Wr32(q + 40, p.genSize);
+		Wr32(q + 44, p.declLo);
+		Wr32(q + 48, p.declHi);
+		Wr32(q + 52, p.expDiscId);
+		Wr32(q + 56, p.expPartIdx);
+		Wr32(q + RIIVO_PARAM_EPOCH_OFF, p.epoch);
+		Wr32(q + RIIVO_PARAM_ARMED_OFF, p.armed);
 
 		plan.addr = at;
 		plan.physAddr = phys;

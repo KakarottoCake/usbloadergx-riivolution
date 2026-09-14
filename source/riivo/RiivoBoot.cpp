@@ -39,6 +39,7 @@
 #include "RiivoIosProbe.hpp"
 #include "RiivoOnDemand.hpp"
 #include "RiivoModuleBlob.hpp"
+#include "RiivoModuleInstall.hpp"
 #include "RiivoRedirectTable.hpp"
 #include "RiivoDiPatch.hpp"
 #include "RiivoFragPlan.hpp"
@@ -1616,7 +1617,11 @@ namespace Riivo
 	//! by Activate above their definitions like the rest here).
 	static bool FillGenStore(std::string &out);
 	static void PoisonStagedTable();
+	static void DisarmModule();
 	static void ArmModule();
+	static bool ModuleAckProbe(std::string &out,
+							   const std::map<u64, const PlannedFile *> &partialSlots,
+							   const std::vector<PlacedFile> &placedFiles);
 	static bool ComposePartialReference(const PlannedFile &file, u64 slot,
 										u64 woff, u8 *dst, u32 len,
 										std::string &why);
@@ -1692,6 +1697,20 @@ namespace Riivo
 				if (mo != modOffsets.end())
 					partialSlots[mo->second] = &pf;
 			}
+		}
+
+		//! Acknowledgment before anything is committed: when the on-demand
+		//! module is installed, the FST about to be staged depends on it,
+		//! so the ARM side must have echoed this boot's generation after
+		//! serving - not merely been armed. Failure disarms + poisons +
+		//! withholds (MODACK) inside the probe: no Book, no FST commit,
+		//! memory held back. Three attempts; DI calls block with IOS
+		//! timeouts, so attempts bound the wait.
+		if (onDemandLayout.moduleAddr)
+		{
+			LogStep("waiting for the module to acknowledge this boot");
+			if (!ModuleAckProbe(out, partialSlots, placed))
+				return;
 		}
 
 		std::string why;
@@ -2049,6 +2068,10 @@ namespace Riivo
 		g_launch.ReleaseStaging();
 		g_launch.Refuse(8);
 		DeactivateBootView();
+		//! A withheld boot must not leave a live module behind: with no
+		//! committed FST nothing may reference the mod region, so stop the
+		//! reader too (MISS-all). No-op when no module was installed.
+		DisarmModule();
 		withholdStage = stage;
 		out += detail;
 	}
@@ -2079,10 +2102,14 @@ namespace Riivo
 
 	//! Zero the staged table's magic and flush: module init refuses a
 	//! bad-magic table, so every later read MISSES to the stock path
-	//! instead of serving a contract whose slices never arrived. The boot
-	//! then continues stock through the normal withhold below.
+	//! instead of serving a contract whose slices never arrived. Always
+	//! paired with DisarmModule below: the magic stops future inits while
+	//! the cleared armed word stops an already-initialized reader at the
+	//! per-read gate. The boot then continues stock through the normal
+	//! withhold below.
 	static void PoisonStagedTable()
 	{
+		DisarmModule();
 		if (!onDemandLayout.tableAddr || !onDemandLayout.tableLen)
 			return;
 		u8 zero[4] = { 0, 0, 0, 0 };
@@ -2092,24 +2119,160 @@ namespace Riivo
 		gprintf("Riivo: staged table poisoned after a fill failure (module will MISS all)\n");
 	}
 
+	//! Clear the activation word and flush exactly its cache line. The
+	//! armed word owns its 32-byte line (see riivo_ios.h): no ARM-written
+	//! counter shares it, so this writeback cannot clobber ARM state, and
+	//! every later module read MISSES at the per-read gate - including an
+	//! already-initialized reader, whose cached table is never consulted
+	//! past a cleared armed word. Runs between synchronous DI calls on the
+	//! boot thread (ARM executes only inside our own WDVD calls), so no
+	//! read is in flight here; post-shutdown this never runs at all.
+	static void DisarmModule()
+	{
+		if (!onDemandLayout.moduleAddr)
+			return;
+		u8 *armed = (u8 *) (onDemandLayout.moduleAddr + RIIVO_MODULE_PARAMS_OFF + RIIVO_PARAM_ARMED_OFF);
+		armed[0] = 0;
+		armed[1] = 0;
+		armed[2] = 0;
+		armed[3] = 0;
+		DCFlushRange((void *) ((onDemandLayout.moduleAddr + RIIVO_MODULE_PARAMS_OFF + RIIVO_PARAM_ARMED_OFF) & ~31u),
+					 32);
+		gprintf("Riivo: module disarmed (activation word cleared + flushed)\n");
+	}
+
 	//! Complete the activation the install left pending: the slice store is
-	//! filled and verified, so flip the module's armed word and flush. From
-	//! here the module may initialize and serve; before here every read
-	//! MISSED without initializing, so no reader state can predate the
-	//! filled store. Whole-file installs arm at install time (nothing to
-	//! fill) and never reach here.
+	//! filled and verified, so flip the module's armed word and flush
+	//! exactly its cache line (RIIVO_PARAM_ARMED_OFF: the word owns the
+	//! line, so no ARM-written counter is touched). From here the module
+	//! may initialize and serve; before here every read MISSED without
+	//! initializing, so no reader state can predate the filled store.
+	//! Whole-file installs arm at install time (nothing to fill) and
+	//! never reach here.
 	static void ArmModule()
 	{
 		if (!onDemandLayout.moduleAddr)
 			return;
-		u8 *armed = (u8 *) (onDemandLayout.moduleAddr + RIIVO_MODULE_PARAMS_OFF + 76);
+		u8 *armed = (u8 *) (onDemandLayout.moduleAddr + RIIVO_MODULE_PARAMS_OFF + RIIVO_PARAM_ARMED_OFF);
 		armed[0] = 0;
 		armed[1] = 0;
 		armed[2] = 0;
 		armed[3] = 1;
-		DCFlushRange((void *) ((onDemandLayout.moduleAddr + RIIVO_MODULE_PARAMS_OFF) & ~31u),
-					 128);
+		DCFlushRange((void *) ((onDemandLayout.moduleAddr + RIIVO_MODULE_PARAMS_OFF + RIIVO_PARAM_ARMED_OFF) & ~31u),
+					 32);
 		gprintf("Riivo: module armed after verified slice fill\n");
+	}
+
+	//! MEM2 cached->uncached alias, as the IOS probe uses for all its own
+	//! reads of IOS-written memory: a cached PPC read of an ARM-written
+	//! counter could hit a stale line (or fill one a later flush would
+	//! write back over ARM's counts), so counters are only ever read here.
+	static const u32 RIIVO_UNCACHED_BIAS = 0x40000000;
+	static u32 ModuleReadUncached(u32 ppcAddr)
+	{
+		return *(volatile u32 *)(ppcAddr + RIIVO_UNCACHED_BIAS);
+	}
+
+	//! Require the ARM side to have observed this boot before anything is
+	//! committed that depends on it. One probe read through the hook plus
+	//! the echoed generation: content match proves the module served (the
+	//! on-demand path maps no fragments, so the stock path cannot produce
+	//! these bytes), the reads counter advancing proves it served NOW, and
+	//! acked==epoch binds that service to this boot's install. Bounded to
+	//! three attempts - DI calls block with IOS timeouts, so attempts, not
+	//! wall time, are the bound. Failure disarms + poisons + withholds
+	//! (MODACK) via the caller: no Book, no FST commit, memory held back.
+	static bool ModuleAckProbe(std::string &out,
+							   const std::map<u64, const PlannedFile *> &partialSlots,
+							   const std::vector<PlacedFile> &placedFiles)
+	{
+		if (!onDemandLayout.moduleAddr)
+		{
+			WithholdStaged(out, "MODACK",
+				"  module acknowledgment impossible: no module installed.\n");
+			return false;
+		}
+		//! First servable byte: a partial slot head (reference-composed)
+		//! or the first placed file head (card bytes). Zero-length-only
+		//! mods have nothing to serve and nothing to ack: vacuous pass.
+		u64 probeOff = 0;
+		bool haveProbe = false;
+		bool partialProbe = false;
+		const PlannedFile *probeFile = 0;
+		std::string probeExternal;
+		for (size_t i = 0; i < placedFiles.size() && !haveProbe; ++i)
+		{
+			if (placedFiles[i].length == 0)
+				continue;
+			std::map<u64, const PlannedFile *>::const_iterator pit =
+				partialSlots.find(placedFiles[i].offset);
+			if (pit == partialSlots.end())
+			{
+				probeOff = placedFiles[i].offset;
+				probeExternal = placedFiles[i].external;
+				haveProbe = true;
+			}
+			else if (pit->second && pit->second->finalSize > 0)
+			{
+				probeOff = placedFiles[i].offset;
+				probeFile = pit->second;
+				partialProbe = true;
+				haveProbe = true;
+			}
+		}
+		const u32 params = onDemandLayout.moduleAddr + RIIVO_MODULE_PARAMS_OFF;
+		const u32 wantEpoch = g_launch.generation;
+		if (wantEpoch == 0)
+		{
+			WithholdStaged(out, "MODACK",
+				"  module acknowledgment impossible: boot has no generation.\n");
+			return false;
+		}
+		if (!haveProbe)
+		{
+			Addf(out, "  module ack         : no servable byte (empty files only), nothing to acknowledge\n");
+			return g_launch.NoteModuleAck(wantEpoch);
+		}
+		u8 want[32];
+		u8 have[32] ATTRIBUTE_ALIGN(32);
+		for (int attempt = 1; attempt <= 3; ++attempt)
+		{
+			std::string refWhy;
+			bool refOK;
+			if (partialProbe && probeFile)
+				refOK = ComposePartialReference(*probeFile, probeOff, 0, want, sizeof(want), refWhy);
+			else
+				refOK = BootFatReader(probeExternal, 0, want, sizeof(want), 0);
+			if (!refOK)
+			{
+				Addf(out, "  module ack         : reference unreadable (attempt %d): %s\n",
+					 attempt, refWhy.empty() ? probeExternal.c_str() : refWhy.c_str());
+				continue;
+			}
+			const u32 reads0 = ModuleReadUncached(params + RIIVO_PARAM_READS_OFF);
+			memset(have, 0, sizeof(have));
+			const s32 rr = WDVD_Read(have, sizeof(have), probeOff);
+			const u32 reads1 = ModuleReadUncached(params + RIIVO_PARAM_READS_OFF);
+			const u32 acked = ModuleReadUncached(params + RIIVO_PARAM_ACKED_OFF);
+			if (rr == 0 && memcmp(have, want, sizeof(want)) == 0
+				&& reads1 > reads0 && acked == wantEpoch)
+			{
+				Addf(out, "  module ack         : ARM served + echoed generation %u (attempt %d, reads %u->%u)\n",
+					 wantEpoch, attempt, reads0, reads1);
+				return g_launch.NoteModuleAck(acked);
+			}
+			Addf(out, "  module ack         : attempt %d not acknowledged "
+				 "(read %d, content %s, reads %u->%u, acked %08x, want %08x)\n",
+				 attempt, (int)rr,
+				 (rr == 0 && memcmp(have, want, sizeof(want)) == 0) ? "match" : "MISMATCH",
+				 reads0, reads1, acked, wantEpoch);
+		}
+		DisarmModule();
+		PoisonStagedTable();
+		WithholdStaged(out, "MODACK",
+			"  module never acknowledged this boot: no FST is committed that\n"
+			"  would point the game at synthetic offsets nothing serves.\n");
+		return false;
 	}
 
 	//! Reference bytes for [slot+woff, +len) of a partial plan file:
@@ -4677,6 +4840,7 @@ namespace Riivo
 					meta.declSize = declared;
 					meta.discId = discId;
 					meta.partIdx = 0;
+					meta.epoch = g_launch.generation;
 					OnDemandLayout riv1Layout;
 					if (InstallOnDemand(bootProbe.patchSites[0], riv1,
 										RIIVO_PART_DISCOVER, meta, riv1Layout,
@@ -4687,6 +4851,10 @@ namespace Riivo
 						hookGeneration = g_launch.generation;
 						onDemandLayout = riv1Layout;
 						riv1Staged = true;
+						//! From here the FST commit additionally requires the
+						//! ARM ack (ModuleAckProbe in Activate): installing
+						//! the module is not proof it runs this boot.
+						g_launch.RequireModuleAck();
 						haveEarlyRiv1 = true;
 						earlyGen = gen;
 						earlyRiv1Blob = riv1;
@@ -4743,6 +4911,7 @@ namespace Riivo
 				LogStep("on-demand: table built, %u file(s), %u bytes",
 						(unsigned) entries.size(), (unsigned) table.size());
 			OnDemandMeta meta;
+			meta.epoch = g_launch.generation;
 			patchApplied = InstallOnDemand(bootProbe.patchSites[0], table,
 										   RIIVO_PART_DISCOVER, meta, onDemandLayout,
 										   patchWhy);
@@ -4750,6 +4919,9 @@ namespace Riivo
 			{
 				patchStorage = onDemandLayout.moduleAddr;
 				hookGeneration = g_launch.generation;
+				//! Same gate as the RIV1 path: the whole-file module must
+				//! also prove it runs this boot before anything commits.
+				g_launch.RequireModuleAck();
 			}
 			}
 			gprintf("Riivo: on-demand hook at %08x: %s\n",
@@ -5312,6 +5484,18 @@ namespace Riivo
 		//! live flag move together and can never desynchronise. Book itself
 		//! refuses invalid placements and any re-booking, so reaching the
 		//! Ready text below means exactly one live booking exists.
+		//! Backstop: when the FST depends on the on-demand module, a missing
+		//! ARM acknowledgment withholds here even if the probe above was
+		//! somehow skipped - Book would refuse anyway, but this names MODACK
+		//! instead of misreporting a placement failure.
+		if (g_launch.NeedsModuleAck() && !g_launch.ModuleAckSatisfied())
+		{
+			Addf(out, "\n  module acknowledgment missing for this boot: the FST "
+					  "is not committed to synthetic offsets nothing proved.\n");
+			withholdStage = "MODACK";
+			AppendLog(out);
+			return;
+		}
 		if (pendingFst && pendingFstSize && effPlace.ok && g_launch.Book(effPlace))
 		{
 			out += "\n  Ready. The table goes in last, immediately before the\n"

@@ -5,6 +5,7 @@
 // FAT16 volume. Exit 0 = all pass. No Wii toolchain, no reserved writes.
 #include <cstdio>
 #include <cstring>
+#include <stdint.h>
 #include <string>
 #include <vector>
 #include <map>
@@ -12,8 +13,28 @@
 #include "riivo/ios/riivo_fat.h"
 #include "riivo/ios/riivo_redirect.h"
 #include "riivo/ios/riivo_segread.h"
+#include "riivo/ios/riivo_ios.h"
+#include "riivo/ios/riivo_cache.h"
 #include "riivo/RiivoManifest.hpp"
 #include "riivo/RiivoRedirectTable.hpp"
+
+// Host mock for the Starlet cache primitive: records every call so tests
+// pin WHERE invalidation happens (armed line: yes, before the load;
+// counters line: never). It models the call contract, not cache contents:
+// no host mock can prove Starlet visibility, and this one does not claim to.
+struct InvCall
+{
+	const void *addr;
+	unsigned len;
+};
+static std::vector<InvCall> g_invLog;
+void riivo_inv_range(void *addr, unsigned len)
+{
+	InvCall c;
+	c.addr = addr;
+	c.len = len;
+	g_invLog.push_back(c);
+}
 
 static int g_checks = 0, g_fail = 0;
 static void check(bool cond, const char *what)
@@ -516,6 +537,65 @@ int main()
 				untouched2 = false;
 		check(untouched2, "deactivation writes nothing");
 		check(g.initCalls == 1, "deactivation adds no init");
+	}
+
+	// Real dispatch gate through riivo_di_read (ios.c): unarmed MISS
+	// before init, invalidate sequencing, counters-line protection.
+	// Reachable on a 64-bit host because NOTHING here dereferences a
+	// masked pointer: the gate returns before init, mount, table, or
+	// device access. Armed-path init needs 32-bit device addresses the
+	// host cannot provide (u32 params words), so init-success dispatch
+	// stays covered by the sr-direct sections above plus the ARM build.
+	{
+		g_invLog.clear();
+		g_params.armed = 0;
+		g_params.state = 0;
+		g_params.reads = 0;
+		g_params.misses = 0;
+		g_params.errors = 0;
+		g_params.acked = 0;
+		g_params.epoch = 9;
+		std::vector<u8> out(64, 0xCC);
+		check(riivo_di_read(0x60000000u, (unsigned)out.size(), &out[0]) == RIIVO_DI_MISS,
+			  "unarmed dispatch MISSES through the real gate");
+		check(g_params.state == 0, "unarmed dispatch never inits");
+		check(g_params.acked == 0, "unarmed dispatch acks nothing");
+		bool untouched = true;
+		for (size_t i = 0; i < out.size(); ++i)
+			if (out[i] != 0xCC)
+				untouched = false;
+		check(untouched, "gate MISS writes nothing");
+		check(g_params.misses == 1, "gate MISS counted once");
+		// Every invalidate call names the armed line only: the PPC-owned
+		// activation word the gate is about to load. The ARM-owned
+		// counters line is never invalidated (that would discard ARM's
+		// own dirty data).
+		uintptr_t armedLine = (uintptr_t)&g_params.armed & ~(uintptr_t)31;
+		uintptr_t countersLine = (uintptr_t)&g_params.state & ~(uintptr_t)31;
+		check(armedLine != countersLine, "test setup: lines actually differ");
+		check(!g_invLog.empty(), "gate invalidated before loading armed");
+		// Every logged call must sit inside the armed line (the helper
+		// rounds it to the line) and must not reach the counters line.
+		bool onlyArmed = true;
+		for (size_t i = 0; i < g_invLog.size(); ++i)
+		{
+			uintptr_t a = (uintptr_t)g_invLog[i].addr;
+			uintptr_t e = a + g_invLog[i].len;
+			bool insideArmed = a >= armedLine && e <= armedLine + 32 && e > a;
+			bool hitsCounters = !(e <= countersLine || a >= countersLine + 32);
+			if (!insideArmed || hitsCounters)
+				onlyArmed = false;
+		}
+		check(onlyArmed, "invalidate covers the armed line, never counters");
+		// Second unarmed read: still no init, miss counted again.
+		check(riivo_di_read(0x60000000u, (unsigned)out.size(), &out[0]) == RIIVO_DI_MISS,
+			  "repeat unarmed read still MISSES");
+		check(g_params.state == 0 && g_params.misses == 2, "still no init, miss counted");
+		// Zero-length reads succeed before the gate (no storage, no calls).
+		size_t invBefore = g_invLog.size();
+		check(riivo_di_read(0x60000000u, 0, &out[0]) == RIIVO_DI_OK,
+			  "zero-length read succeeds");
+		check(g_invLog.size() == invBefore, "zero-length touches nothing");
 	}
 
 	std::printf("%d checks, %d failures\n", g_checks, g_fail);
