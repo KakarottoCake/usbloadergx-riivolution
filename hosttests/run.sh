@@ -207,6 +207,13 @@ build_run test_manifest "$SRC/riivo/RiivoManifest.cpp"
 # plus the ARM build - stated, not stubbed into passing.
 build_run test_segread -DRIIVO_HOST_TEST "$SRC/riivo/ios/riivo_segread.c" "$SRC/riivo/ios/riivo_redirect.c" "$SRC/riivo/ios/riivo_fat.c" "$SRC/riivo/ios/riivo_ios.c" "$SRC/riivo/ios/riivo_glue.c" "$SRC/riivo/RiivoManifest.cpp" "$SRC/riivo/RiivoRedirectTable.cpp"
 
+# Paged RIV1 table access: production-built tables sliced into pages,
+# paged lookups equal to resident scans, fetch behavior bounded, path
+# resolution exact, corruptions refused. Real ios/riivo_page.c over a
+# synthetic FAT16 volume. The storage half of the survival answer: the
+# table file lives on the card, ~4.6 KB stays resident.
+build_run test_page "$SRC/riivo/ios/riivo_page.c" "$SRC/riivo/ios/riivo_fat.c" "$SRC/riivo/RiivoManifest.cpp"
+
 # WP1 fixtures: revision/disc filters with unknown-axis skipping, multi-XML
 # merge precedence, skipped patch-ref accounting, selection round-trip.
 # Needs RiivoConfig only (no pugixml: discs are built programmatically).
